@@ -1,0 +1,295 @@
+#page {
+  margin-left: 0px;
+}
+/*
+.ui-icon, .ui-widget-content .ui-icon {
+  right: 10px; 
+}
+.ui-menu {
+  width: 200px;
+}
+.ui-widget ul.ui-widget {
+  margin-left: -9px; 
+}
+*/
+/* The > mark on the menu system - move it in */
+#concept-create{
+ margin: 0;
+ width: 150px;
+}
+
+.ui-menu a.ui-state-active {
+  background: #beebff;
+}
+dl {
+  margin-left:3px;
+  padding-top:3px;
+}
+dt {
+  font-weight: bold;
+}
+/*
+#concept-meta-menu, #resource-meta-menu {
+  float:left;
+}
+*/
+#concept-create-menu .ui-menu .ui-menu-item , 
+#concept-meta-menu .ui-menu .ui-menu-item , 
+#resource-meta-menu .ui-menu .ui-menu-item,
+#resource-create-menu .ui-menu .ui-menu-item
+{
+  padding-top:0px;
+  padding-bottom:0px;
+  padding-left:0px;
+  width: auto
+}
+li a input {
+  top: 2px;
+  position:relative;
+}
+.sidora-menu li{
+  border: 1px solid #aaa;
+  z-index: 1;
+}
+#res_table td {
+  text-align: right;
+  padding: 3px;
+}
+#res_table td:nth-child(3){
+  width: 99%;
+}
+.resource-list-tn {
+  width: 100px;
+  min-width: 150px;
+}
+.resource-list-label {
+  text-align: left;
+  margin-left: 15px;
+
+}
+#sidora-resource-type-dropdown {
+  margin-left:5px;
+  margin-bottom: 5px;
+}
+/*
+#resource-create-menu {
+    width: 170px;
+    display: inline-block;
+    right: -10px;
+    position: absolute;
+    top: -10px;
+}
+*/
+#resource-meta {
+  border-left: 1px solid grey;
+  border-bottom: 1px solid grey;
+  border-right: 1px solid grey;
+  padding:0;
+}
+#sidora_content_concept_info {
+  position:absolute;
+  top:0;
+  left:300px;
+  width:500px;
+}
+#workbench-menu{
+  position:relative;
+  top: -35px;
+  height: 0px;
+  text-align: right;
+}
+.jstree-default .jstree-node {
+  margin-left:0px;
+}
+#forjstree .region-content ul {
+  margin:0;
+  padding:0 0 0 1em;
+}
+#forjstree ul, #forjstree .block ul, #forjstree .item-list ul {
+  margin: 0 0 0 1em;
+}
+  /*
+      content:url("data:image/gif;base64,R0lGODlhCgAKAJEAAAAAAP///////wAAACH5BAEAAAIALAAAAAAKAAoAAAISlG8AeMq5nnsiSlsjzmpzmj0FADs=");
+  */
+.not_original_metadata{
+  background: url("/misc/message-16-ok.png") no-repeat scroll 0 50% transparent;
+  height: 16px;
+  width:16px;
+}
+.original_metadata{
+  background: url("/misc/message-16-error.png") no-repeat scroll 0 50% transparent;
+  height: 16px;
+  width:16px;
+}
+.dataTables_filter{
+  display:none;
+}
+.dataTables_wrapper{
+  width:50%;
+}
+.ui-resizable-w{
+  width:20px;
+}
+#resourceInformationPane {
+  padding-left:0px;
+  float:right;
+  border-left-style:solid;
+  border-left-width:10px;
+  border-left-color:gray;
+  display:inline-block;
+  width:40%;
+}
+#concept-resource-list, #concept-meta , #res_table_wrapper{
+  min-height: 600px;
+}
+#concept-meta , #res_table_wrapper{
+  min-width: 270px;
+}
+#concept-meta {
+  margin-top: 30px;
+} 
+#concept-resource-list {
+  min-width: 785px;
+}
+table tr.is-being-moved td {
+  opacity: 0.5;
+  background: black;
+}
+div.metadata-table {
+  padding-top: 10px; 
+}
+#resource-menu-holder {
+  position: absolute;
+}
+#res_table {
+  width: 96%;
+}
+#res_table_wrapper {
+  width: 97%;
+  display: inline-block;
+  overflow: hidden;
+  margin-top: 40px;
+}
+#res_table td.highlight {
+  background-color: whitesmoke !important;
+}
+
+#resourceIframeHolder {
+  height:100%;
+  width:100%;
+  float:right;
+  padding: 0;
+}
+#iframeOverlay {
+  height:100%;
+  width:100%;
+  position:absolute;
+  display:none;
+  background:rgba(100,100,100,0.5);
+  top: 0;
+}
+#resourceResizable {
+  height: 100%;
+  padding: 0;
+  margin-left: 2px;
+  margin-top: 0;
+  margin-right: 0;
+  margin-bottom: 0;
+  border: 0;
+}
+
+button.ui-button-text-only .ui-button-text {
+  padding: 0;
+}
+#forjstree {
+  overflow: auto;
+  width:300px;
+  height:700px;
+}
+
+#concept-meta-menu, .resource-menu-holder {
+  position: absolute;
+  top: 50px;
+}
+#concept_tabs, #sidora_content_concept_info {
+  min-width: 822px;
+}
+/*
+#resource-create-menu li {
+  padding: 0;
+}
+*/
+#resourceInformationPane {
+  min-width: 400px;
+}
+/**
+ * jMenu fixes to work with other libs
+ */
+.jMenu li a {
+  padding-bottom: 7px;
+  padding-top: 6px;
+}
+.jMenu li ul {
+  z-index:90;
+}
+
+.workbench-nav ul, .workbench-nav .block ul, .workbench-nav .item-list ul {
+  margin: 0;
+  z-index: 2;
+}
+.workbench-nav h1 {
+  font-family: Helvetica;
+  font-weight: 100;
+}
+
+.workbench-nav .nav {
+	margin: 0px;
+	padding: 0px;
+	list-style: none;
+}
+
+.workbench-nav .nav li a {
+	background: #333;
+	color: #fff;
+	display: block;
+	padding: 7px 8px;
+	text-decoration: none;
+	border-top: 1px solid #069;
+}
+
+.workbench-nav .nav li a:hover {
+	color: #069;
+}
+
+/*=== submenu ===*/
+
+.workbench-nav .nav ul {
+	display: none;
+	margin-left: 0px;
+	list-style: none;
+	padding: 0px;
+}
+
+.workbench-nav .nav ul a {
+	display: block;
+	height: 15px;
+	padding: 7px 8px;
+	color: #fff;
+	text-decoration: none;
+	border-bottom: 1px solid #222;
+}
+
+.workbench-nav .nav ul li a:hover {
+	color: #069;
+}
+#queueMessage {
+  z-index: 4;
+}
+footer {
+  height: 60px;
+  position: fixed;
+  border-top: aqua 1px solid;
+  width: 100%;
+  bottom: 0;
+  background: white;
+}

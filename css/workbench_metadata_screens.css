@@ -1,0 +1,6 @@
+#header, #breadcrumb, #footer-wrapper, #toolbar, #page-title, #tabs, #edit-submit, #edit-update, #edit-next, #branding {display:none;}
+#main {width:auto;}
+body { padding-top:0px; }
+body.toolbar-drawer { padding-top: 0px; }
+body.toolbar {padding-top: 0px;}
+
