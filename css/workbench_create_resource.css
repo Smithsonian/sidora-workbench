@@ -1,0 +1,38 @@
+#header, #breadcrumb, #footer-wrapper, #toolbar, #page-title, #tabs, #edit-submit, #edit-update, #edit-next, #branding {display:none;}
+#main {width:auto;}
+body { padding-top:0px; }
+body.toolbar-drawer { padding-top: 0px; }
+body.toolbar {padding-top: 0px;}
+.overlay-top {
+		position: fixed;
+		top: 0;
+		left: 0;
+		width: 100%;
+		height: 100%;
+		z-index: 10001;
+		text-align: center;
+		margin-top: 30%;
+}
+.overlay {
+		position: fixed;
+		top: 0;
+		left: 0;
+		width: 100%;
+		height: 100%;
+		background-color: #000;
+		filter:alpha(opacity=50);
+		-moz-opacity:0.5;
+		-khtml-opacity: 0.5;
+		opacity: 0.5;
+		z-index: 10000;
+}
+.has-image form {
+	width: 45%;
+	float: right;
+}
+.picHolder {
+	overflow: scroll;
+	width: 50%;
+	float: left;
+}
+

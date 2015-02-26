@@ -1,0 +1,6 @@
+name = Sidora
+description = Smithsonian Institution interface to Fedora Commons Repository for research information
+core = 7.x
+package = Smithsonian
+dependencies[] = islandora
+configure = admin/sidora/configure
