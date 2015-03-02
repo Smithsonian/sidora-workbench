@@ -1204,12 +1204,15 @@ sidora.resources.individualPanel.LoadRelationships = function(){
 /*
  * Loads the viewer once an item has been clicked on
  */
-sidora.resources.individualPanel.LoadContent = function(){
+sidora.resources.individualPanel.LoadContent = function(suppressResourceViewerReload){
+  if (typeof(suppressResourceViewerReload) == 'undefined'){ suppressResourceViewerReload = false; }
   roipid = sidora.resources.individualPanel.resourceOfInterest.pid;
     //<iframe frameborder="0" height="100%" width="100%" src="http://sidora07.dev1.myquotient.net/~randerson/sidora/GitMain/viewer/si:258581/IMAGE/ids_iframe"></iframe>
-  var resourceViewerHtml = '<iframe frameborder="0" height="100%" width="100%" src="'+Drupal.settings.basePath+'sidora/resource_viewer/'+sidora.resources.individualPanel.resourceOfInterest.pid+'"></iframe> ';
-  jQuery('#resourceIframeHolder').children().remove();
-  jQuery('#resourceIframeHolder').append(resourceViewerHtml);
+  if (suppressResourceViewerReload){
+    var resourceViewerHtml = '<iframe frameborder="0" height="100%" width="100%" src="'+Drupal.settings.basePath+'sidora/resource_viewer/'+sidora.resources.individualPanel.resourceOfInterest.pid+'"></iframe> ';
+    jQuery('#resourceIframeHolder').children().remove();
+    jQuery('#resourceIframeHolder').append(resourceViewerHtml);
+  }
   jQuery('#resource-meta .error-message').remove();
   jQuery.ajax({
     url: '../info/'+roipid+'/meta/sidora_xsl_config_variable/browser/html',
@@ -1225,6 +1228,7 @@ sidora.resources.individualPanel.LoadContent = function(){
     sidora.resources.individualPanel.ResizeAndStop(); //Gives it proper height
     sidora.recentAjaxFailure(meta_html);
   });;
+  sidora.resources.individualPanel.LoadRelationships();
 }
 /*
  * Information to give to user if we get a bad response from an ajax query
@@ -1276,7 +1280,6 @@ sidora.resources.individualPanel.CreateAndInit = function () {
     jQuery("#res_table").css("width","100%");
   }
   sidora.resources.individualPanel.LoadContent();
-  sidora.resources.individualPanel.LoadRelationships();
 }
 /*
  * Basic resizing for when there are major changes to the resource list tab
