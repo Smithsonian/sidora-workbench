@@ -453,17 +453,19 @@ var ids__ = jQuery('#containerIDS').ids({
  */
 function sidora_codebook_autocomplete($s1){
   module_load_include('inc', 'sidora', 'includes/utils');
-  $tuque = islandora_get_tuque_connection();
-  $user_projects_pid = sidora_get_user_object();
-  $user_projects = $tuque->repository->getObject($user_projects_pid);
-  $rels = $user_projects->relationships->get(FEDORA_RELS_EXT_URI, 'managesCodebook');
+  $user_projects = sidora_obj(sidora_get_user_object());
   $matches = array();
-  foreach($rels as $rel){
-    $pid = $rel['object']['value'];
-    $curr_codebook = $tuque->repository->getObject($pid);
-    $label = $curr_codebook->label;
-    if (strpos($label, $s1) !== FALSE || strpos($pid, $s1) !== FALSE){
-      $matches[$pid] = $label.' ('.$pid.')';
+  if (!empty($user_projects)){
+    $rels = $user_projects->relationships->get(FEDORA_RELS_EXT_URI, 'managesCodebook');
+    foreach($rels as $rel){
+      $pid = $rel['object']['value'];
+      $curr_codebook = sidora_obj($pid);
+      if (!empty($curr_codebook)){
+        $label = $curr_codebook->label;
+        if (strpos($label, $s1) !== FALSE || strpos($pid, $s1) !== FALSE){
+          $matches[$pid] = $label.' ('.$pid.')';
+        }
+      }
     }
   }
   drupal_json_output($matches);
@@ -1033,7 +1035,7 @@ function sidora_get_parent_table($pid){
         }
         window.lastArgs = arguments;
       },
-      function(){},pid
+      function(){},[pid,ppid]
     );
     sidora.queue.Next();
 
@@ -1046,6 +1048,33 @@ function sidora_get_parent_table($pid){
  */
 function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $extra = ''){
   global $user;
+  if ($one == 'formbuilder'){
+    $form_content = '';
+    try{
+      module_load_include('inc', 'xml_form_builder', 'XMLFormRepository');
+      module_load_include('inc', 'xml_form_builder', 'includes/associations');
+      $names = XMLFormRepository::GetNames();
+      /*
+      $orig_form = array();
+      $form_state = array();
+      $form = xml_form_builder_get_form($orig_form, $form_state, $names[0]);
+      */
+      $form_name = $names[0];
+      if ($two != 'two') $form_name = $two;
+      $form = XMLFormRepository::Get($form_name); //DOMDocument
+      if (!empty($form)){
+        $form->formatOutput = TRUE;
+        $form_content = $form->saveXML();
+      }else{
+        $form_content = 'Form not found';
+      }
+    
+    }catch(Exception $exc){
+      dsm($exc);
+      return "got error";
+    }
+    return "Form<pre>".htmlentities($form_content).'<pre>';
+  }
   if ($one == 'parenttable'){
     return sidora_get_parent_table($two);
   }
@@ -1112,37 +1141,37 @@ function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $ex
       $to_return .= 'Use with /_pid_/_user_/obtain or /_pid_/_user_/clear.  ';
       $to_return .= 'Use with /_pid_/ to see current lock on pid';
     }else{
-      $pid = $two;
+    $pid = $two;
       if ($parent_pid == 'si:root'){
         $cache_name = "sidora:locking:".$pid;
         $pid_lock = cache_get($cache_name);
         dsm($pid_lock);
       }else{
-        $user_name = $parent_pid;
-        $obtain_lock = $extra == 'obtain';
-        $clear_lock = $extra == 'clear';
-        if ($extra == 'clearobtain') $obtain_lock = $clear_lock = TRUE;
-        $to_return .= "Desired:<table>";
-        $to_return .= "<tr><td>Pid</td><td>$pid</td></tr>";
-        $to_return .= "<tr><td>User</td><td>$user_name</td></tr>";
-        $to_return .= "<tr><td>Obtain Lock</td><td>$obtain_lock</td></tr>";
-        $to_return .= "<tr><td>Clear Lock</td><td>$clear_lock</td></tr>";
-        $to_return .= "</table>";
-        $spsl = sidora_pid_set_locked($pid, $user_name, $obtain_lock, $clear_lock);
-        $to_return .= "<h1>$spsl</h1>";
-        $cache_name = "sidora:locking:".$pid;
-        $pid_lock = cache_get($cache_name);
-        dsm($pid_lock);
-        if (!empty($pid_lock)){
-          $expiry = $pid_lock->expire;
-          $to_return .= "Currently:<table>";
-          $to_return .= "<tr><td>User</td><td>$pid_lock->data</td></tr>";
-          $to_return .= "<tr><td>Expire</td><td>$expiry</td></tr>";
-          $to_return .= "<tr><td>Current</td><td>".time()."</td></tr>";
-          $sec_left = ($expiry - time());
-          $to_return .= "<tr><td>Expires In:</td><td>".$sec_left."</td></tr>";
-          $to_return .= "</table>";
-        }
+    $user_name = $parent_pid;
+    $obtain_lock = $extra == 'obtain';
+    $clear_lock = $extra == 'clear';
+    if ($extra == 'clearobtain') $obtain_lock = $clear_lock = TRUE;
+    $to_return .= "Desired:<table>";
+    $to_return .= "<tr><td>Pid</td><td>$pid</td></tr>";
+    $to_return .= "<tr><td>User</td><td>$user_name</td></tr>";
+    $to_return .= "<tr><td>Obtain Lock</td><td>$obtain_lock</td></tr>";
+    $to_return .= "<tr><td>Clear Lock</td><td>$clear_lock</td></tr>";
+    $to_return .= "</table>";
+    $spsl = sidora_pid_set_locked($pid, $user_name, $obtain_lock, $clear_lock);
+    $to_return .= "<h1>$spsl</h1>";
+    $cache_name = "sidora:locking:".$pid;
+    $pid_lock = cache_get($cache_name);
+    dsm($pid_lock);
+    if (!empty($pid_lock)){
+      $expiry = $pid_lock->expire;
+      $to_return .= "Currently:<table>";
+      $to_return .= "<tr><td>User</td><td>$pid_lock->data</td></tr>";
+      $to_return .= "<tr><td>Expire</td><td>$expiry</td></tr>";
+      $to_return .= "<tr><td>Current</td><td>".time()."</td></tr>";
+      $sec_left = ($expiry - time());
+      $to_return .= "<tr><td>Expires In:</td><td>".$sec_left."</td></tr>";
+      $to_return .= "</table>";
+    }
       }
     }
     return $to_return;;
@@ -2022,12 +2051,15 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
             //var_dump($curr_check);
             $model_match = in_array($curr_check->model,$models);
             $form_match = $curr_check->form == $form_name;
-            $dsid_match = $curr_check->dsid == $preferred_dsid;
+            //$dsid_match = $curr_check->dsid == $preferred_dsid;
             //print 'mm:'.$model_match.' for:'.$curr_check->model;
             //var_dump($models);
             //print 'fm:'.$form_match.' for:'.$form_name.' vs:'.$curr_check->form;
-            if ($model_match && $form_match && $dsid_match){
+            
+            if ($model_match && $form_match){
               $perfect_match = TRUE;
+              $dsid_to_use = $curr_check->dsid;
+              //print 'Setting dsid to use to '.$dsid_to_use;
             }
             if ($model_match && $form_match){
               $xsl_file = $curr_check->file;
@@ -2041,6 +2073,7 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
           }
         }//ends sidora_xsl_config_variable
         $datastream_content = '';
+        //print "Using $specific_meta";
         foreach($object as $dsid=>$datastream){
           if ($specific_meta == 'all'){
             //strip off the <?xml directives if it has any and remove binary data
@@ -2059,7 +2092,7 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
           exit();
         }
         if ($specific_meta == 'all'){
-          $datastream_content = '<xml_root><general_info><label>'.$object->label.'</label></general_info>'."\n".$datastream_content."\n".'</xml_root>';
+          $datastream_content = '<xml_root><general_info><owner>'.$object->owner.'</owner><label>'.$object->label.'</label></general_info>'."\n".$datastream_content."\n".'</xml_root>';
         }
 
         //datastream_content is now set.  perform the output
@@ -3599,7 +3632,11 @@ function sidora_metadata_to_html_table_transform($xml, $xsl_file){
   $xsl_string = sidora_xsl_string($xsl_file);
   $doc->loadXML($xsl_string);
   $xsl->importStyleSheet($doc);
-  $docToLoad = ('<?xml version="1.0" encoding="UTF-8"?>'.$xml);
+  if (strpos($xml, "<?xml version") === FALSE){
+    $docToLoad = ('<?xml version="1.0" encoding="UTF-8"?>'.$xml);
+  }else{
+    $docToLoad = $xml;
+  }
   $doc->loadXML($docToLoad);
   $initialOutput = $xsl->transformToXML($doc);
   //now go through and add the even/odd classes
