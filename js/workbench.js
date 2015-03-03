@@ -289,20 +289,9 @@ sidora.concept.LoadContentHelp.CreateMenu = function(conceptOfInterest){
   });
 }
 /*
- * Loads the Concept Content Panels, preps menus and actions
+ * Loads the Resource List panel with information from the input concept pid
  */
-sidora.concept.LoadContent = function(){
-  conceptOfInterest = sidora.concept.GetPid();
-  console.log("Concept Pid:"+conceptOfInterest);
-  if ("" == conceptOfInterest){
-    jQuery("#sidora_content_concept_info").hide();
-    return;
-  }
-  jQuery("#sidora_content_concept_info").show();
-  jQuery('#concept-meta .error-message').remove();
-
-  sidora.concept.LoadContentHelp.Permissions(conceptOfInterest);
-  sidora.concept.LoadContentHelp.Metadata(conceptOfInterest);
+sidora.concept.LoadContentHelp.FullTableReload = function(conceptOfInterest){
   jQuery.ajax({
     url: '../info/'+conceptOfInterest+'/resources/all/browser/html_placeholder'
   }).done(function(resources_table){
@@ -319,6 +308,23 @@ sidora.concept.LoadContent = function(){
     jQuery('#concept-resource-list-internal').append(myDiv);
     sidora.recentAjaxFailure(failure_obj);
   });
+}
+/*
+ * Loads the Concept Content Panels, preps menus and actions
+ */
+sidora.concept.LoadContent = function(){
+  conceptOfInterest = sidora.concept.GetPid();
+  console.log("Concept Pid:"+conceptOfInterest);
+  if ("" == conceptOfInterest){
+    jQuery("#sidora_content_concept_info").hide();
+    return;
+  }
+  jQuery("#sidora_content_concept_info").show();
+  jQuery('#concept-meta .error-message').remove();
+
+  sidora.concept.LoadContentHelp.Permissions(conceptOfInterest);
+  sidora.concept.LoadContentHelp.Metadata(conceptOfInterest);
+  sidora.concept.LoadContentHelp.FullTableReload(conceptOfInterest);
 }
 /*
  * Used to see if there is at least a tag in there someplace
@@ -379,7 +385,8 @@ sidora.InitiateJSTree = function(){
       //console.log("Copy:"+toMovePid+" to:"+moveToPid);
       jQuery.ajax({
         url: actionUrl
-      }).done(function(tree_html){
+      }).done(function(data){
+        sidora.concept.LoadContentHelp.Relationships();
       }).fail(function(failure_obj){
       });
     });
@@ -393,7 +400,8 @@ sidora.InitiateJSTree = function(){
       if (moveFromPid == moveToPid){ console.log('move to itself, ignoring...'); return; }
       jQuery.ajax({
         url: '../ajax_parts/move/'+moveFromPid+'/'+moveToPid+'/'+toMovePid
-      }).done(function(tree_html){
+      }).done(function(data){
+        sidora.concept.LoadContentHelp.Relationships();
       }).fail(function(failure_obj){
       });
     });

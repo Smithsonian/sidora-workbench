@@ -1032,6 +1032,13 @@ function sidora_get_parent_table($pid){
         }else{
           cp.children().remove();
           cp.append("<div>Removed</div>");
+          //When I unassociate from the currently selected concept, reload the resources table,
+          if (ppid == sidora.concept.GetPid()){
+            sidora.concept.LoadContentHelp.FullTableReload(ppid);
+          }else{
+            //otherwise reload the tree? TBD
+            sidora.util.RefreshTree();
+          }
         }
         window.lastArgs = arguments;
       },
