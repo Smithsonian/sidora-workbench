@@ -1216,7 +1216,7 @@ sidora.resources.individualPanel.LoadContent = function(suppressResourceViewerRe
   if (typeof(suppressResourceViewerReload) == 'undefined'){ suppressResourceViewerReload = false; }
   roipid = sidora.resources.individualPanel.resourceOfInterest.pid;
     //<iframe frameborder="0" height="100%" width="100%" src="http://***REMOVED***/~***REMOVED***/sidora/GitMain/viewer/si:258581/IMAGE/ids_iframe"></iframe>
-  if (suppressResourceViewerReload){
+  if (!suppressResourceViewerReload){
     var resourceViewerHtml = '<iframe frameborder="0" height="100%" width="100%" src="'+Drupal.settings.basePath+'sidora/resource_viewer/'+sidora.resources.individualPanel.resourceOfInterest.pid+'"></iframe> ';
     jQuery('#resourceIframeHolder').children().remove();
     jQuery('#resourceIframeHolder').append(resourceViewerHtml);
