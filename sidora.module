@@ -349,7 +349,8 @@ function sidora_resource_viewer($pid){
         if (!empty($ds)){
           switch ($viewer) {
             case 'direct':
-              return sidora_info_json($pid, 'meta', $dsid, 'browser');
+              sidora_info_json($pid, 'meta', $dsid, 'browser');
+              exit();
               break;
             case 'web_view':
               $viewable_mime_types = sidora_get_viewable_mime_types();
@@ -1055,6 +1056,15 @@ function sidora_get_parent_table($pid){
  */
 function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $extra = ''){
   global $user;
+  if ($one == 'clearcache'){
+    if ($two == 'all'){
+      sidora_clear_entire_tree_cache();
+    }else{
+      sidora_clear_tree_cache($two);
+    }
+    $to_return = sidora_html_tree_for_ajax();
+    return "cleared $two".$to_return;
+  }
   if ($one == 'formbuilder'){
     $form_content = '';
     try{
@@ -2081,30 +2091,34 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
         }//ends sidora_xsl_config_variable
         $datastream_content = '';
         //print "Using $specific_meta";
-        foreach($object as $dsid=>$datastream){
+        $datastream = '';
+        foreach($object as $dsid_loop=>$datastream_loop){
           if ($specific_meta == 'all'){
             //strip off the <?xml directives if it has any and remove binary data
-            $content = $datastream->content;
+            $content = $datastream_loop->content;
             $doc = new DOMDocument();
             if (substr(trim($content),0,1) == '<'){
               $doc->loadXML($content);
               $datastream_content .= $doc->saveHTML();
             }
-          }else if ($dsid == $specific_meta){
-            $datastream_content = $datastream->content;
+          }else if ($dsid_loop == $specific_meta){
+            $datastream_content = $datastream_loop->content;
+            $datastream = $datastream_loop;
           }
         }
         if (empty($datastream_content)){
           print t('Datastream not found by that name');
           exit();
         }
-        if ($specific_meta == 'all'){
-          $datastream_content = '<xml_root><general_info><owner>'.$object->owner.'</owner><label>'.$object->label.'</label></general_info>'."\n".$datastream_content."\n".'</xml_root>';
-        }
-
         //datastream_content is now set.  perform the output
         $mime_type = $datastream->mimeType;
-        if ($download=='browser'){
+
+        if ($specific_meta == 'all'){
+          $datastream_content = '<xml_root><general_info><owner>'.$object->owner.'</owner><label>'.$object->label.'</label></general_info>'."\n".$datastream_content."\n".'</xml_root>';
+          $mime_type = 'text/xml';
+        }
+
+        if ($download=='browser' && strpos($mime_type,"text") !== FALSE){ //html, text, csv
           header("Content-type: html");
         }else{
           header("Content-type: $mime_type");
@@ -2123,6 +2137,7 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
           print '<div class="metadata-table">'.sidora_metadata_to_html_table_transform($datastream_content, $xsl_file).'</div>';
         }else{
           print $datastream_content;
+          exit();
         }
       }else{
         $for_json_output = array();
@@ -3475,6 +3490,12 @@ function sidora_html_tree($query_result_tree, $input_path = ''){
     $to_return .= '</li>'."\n";
   }
   return $to_return;
+}
+/*
+ * Clears specific pids out of the tree cache 
+ */
+function sidora_clear_entire_tree_cache(){
+  cache_clear_all('sidora:children_results:', 'cache', TRUE);
 }
 /*
  * Clears specific pids out of the tree cache 
