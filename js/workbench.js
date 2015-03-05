@@ -383,12 +383,12 @@ sidora.InitiateJSTree = function(){
         return; //resource actions are handled by the 'dnd_stop.vakata' event
       }
       //console.log("Copy:"+toMovePid+" to:"+moveToPid);
-      jQuery.ajax({
-        url: actionUrl
-      }).done(function(data){
+      sidora.queue.incomingRequestsAreSilent = true;
+      sidora.queue.Request('TBD: Silence this', actionUrl, function(){
         sidora.concept.LoadContentHelp.Relationships();
-      }).fail(function(failure_obj){
-      });
+      }, null, [moveToPid,toMovePid]);
+      sidora.queue.incomingRequestsAreSilent = false;
+      sidora.queue.Next();
     });
     jQuery('#forjstree').bind('move_node.jstree',function(event,data){
      //   jQuery.jstree.rollback(data.rlbk);
@@ -398,12 +398,14 @@ sidora.InitiateJSTree = function(){
       var moveFromPid = jQuery("#"+data.old_parent+" a").attr('pid');
       console.log("Move:"+toMovePid+" from:"+moveFromPid+" to:"+moveToPid);
       if (moveFromPid == moveToPid){ console.log('move to itself, ignoring...'); return; }
-      jQuery.ajax({
-        url: '../ajax_parts/move/'+moveFromPid+'/'+moveToPid+'/'+toMovePid
-      }).done(function(data){
+      var actionUrl = '../ajax_parts/move/'+moveFromPid+'/'+moveToPid+'/'+toMovePid;
+      //next requests are silent
+      sidora.queue.incomingRequestsAreSilent = true;
+      sidora.queue.Request('TBD: Silence this', actionUrl, function(){
         sidora.concept.LoadContentHelp.Relationships();
-      }).fail(function(failure_obj){
-      });
+      }, null, [moveToPid,toMovePid,moveFromPid]);
+      sidora.queue.incomingRequestsAreSilent = false;
+      sidora.queue.Next();
     });
     /*
     */
@@ -465,7 +467,6 @@ sidora.InitiateJSTree = function(){
             }
           }else{
             if (sidora.util.userConfirmedCopy){
-              sidora.util.userConfirmedCopy = false;
               return true;
             }
             //Concept
@@ -507,8 +508,11 @@ sidora.InitiateJSTree = function(){
                     function(){
                       sidora.util.userConfirmedCopy = true;
                       for(var objIndex = 0; objIndex < objectsToCopyOver.length; objIndex++){
-                        jQuery("#forjstree").jstree(true).copy_node(jst.get_node(objectsToCopyOver[objIndex]),mouseOverObject); 
+                        var currToCopyId = objectsToCopyOver[objIndex];
+                        var currToCopyNode = jst.get_node(currToCopyId);
+                        jQuery("#forjstree").jstree(true).copy_node(currToCopyNode,mouseOverObject); 
                       }
+                      sidora.util.userConfirmedCopy = false;
                     },null,null,null,function(){
                       sidora_util.lock.Release(parentPid);
                     }
@@ -529,7 +533,6 @@ sidora.InitiateJSTree = function(){
         }
         if (callbackType == "move_node"){
           if (sidora.util.userConfirmedMove){
-            sidora.util.userConfirmedMove = false;
             return true;
           }
           if (dragStatus.core){
@@ -569,10 +572,15 @@ sidora.InitiateJSTree = function(){
                 sidora.util.Confirm("Move Concept",showText,
                   function(){
                     sidora.util.userConfirmedMove = true;
-                    jQuery("#forjstree").jstree(true).move_node(draggedObjects,mouseOverObject); 
-                      },null,null,null,function(){
-                        sidora_util.lock.Release(parentPid);
-                      }
+                    for(var objIndex = 0; objIndex < objectsToCopyOver.length; objIndex++){
+                      var currToCopyId = objectsToCopyOver[objIndex];
+                      var currToCopyNode = jst.get_node(currToCopyId);
+                      jQuery("#forjstree").jstree(true).move_node(currToCopyNode,mouseOverObject); 
+                    }
+                    sidora.util.userConfirmedMove = false;
+                  },null,null,null,function(){
+                    sidora_util.lock.Release(parentPid);
+                  }
                 );
               }else{
                 sidora.util.Confirm("Move Concept","All items selected for move already exist on the target.",
