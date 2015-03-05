@@ -269,12 +269,14 @@ tr.removed.odd {
 			'#options' => array(
 				'direct' => t('Direct stream to browser (actual image / binary / text)'),
 				'web_view' => t('Direct stream to browser for web viewable items, download message for others'),
+        'flexpaper_pdf' => t('Flexpaper / Convert to flexpaper / direct stream to browser'),
 				'IDS' => t('Smithsonian IDS Viewer'),
 				'none' => t('None - no display available'),
 				'never' => t('Never set'),
 			),
 			'#default_value' => variable_get('resource_viewer_viewer_'.$model,'never'),
 		),
+    //TODO: make both this and the looped additions to use the same code instead of copy/paste
 	);
 
   foreach($names as $model => $name){
@@ -292,6 +294,7 @@ tr.removed.odd {
         '#options' => array(
           'direct' => t('Direct stream to browser (actual image / binary / text)'),
 				  'web_view' => t('Direct stream to browser for web viewable items, download message for others'),
+          'flexpaper_pdf' => t('Flexpaper / Convert to flexpaper / direct stream to browser'),
           'IDS' => t('Smithsonian IDS Viewer'),
           'none' => t('None - no display available'),
           'never' => t('Never set'),
