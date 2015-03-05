@@ -10,6 +10,7 @@ SidoraQueue.prototype.completedFailedRequests = [];
 SidoraQueue.prototype.requests = [];
 SidoraQueue.prototype.pidsInProcess = [];
 SidoraQueue.prototype.requestInProcess = null;
+SidoraQueue.prototype.incomingRequestsAreSilent = false;
 SidoraQueue.prototype.showWarning = function(warning){
   console.log(warning);
 }
@@ -41,7 +42,8 @@ SidoraQueue.prototype.RequestPost = function(userFriendlyName, ajaxRequestUrl, p
   var sidoraRequestConfig = {
     ajaxRequest: ajaxObj,
     userFriendlyName: userFriendlyName,
-    pidsBeingProcessed: pidsBeingProcessed
+    pidsBeingProcessed: pidsBeingProcessed,
+    isSilent: this.incomingRequestsAreSilent
   };
   sr.pullFromConfig(sidoraRequestConfig);
   myself.SidoraRequest(sr);
@@ -61,7 +63,9 @@ SidoraQueue.prototype.Request = function(userFriendlyName, ajaxRequestUrl, doneF
   srFailFunction = function(){ 
     failFunction.apply(this,arguments); myself.Fail(this, arguments); myself.requestInProcess = null; myself.Next(); 
   };
-  myself.SidoraRequest(new SidoraRequest(userFriendlyName, ajaxRequestUrl, srDoneFunction, srFailFunction, pidsBeingProcessed));
+  var sr = (new SidoraRequest(userFriendlyName, ajaxRequestUrl, srDoneFunction, srFailFunction, pidsBeingProcessed));
+  sr.isSilent = this.incomingRequestsAreSilent;
+  myself.SidoraRequest(sr);
 }
 SidoraQueue.prototype.SidoraRequest = function(sidoraRequest){
   var myself = this;
@@ -98,7 +102,7 @@ SidoraQueue.prototype.Done = function(completedItem, ajaxReturn){
     }
     this.NotificationWindow.Show(toShow, true);
   }else{
-    this.NotificationWindow.Show(completedItem.userFriendlyName);
+    if (!completedItem.isSilent) this.NotificationWindow.Show(completedItem.userFriendlyName);
     for (var i = 0; i < completedItem.pidsBeingProcessed.length; i++){
       if (sidora.concept.GetPid() == completedItem.pidsBeingProcessed[i]){
         sidora.concept.LoadContent();
@@ -164,14 +168,22 @@ SidoraQueue.prototype.Next = function(){
   if (this.requestInProcess == null){
     var nextItem = this.requests.shift();
     if (nextItem instanceof SidoraRequest){
-      jQuery("footer").html("In Queue: <span class='items-left'>"+(1+this.requests.length)+"</span> Currently working on:"+nextItem.userFriendlyName);
+      if (!nextItem.isSilent){
+        jQuery("footer").html("In Queue: <span class='items-left'>"+(1+this.requests.length)+"</span> Currently working on:"+nextItem.userFriendlyName);
+      }else{
+        jQuery("footer").html("").fadeOut();
+      }
       nextItem.performAjax();
     }else{
       jQuery("footer").html("").fadeOut();
     }
     this.requestInProcess = nextItem;
   }else{
-    jQuery("footer").html("In Queue: <span class='items-left'>"+(1+this.requests.length)+"</span> Currently working on:"+this.requestInProcess.userFriendlyName);
+    if (!this.requestInProcess.isSilent){
+      jQuery("footer").html("In Queue: <span class='items-left'>"+(1+this.requests.length)+"</span> Currently working on:"+this.requestInProcess.userFriendlyName);
+    }else{
+      jQuery("footer").html("").fadeOut();
+    }
   }
 }
 

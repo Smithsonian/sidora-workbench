@@ -23,8 +23,10 @@ var SidoraRequest = function(userFriendlyNameOrFullObject, ajaxRequestUrl, doneF
 		this.failFunction = failFunction;
 		this.pidsBeingProcessed = pidsBeingProcessed;
 		this.userFriendlyName = userFriendlyName;
+    
   }
 }
+SidoraRequest.prototype.isSilent = false;
 SidoraRequest.prototype.pullFromConfig = function(configObject){
 	this.fullObject = configObject;
 	this.pidsBeingProcessed = this.fullObject.pidsBeingProcessed;
@@ -33,6 +35,7 @@ SidoraRequest.prototype.pullFromConfig = function(configObject){
 	}
 	this.userFriendlyName = this.fullObject.userFriendlyName; 
   this.pidsBeingProcessed = this.fullObject.pidsBeingProcessed;
+  this.isSilent = this.fullObject.isSilent;
 }
 
 SidoraRequest.prototype.performAjax = function(){
