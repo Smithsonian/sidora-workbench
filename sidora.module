@@ -316,10 +316,14 @@ function sidora_direct_jpg_output($content){
   $tempfilename = tempnam('','Sidora_temp_pic_');
   file_put_contents($tempfilename, $content);
   $tempimage = image_load($tempfilename);
-  image_scale($tempimage, 800, 700);
-  $save_info = image_save($tempimage);
-  header("Content-type: image/jpeg");
-  readfile($tempfilename);
+  if (!empty($tempimage)){
+    image_scale($tempimage, 800, 700);
+    $save_info = image_save($tempimage);
+    header("Content-type: image/jpeg");
+    readfile($tempfilename);
+  }else{
+    print t('There is no available view for this content');
+  }
   exit();
 }
 /**
@@ -342,30 +346,43 @@ function sidora_resource_viewer($pid){
     $viewer = variable_get('resource_viewer_viewer_'.$model,'never');
     $viewers[] = $viewer;
     if ($viewer != 'never' && $viewer != 'none'){
-      $dsid = variable_get('resource_viewer_dsid_'.$model,'');
-      //The admin may have typed in something poorly or unexpected data.  See that the DS exists
-      if (!empty($dsid)){
-        $ds = $obj[$dsid];
-        if (!empty($ds)){
-          switch ($viewer) {
-            case 'direct':
-              sidora_info_json($pid, 'meta', $dsid, 'browser');
-              exit();
-              break;
-            case 'web_view':
-              $viewable_mime_types = sidora_get_viewable_mime_types();
-              if (in_array($ds->mimetype, $viewable_mime_types)){
-                return sidora_info_json($pid, 'meta', $dsid, 'browser');
-              }else{
-                sidora_direct_jpg_output($ds->content);
-              }
-              break;
-            case 'IDS':
-              return sidora_view_ids_iframe($pid, $dsid);
-              break;
+      $list_of_dsids = variable_get('resource_viewer_dsid_'.$model,'');
+      $dsids = preg_split('/\s*,\s*/',trim($list_of_dsids));
+      foreach($dsids as $dsid){
+        //$dsid = variable_get('resource_viewer_dsid_'.$model,'');
+        //The admin may have typed in something poorly or unexpected data.  See that the DS exists
+        if (!empty($dsid)){
+          $ds = $obj[$dsid];
+          if (!empty($ds)){
+            switch ($viewer) {
+              case 'direct':
+                sidora_info_json($pid, 'meta', $dsid, 'browser');
+                exit();
+                break;
+              case 'web_view':
+                $viewable_mime_types = sidora_get_viewable_mime_types();
+                if (in_array($ds->mimetype, $viewable_mime_types)){
+                  return sidora_info_json($pid, 'meta', $dsid, 'browser');
+                }else{
+                  sidora_direct_jpg_output($ds->content);
+                }
+                break;
+              case 'flexpaper_pdf':
+                //TODO: TBD BBB add in for convert to flexpaper if pdf when flash datastream not available
+                if ($ds->mimetype == 'application/x-shockwave-flash') {
+                  print sidora_get_html_flexpaper($pid,$dsid);
+                }else{
+                  sidora_info_json($pid, 'meta', $dsid, 'browser');
+                }
+                exit();
+                break;
+              case 'IDS':
+                return sidora_view_ids_iframe($pid, $dsid);
+                break;
+            }
           }
         }
-      }
+      }//end dsids loop
     }
   }
   print 'The Administrator has not chosen a viewer for this combination of resource and dataset type.  You can still download the object through the View > Download option.';
@@ -1052,10 +1069,92 @@ function sidora_get_parent_table($pid){
   return $output;
 }
 /**
+ * returns an entite html page that loads the javascript for flexpaper and a OBJ.swf from a fedora object
+ */
+function sidora_get_html_flexpaper($pid,$dsid = 'OBJ.swf'){
+  global $base_url;
+  $flexpaper_path = base_path().libraries_get_path('flexpaper');
+  $to_return = '
+
+<!doctype html>
+<html>
+    <head> 
+        <title>FlexPaper AdaptiveUI</title>                
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" /> 
+  <meta name="viewport" content="initial-scale=1,user-scalable=0,width=device-width" />
+        <style type="text/css" media="screen"> 
+      html, body  { height:100%; }
+      body { margin:0; padding:0; overflow:auto; }   
+      #flashContent { display:none; }
+        </style> 
+    
+    <link rel="stylesheet" type="text/css" href="'.$flexpaper_path.'/css/flexpaper_flat.css?r=141205" />
+    <script type="text/javascript" src="'.$flexpaper_path.'/js/jquery.min.js?r=141205"></script>
+    <script type="text/javascript" src="'.$flexpaper_path.'/js/jquery.extensions.min.js?r=141205"></script>
+    <script type="text/javascript" src="'.$flexpaper_path.'/js/flexpaper.js?r=141205"></script>
+    <script type="text/javascript" src="'.$flexpaper_path.'/js/flexpaper_handlers.js?r=141205"></script>
+    </head> 
+    <body>  
+
+    <div id="documentViewer" class="flexpaper_viewer" style="width:100%;height:100%;"></div>
+          
+          <script type="text/javascript">   
+            var startDocument = "Paper";
+          
+          jQuery.get(\'UI_flexpaper_desktop_flat.html\',
+                  function(toolbarData) {
+                      $(\'#documentViewer\').FlexPaperViewer(
+                              { config : {
+              SWFFile : "'.$base_url.'/sidora/info/'.$pid.'/meta/'.$dsid.'/browser",     
+              jsDirectory : "'.$flexpaper_path.'/js/",
+             //SWFFile : \'{samples/WhitePaper_sample.pdf_[*,0].swf,32}\',
+             //            IMGFiles : \'samples/WhitePaper_sample.pdf_{page}.jpg\',
+             //            JSONFile : \'samples/WhitePaper_sample.pdf_{page}.js\',
+             //            PDFFile : \'samples/WhitePaper_sample_[*,2].pdf\',
+             //PDFFile : \'samples/WhitePaper_sample.pdf\',
+             //            ThumbIMGFiles : \'samples/WhitePaper_sample.pdf_{page}_thumb.jpg\',
+             Scale : 1, 
+             ZoomTransition : \'easeOut\',
+             ZoomTime : 0.5, 
+             ZoomInterval : 0.2,
+             FitPageOnLoad : false,
+             FitWidthOnLoad : false, 
+             FullScreenAsMaxWindow : false,
+             ProgressiveLoading : true,
+             MinZoomSize : 0.2,
+             MaxZoomSize : 5,
+             SearchMatchAll : false,
+             Toolbar : toolbarData,
+             InitViewMode : \'Portrait\',
+             RenderingOrder : \'flash\',
+             
+             ViewModeToolsVisible : true,
+             ZoomToolsVisible : true,
+             NavToolsVisible : true,
+             CursorToolsVisible : true,
+             SearchToolsVisible : true,
+             localeChain: \'en_US\'
+          }}
+                     );
+                });
+          </script>  
+   </body> 
+</html> 
+';
+  return $to_return;
+}
+/**
  * Used only for testing purposes.  Should not be called by the main application
  */
 function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $extra = ''){
   global $user;
+  if ($one == 'flexpaper'){
+  $pid = $two;
+  //$to_return .= '<li><a href="'.base_path().'sidora/workbench/#'.$root_pid.'" pid="'.$root_pid.'" fullname="'.$root->label.'">';
+    //$base_path = 
+    print sidora_get_html_flexpaper($pid);
+    exit();
+  }
   if ($one == 'clearcache'){
     if ($two == 'all'){
       sidora_clear_entire_tree_cache();
