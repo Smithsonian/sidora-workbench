@@ -917,6 +917,7 @@ function sidora_edit_metadata($object_id = '', $dsid = '', $form_name = ''){
    jQuery(".content").append("<input id=\"workbench-submit\" class=\"form-submit\" value=\"Update\" style=\"float:right;\"></input>");
    var sidora = window.parent.sidora;
    jQuery("#workbench-submit").click(function(){
+   jQuery("body").append("<div class=\'theoverlay\' style=\'width:100%;height:100%;overflow:hidden;opacity:0.5;position:fixed;top:0;left:0;background-color:black;z-index:4000\'></div>");
      jQuery.ajax({
        type: "POST",
        url: "",
@@ -926,6 +927,7 @@ function sidora_edit_metadata($object_id = '', $dsid = '', $form_name = ''){
          if (data.indexOf("<h2 class=\"element-invisible\">Error message</h2")>0){
            //If not successful, reload the page so that the user can see why
            jQuery("#edit-update").click();
+           jQuery(".theoverlay").remove();
          }else{
            //If successful, kill itself.
            newPid = data.substring(0,data.indexOf(")"+" has been ingested")).substring(data.substring(0,data.indexOf(")"+" has been ingested")).lastIndexOf("si:"))
