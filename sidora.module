@@ -368,7 +368,7 @@ function sidora_resource_viewer($pid){
                 }
                 break;
               case 'flexpaper_pdf':
-                //TODO: TBD BBB add in for convert to flexpaper if pdf when flash datastream not available
+                //***REMOVED***: 3/4/2015, does not need to do pdf to swf conversion
                 if ($ds->mimetype == 'application/x-shockwave-flash') {
                   print sidora_get_html_flexpaper($pid,$dsid);
                 }else{
