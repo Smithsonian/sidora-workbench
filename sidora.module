@@ -617,7 +617,9 @@ function sidora_islandora_datastream_modified(AbstractObject $object, AbstractDa
   if ($datastream->mimetype == 'text/xml' && $datastream->id != 'SIDORA' && $datastream->id != 'DC' && $datastream->id != 'RELS-EXT'){
     if (!empty($object['SIDORA'])){
       $doc = new DOMDocument();
-      $docToLoad = ('<?xml version="1.0" encoding="UTF-8"?>'.$object['SIDORA']->content);
+      $docToLoad = ('<'.'?'.'xml version="1.0" encoding="UTF-8"'.'?'.'>'.$object['SIDORA']->content);  
+      //vi gets borked when it sees the xml declaration and no longer highlights correctly for the rest of the file
+      //for the sanity of anyone using vi please leave the xml declaration as a concatenation
       $doc->loadXML($docToLoad);
       $mrf = $doc->getElementsByTagName('meta_requirements_fulfilled');
       if (!empty($mrf) && $mrf->length > 0){
@@ -737,6 +739,12 @@ PDF metadata:
 */
       $to_return['dsid'] = 'FGDC'; 
       $to_return['form_name'] = 'Archaeology Site'; 
+      $object_content_models = $object->relationships->get('info:fedora/fedora-system:def/model#', 'hasModel'); 
+      foreach($object_content_models as $ocm){
+        if ($ocm['object']['value'] == 'si:cameraTrapCModel'){
+          $to_return['form_name'] = 'Camera Trap Deployment';
+        }
+      }
     }else if (!empty($object['FGDC-CTPlot'])){
       $to_return['dsid'] = 'FGDC-CTPlot'; 
       $to_return['form_name'] = 'Camera Trap Plot'; 
@@ -790,9 +798,7 @@ function sidora_get_form_and_dsid($object_pid){
   module_load_include('inc', 'islandora', 'includes/ingest.form');
   module_load_include('inc','xml_forms','builder/includes/datastream.form');
   module_load_include('inc','xml_forms','builder/includes/associations');
-  $tuque = islandora_get_tuque_connection();
-  $object = $tuque->repository->getObject($object_pid);
-  if (empty($object_id) || empty($dsid)){  //If both are specified in the url, use those
+  $object = sidora_obj($object_pid);
     //Now that we have the object, check to see if it has the SIDORA datastream (which will tell us the model and form to use)
     if ($object['SIDORA']){
       $to_model = '
@@ -857,10 +863,7 @@ xmlns:cpf="urn:isbn:1-931666-33-4"
         return FALSE;
       }
     }
-  }
   return $to_return; 
-
-  
 }
 /*
  * Show the form used to edit the object's metadata
