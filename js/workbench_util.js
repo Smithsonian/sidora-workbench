@@ -6,16 +6,40 @@ window.sidora_util = {
   }
 };
 sidora_util.lock.Obtain = function(pid, callback){
+  if (typeof(pid) == 'undefined'){
+    console.log("Attempted to obtain lock on undefined pid");
+    return false;
+  }
   if (typeof(callback) == 'undefined') callback = function(){};
+  //If trying to obtain a lock already
+  for (var i = 0; i < this.locks.length; i++){
+    var currLock = this.locks[i];
+    if (!currLock.killed && currLock.pid == pid){
+      console.log("attempted to reobtain lock for:"+pid);
+      if (currLock.firstAttemptAjaxArguments == null){
+        var ofa = currLock.onFirstAttempt;
+        var newCallback = function(args){
+          ofa(args);
+          callback(args);
+        }
+        currLock.onFirstAttempt = newCallback;
+      }else{
+        callback(currLock.firstAttemptAjaxArguments); 
+      }
+      return;
+    }
+  }
+  
   var myNewLock = {
     "pid":pid,
     "killed":false,
     "onFirstAttempt":callback,
-    "numBeats": 0
+    "numBeats": 0,
+    "firstAttemptAjaxArguments":null
   };
+  
   this.locks.push(myNewLock);
   this.Renew();
-  
 }
 sidora_util.lock.Renew = function(){
   for (var i = 0; i < this.locks.length; i++){
@@ -28,7 +52,10 @@ sidora_util.lock.Renew = function(){
         "url":url
       }).done(function(){
         currLock.numBeats++;
-        if (currLock.numBeats == 1) currLock.onFirstAttempt(arguments); 
+        if (currLock.numBeats == 1){
+          currLock.firstAttemptAjaxArguments = arguments;
+          currLock.onFirstAttempt(arguments); 
+        }
       });
     }
   }

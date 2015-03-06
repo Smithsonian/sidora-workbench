@@ -312,9 +312,14 @@ sidora.concept.LoadContentHelp.FullTableReload = function(conceptOfInterest){
 /*
  * Loads the Concept Content Panels, preps menus and actions
  */
-sidora.concept.LoadContent = function(){
+sidora.concept.loadedContentPid = null;
+sidora.concept.LoadContent = function(leaveContentIfAlreadyLoaded){
+  if (typeof(leaveContentIfAlreadyLoaded) == 'undefined') leaveContentIfAlreadyLoaded = false;
   conceptOfInterest = sidora.concept.GetPid();
-  console.log("Concept Pid:"+conceptOfInterest);
+  //Don't continue if we want to leave the current concept info (e.g. only load a new one)
+  console.log("Concept Pid:"+conceptOfInterest+" currently loaded:"+sidora.concept.loadedContentPid+" leaveContentIfAlreadyLoaded:"+leaveContentIfAlreadyLoaded);
+  if (conceptOfInterest == this.loadedContentPid && leaveContentIfAlreadyLoaded) return;
+  
   if ("" == conceptOfInterest){
     jQuery("#sidora_content_concept_info").hide();
     return;
@@ -325,6 +330,7 @@ sidora.concept.LoadContent = function(){
   sidora.concept.LoadContentHelp.Permissions(conceptOfInterest);
   sidora.concept.LoadContentHelp.Metadata(conceptOfInterest);
   sidora.concept.LoadContentHelp.FullTableReload(conceptOfInterest);
+  sidora.concept.loadedContentPid = conceptOfInterest;
 }
 /*
  * Used to see if there is at least a tag in there someplace
@@ -383,6 +389,17 @@ sidora.InitiateJSTree = function(){
         return; //resource actions are handled by the 'dnd_stop.vakata' event
       }
       //console.log("Copy:"+toMovePid+" to:"+moveToPid);
+      var jst = jQuery("#forjstree").jstree(true);
+      var newParentExistingHtml = jst.get_node(data.parent).text;
+      var newParentExistingChildConceptsNumber = parseInt(jQuery("#"+data.parent).children("a").attr("conceptchildren"));
+      var npReplacer = newParentExistingChildConceptsNumber+1;
+      if (newParentExistingChildConceptsNumber == 0){
+        jst.rename_node(data.parent, newParentExistingHtml+" ("+npReplacer+")");
+      }else{
+        jst.rename_node(data.parent, newParentExistingHtml.substring(0,newParentExistingHtml.lastIndexOf(" ("))+" ("+npReplacer+")");
+      }
+      jQuery("#"+data.parent).children("a").attr("conceptchildren",""+npReplacer);
+      jst.get_node(data.parent).a_attr.conceptchildren = ""+npReplacer;
       sidora.queue.incomingRequestsAreSilent = true;
       sidora.queue.Request('TBD: Silence this', actionUrl, function(){
         sidora.concept.LoadContentHelp.Relationships();
@@ -399,10 +416,39 @@ sidora.InitiateJSTree = function(){
       console.log("Move:"+toMovePid+" from:"+moveFromPid+" to:"+moveToPid);
       if (moveFromPid == moveToPid){ console.log('move to itself, ignoring...'); return; }
       var actionUrl = '../ajax_parts/move/'+moveFromPid+'/'+moveToPid+'/'+toMovePid;
+
+      var jst = jQuery("#forjstree").jstree(true);
+      //New Parent renumber
+      var newParentExistingHtml = jst.get_node(data.parent).text;
+      var newParentExistingChildConceptsNumber = parseInt(jQuery("#"+data.parent).children("a").attr("conceptchildren"));
+      var npReplacer = newParentExistingChildConceptsNumber+1;
+      if (newParentExistingChildConceptsNumber == 0){
+        jst.rename_node(data.parent, newParentExistingHtml+" ("+npReplacer+")");
+      }else{
+        jst.rename_node(data.parent, newParentExistingHtml.substring(0,newParentExistingHtml.lastIndexOf(" ("))+" ("+npReplacer+")");
+      }
+      jQuery("#"+data.parent).children("a").attr("conceptchildren",""+npReplacer);
+      jst.get_node(data.parent).a_attr.conceptchildren = ""+npReplacer;
+
+      //Old Parent renumber
+      var oldParentExistingHtml = jst.get_node(data.old_parent).text;
+      var oldParentExistingChildConceptsNumber = parseInt(jQuery("#"+data.old_parent).children("a").attr("conceptchildren"));
+      var opReplacer = oldParentExistingChildConceptsNumber-1;
+      if (opReplacer == 0){
+        jst.rename_node(data.old_parent,oldParentExistingHtml.substring(0,oldParentExistingHtml.lastIndexOf(" ("))); 
+      }else{
+        jst.rename_node(data.old_parent,oldParentExistingHtml.substring(0,oldParentExistingHtml.lastIndexOf(" ("))+" ("+opReplacer+")");
+      }
+      jQuery("#"+data.old_parent).children("a").attr("conceptchildren",""+opReplacer);
+      jst.get_node(data.old_parent).a_attr.conceptchildren = ""+opReplacer;
+
       //next requests are silent
       sidora.queue.incomingRequestsAreSilent = true;
       sidora.queue.Request('TBD: Silence this', actionUrl, function(){
         sidora.concept.LoadContentHelp.Relationships();
+        //Ideally would want the tree to update itself without a refresh from server
+        //Issue is the number in the parenthesis
+        sidora.util.RefreshTree(20000);
       }, null, [moveToPid,toMovePid,moveFromPid]);
       sidora.queue.incomingRequestsAreSilent = false;
       sidora.queue.Next();
@@ -422,8 +468,9 @@ sidora.InitiateJSTree = function(){
     jQuery('#forjstree').show();
     var updateLocationWith = jQuery('#'+jstreeIdSelected).children('a').attr('href');
     if (typeof(updateLocationWith) != 'undefined') window.location = updateLocationWith;
+    //if the content is already based on the highlighted concept, do nothing
     sidora.UpdateTitleBasedOnNameInTree();
-    sidora.concept.LoadContent();
+    sidora.concept.LoadContent(true);
   },200)});
   jQuery('#forjstree').hide();
   jQuery('#forjstree').jstree({
@@ -504,19 +551,21 @@ sidora.InitiateJSTree = function(){
                 }
                 showText += "</ul>";
                 if (objectsToCopyOver.length > 0){
-                  sidora.util.Confirm("Copy item",showText,
-                    function(){
-                      sidora.util.userConfirmedCopy = true;
-                      for(var objIndex = 0; objIndex < objectsToCopyOver.length; objIndex++){
-                        var currToCopyId = objectsToCopyOver[objIndex];
-                        var currToCopyNode = jst.get_node(currToCopyId);
-                        jQuery("#forjstree").jstree(true).copy_node(currToCopyNode,mouseOverObject); 
+                  if (!sidora.util.isConfirmShowing()){
+                    sidora.util.Confirm("Copy item",showText,
+                      function(){
+                        sidora.util.userConfirmedCopy = true;
+                        for(var objIndex = 0; objIndex < objectsToCopyOver.length; objIndex++){
+                          var currToCopyId = objectsToCopyOver[objIndex];
+                          var currToCopyNode = jst.get_node(currToCopyId);
+                          jQuery("#forjstree").jstree(true).copy_node(currToCopyNode,mouseOverObject); 
+                        }
+                        sidora.util.userConfirmedCopy = false;
+                      },null,null,null,function(){
+                        sidora_util.lock.Release(parentPid);
                       }
-                      sidora.util.userConfirmedCopy = false;
-                    },null,null,null,function(){
-                      sidora_util.lock.Release(parentPid);
-                    }
-                  );
+                    );
+                  }
                 }else{
                   sidora.util.Confirm("Copy item","All items selected for copy already exist on the target.",
                     null,null,null,null,function(){
@@ -569,19 +618,21 @@ sidora.InitiateJSTree = function(){
               }
               showText += "</ul>";
               if (objectsToCopyOver.length > 0){
-                sidora.util.Confirm("Move Concept",showText,
-                  function(){
-                    sidora.util.userConfirmedMove = true;
-                    for(var objIndex = 0; objIndex < objectsToCopyOver.length; objIndex++){
-                      var currToCopyId = objectsToCopyOver[objIndex];
-                      var currToCopyNode = jst.get_node(currToCopyId);
-                      jQuery("#forjstree").jstree(true).move_node(currToCopyNode,mouseOverObject); 
+                if (!sidora.util.isConfirmShowing()){
+                  sidora.util.Confirm("Move Concept",showText,
+                    function(){
+                      sidora.util.userConfirmedMove = true;
+                      for(var objIndex = 0; objIndex < objectsToCopyOver.length; objIndex++){
+                        var currToCopyId = objectsToCopyOver[objIndex];
+                        var currToCopyNode = jst.get_node(currToCopyId);
+                        jQuery("#forjstree").jstree(true).move_node(currToCopyNode,mouseOverObject); 
+                      }
+                      sidora.util.userConfirmedMove = false;
+                    },null,null,null,function(){
+                      sidora_util.lock.Release(parentPid);
                     }
-                    sidora.util.userConfirmedMove = false;
-                  },null,null,null,function(){
-                    sidora_util.lock.Release(parentPid);
-                  }
-                );
+                  );
+                }
               }else{
                 sidora.util.Confirm("Move Concept","All items selected for move already exist on the target.",
                   null,null,null,null,function(){
@@ -911,15 +962,26 @@ sidora.CloseIFrame = function(newlyCreatedConceptId, typeOfClosure){
 }
 /*
  * Goes to get the tree from the server and replaces exsiting tree
+ * singleTripWaitMilliseconds - number of milliseconds to wait for other refreshTree requests to come in
+ *      - so that only one refresh tree request goes out no matter how many times its called during that time period
  */
-sidora.util.RefreshTree = function(){
-  jQuery.ajax({
-    url: '../ajax_parts/tree',
-  }).done(function(tree_html){
-    sidora.RefreshTreeHtml(tree_html);
-  }).fail(function(failure_obj){
-    sidora.recentAjaxFailure(failure_obj);
-  });
+sidora.util.refreshTreeRequestInProgress = false;
+sidora.util.RefreshTree = function(singleTripWaitMilliseconds){
+  if (typeof(singleTripWaitMilliseconds) == 'undefined') singleTripWaitMilliseconds = 10;
+  //Wait to see if we get a few requests at a time before going thru with the reload
+  if (sidora.util.refreshTreeRequestInProgress) return;
+  sidora.util.refreshTreeRequestInProgress = true;
+  setTimeout(function(){
+    jQuery.ajax({
+      url: '../ajax_parts/tree',
+    }).done(function(tree_html){
+      sidora.RefreshTreeHtml(tree_html);
+    }).fail(function(failure_obj){
+      sidora.recentAjaxFailure(failure_obj);
+    }).always(function(){
+      sidora.util.refreshTreeRequestInProgress = false;
+    });
+  },singleTripWaitMilliseconds);
 }
 /*
  * Replaces exsiting tree with passed in html, and initializes new tree
@@ -942,6 +1004,7 @@ sidora.concept.Manage = function(){
 /*
  * Generic confirming something from user.
  */
+sidora.util.isConfirmShowing = function(){return jQuery("#userConfirm").is(":visible");}
 sidora.util.Confirm = function(title, questionText, onConfirmation, onCancel, confirmButtonText, cancelButtonText, onAnyClose){
   if (typeof(onConfirmation) != 'function') onConfirmation = function(){};
   if (typeof(onCancel) != 'function') onCancel = function(){};
