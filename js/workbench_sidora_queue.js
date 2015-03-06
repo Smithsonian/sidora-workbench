@@ -162,28 +162,23 @@ SidoraQueue.prototype.NotificationWindow.Hide = function(){
   jQuery("#queueMessage").fadeOut('fast');
   jQuery(".notification-window-message").children().fadeOut('fast');
 }
+SidoraQueue.prototype.updateFooterWithRequestInProcess = function(){
+  if (this.requestInProcess != null && !this.requestInProcess.isSilent){
+    if (!jQuery("footer").is(":visible")) jQuery("footer").fadeIn();
+    jQuery("footer").html("In Queue: <span class='items-left'>"+(1+this.requests.length)+"</span> Currently working on:"+this.requestInProcess.userFriendlyName);
+  }else{
+    if (jQuery("footer").is(":visible")) jQuery("footer").html("").fadeOut();
+  }
+}
 SidoraQueue.prototype.Next = function(){
   if (jQuery("footer").length == 0) jQuery("body").parent().append("<footer></footer");
-  jQuery("footer").fadeIn();
   if (this.requestInProcess == null){
     var nextItem = this.requests.shift();
     if (nextItem instanceof SidoraRequest){
-      if (!nextItem.isSilent){
-        jQuery("footer").html("In Queue: <span class='items-left'>"+(1+this.requests.length)+"</span> Currently working on:"+nextItem.userFriendlyName);
-      }else{
-        jQuery("footer").html("").fadeOut();
-      }
       nextItem.performAjax();
-    }else{
-      jQuery("footer").html("").fadeOut();
     }
     this.requestInProcess = nextItem;
-  }else{
-    if (!this.requestInProcess.isSilent){
-      jQuery("footer").html("In Queue: <span class='items-left'>"+(1+this.requests.length)+"</span> Currently working on:"+this.requestInProcess.userFriendlyName);
-    }else{
-      jQuery("footer").html("").fadeOut();
-    }
   }
+  this.updateFooterWithRequestInProcess();
 }
 
