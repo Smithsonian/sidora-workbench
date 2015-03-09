@@ -446,9 +446,6 @@ sidora.InitiateJSTree = function(){
       sidora.queue.incomingRequestsAreSilent = true;
       sidora.queue.Request('TBD: Silence this', actionUrl, function(){
         sidora.concept.LoadContentHelp.Relationships();
-        //Ideally would want the tree to update itself without a refresh from server
-        //Issue is the number in the parenthesis
-        sidora.util.RefreshTree(20000);
       }, null, [moveToPid,toMovePid,moveFromPid]);
       sidora.queue.incomingRequestsAreSilent = false;
       sidora.queue.Next();
@@ -1448,7 +1445,7 @@ sidora.manage.OpenCurrentConfig = function(){
           enableKeys: false,
           onFinish:  function(){
             jQuery("#submitObjProperties").click(function(){
-              sidora.queue.RequestPost(userFriendlyToastName+":"+name+" ("+pid+")","/sidora/manage/"+pid+"/save","label="+jQuery("#objPropLabel").val()+"&owner"+jQuery("#objPropOwner").val(),function(){},function(){},pid);
+              sidora.queue.RequestPost(userFriendlyToastName+":"+name+" ("+pid+")","/sidora/manage/"+pid+"/save","label="+jQuery("#objPropLabel").val()+"&owner="+jQuery("#objPropOwner").val(),function(){},function(){},pid);
               sidora.queue.Next();
             });
             jQuery("#addDatastream").click(function(){

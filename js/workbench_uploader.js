@@ -138,9 +138,12 @@ window.startBatch = function(){
 	ajaxSettings.success = function(data){
 		oldSuccess(data);
 		if (window != null && typeof(window.numComplete) != 'undefined') jQuery(".num-complete").html(++window.numComplete);
+    if (typeof(window.parent.updateCodebookComplete) == 'function'){
+      window.parent.updateCodebookComplete('','',data);
+    }
 		window.startBatch();  //Performs next in batch
 	}
-	console.log("Assumed debugging, sending information via Ajax because the parent of this frame does not have a valid sidora object");
+  //This is the normal submit of the codebook
 	jQuery.ajax(ajaxSettings);
 }
 /*
@@ -177,7 +180,7 @@ window.closeMyself = function(newPid){
  */
 window.setWhetherMetaEntered = function(){
 	jQuery("[name=all_meta_entered]").val('TRUE');
-	var needVals = jQuery(".form-required").closest("div").find("input[type=text]").filter(function(){return this.value == "";});
+	var needVals = jQuery(".form-required").closest("div").find("input[type=text], textarea").filter(function(){return this.value == "";});
 	for (var i = 0; i < needVals.length; i++){
 		jQuery(needVals[i]).closest("form").find("[name=all_meta_entered]").val('FALSE');
 	}
