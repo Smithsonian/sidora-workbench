@@ -2,6 +2,11 @@
 $islandora_module_path = drupal_get_path('module', 'islandora');
 @include_once 'sites/all/libraries/tuque/FedoraRelationships.php';
 
+
+module_load_include('inc', 'xml_forms', 'builder/includes/datastream.form'); //BBB TODO TBD REMOVE, figure out how to do this properly:
+//The issue is that the ahah call on the edit metadata form can't find the function for the form
+//So it throws an error.  This is related to SID-305
+ 
 /**
  * Implements hook_help().
  *
@@ -903,12 +908,15 @@ function sidora_edit_metadata($object_id = '', $dsid = '', $form_name = ''){
   }
   //print "<br>-<br>";
   //print_r($association);
-  if (sizeof($associations) == 0){
+  //if (sizeof($associations) == 0){
     //No known form, should not allow showing
     //But for demo, will show a form anyway BBB TODO REMOVE
-    $associations = xml_form_builder_datastream_form_get_associations($form_state,array("si:generalImageCModel"), 'MODS');
+  //  $associations = xml_form_builder_datastream_form_get_associations($form_state,array("si:generalImageCModel"), 'MODS');
+  //}
+  //if (empty($association)) $association = $associations[0];
+  if (empty($association)){
+    print "The form is not configured correctly.  The form specified is not associated to this model";
   }
-  if (empty($association)) $association = $associations[0];
   //print "<br>-<br>";
   //print_r($association);
   $tform = drupal_get_form('xml_form_builder_datastream_form_metadata_form',$object,$association);
@@ -1581,7 +1589,7 @@ function sidora_create_resource_codebook_creation_step(){
     '#title' => 'Use Existing Tabular Data Codebook',
     '#description' => 'Type a codebook name to associate with the tabular dataset or use the button below to create a new codebook',
     '#required' => false,
-    '#value' => $user->data['recent_codebook_id'],  
+    '#value' => empty($user->data['recent_codebook_id'])?'':$user->data['recent_codebook_id'],  
     //Since this is not a normal drupal form / validate / submit, using #value instead of #default_value
     '#autocomplete_path' => 'sidora/codebook/autocomplete',
     '#maxlength' => 1024,
@@ -2016,7 +2024,9 @@ function sidora_user_view($account, $view_mode, $langcode){
       foreach($codebooks as $codebook_info){
         $codebook_pid = ($codebook_info['object']['value']);
         $codebook = sidora_obj($codebook_pid);
-        $codebook_html .= '<tr><td>'.$codebook_pid.'</td><td>'.$codebook->label.'</td></tr>';
+        $codebook_html .= '<tr><td>'.$codebook_pid.'</td><td>'.$codebook->label.'</td>';
+        $codebook_html .= '<td><a href="'.base_path().'sidora/workbench/#'.$codebook_pid.'">View In Workbench</a></td>';
+        $codebook_html .= '</tr>';
       }
     }
   }
@@ -2028,10 +2038,10 @@ function sidora_user_view($account, $view_mode, $langcode){
       '#type' => 'user_profile_item',
     );
   }
-  $codebook_html = '<table><tr><th>ID</th><th>Label</th></tr>'.$codebook_html.'</table>';
+  $codebook_html = '<table><tr><th>ID</th><th>Label</th><th>Link</th></tr>'.$codebook_html.'</table>';
   $account->content['islandora_user_pid'] = array(
-    '#title' => t('My Repository Project'),
-    '#markup' => '<br /><br />' . l(t('Manage Your Codebooks'), 'fedora/repository/' . $codebook_pid). $codebook_html,
+    '#title' => t('Codebooks'),
+    '#markup' => $codebook_html,
     '#class' => 'islandora_user_pid',
     '#type' => 'user_profile_item',
   );
@@ -2571,7 +2581,10 @@ function sidora_block_view($delta = ''){
             <li><a href="#" onclick="return false;">Concepts</a>
               <ul id="concept-file-menu">
                 <li id="editMetadataConcept"><a href="#" onclick="return false;" id="edit-concept-metadata-menu">Edit&nbsp;Metadata</a></li>
-                <li id="exhibitConcept"><a href="#" onclick="window.open(\'http://si-oris-app02.si.edu/fedora/repository/\'+window.sidora.concept.GetPid()); return false;">Exhibit</a></li>
+                <li id="exhibitConcept"><a href="#" onclick="window.open(\''.
+variable_get('si_exhibition_website_location', '').
+//'http://si-oris-app02.si.edu/fedora/repository/'.
+'\'+window.sidora.concept.GetPid()); return false;">Exhibit</a></li>
                 <li id="configureExhibition"><a href="#" onclick="window.open(Drupal.settings.basePath+\'exhibition_config/config/\'+window.sidora.concept.GetPid()); return false;">Configure&nbsp;Exhibition</a></li>
                 <li id="editPermissionsConcept"><a href="#" onclick="return false;sidora.concept.ShowPermissions(); return false;">Edit&nbsp;Permissions</a></li>
                 <li id="manageConcept"><a href="#" onclick="sidora.concept.Manage(); return false;">Manage&nbsp;Concept</a></li>
