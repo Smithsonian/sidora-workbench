@@ -31,7 +31,8 @@ sidora.concept.LoadContentHelp.Resources.TableLoad = function(conceptOfInterest)
      "oLanguage": {
             "sLengthMenu": "Show _MENU_"
                 },
-     'processing': true,
+		 'sPaginationType': "input",
+		 'processing': true,
      'serverSide': true,
      'ordering' : false,
      'ajax': jQuery.fn.dataTable.pipeline({
@@ -41,7 +42,7 @@ sidora.concept.LoadContentHelp.Resources.TableLoad = function(conceptOfInterest)
   });
   (function($){
     var table = $('#res_table').DataTable();
-    $('#res_table tbody').on( 'click', 'tr', function (e) {
+   $('#res_table tbody').on( 'click', 'tr', function (e) {
       //If the mousedown is on something that is in the middle of a move process, ignore the mousedown
       if (jQuery(this).hasClass("is-being-moved")){
         console.log("Item is being moved, ignoring click");
@@ -313,8 +314,10 @@ sidora.concept.LoadContentHelp.FullTableReload = function(conceptOfInterest){
  * Loads the Concept Content Panels, preps menus and actions
  */
 sidora.concept.loadedContentPid = null;
+sidora.concept.forceRefreshOnNextLoadContent = false;
 sidora.concept.LoadContent = function(leaveContentIfAlreadyLoaded){
   if (typeof(leaveContentIfAlreadyLoaded) == 'undefined') leaveContentIfAlreadyLoaded = false;
+  if (this.forceRefreshOnNextLoadContent == true) { leaveContentIfAlreadyLoaded = false; this.forceRefreshOnNextLoadContent = false; }
   conceptOfInterest = sidora.concept.GetPid();
   //Don't continue if we want to leave the current concept info (e.g. only load a new one)
   console.log("Concept Pid:"+conceptOfInterest+" currently loaded:"+sidora.concept.loadedContentPid+" leaveContentIfAlreadyLoaded:"+leaveContentIfAlreadyLoaded);
@@ -751,7 +754,7 @@ sidora.resources.performCopyOrMove = function(copyOrMove, toLocationId){
 sidora.ontology.CreateMenu = function(){
   jQuery.ajax({
     dataType: "json",
-    url: "../ajax_parts/ontology",
+    url: Drupal.settings.basePath+"sidora/ajax_parts/ontology",
     error: function(){
       console.log("error on create menu");
     },

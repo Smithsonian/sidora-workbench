@@ -48,7 +48,10 @@ li a input {
   position:relative;
 }
 .sidora-menu li{
-  border: 1px solid #aaa;
+ /* commented by RA 3/10/15 to test concept dropdown menus widths. added border top and bottom instead */
+ /* border: 1px solid #aaa; */
+  border-bottom: 1px solid #aaa;
+  border-top: 1px solid #aaa;
   z-index: 1;
 }
 #res_table td {
