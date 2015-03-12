@@ -196,6 +196,7 @@ jQuery(document).ready(function(){
 }
 
 function sidora_management_panel($pid, $show_or_save = 'show', $dsid_to_remove = '', $confirm_action = FALSE){
+  global $user;
   if ($show_or_save == 'new_dsid'){
     if (!sidora_allow($user,$pid,'update')) drupal_not_found();
     $label = filter_input(INPUT_POST, 'label', FILTER_SANITIZE_STRING);
@@ -922,6 +923,9 @@ function sidora_edit_metadata($object_id = '', $dsid = '', $form_name = ''){
   $tform = drupal_get_form('xml_form_builder_datastream_form_metadata_form',$object,$association);
   drupal_add_css(drupal_get_path('module','sidora').'/css/workbench_metadata_screens.css',array('weight' => '1000000', 'group' => CSS_THEME));
   drupal_add_js(drupal_get_path('module','sidora').'/js/workbench_util.js',array('weight' => '1000000', 'group' => JS_THEME));
+  $is_concept = sidora_is_concept($object);
+  drupal_add_js('window.isConcept = '.$is_concept.';
+  ',array('type' => 'inline', 'weight' => '1000000', 'group' => JS_THEME));
   drupal_add_js('
   jQuery().ready(function(){
    jQuery("body").css("padding-top","0px");
@@ -943,6 +947,7 @@ function sidora_edit_metadata($object_id = '', $dsid = '', $form_name = ''){
            //If successful, kill itself.
            newPid = data.substring(0,data.indexOf(")"+" has been ingested")).substring(data.substring(0,data.indexOf(")"+" has been ingested")).lastIndexOf("si:"))
            if (sidora && sidora.CloseIFrame){
+             if (window.isConcept) sidora.concept.forceRefreshOnNextLoadContent = true;
              sidora.CloseIFrame(newPid, "edit metadata");
            }else{
              console.log("This is not in the expected IFrame");
@@ -954,7 +959,6 @@ function sidora_edit_metadata($object_id = '', $dsid = '', $form_name = ''){
    });
   });
   ',array('type' => 'inline', 'weight' => '1000000', 'group' => JS_THEME));
-  $is_concept = sidora_is_concept($object);
   $pic_shown = FALSE;
   if (!$is_concept){
     $vmt = sidora_get_viewable_mime_types();
@@ -2225,7 +2229,7 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
           exit();
         }
         //datastream_content is now set.  perform the output
-        $mime_type = $datastream->mimeType;
+        $mime_type = (empty($datastream))?'text/xml':$datastream->mimeType;
 
         if ($specific_meta == 'all'){
           $datastream_content = '<xml_root><general_info><owner>'.$object->owner.'</owner><label>'.$object->label.'</label></general_info>'."\n".$datastream_content."\n".'</xml_root>';
@@ -2276,7 +2280,7 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
         //The search value holds both the type of object and the title search, pull those out
         $vals = explode("\n",$jsdt_title_and_type_search_val);
         $jsdt_search_val = $vals[0];
-        $jsdt_title_search_val = $vals[1];
+        $jsdt_title_search_val = empty($vals[1])?'':$vals[1];
         if (!array_key_exists($jsdt_search_val, $resource_types)){
           $jsdt_search_val = 'all';
         }
@@ -2581,10 +2585,17 @@ function sidora_block_view($delta = ''){
             <li><a href="#" onclick="return false;">Concepts</a>
               <ul id="concept-file-menu">
                 <li id="editMetadataConcept"><a href="#" onclick="return false;" id="edit-concept-metadata-menu">Edit&nbsp;Metadata</a></li>
+';
+   //Only show exhibition link if someone has administratively set a location for where exhibition exists
+   //if (!empty(variable_get('si_exhibition_website_location', ''))){
+   if (variable_get('si_exhibition_website_location', '') != ''){
+     $block['content'] .= '
                 <li id="exhibitConcept"><a href="#" onclick="window.open(\''.
-variable_get('si_exhibition_website_location', '').
-//'http://si-oris-app02.si.edu/fedora/repository/'.
-'\'+window.sidora.concept.GetPid()); return false;">Exhibit</a></li>
+     variable_get('si_exhibition_website_location', '').
+     '\'+window.sidora.concept.GetPid()); return false;">Exhibit</a></li>';
+
+   }
+   $block['content'] .= '
                 <li id="configureExhibition"><a href="#" onclick="window.open(Drupal.settings.basePath+\'exhibition_config/config/\'+window.sidora.concept.GetPid()); return false;">Configure&nbsp;Exhibition</a></li>
                 <li id="editPermissionsConcept"><a href="#" onclick="return false;sidora.concept.ShowPermissions(); return false;">Edit&nbsp;Permissions</a></li>
                 <li id="manageConcept"><a href="#" onclick="sidora.concept.Manage(); return false;">Manage&nbsp;Concept</a></li>
@@ -3288,6 +3299,7 @@ function sidora_block_content_navigation(){
   drupal_add_js(drupal_get_path('module','sidora').'/js/workbench_util.js');
   drupal_add_js(drupal_get_path('module','sidora').'/js/workbench_menus.js');
   drupal_add_js(drupal_get_path('module','sidora').'/js/workbench_sidora_request.js');
+  drupal_add_js(drupal_get_path('module','sidora').'/js/paging.js'); // adds paging capability to resources
   return $to_return;
 }
 // For Ingestion
