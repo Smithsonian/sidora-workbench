@@ -1,0 +1,122 @@
+<?php
+function exhibition_config_install() {
+  drupal_set_message(t("Exhibition Config Install starting"));
+  _exhibition_config_install_roles();
+  drupal_set_message(t("Exhibition Config Install complete"));
+}
+function exhibition_config_schema(){
+  $schema['exhibition_config'] = array(
+    'description' => t('Stores information for exhibitions'),
+    'fields' => array(
+      'pid' => array(
+        'type' => 'varchar',
+        'length' => '256',
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'logo' => array(
+        'type' => 'text',
+        'size' => 'normal',
+      ),
+      'title' => array(
+        'type' => 'text',
+        'size' => 'normal',
+      ),
+      'header_html' => array(
+        'type' => 'text',
+        'size' => 'normal',
+      ),
+      'css_script' => array(
+        'type' => 'text',
+        'size' => 'normal',
+      ),
+      'footer_html' => array(
+        'type' => 'text',
+        'size' => 'normal',
+      ),
+      'precontent_html' => array(
+        'type' => 'text',
+        'size' => 'normal',
+      ),
+      'postcontent_html' => array(
+        'type' => 'text',
+        'size' => 'normal',
+      ),
+      'sidebar_left_html' => array(
+        'type' => 'text',
+        'size' => 'normal',
+      ),
+      'sidebar_right_html' => array(
+        'type' => 'text',
+        'size' => 'normal',
+      ),
+      'nav_location' => array(
+        'type' => 'text',
+        'size' => 'normal',
+      ),
+      'logo_width' => array(
+        'type' => 'text',
+        'size' => 'normal',
+      ),
+      'logo_height' => array(
+        'type' => 'text',
+        'size' => 'normal',
+      ),
+      'nav_type' => array(
+        'type' => 'text',
+        'size' => 'normal',
+      ),
+      'custom_url' => array(
+        'type' => 'text',
+        'size' => 'normal',
+      ),
+      'link_bar_links' => array(
+        'type' => 'text',
+        'size' => 'normal',
+      ),
+      'use_parent_config' => array(
+        'type' => 'int',
+      ),
+      'is_available' => array(
+        'type' => 'int',
+      ),
+    ),
+  );
+  return $schema;
+}
+/*
+* Implementation of hook_uninstall().
+*/
+function exhibition_config_uninstall() {
+  $new_roles = _exhibition_config_get_roles_by_name ();
+  
+  foreach ($new_roles as $r){
+    if(user_role_load_by_name($r)){
+      user_role_delete($r);
+      drupal_set_message(t('Role removed:').$r);
+    }else{
+      drupal_set_message(t('Expected Role to remove was missing:').$r);
+    }
+  }
+}
+function _exhibition_config_install_roles(){
+  //Add the role for those that can edit the exhibition configs without being owners
+  $new_roles = _exhibition_config_get_roles_by_name ();
+  foreach ($new_roles as $r){
+    if(!user_role_load_by_name($r)){
+      $role = new stdClass();
+      $role->name = $r;
+      user_role_save($role);
+    }
+  }
+  drupal_set_message(t("Drupal roles installed: '").implode("','",$new_roles)."'");
+  return array();
+
+}
+
+function _exhibition_config_get_roles_by_name() {
+  // Return role information
+  return array (
+    'Exhibition Configuration Administrator',
+  );
+}
