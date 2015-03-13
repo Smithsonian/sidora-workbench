@@ -87,6 +87,24 @@ sidora.concept.LoadContentHelp.Resources.TableLoad = function(conceptOfInterest)
  * Prepares the resource table to respond to user inputs: dragging, changing filters, entering search parameters
  */
 sidora.concept.LoadContentHelp.Resources.TableActionsSetup = function(){
+  //Put a more compact pager in place
+  if (false){
+  jQuery("#res_table_wrapper").before('<div id="sidora-resources-button-row" style=""><style>#sidora-resources-button-row {    position: absolute;    top: 50px;    left: 270px;}.sidora-resources-icon {    background-image: url(\'http://***REMOVED***/sites/all/modules/sidora/images/assorted_glass%20buttons.png\');    display:inline-block;    height: 36px;    width: 36px; }</style><div id="sidora-resources-button-first" class="sidora-resources-icon" style="    background-position: -306px -44px;"></div><div id="sidora-resources-button-prev" class="sidora-resources-icon" style="    background-position: -231px -4px;"></div><div id="sidora-resources-pager" style="display:inline-block;vertical-align: top;padding-top: 7px;"><div id="sidora-resources-page-text" style="display:inline-block">Page</div><input id="sidora-resources-page-number" type="text" size="2" class="form-text"/><div id="sidora-resources-page-count" style="display:inline-block">of </div></div><div id="sidora-resources-button-next" class="sidora-resources-icon" style="    background-position: -270px -4px;"></div><div id="sidora-resources-button-last" class="sidora-resources-icon" style="    background-position: -346px -44px;"></div></div>');
+  jQuery("#sidora-resources-button-first").click(function(){ jQuery(".paginate_button.first").click();  });
+  jQuery("#sidora-resources-button-prev").click(function(){ jQuery(".paginate_button.previous").click();  });
+  jQuery("#sidora-resources-button-next").click(function(){ jQuery(".paginate_button.next").click();  });
+  jQuery("#sidora-resources-button-last").click(function(){ jQuery(".paginate_button.last").click();  });
+  jQuery("#res_table_paginate").hide();
+  jQuery("#sidora-resources-page-number").change(function(){
+    jQuery(".paginate_input").val(jQuery("#sidora-resources-page-number").val()).change();
+  }); 
+  jQuery('#res_table').on( 'draw.dt', function () {
+    var info = jQuery(this).DataTable().page.info();
+    jQuery('#sidora-resources-page-number').val((1+info.page));
+    jQuery('#sidora-resources-page-count').html(' of '+info.pages );
+  } );
+  }
+
   //Drag and drop enabling
   jQuery('#res_table tbody').on('mousedown','tr', function (e) {
     //If the mousedown is on something that is in the middle of a move process, ignore the mousedown
@@ -187,6 +205,23 @@ sidora.concept.LoadContentHelp.Permissions = function(conceptOfInterest){
       jQuery("#editMetadataConcept").toggle(permissions.update); 
       jQuery("#editPermissionsConcept").toggle(permissions.permission); 
       jQuery("#manageConcept").toggle(permissions.manage); 
+    }
+  });
+}
+/*
+ * Sets the visiblility of exhibition menu item on the concept menu. - RA 3/12/15
+ */
+sidora.concept.LoadContentHelp.Exhibition_view = function(conceptOfInterest){
+  jQuery.ajax({
+    dataType: "json",
+    url: '../info/'+conceptOfInterest+'/exhibition',
+    success: function(exhibitions){
+			if (exhibitions.exist != 'true'){
+			jQuery("#exhibitConcept").children('a').addClass('ui-state-disabled');
+			}else{
+			jQuery("#exhibitConcept").children('a').removeClass('ui-state-disabled'); 
+			}
+			console.log(exhibitions.exist);
     }
   });
 }
@@ -331,6 +366,7 @@ sidora.concept.LoadContent = function(leaveContentIfAlreadyLoaded){
   jQuery('#concept-meta .error-message').remove();
 
   sidora.concept.LoadContentHelp.Permissions(conceptOfInterest);
+	sidora.concept.LoadContentHelp.Exhibition_view(conceptOfInterest);
   sidora.concept.LoadContentHelp.Metadata(conceptOfInterest);
   sidora.concept.LoadContentHelp.FullTableReload(conceptOfInterest);
   sidora.concept.loadedContentPid = conceptOfInterest;
@@ -1396,6 +1432,15 @@ sidora.resources.individualPanel.ResizeIt = function (e, ui)
   jQuery("#resourceIframeHolder").height(newMinHeight-40);
   //Protect the cursor input from being taken into the iframe by making the overlay displayable
   jQuery("#iframeOverlay").show();
+  
+  //Move items around to fit the menu in the best place
+  if (jQuery("#res_table_wrapper").width() < 470){
+    jQuery("#res_table_wrapper").css("margin-top","70px");
+    jQuery("#sidora-resources-button-row").css("top","90px").css("left","20px");
+  }else{
+    jQuery("#res_table_wrapper").css("margin-top","50px");
+    jQuery("#sidora-resources-button-row").css("top","").css("left","");
+  }
 };
 /*
  * Resizes items on the resources pane once the user (or program) is done with dragging the splitter bar between the table and viewer
