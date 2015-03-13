@@ -88,8 +88,8 @@ sidora.concept.LoadContentHelp.Resources.TableLoad = function(conceptOfInterest)
  */
 sidora.concept.LoadContentHelp.Resources.TableActionsSetup = function(){
   //Put a more compact pager in place
-  if (false){
-  jQuery("#res_table_wrapper").before('<div id="sidora-resources-button-row" style=""><style>#sidora-resources-button-row {    position: absolute;    top: 50px;    left: 270px;}.sidora-resources-icon {    background-image: url(\'http://sidora09.myquotient.net/sites/all/modules/sidora/images/assorted_glass%20buttons.png\');    display:inline-block;    height: 36px;    width: 36px; }</style><div id="sidora-resources-button-first" class="sidora-resources-icon" style="    background-position: -306px -44px;"></div><div id="sidora-resources-button-prev" class="sidora-resources-icon" style="    background-position: -231px -4px;"></div><div id="sidora-resources-pager" style="display:inline-block;vertical-align: top;padding-top: 7px;"><div id="sidora-resources-page-text" style="display:inline-block">Page</div><input id="sidora-resources-page-number" type="text" size="2" class="form-text"/><div id="sidora-resources-page-count" style="display:inline-block">of </div></div><div id="sidora-resources-button-next" class="sidora-resources-icon" style="    background-position: -270px -4px;"></div><div id="sidora-resources-button-last" class="sidora-resources-icon" style="    background-position: -346px -44px;"></div></div>');
+  if (true){
+  jQuery("#res_table_wrapper").before('<div id="sidora-resources-button-row" style=""><style>#sidora-resources-button-row {    position: absolute;    top: 50px;    left: 270px;}.sidora-resources-icon.disabled{opacity:0.2;} .sidora-resources-icon:not(.disabled):hover{cursor:pointer;opacity:1.0}.sidora-resources-icon {    background-image: url(\'http://sidora09.myquotient.net/sites/all/modules/sidora/images/assorted_glass%20buttons.png\'); opacity:0.7;   display:inline-block;    height: 36px;    width: 36px; }</style><div id="sidora-resources-button-first" class="sidora-resources-icon" style="    background-position: -306px -44px;"></div><div id="sidora-resources-button-prev" class="sidora-resources-icon" style="    background-position: -231px -4px;"></div><div id="sidora-resources-pager" style="display:inline-block;vertical-align: top;padding-top: 7px;"><div id="sidora-resources-page-text" style="display:inline-block">Page</div><input id="sidora-resources-page-number" type="text" size="2" class="form-text"/><div id="sidora-resources-page-count" style="display:inline-block">of </div></div><div id="sidora-resources-button-next" class="sidora-resources-icon" style="    background-position: -270px -4px;"></div><div id="sidora-resources-button-last" class="sidora-resources-icon" style="    background-position: -346px -44px;"></div></div>');
   jQuery("#sidora-resources-button-first").click(function(){ jQuery(".paginate_button.first").click();  });
   jQuery("#sidora-resources-button-prev").click(function(){ jQuery(".paginate_button.previous").click();  });
   jQuery("#sidora-resources-button-next").click(function(){ jQuery(".paginate_button.next").click();  });
@@ -99,7 +99,12 @@ sidora.concept.LoadContentHelp.Resources.TableActionsSetup = function(){
     jQuery(".paginate_input").val(jQuery("#sidora-resources-page-number").val()).change();
   }); 
   jQuery('#res_table').on( 'draw.dt', function () {
+    jQuery(".sidora-resources-icon").addClass("disabled");
     var info = jQuery(this).DataTable().page.info();
+    if (info.page+1 < info.pages) jQuery("#sidora-resources-button-next").removeClass("disabled");
+    if (info.page+1 < info.pages) jQuery("#sidora-resources-button-last").removeClass("disabled");
+    if (info.page > 0) jQuery("#sidora-resources-button-first").removeClass("disabled");
+    if (info.page > 0) jQuery("#sidora-resources-button-prev").removeClass("disabled");
     jQuery('#sidora-resources-page-number').val((1+info.page));
     jQuery('#sidora-resources-page-count').html(' of '+info.pages );
   } );
@@ -168,7 +173,8 @@ sidora.concept.LoadContentHelp.Resources.TableActionsSetup = function(){
         } );
     }(jQuery));
     */
-    jQuery('#res_table_filter').after('<select id=\"sidora-resource-type-dropdown\" name=\"search\"><option value=\"\">All</option><option value=\"images\">Image</option><option value=\"pdf\">Digitized Text</option><option value=\"csv\">Tabular Dataset</option></select><input type="text" name="titleFilter" id="titleFilter" style="border: solid 1px lightblue;">');
+    jQuery('#res_table_filter').after('<select id=\"sidora-resource-type-dropdown\" class="form-select" name=\"search\"><option value=\"\">All</option><option value=\"images\">Image</option><option value=\"pdf\">Digitized Text</option><option value=\"csv\">Tabular Dataset</option></select><input type="text" name="titleFilter" id="titleFilter" style="border: solid 1px lightblue;">');
+    jQuery("#res_table_length select").addClass("form-select");
     sidora.resources.reloadDatatableBasedOnCurrentFilters = function(){
       var changeTo = jQuery('#sidora-resource-type-dropdown').val();
       jQuery('#res_table_filter input').val(changeTo);
@@ -216,12 +222,12 @@ sidora.concept.LoadContentHelp.Exhibition_view = function(conceptOfInterest){
     dataType: "json",
     url: '../info/'+conceptOfInterest+'/exhibition',
     success: function(exhibitions){
-			if (exhibitions.exist != 'true'){
-			jQuery("#exhibitConcept").children('a').addClass('ui-state-disabled');
-			}else{
-			jQuery("#exhibitConcept").children('a').removeClass('ui-state-disabled'); 
-			}
-			console.log(exhibitions.exist);
+			jQuery("#exhibitConcept").attr('onclick', '');
+		//	jQuery("#exhibitConcept").off('click','a');
+			jQuery("#exhibitConcept").children('a').attr('onclick',exhibitions.action);
+			jQuery("#exhibitConcept").children('a').toggleClass('ui-state-disabled',exhibitions.ui_state_disable);
+			console.log("Action : " +exhibitions.action);
+			console.log("uistate : "+exhibitions.ui_state_disable);
     }
   });
 }
