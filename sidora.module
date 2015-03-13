@@ -1480,7 +1480,13 @@ function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $ex
     );
     return sidora_get_plupload_html($elements);
   }
-}
+if ($one == 'exhibition'){ 
+		  if (module_exists('exhibition_config')){
+				$exhibition_data = exhibition_config_get_config_data($two);
+	var_dump($exhibition_data);
+	}
+	}
+	}
 /*
  * Show the form to create a concept
  */
@@ -2401,7 +2407,30 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
           $to_output .= '</ul>';
         }
       break;
-  }
+	 // added by RA on 3/12/15 - to make the ajax call to see if there is an exhibition for the current concept.
+		case 'exhibition': 
+		  $exhibitions['exist'] = 'false';
+			if (empty($pid))$exhibitions['exist'] = 'false-pid' ; //can't do operations on blank pid
+		  if (module_exists('exhibition_config')){
+				$exhibition_data = exhibition_config_get_config_data($pid);
+				if (!empty($exhibition_data)) {
+          if (is_null($exhibition_data['pid'])){
+      		  $exhibitions['exist'] = 'false-null';
+    			} else if ($exhibition_data['is_available']){
+              $exhibitions['exist'] = 'true';
+				  }else{
+				   $exhibitions['exist'] = 'false-available';
+				  }
+				}else{
+				  $exhibitions['exist'] = 'false-empty';
+				}			
+				}else{
+				  $exhibitions['exist'] = 'false-module';
+				}			
+			print json_encode($exhibitions);
+      exit();
+      break; 
+	}
   print $to_output;
 }
 /**
@@ -2584,23 +2613,33 @@ function sidora_block_view($delta = ''){
           <ul id="concept-menu">
             <li><a href="#" onclick="return false;">Concepts</a>
               <ul id="concept-file-menu">
-                <li id="editMetadataConcept"><a href="#" onclick="return false;" id="edit-concept-metadata-menu">Edit&nbsp;Metadata</a></li>
 ';
-   //Only show exhibition link if someone has administratively set a location for where exhibition exists
-   //if (!empty(variable_get('si_exhibition_website_location', ''))){
-   if (variable_get('si_exhibition_website_location', '') != ''){
-     $block['content'] .= '
-                <li id="exhibitConcept"><a href="#" onclick="window.open(\''.
-     variable_get('si_exhibition_website_location', '').
-     '\'+window.sidora.concept.GetPid()); return false;">Exhibit</a></li>';
-
-   }
-   $block['content'] .= '
-                <li id="configureExhibition"><a href="#" onclick="window.open(Drupal.settings.basePath+\'exhibition_config/config/\'+window.sidora.concept.GetPid()); return false;">Configure&nbsp;Exhibition</a></li>
-                <li id="editPermissionsConcept"><a href="#" onclick="return false;sidora.concept.ShowPermissions(); return false;">Edit&nbsp;Permissions</a></li>
-                <li id="manageConcept"><a href="#" onclick="sidora.concept.Manage(); return false;">Manage&nbsp;Concept</a></li>
+      $block['content'] .= '
                 <li id="deleteConcept"><a href="#" onclick="sidora.concept.DeleteConcept(); return false;">Delete</a></li>
               </ul>
+           </li>
+           <li><a href="#" onclick="return false;">Edit</a>
+             <ul>
+                <li id="editMetadataConcept"><a href="#" onclick="return false;" id="edit-concept-metadata-menu">Edit&nbsp;Metadata</a></li>
+                <li id="editPermissionsConcept"><a href="#" onclick="return false;sidora.concept.ShowPermissions(); return false;">Edit&nbsp;Permissions</a></li>';
+      if (sidora_is_admin()) $block['content'] .= '
+                <li id="manageConcept"><a href="#" onclick="sidora.concept.Manage(); return false;">Manage&nbsp;Concept</a></li>';
+      $block['content'] .='
+                <li id="configureExhibition"><a href="#" onclick="window.open(Drupal.settings.basePath+\'exhibition_config/config/\'+window.sidora.concept.GetPid()); return false;">Configure&nbsp;Exhibition</a></li>
+             </ul>
+           </li>
+           <li><a href="#" onclick="return false;">View</a>
+             <ul>';
+ 
+      //Only show exhibition link if someone has administratively set a location for where exhibition exists
+      if (variable_get('si_exhibition_website_location', '') != ''){
+        $block['content'] .= '
+                <li id="exhibitConcept"><a href="#" onclick="return false;window.open(\''.
+          variable_get('si_exhibition_website_location', '').
+          '\'+window.sidora.concept.GetPid()); return false;">Exhibit</a></li>';
+      }
+      $block['content'] .= '
+             </ul>
            </li>
          </ul>
        </div>    
