@@ -1,0 +1,7 @@
+name = Smithsonian Exhibition Configuration
+description = Allows users of the item viewer to configure their exhibition sites - this does not display the exhibition sites themselves
+package = Smithsonian
+dependencies[] = ckeditor
+core = 7.x
+configure = admin/exhibition_config/configure
+

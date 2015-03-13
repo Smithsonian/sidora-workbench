@@ -1,0 +1,10 @@
+body.logged-in {
+  background-color: white;
+}
+.fieldset {
+  padding: 2em;
+}
+legend {
+  height: 11px;
+}
+
