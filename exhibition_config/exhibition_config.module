@@ -1,0 +1,1709 @@
+<?php
+function exhibition_config_menu(){
+  $items['admin/exhibition_config/configure'] = array(
+      'title' => 'Exhibition Configuration',
+      'description' => 'Configure the Exhibition Configuration Module.',
+      'page callback' => 'drupal_get_form',
+      'page arguments' => array('exhibition_config_admin_settings'),
+      'access arguments' => array('administer site configuration'),
+      'file' => 'exhibition_config.admin.inc',
+      'type' => MENU_NORMAL_ITEM,
+  );
+  $items['exhibition_config/config'] = array(
+    'title' => t('Exhibition Configuration for Individual Fedora Concept'),
+    'page callback' => 'exhibition_config_main_form',
+    'page arguments' => array(2),
+    'access arguments' => array('access content'),
+    'description' => t('Allows configuration for the exhibition display for the Fedora Concept'),
+    'type' => MENU_CALLBACK,
+  );
+  $items['exhibition_config/info/custom_url'] = array(
+    'title' => t('JSON data'),
+    'page callback' => 'exhibition_config_custom_url',
+    'page arguments' => array(3),
+    'access callback' => TRUE, 
+    'description' => t('Delivers the actual URL from the custom url'),
+    'type' => MENU_CALLBACK,
+  );
+  $items['exhibition_config/info'] = array(
+    'title' => t('JSON data'),
+    'page callback' => 'exhibition_config_json_data',
+    'page arguments' => array(2),
+    'access callback' => TRUE, 
+    'description' => t('JSON data'),
+    'type' => MENU_CALLBACK,
+  );
+  return $items;
+}
+function exhibition_config_get_exhibition_pids_for_user($user_id){
+  require_once ( dirname(__FILE__) . '/exhibition_config.util.inc');
+  $repo = si_exhibition_get_repo();
+
+  $exhibition_pids = array();
+  $result = db_query("select pid from {exhibition_config}");
+  foreach ($result as $records){
+    $pid_to_test = $records->pid;
+    $curr_label = '';
+    try{
+      $exist = si_exhibition_check_object_info_accessible(array('pid' => $pid_to_test));
+      if ($exist){
+        $object = $repo->getObject($pid_to_test); 
+        $curr_label = $object->label;
+        $to_add = array('pid'=>$pid_to_test, 'label'=>$curr_label);
+        if ($user_id == $object->owner) $exhibition_pids[] = $to_add;
+      }
+    }catch(Exception $hce){
+      dsm('exception trying to get:'.$pid_to_test);
+    }
+
+  }
+  return $exhibition_pids;
+}
+function exhibition_config_user_view($account, $view_mode, $langcode){
+  global $user;
+  $is_logged_in_as_admin = FALSE;
+  //if they came in trying to change the user pid, see if they are an administrator and then do it
+  if (sidora_is_admin($user)){
+    $is_logged_in_as_admin = TRUE;
+    $new_user_pid = filter_input(INPUT_POST, 'user_pid', FILTER_SANITIZE_URL);
+    if (!empty($new_user_pid)) sidora_set_user_object($account, $new_user_pid);
+  }
+
+  module_load_include('inc', 'sidora', 'includes/utils');
+  $account_data = ($account->data);
+
+  //dsm($account);
+  $codebook_pid = '';
+  $codebook_html = '';
+  $user_pid = sidora_get_user_object($account);
+  $members = array();
+  if ($user_pid) {
+    $epids = exhibition_config_get_exhibition_pids_for_user($user->name);
+    $epid_html = '<table><tr><th>ID</th><th>Label</th><th>Configure</th><th>Open</th></tr>';
+    foreach($epids as $epid){
+      $epid_html .= '<tr>';
+      $epid_html .= '<td>'.$epid['pid'].'</td>';
+      $epid_html .= '<td>'.$epid['label'].'</td>';
+      $epid_html .= '<td><a href ="'.base_path().'exhibition_config/config/'.$epid['pid'].'">Configure</a></td>';
+      $epid_html .= '<td><a href ="'.variable_get('si_exhibition_website_location', '').''.$epid['pid'].'">Open</a></td>';
+      $epid_html .= '</tr>';
+    }
+    $epid_html .= '</table>';
+    $account->content['exhibition_config_pids'] = array(
+      '#title' => 'Exhibitions',
+      '#markup' => $epid_html,
+      '#type' => 'user_profile_item',
+    );
+  }
+}
+function exhibition_config_get_config_data($pid){
+  $result = db_query("Select ". //SELECT
+" is_available, link_bar_links, use_parent_config, pid, logo, logo_width, logo_height, title, header_html, css_script, footer_html, precontent_html, postcontent_html, sidebar_left_html, sidebar_right_html, nav_location, nav_type, custom_url ".
+"FROM {exhibition_config} where pid = :pid", array(':pid'=>$pid));
+//"FROM {exhibition_config} where pid = 'si:root'");//:pid'", array(':pid'=>$pid));
+  $row = array();
+  foreach ($result as $input){
+    foreach($input as $name=>$value){
+      $row[$name] = $value;
+    }
+  }
+  return $row;
+}
+function exhibition_config_custom_url($custom_url){
+  $result = db_query("Select pid FROM {exhibition_config} where custom_url = '%s'", array($custom_url));
+  $row = null;
+  if ($result) $row = db_fetch_array($result);
+  print($row['pid']);
+  exit();
+}
+function exhibition_config_json_data($pid){
+  $pid = urldecode($pid);
+  $row = exhibition_config_get_config_data($pid);
+  if (!empty($row)) {
+    if (is_null($row['pid'])){
+      print '{ "error": true, "error_message" : "Exhibition not available" }';
+    } else if ($row['is_available']){
+      $my_css = unserialize($row['css_script']);
+      $links = unserialize($row['link_bar_links']);
+      print '
+{
+      "error": false,
+      "pid":'.json_encode($row['pid']).',
+      "logo":'.json_encode($row['logo']).',
+      "logo_width":'.json_encode($row['logo_width']).',
+      "logo_height":'.json_encode($row['logo_height']).',
+      "title":'.json_encode($row['title']).',
+      "extra_css":'.json_encode($my_css['actual']).',
+      "seu_h":'.json_encode($row['header_html']).',
+      "seu_f":'.json_encode($row['footer_html']).',
+      "seu_pre":'.json_encode($row['precontent_html']).',
+      "seu_post":'.json_encode($row['postcontent_html']).',
+      "seu_sf":'.json_encode($row['sidebar_left_html']).',
+      "seu_sl":'.json_encode($row['sidebar_right_html']).',
+      "nav_location":'.json_encode($row['nav_location']).',
+      "nav_type":'.json_encode($row['nav_type']).',
+      "custom_url":'.json_encode($row['custom_url']).',
+      "links":[';
+      for($currLinkNum = 0; $currLinkNum < count($links['names']); $currLinkNum++){
+        print '
+        { "name":'.json_encode($links['names'][$currLinkNum]).',"link":'.json_encode($links['urls'][$currLinkNum]).'}';
+        if ($currLinkNum < count($links['names'])-1){
+          print ',';
+        }else{
+          print "\n";
+        }
+      }
+      print ']
+
+}';
+    }else{
+      //not set to publicly viewable, is in DB
+      print '{ "error": true, "error_message" : "Exhibition for this item not available" }';
+    }
+  }else{
+    print '{ "error": true, "error_message" : "database problem" }';
+  }
+}
+
+function startsWith($haystack, $needle)
+{
+    return $needle === "" || strpos($haystack, $needle) === 0;
+}
+function exhibition_config_form_validate($form, &$form_state){
+    $pid = $form['pid']['#value'];
+    $check_url =  $form['custom_url']['#value'];
+    if (!empty($check_url)){
+      $url_in_use_result = db_query("select pid from {exhibition_config} where pid != '%s' and custom_url = '%s'", 
+        array(
+          $pid, 
+          $form['custom_url']['#value'],
+        )
+      );
+      $first_hit = $url_in_use_result->fetchAssoc();;
+      if (!empty($first_hit)){
+        form_set_error('custom_url',t('Custom URL already in use.'));
+      }
+      $stripped = preg_replace("/[^A-Za-z0-9]/", "", $check_url );
+      if ($stripped != $check_url){
+        form_set_error('custom_url',t('Custom URL must be alphanumeric, no symbols or spaces.'));
+      }
+    }
+    $lh = $form['top']['logo_height']['#value'];
+    if (!empty($lh)){
+       if (!filter_var($lh, FILTER_VALIDATE_INT)){
+         form_set_error("top']['logo_height",t('Logo Height must be positive integer, zero, or blank.  Zero and blank leave the default size of the image.'));
+       }
+    }
+    $lw = $form['top']['logo_width']['#value'];
+    if (!empty($lw)){
+       if (!filter_var($lw, FILTER_VALIDATE_INT)){
+         form_set_error("top']['logo_width",t('Logo Width must be positive integer, zero, or blank.  Zero and blank leave the default size of the image.'));
+       }
+    }
+    //The new links are not located in the form, pull them from the POST data
+    $link_names = $_POST['link_name'];
+    $link_urls = $_POST['link_url'];
+    foreach ($link_names as $currLinkNum => $link_name){
+      $link_url = $link_urls[$currLinkNum];
+      if (strpos($link_url, "://") === FALSE && !empty($link_url)){
+        $link_url = 'http://' . $link_url;
+        $_POST['link_url'][$currLinkNum] = $link_url;
+      }
+      $curr_link_url = filter_var($link_url, FILTER_VALIDATE_URL, FILTER_SANITIZE_STRING);
+      if ($link_url && $curr_link_url != $link_url){
+        form_set_error("top']['new_links",t('Invalid new link URL submitted.'));
+      }
+      $curr_link_name = filter_var($link_name, FILTER_SANITIZE_STRING);
+      if ($link_name && $curr_link_name != $link_name){
+        form_set_error("top']['new_links",t('Invalid new link name submitted.'));
+      }
+      if (!empty($link_name) && empty($link_url)){
+        form_set_error("top']['new_links",t('Must set a URL when submitting a link name.'));
+      }
+      /* Removing the title is removing the link...
+      if (empty($link_name) && !empty($link_url)){
+        form_set_error("top']['new_links",t('Must set a link name when submitting a URL.'));
+      }
+      */
+    }
+}
+function exhibition_config_form_submit($form, &$form_state) {
+    $pid = $form['pid']['#value'];
+    $allowed = exhibition_config_allowed_to_edit($pid);
+    $allowed = true; //BBB
+    if (!$allowed){
+      drupal_set_message(t('Your user is not allowed to change the configuration of this object.  To change the configuration, the object must be viewable in Fedora by your user, and you must either be the owner of the object or have the "Exhibition Configuration Administrator" role.'), 'error');
+      return;
+    }
+    if (isset($_FILES['files']['name']['logo_upload'])){
+       $dir = dirname(__FILE__) . '/files/';
+       $dir = drupal_tempnam($dir,'');
+       //$dir = drupal_get_path('module', 'exhibition_config') . '/files';
+       //$dir = variable_get('file_private_path');//file_directory_path();//drupal_get_path('module', 'exhibition_config') . '/files';
+       $name = $_FILES['files']['name']['logo_upload'];
+       $size = $_FILES['files']['size']['logo_upload'];
+       $type = $_FILES['files']['type']['logo_upload'];
+       if (!empty($name)){
+         $file = file_save_upload('logo_upload', array(), 'public://');//,array(),$dir);//'exhibition_config_uploads', array() , $dir);
+         if($file){
+           $form['top']['logo']['#value'] = file_create_url($file->destination);
+         }else{
+           drupal_set_message(t("Could not save upload: $name"));
+         }
+       }
+    }
+    $my_css = array();
+    foreach($form['colors'] as $ffname => $formField){
+      if (startsWith($ffname, 'color-') || startsWith($ffname,'font')){
+        $my_css[$ffname] = $formField['#value'];
+      }
+    }
+    $my_css['actual'] = $form['css']['#value'];
+    $css_serialized = serialize($my_css);
+    $check_url =  $form['custom_url']['#value'];
+    if (!empty($check_url)){
+      $url_in_use_result = db_query("select pid from {exhibition_config} where pid != '%s' and custom_url = '%s'", 
+        array(
+          $pid, 
+          $form['custom_url']['#value'],
+        )
+      );
+      $first_hit = $url_in_use_result->fetchAssoc();
+      if (!empty($first_hit)){
+        drupal_set_message('Custom URL already in use, all other information saved.', 'warning');
+        $form['custom_url']['#value'] = '';
+      }
+    }
+    
+    //The new links are not located in the form, pull them from the POST data
+    $link_names_orig = $_POST['link_name'];
+    $link_urls_orig = $_POST['link_url'];
+    //Reorder them as indicated by the weight
+    $weights = '';
+    if (!empty($_POST['weight'])) $weights = $_POST['weight'];
+    $link_names = array();
+    $link_urls = array();
+    if ($weights){
+      asort($weights);
+      foreach($weights as $index => $weight){
+        $link_names[] = $link_names_orig[$index];
+        $link_urls[] = $link_urls_orig[$index];
+      }
+      for ($leftover = count($weights); $leftover < count($link_names_orig); $leftover++){
+        $link_names[] = $link_names_orig[$leftover];
+        $link_urls[] = $link_urls_orig[$leftover];
+      }
+    }else{
+      $link_names = $link_names_orig;
+      $link_urls = $link_urls_orig;
+    }
+    if (empty($link_names)) $link_names = array();
+    if (empty($link_urls)) $link_urls = array();
+    //Remove the items if user cleared it out
+    foreach ($link_names as $currLinkNum => $unused){
+      if ($link_names[$currLinkNum] == ''){
+        //Clearing link title is removing link, don't put into array
+        unset($link_names[$currLinkNum]);
+        unset($link_urls[$currLinkNum]);
+      }
+    }
+    $link_names = array_values($link_names); //Remove empty slots if any were there
+    $link_urls = array_values($link_urls);
+
+    $fullLinkSet = array('names'=>$link_names, 'urls'=>$link_urls);  //validate already said these were okay
+    $fls_serialized = serialize($fullLinkSet);
+    $delete_result = db_delete("{exhibition_config}")->condition('pid', $pid)->execute();
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    $fields = 
+      array(
+        'pid', 
+        'logo',
+        'logo_width', 
+        'logo_height', 
+        'title', 
+        'header_html', 
+        'css_script', 
+        'footer_html', 
+        'precontent_html', 
+        'postcontent_html', 
+        'sidebar_left_html', 
+        'sidebar_right_html', 
+        'nav_location', 
+        'nav_type', 
+        'custom_url', 
+        'link_bar_links', 
+        'is_available', 
+        'use_parent_config'
+      );
+    $insert_query = db_insert('exhibition_config')->fields($fields);
+    $insert_query->values( 
+      array(
+        'pid' => $pid,
+        'logo' => $form['top']['logo']['#value'],
+        'logo_width' => $form['top']['logo_width']['#value'],
+        'logo_height' => $form['top']['logo_height']['#value'],
+        'title' => $form['top']['title']['#value'],
+        'header_html' => $form['top']['header']['value']['#value'],
+        'css_script' => $css_serialized,
+        'footer_html' => $form['bottom']['footer']['value']['#value'],
+        'precontent_html' => $form['content_area']['precontent']['value']['#value'],
+        'postcontent_html' => $form['content_area']['postcontent']['value']['#value'],
+        'sidebar_left_html' => $form['content_area']['sidebar_left']['value']['#value'],
+        'sidebar_right_html' => $form['content_area']['sidebar_right']['value']['#value'],
+        'nav_location' => $form['content_area']['nav_location']['#value'],
+        'nav_type' => $form['content_area']['nav_type']['#value'],
+        'custom_url' => $form['custom_url']['#value'],
+        'link_bar_links' => $fls_serialized,
+        'is_available' => $form['is_available']['#value'],
+        'use_parent_config' => empty($form['use_parent_config']['#value'])?'0':$form['use_parent_config']['#value'],
+      )
+    );
+    $output = $insert_query->execute();
+    /*
+    if ($form['use_current_config_for_children']['#value']){
+      $full_pid_list = array();
+      $object = get_pid_tree_ec($pid,'', &$full_pid_list);
+      foreach($full_pid_list as $curr_pid){
+        $row = exhibition_config_get_config_data($curr_pid);
+        if (empty($row) || is_null($row['pid'])){
+        $result = db_query("INSERT INTO {exhibition_config} (pid, logo, title, header_html, css_script, footer_html, precontent_html, postcontent_html, sidebar_left_html, sidebar_right_html, nav_location, is_available, use_parent_config) VALUES ('%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s', '%s', '%s')",
+         array(
+          $curr_pid,
+          $form['logo']['#value'],
+          $form['title']['#value'],
+          $form['header']['#value'],
+          $form['css']['#value'],
+          $form['footer']['#value'],
+          $form['precontent']['#value'],
+          $form['postcontent']['#value'],
+          $form['sidebar_left']['#value'],
+          $form['sidebar_right']['#value'],
+          $form['nav_location']['#value'],
+          $form['is_available']['#value'],
+          $form['use_parent_config']['#value'],
+         )
+        );
+        //dsm("pid:$curr_pid");
+        //dsm($result);
+        }else{
+          //dsm("already set:$curr_pid");
+        }
+      }
+    }
+    */
+    if ($output !== FALSE){
+      drupal_set_message(t('Configuration saved.'));
+    }else{
+      drupal_set_message(t('Database Error.'), 'error');
+    }
+}
+
+
+
+/*
+Returns an array 
+array( 'pid' -> $pid
+       'children' -> array(
+          [0] -> array (
+                   'pid' -> 'child_pid1',
+                   'children' -> ...
+                 )
+          [1] -> array (
+                   'pid' -> 'child_pid2',
+                   'children' -> ...
+                 )
+            
+*/
+function get_pid_tree_ec($pid, $owner_id, &$pid_list = array()){
+  require_once ( dirname(__FILE__) . '/exhibition_config.util.inc');
+  $to_return = array();
+  $to_return['pid'] = $pid;
+  if (in_array($pid, $pid_list)){
+    //already did this, duplicate found:
+    $to_return['already_in_tree'] = TRUE;
+    return $to_return;
+  }
+  $repo = si_exhibition_get_repo();
+  try{
+    $exist = si_exhibition_check_object_info_accessible(array('pid' => $pid));
+    if ($exist){
+      $object = $repo->getObject($pid); 
+      $to_return['object'] = $object;
+      $to_return['children'] = array();
+      $pid_list[] = $pid;
+      //return $object->owner; //si_exhibition_get_child_concept_info($object);
+      $children = si_exhibition_get_child_concept_info($object);
+      //Get the children
+      foreach($children as $child){
+        //Build the tree from all the children
+        //for each child, get their sub-tree
+        $to_return['children'][] = get_pid_tree_ec($child['pid'],$owner_id,$pid_list); 
+      }
+      return $to_return;
+    }else{
+      dsm('doesnt exist:'.$pid);
+      return null;
+    }
+  }catch(Exception $hce){
+    dsm('exception trying to get:'.$pid);
+    return null;
+  }
+}
+
+
+
+
+function exhibition_config_main_form($pid){
+  $pid = urldecode($pid);
+  
+  return drupal_get_form('exhibition_config_form',$pid);
+}
+/*
+$owner_id - null or empty indicates the current logged in user
+*/
+function exhibition_config_allowed_to_edit($pid, $user_id = null){
+  global $user;
+  require_once ( dirname(__FILE__) . '/exhibition_config.util.inc');
+  $user_profile = null;
+  if (empty($user_id)){
+    $user_id = $user->name;
+    $user_profile = $user;
+  }else{
+    $user_profile = user_load(array('name' => $user_id));
+  }
+  if (in_array('Exhibition Configuration Administrator', array_values($user_profile->roles))){
+    $exist = si_exhibition_check_object_info_accessible(array('pid' => $pid));
+    return $exist;
+    return true;
+  }else{
+    $repo = si_exhibition_get_repo();
+    try{
+      $exist = si_exhibition_check_object_info_accessible(array('pid' => $pid));
+      if ($exist){
+        $object = $repo->getObject($pid);
+        return $user_id == $object->owner; 
+      }
+    }catch(Exception $hce){
+    }
+  }
+  return false;
+}
+
+function _exhibition_config_get_object($pid){
+  require_once ( dirname(__FILE__) . '/exhibition_config.util.inc');
+  $repo = si_exhibition_get_repo();
+  $exist = si_exhibition_check_object_info_accessible(array('pid' => $pid));
+  if ($exist){
+    $object = $repo->getObject($pid);
+    return $object;
+  }
+  return null;
+}
+
+function exhibition_config_form($form, $form_state){
+  $pid = $form_state['build_info']['args'][0];
+  $allowed = exhibition_config_allowed_to_edit($pid);
+    $allowed = true; //BBB
+  if (!$allowed){
+    drupal_set_message(t('Your user is not allowed to change the configuration of this object.  To change the configuration, the object must be viewable in Fedora by your user, and you must either be the owner of the object or have the "Exhibition Configuration Administrator" role.'), 'error');
+    return;
+  }
+  $object = _exhibition_config_get_object($pid);
+  $row = exhibition_config_get_config_data($pid);
+  drupal_add_library('system', 'ui.resizable');
+  if (empty($row)) {
+    $row = array();
+    $row['css_script'] = '';
+    $row['link_bar_links'] = '';
+    $row['logo'] = '';
+    $row['header_html'] = '';
+    $row['title'] = '';
+    $row['sidebar_left_html'] = '';
+    $row['precontent_html'] = '';
+    $row['postcontent_html'] = '';
+    $row['sidebar_right_html'] = '';
+    $row['footer_html'] = '';
+    $row['is_available'] = '';
+    $row['custom_url'] = '';
+    $row['logo_width'] = '';
+    $row['logo_height'] = '';
+    $row['nav_location'] = '';
+    $row['nav_type'] = '';
+  }  //have everything's value as a blank
+  $my_css = unserialize($row['css_script']);
+  $links = unserialize($row['link_bar_links']);
+  $full = '
+<a href="javascript:void(0);" onclick="togglePreviewLocation();" title="Moves the sample between the top and side of the page.  You can also move your mouse between the sections and drag to change the sizes when the sample is on the right.">Toggle Sample Location</a><br/>
+<a href="javascript:void(0);" onclick="togglePreviewEditLinks();" title="Turns off the \'Edit\' quick links to get a better view of the sample, or turns them back on to quickly jump to a section to edit">Toggle Placeholder Text and Links</a><br/>
+<a href="javascript:void(0);" onclick="window.open(\''.
+variable_get('si_exhibition_website_location', '').
+//variable_get('sidora_exhibit_url','').'/fedora/repository/'.
+$pid.'\')" title="Opens the current exhibit in a new window">Direct Link to Exhibition</a>
+<script>
+function setScheme(schemeName){
+  if (schemeName == "Blue_Orange"){
+    jQuery.farbtastic("#cp-edit-color-page-background").setColor("#fbf5ed");
+    jQuery.farbtastic("#cp-edit-color-background").setColor("#025167");
+    jQuery.farbtastic("#cp-edit-color-inner-background").setColor("#216477");
+    jQuery.farbtastic("#cp-edit-color-link").setColor("#fcbf81");
+    jQuery.farbtastic("#cp-edit-color-active-link").setColor("#39aecf");
+    jQuery.farbtastic("#cp-edit-color-text").setColor("#d67d23");
+    jQuery.farbtastic("#cp-edit-color-table-main").setColor("#ffba73");
+    jQuery.farbtastic("#cp-edit-color-table-color-1").setColor("#cde8f0");
+    jQuery.farbtastic("#cp-edit-color-table-color-2").setColor("#f0f8fa");
+  }
+  if (schemeName == "Yellow_Black"){
+    jQuery.farbtastic("#cp-edit-color-page-background") .setColor("#ffffff");
+    jQuery.farbtastic("#cp-edit-color-background")      .setColor("#cccccc");
+    jQuery.farbtastic("#cp-edit-color-inner-background").setColor("#dddddd");
+    jQuery.farbtastic("#cp-edit-color-link")            .setColor("#777744");
+    jQuery.farbtastic("#cp-edit-color-active-link")     .setColor("#555533");
+    jQuery.farbtastic("#cp-edit-color-text")            .setColor("#111111");
+    jQuery.farbtastic("#cp-edit-color-table-main")      .setColor("#ffff55");
+    jQuery.farbtastic("#cp-edit-color-table-color-1")   .setColor("#ffffff");
+    jQuery.farbtastic("#cp-edit-color-table-color-2")   .setColor("#ffffcc");
+  }
+  if (schemeName == "Greens"){
+    jQuery.farbtastic("#cp-edit-color-page-background") .setColor("#ffffff");
+    jQuery.farbtastic("#cp-edit-color-background")      .setColor("#dbf26d");
+    jQuery.farbtastic("#cp-edit-color-inner-background").setColor("#effab5");
+    jQuery.farbtastic("#cp-edit-color-link")            .setColor("#88a30e");
+    jQuery.farbtastic("#cp-edit-color-active-link")     .setColor("#7c950d");
+    jQuery.farbtastic("#cp-edit-color-text")            .setColor("#005533");
+    jQuery.farbtastic("#cp-edit-color-table-main")      .setColor("#ffffbb");
+    jQuery.farbtastic("#cp-edit-color-table-color-1")   .setColor("#ffffff");
+    jQuery.farbtastic("#cp-edit-color-table-color-2")   .setColor("#ffffbb");
+  }
+  if (schemeName == "Plum_Sea"){
+    jQuery.farbtastic("#cp-edit-color-page-background") .setColor("#f5f2ee");
+    jQuery.farbtastic("#cp-edit-color-background")      .setColor("#603642");
+    jQuery.farbtastic("#cp-edit-color-inner-background").setColor("#7d1935");
+    jQuery.farbtastic("#cp-edit-color-link")            .setColor("#4a96ad");
+    jQuery.farbtastic("#cp-edit-color-active-link")     .setColor("#4a96ad");
+    jQuery.farbtastic("#cp-edit-color-text")            .setColor("#929292");
+    jQuery.farbtastic("#cp-edit-color-table-main")      .setColor("#254853");
+    jQuery.farbtastic("#cp-edit-color-table-color-1")   .setColor("#ffffff");
+    jQuery.farbtastic("#cp-edit-color-table-color-2")   .setColor("#d6e8ed");
+  }
+  if (schemeName == "Default"){
+    jQuery.farbtastic("#cp-edit-color-page-background") .setColor("#f5f2ee");
+    jQuery.farbtastic("#cp-edit-color-background")      .setColor("#f5f2ee");
+    jQuery.farbtastic("#cp-edit-color-inner-background").setColor("#ffffff");
+    jQuery.farbtastic("#cp-edit-color-link")            .setColor("#006ca8");
+    jQuery.farbtastic("#cp-edit-color-active-link")     .setColor("#006ca8");
+    jQuery.farbtastic("#cp-edit-color-text")            .setColor("#323232");
+    jQuery.farbtastic("#cp-edit-color-table-main")      .setColor("#ffffff");
+    jQuery.farbtastic("#cp-edit-color-table-color-1")   .setColor("#ffffff");
+    jQuery.farbtastic("#cp-edit-color-table-color-2")   .setColor("#ececec");
+  }
+  performRecolor(true);
+}
+</script>
+<div id="originalHolderShowExample">
+<div id="ShowExample" class="show-example" style="background:#EEEEEE;padding:10px;">
+<style scoped>
+  @import "'. file_create_url(
+  drupal_get_path('module','exhibition_config').'/css/fusion-typography.css'
+  ).'";
+  @import "'. file_create_url(
+  drupal_get_path('module','exhibition_config').'/css/fusion-style.css'
+  ).'";
+  @import "'. file_create_url(
+  drupal_get_path('module','exhibition_config').'/css/grid16-fluid.css'
+  ).'";
+  @import "'. file_create_url(
+  drupal_get_path('module','exhibition_config').'/css/si-exhibition.css'
+  ).'";
+  @import "'. file_create_url(
+  drupal_get_path('module','exhibition_config').'/css/smithsonian.css'
+  ).'";
+</style>
+<div class="page-inner page-inner-sample" id="page-inner">
+      <div class="header-group-wrapper full-width" id="header-group-wrapper">
+        <div class="header-group row grid16-16" id="header-group">
+          <div class="header-group-inner inner clearfix" id="header-group-inner">
+            <div class="header-site-info block" id="header-site-info">
+              <div class="header-site-info-inner inner" id="header-site-info-inner">
+                <div id="logo">
+                  <a title="Home" href="#"><div id="actualLogoImageHolder" class="resizable" style="resize:both; overflow: hidden; padding: 0px 0px 10px; height:10px; width:10px;"><img alt="Home" id="actualLogoImage" style="height:100%;width:100%;" src="'.$row['logo'].'"></div></a>
+                  <a href="#edit-logo" class="previewEditLink">Edit Logo</a>
+                </div>
+   
+              <div class="clearfix" id="site-name-value">
+                <span id="site-name">
+       <span id="preview-title"><span>'.$row['title'].'</span><span class="previewEditLink"> Placeholder Title<br/></span></span>
+               </span>
+       <a href="#edit-title-value" class="previewEditLink">Edit Title</a>
+              </div>
+            </div>
+          </div>
+            
+            
+<div class="block block-si_exhibition odd first last grid16-16" id="block-si_exhibition-seu_h">
+  <div class="inner clearfix">
+     <div class="content clearfix">
+       <span id="preview-header-value"><span>'.$row['header_html'].'</span><span class="previewEditLink"> Placeholder Header<br/></span></span>
+       <a href="#edit-header-value" class="previewEditLink">Edit Header</a>
+     </div>
+  </div><!-- /block-inner -->
+</div><!-- /block -->
+            <div class="primary-menu block" id="primary-menu">
+<div class="primary-menu-inner inner clearfix" id="primary-menu-inner">
+<ul class="menu sf-menu sf-js-enabled" style="width:90%"><li class="leaf first last"><a title="" href="#" style="color:#ffffff">Smithsonian</a></li>
+</ul></div><!-- /primary-menu-inner -->
+</div><!-- /primary-menu -->
+            <div class="breadcrumbs block" id="breadcrumbs">
+<div class="breadcrumbs-inner inner clearfix" id="breadcrumbs-inner">
+<div class="breadcrumb"><a href="#">Home</a></div></div><!-- /breadcrumbs-inner -->
+</div><!-- /breadcrumbs -->
+
+          </div><!-- /header-group-inner -->
+        </div><!-- /header-group -->
+      </div><!-- /header-group-wrapper -->
+
+      
+      <!-- preface-top row: width = grid_width -->
+      
+      <!-- main row: width = grid_width -->
+      <div class="main-wrapper full-width" id="main-wrapper">
+        <div class="main row grid16-16" id="main">
+          <div class="main-inner inner clearfix" id="main-inner">
+            <div style="display:none;" class="inivisitree" id="invisitree"><ul class="menu"><li class="collapsed first"><a href="#">123</a></li>
+<li class="expanded last"><a href="#">_123</a><ul class="menu"><li class="collapsed first last"><a href="#">123</a></li>
+</ul></li>
+</ul></div>
+<div class="sidebar-first row nested grid16-3" id="preview-sidebar-first">
+<div class="sidebar-first-inner inner clearfix" id="sidebar-first-inner">
+
+<div class="block block-si_exhibition odd first last grid16-16" id="block-si_exhibition-seu_sf" style="margin-bottom: 0px;">
+  <div class="inner clearfix">
+    <div class="content clearfix">
+       <div class="preview-sidebar-left-holder">
+         <span id="preview-sidebar-left-value"><span>'.$row['sidebar_left_html'].'</span><span class="previewEditLink"> Placeholder Sidebar Left Text<br/></span></span>
+         <a href="#edit-sidebar-left-value" class="previewEditLink">Edit Sidebar Left</a>
+       </div>
+    </div>
+  </div><!-- /block-inner -->
+</div><!-- /block -->
+</div><!-- /sidebar-first-inner -->
+</div><!-- /sidebar-first -->
+            
+            <!-- main group: width = grid_width - sidebar_first_width -->
+            <div class="main-group row nested grid16-13" id="preview-main-group">
+              <div class="main-group-inner inner" id="main-group-inner">
+                
+                <div class="main-content row nested" id="preview-main-content">
+                  <div class="main-content-inner inner" id="main-content-inner" style="position:relative">
+                    <!-- content group: width = grid_width - (sidebar_first_width + sidebar_last_width) -->
+                    <div class="content-group row nested " id="content-group">
+                      <div class="content-group-inner inner" id="content-group-inner">
+                        
+
+                                                <div class="content-top row nested" id="content-top">
+                          <div class="content-top-inner inner" id="content-top-inner">
+                                                                                    
+<div class="block block-si_exhibition odd first last grid16-16" id="block-si_exhibition-seu_pre">
+  <div class="inner clearfix">
+     <div class="content clearfix">
+       <span id="preview-precontent-value"><span>'.$row['precontent_html'].'</span><span class="previewEditLink"> Placeholder Precontent Text<br/></span></span>
+       <a href="#edit-precontent-value" class="previewEditLink">Edit Precontent</a>
+     </div>
+  </div><!-- /block-inner -->
+</div><!-- /block -->
+                          </div><!-- /content-top-inner -->
+                        </div><!-- /content-top -->
+                        
+                        <div class="content-region row nested" id="content-region">
+                          <div class="content-region-inner inner" id="content-region-inner">
+                            <a id="main-content-area" name="main-content-area"></a>
+                                                        <div class="content-inner block" id="content-inner">
+                              <div class="content-inner-inner inner" id="content-inner-inner">
+                                                                                                <div class="content-content" id="content-content">
+                                  <div class="si-exhibition-full-width" id="si-exhibition">
+      <div id="si-content">
+     <h2 class="object-title">Sample Project Title</h2>
+     <span class="si-icon si-projectcmodel si-conceptcmodel fedora-system-fedoraobject-3-0"></span>
+     <div id="si-content-inner">
+      <table class="metadata-table">
+<tbody>
+ <tr class="odd"><td>Project Name (Full)</td><td>Sample Project Name</td> </tr>
+</tbody>
+</table>
+     </div>
+   </div>
+   <div id="si-resources">
+    <h2>Resources</h2>
+    <div id="si-resources-inner">
+<div action="/fedora/repository/si:277545" method="get" id="exhibition-resources-form" accept-charset="UTF-8"><div><div class="form-item form-type-select form-item-show">
+  <label for="edit-show">Limit by type </label>
+ <select id="edit-show" name="show" class="form-select"><option value="all">All</option><option value="images">Images</option><option value="pdf">Digitized Text (pdf)</option><option value="csv">Tabular Datasets</option></select>
+</div>
+<div class="form-item form-type-select form-item-limit">
+  <label for="edit-limit">Results per page </label>
+ <select id="edit-limit" name="limit" class="form-select"><option value="10">10</option><option value="15">15</option><option value="20">20</option><option value="25">25</option><option value="30">30</option></select>
+</div>
+<input type="submit" id="edit-submit" name="op" value="Go" class="form-submit"><input type="hidden" name="form_build_id" value="form-lATDymYKMdI9aWWA7e073XhlbJj7j7UC7bwugWdR_co">
+<input type="hidden" name="form_id" value="exhibition_resources_form">
+</div></div>
+<div class="showing">
+   Showing 1 - 3 of 3</div>
+<table class="resources-table sticky-enabled sticky-table">
+ <thead class="tableHeader-processed"><tr><th></th><th sort="asc">Title</th><th>Options</th> </tr></thead>
+<tbody>
+ <tr class="odd"><td><a href="#" rel="shadowbox[si:257965]" title="Sample Image 1"><img class="resource-tn" src="'.
+$GLOBALS['base_url'].'/'.drupal_get_path('module','exhibition_config').'/images/sample1.jpg'.
+'"></a></td><td><span class="table-label">Sample Image 1<span></span></span></td><td><div class="exhibition_js_dropdown" style="display:none;">
+</div><div class="regular-options"><a href="#">Download</a> <a href="#" rel="shadowbox" title="Sample Image 1" onclick="return false;">View&nbsp;Metadata</a> <a href="#" rel="shadowbox[si:257965]" title="Sample Image 1" onclick="return false;">Preview</a></div>
+</td> </tr>
+ <tr class="even"><td><a href="#" rel="shadowbox[si:257964]" title="Sample Image 2">
+<img class="resource-tn" src="'.
+$GLOBALS['base_url'].'/'.drupal_get_path('module','exhibition_config').'/images/sample2.jpg'.
+'"></a></td><td><span class="table-label">Sample Image 2<span></span></span></td><td><div class="exhibition_js_dropdown" style="display:none;">
+</div><div class="regular-options"><a href="#">Download</a> <a href="#" rel="shadowbox" title="Sample Image 2" onclick="return false;">View&nbsp;Metadata</a> <a href="#" rel="shadowbox[si:257964]" title="Sample Image 2" onclick="return false;">Preview</a></div>
+</td> </tr>
+ <tr class="odd"><td><a href="#" rel="shadowbox[si:257963]" title="Sample Image 3"><img class="resource-tn" src="'.
+$GLOBALS['base_url'].'/'.drupal_get_path('module','exhibition_config').'/images/sample1.jpg'.
+'"></a></td><td><span class="table-label">Sample Image 3<span></span></span></td><td><div class="exhibition_js_dropdown" style="display:none;">
+</div><div class="regular-options"><a href="#">Download</a> <a href="#" rel="shadowbox" title="Sample Image 3" onclick="return false;">View&nbsp;Metadata</a> <a href="#" rel="shadowbox[si:257963]" title="Sample Image 3" onclick="return false;">Preview</a></div>
+</td> </tr>
+</tbody>
+</table>
+    </div>
+  </div>
+</div>
+                                                                  </div><!-- /content-content -->
+                                                              </div><!-- /content-inner-inner -->
+                            </div><!-- /content-inner -->
+                          </div><!-- /content-region-inner -->
+                        </div><!-- /content-region -->
+
+                        <div class="content-bottom row nested " id="content-bottom">
+<div class="content-bottom-inner inner clearfix" id="content-bottom-inner">
+
+<div class="block block-si_exhibition odd first last grid16-16" id="block-si_exhibition-seu_post">
+  <div class="inner clearfix">
+    <div class="content clearfix">
+       <span id="preview-postcontent-value"><span>'.$row['postcontent_html'].'</span><span class="previewEditLink"> Placeholder Postcontent Text<br/></span></span>
+       <a href="#edit-postcontent-value" class="previewEditLink">Edit Postcontent</a>
+    </div>
+  </div><!-- /block-inner -->
+</div><!-- /block -->
+</div><!-- /content-bottom-inner -->
+</div><!-- /content-bottom -->
+                      </div><!-- /content-group-inner -->
+                    </div><!-- /content-group -->
+
+                  </div><!-- /main-content-inner -->
+                </div><!-- /main-content -->
+
+                              </div><!-- /main-group-inner -->
+            </div><!-- /main-group -->
+<div style="" class="sidebar-last row nested grid16-3" id="sidebar-last">
+  <div class="sidebar-last-inner inner clearfix" id="sidebar-last-inner">
+    <div class="block block-si_exhibition odd first grid16-16" id="block-si_exhibition-seu_sl">
+      <div class="inner clearfix">
+        <div class="content clearfix">
+          <div class="preview-sidebar-right-holder">
+            <span id="preview-sidebar-right-value"><span>'.$row['sidebar_right_html'].'</span><span class="previewEditLink"> Placeholder Sidebar Right Text<br/></span></span>
+            <a href="#edit-sidebar-right-value" class="previewEditLink">Edit Sidebar Right Content</a>
+          </div>
+         </div>
+      </div><!-- /block-inner -->
+    </div><!-- /block -->
+    <div class="block block-si_exhibition even  last grid16-16" id="block-si_exhibition-0">
+      <div class="inner clearfix">
+        <div id="pc_nav">
+          <h2 class="title block-title">SI Navigation</h2>
+          <div class="content clearfix">
+            <div id="si-navigation">
+              <div id="si-navigation-inner">
+                <h3>Parent concepts</h3>
+                <div class="item-list">
+                  <ul class="parent-concepts">
+                    <li class="first last"><a href="#">123</a></li>
+                  </ul>
+                </div>
+                <h3>Child concepts</h3>
+                This item has no child concepts.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="inner clearfix">
+        <div id="tree_nav">
+          <div class="content clearfix">
+    '.
+    /*
+    Active JStree (need js and css)
+
+    <div id="forjstree" style="overflow:auto;" class="" role="">
+      <ul><li>
+        <a href="#">Exhibition Tester</a>
+        <ul><li><a href="#">Sample Child 1</a></li><li><a href="#">Sample Child 2</a></li></ul>
+      </li></ul>
+    </div>
+    */
+    /*
+    Inactive JStree (just css)
+    */
+    '
+        <div id="forjstree" style="overflow: auto; display: block;" class="jstree jstree-1 jstree-default jstree-default-responsive" role="tree" aria-activedescendant="j1_1"><ul class="jstree-container-ul"><li role="treeitem" aria-expanded="true" id="j1_1" class="jstree-node  jstree-open jstree-last" aria-selected="false"><i class="jstree-icon jstree-ocl"></i><a class="jstree-anchor" href="/fedora/repository/si:256534?path="><i class="jstree-icon jstree-themeicon"></i>asdf2</a><ul role="group" class="jstree-children" style=""><li role="treeitem" id="j1_2" class="jstree-node  jstree-leaf" aria-selected="false"><i class="jstree-icon jstree-ocl"></i><a class="jstree-anchor" href="/fedora/repository/si:257074?path=si:256534"><i class="jstree-icon jstree-themeicon"></i>asdf10</a></li><li role="treeitem" id="j1_3" class="jstree-node  jstree-leaf jstree-last" aria-selected="false"><i class="jstree-icon jstree-ocl"></i><a class="jstree-anchor" href="/fedora/repository/si:256809?path=si:256534"><i class="jstree-icon jstree-themeicon"></i>ghjk</a></li></ul></li></ul></div>
+    '.
+    /*js tree stuff end */'
+          </div>
+        </div><!-- /tree_nav -->
+      </div>
+    </div>
+  </div><!-- /sidebar-last-inner -->
+</div><!-- /sidebar-last -->
+          </div><!-- /main-inner -->
+        </div><!-- /main -->
+      </div><!-- /main-wrapper -->
+
+      <!-- postscript-bottom row: width = grid_width -->
+      
+      <!-- bottom row: width = grid_width -->
+      
+      <div class="footer-wrapper full-width" id="footer-wrapper">
+<div class="footer row grid16-16" id="footer">
+<div class="footer-inner inner clearfix" id="footer-inner">
+
+<div class="block block-si_exhibition odd first grid16-8" id="block-si_exhibition-seu_f">
+  <div class="inner clearfix">
+    <div class="content clearfix">
+       <span id="preview-footer-value"><span>'.$row['footer_html'].'</span><span class="previewEditLink"> Placeholder Footer Text<br/></span></span>
+       <a href="#edit-footer-value" class="previewEditLink">Edit Footer</a>
+    </div>
+  </div><!-- /block-inner -->
+</div><!-- /block -->
+
+<div class="block block-system even  last grid16-8" id="block-system-0">
+  <div class="inner clearfix">
+  </div><!-- /block-inner -->
+</div><!-- /block -->
+</div><!-- /footer-inner -->
+</div><!-- /footer -->
+</div><!-- /footer-wrapper -->
+
+
+    </div>
+</div>
+</div>
+<script type="text/javascript">
+(function( $ ){
+
+
+$(function(){
+  $("input.form-text").blur(function(){
+    $("#preview-title").children().first().text($("#edit-title").val());
+    $("#actualLogoImage").attr("src",$("#edit-logo").val());
+  });
+  $("#edit-logo-width").blur(function(){
+    resizeLogo();
+  });
+  $("#edit-logo-height").blur(function(){
+    resizeLogo();
+  });
+  $("#edit-nav-location").change(function(){
+    setNavLocationFromDropdown();
+  });
+  setNavLocationFromDropdown();
+  resizeLogo();
+  prepForDraggedLogo();
+  buildMenuLinks();
+  createTargetsForEditLinks();
+});
+jQuery(window).load(function(){
+  CKEDITOR.on("instanceReady",function(e){
+    var previewId = "preview" + e.editor.name.substr(4);
+    CKEDITOR.instances[e.editor.name].on("change",function(){
+      jQuery("#"+previewId).children().first().html(this.getData());
+      resizeProperly();
+    });
+  });
+});
+window.createTargetsForEditLinks = function(){
+  var allLabels = jQuery("label");
+  for (i=0; i<allLabels.length; i++){
+    var newId = jQuery(allLabels[i]).attr("for");
+    if (jQuery("#"+newId).length == 0){
+      jQuery(allLabels[i]).prepend("<span id=\'"+newId+"\'></span>");
+    }
+  }
+}
+window.addRowToLinksTable = function(){
+  var newRow = $("#newLinksTable tr:last").clone();
+  var newInputs = $(newRow).find("input");
+  for (i = 0; i < newInputs.length; i++){
+    $(newInputs[i]).val("");
+    var currName = ($(newInputs[i]).attr("name"));
+    var currNameNum = currName.substring(
+        currName.indexOf("[")+1,
+        currName.indexOf("]")
+    );
+    var newNameNum = parseInt(currNameNum) + 1;
+    var newName = currName.replace("["+currNameNum+"]", "["+newNameNum+"]");
+    $(newInputs[i]).attr("name", newName);
+  }
+  $("#newLinksTable").append(newRow);
+}
+window.prepForDraggedLogo = function(){
+  $("#actualLogoImageHolder").mousedown(function(){
+    window.dragLogo = new Object();
+    window.dragLogo.width = $("#actualLogoImageHolder").css("width");
+    window.dragLogo.height = $("#actualLogoImageHolder").css("height");
+  });
+  $("#actualLogoImageHolder").mouseleave(function(){
+    if (!window.dragLogo) return;
+    if ($("#actualLogoImageHolder").css("width") != window.dragLogo.width){
+      $("#edit-logo-width").val($("#actualLogoImage").width());
+    }
+    if ($("#actualLogoImageHolder").css("height") != window.dragLogo.height){
+      $("#edit-logo-height").val($("#actualLogoImage").height());
+    }
+  });
+}
+function resizeLogo(){
+  if (isNaN(parseInt($("#edit-logo-width").val())) || parseInt($("#edit-logo-width").val()) == 0){
+    $("#actualLogoImageHolder").css("width","auto");
+  }else{
+    $("#actualLogoImageHolder").css("width","10px");
+    $("#actualLogoImageHolder").css("width",$("#edit-logo-width").val()+"px");
+  }
+  if (isNaN(parseInt($("#edit-logo-height").val())) || parseInt($("#edit-logo-height").val()) == 0){
+    $("#actualLogoImageHolder").css("height","auto");
+  }else{
+    $("#actualLogoImageHolder").css("height","10px");
+    $("#actualLogoImageHolder").css("height",(10+parseInt($("#edit-logo-height").val()))+"px"); //10 is the buffer room given for the dragger
+  }
+}
+function setNavLocationFromDropdown(){
+  if($("#edit-nav-location").val() == "bleft"){
+    $("#block-si_exhibition-0").show();
+    $(".preview-sidebar-left-holder").append(
+      $("#block-si_exhibition-0")
+    );
+  }else if($("#edit-nav-location").val() == "left"){
+    $("#block-si_exhibition-0").show();
+    $(".preview-sidebar-left-holder").prepend(
+      $("#block-si_exhibition-0")
+    );
+  }else if($("#edit-nav-location").val() == "bright"){
+    $("#block-si_exhibition-0").show();
+    $(".preview-sidebar-right-holder").append(
+      $("#block-si_exhibition-0")
+    );
+  }else if($("#edit-nav-location").val() == "right"){
+    $("#block-si_exhibition-0").show();
+    $(".preview-sidebar-right-holder").prepend(
+      $("#block-si_exhibition-0")
+    );
+  }else{
+    $("#block-si_exhibition-0").hide();
+  }
+  resizeProperly()
+};
+window.togglePreviewEditLinks = function(){
+  jQuery(".previewEditLink").toggle();
+  resizeProperly();
+}
+function resizeProperly(){
+  var howManySidebars = 0;
+  if (
+      jQuery(".preview-sidebar-left-holder").height() == 0 &&
+      jQuery(".preview-sidebar-left-holder").has(jQuery("#tree_nav:visible")).length == 0
+  ){
+    jQuery("#preview-sidebar-first").removeClass("grid16-3");
+  }else{
+    jQuery("#preview-sidebar-first").addClass("grid16-3");
+    howManySidebars++;
+  }
+  if (
+      jQuery(".preview-sidebar-right-holder").height() == 0 &&
+      jQuery(".preview-sidebar-right-holder").has(jQuery("#tree_nav:visible")).length == 0
+  ){
+    jQuery("#preview-sidebar-last").removeClass("grid16-3");
+  }else{
+    jQuery("#preview-sidebar-last").addClass("grid16-3");
+    howManySidebars++;
+  }
+  if (howManySidebars == 0 ){  
+    jQuery("#preview-main-group").removeClass("grid16-13");
+    jQuery("#preview-main-group").removeClass("grid16-10");
+  }
+  if (howManySidebars == 1 ){  
+    jQuery("#preview-main-group").addClass("grid16-13");
+    jQuery("#preview-main-group").removeClass("grid16-10");
+  }
+  if (howManySidebars == 2 ){  
+    jQuery("#preview-main-group").removeClass("grid16-13");
+    jQuery("#preview-main-group").addClass("grid16-10");
+  }
+
+}
+window.togglePreviewLocation = function(){
+  if (jQuery("#righter").length == 0){
+    putOnSide();
+  }else{
+    putBack();
+  }
+}
+function buildMenuLinks(){
+  //Draggable table hook
+  if (Drupal && Drupal.tableDrag){
+    Drupal.tableDrag.prototype.onDrop = function() {
+      buildMenuLinks();
+      return null;
+    };
+  }else{
+    console.log("table drag not properly included in Drupal configuration");
+  }
+  $(".userCreated").remove();
+  $( "input[name*=\'link_name\']" ).each(function(){
+    $(this).unbind("blur");
+    $(this).blur(function(){
+      buildMenuLinks();
+    });
+    if ($(this).val() == "") return;
+    $("#ShowExample .header-group-wrapper .menu").append("<li class=\'userCreated\'><a href=\'#\'>"+$(this).val()+"</a></li>")
+  });
+}
+function putOnSide(){
+  if (jQuery("#righter").length == 0) 
+  {
+    jQuery("#content").append("<div id=\'righter\' class=\'resizable resizable2\' style=\'display:inline-block;width:60%;float:right;\'></div>");
+  }
+  var toChange = jQuery("#righter").prev();
+  toChange.css("min-width","0");
+  toChange.css("float","left");
+  toChange.css("width","38%");
+  toChange.css("margin-left","0");
+  toChange.css("margin-right","0");
+  toChange.css("display","inline-block");
+  toChange.css("overflow","auto");
+  toChange.css("height","710px");
+  $(".page-inner-sample").css("height","710px");
+  $(".page-inner-sample").css("overflow","auto");
+  jQuery("#righter").append(jQuery("#ShowExample"));
+  setTimeout(mr,1000);
+}
+function putBack(){
+  $("#originalHolderShowExample").append(jQuery("#ShowExample"));
+  var toChange = jQuery("#righter").prev();
+  toChange.css("min-width","0");
+  toChange.css("float","");
+  toChange.css("width","");
+  toChange.css("margin-left","");
+  toChange.css("margin-right","");
+  toChange.css("display","");
+  toChange.css("overflow","");
+  toChange.css("height","");
+  $(".page-inner-sample").css("height","");
+  $(".page-inner-sample").css("overflow","");
+  $("#righter").remove(); 
+}
+window.constantCheck = function(){
+  performRecolor(true); 
+  setTimeout(constantCheck,1000);
+}
+window.addCss = function(cssCode) {
+  if (cssCode == window.currentCssCode){
+     return;
+  }
+  var styleElement = document.createElement("style");
+  if (window.recentStyle){
+    $(window.recentStyle).remove();
+  }
+  styleElement.type = "text/css";
+  if (styleElement.styleSheet) {
+    styleElement.styleSheet.cssText = cssCode;
+  } else {
+    styleElement.appendChild(document.createTextNode(cssCode));
+  }
+  window.recentStyle = styleElement;
+  document.getElementsByTagName("head")[0].appendChild(styleElement);
+  window.currentCssCode = cssCode;
+}
+window.setFieldsetsToUncollapseWhenPreviewEditLinksClicked = function(){
+  $(".previewEditLink").each( function() {
+    var $this = jQuery(this), 
+        target = this.hash;
+    jQuery(this).click(function (e) { 
+        if( $this.length > 0 ) {
+            if($this.attr("href") == "#" ) {
+                // Do nothing   
+            } else {
+                var fieldset = $($(target).closest("fieldset"));
+                if ($(fieldset).is(".collapsed"))
+                    Drupal.toggleFieldset(fieldset);
+               setTimeout(function(){
+                    location.hash = $this.attr("href")
+                },500);
+            }  
+        }
+    });
+  });  
+}
+window.addHighlightsOnSectionMouseovers = function(){
+ $("a:contains(\'Top\')").mouseout(function(){
+  $("#ShowExample .header-group-inner").css("border","");
+ })
+ $("a:contains(\'Top\')").mouseover(function(){
+  $("#ShowExample .header-group-inner").css("border-right","5px solid black");
+  $("#ShowExample .header-group-inner").css("border-left","5px solid black");
+ })
+
+ $("a:contains(\'Content Area\')").mouseout(function(){
+  $("#ShowExample .main-wrapper").css("border","");
+ })
+ $("a:contains(\'Content Area\')").mouseover(function(){
+  $("#ShowExample .main-wrapper").css("border-right","5px solid black");
+  $("#ShowExample .main-wrapper").css("border-left","5px solid black");
+ })
+
+ $("a:contains(\'Bottom\')").mouseout(function(){
+  $("#ShowExample .footer-wrapper").css("border","");
+ })
+ $("a:contains(\'Bottom\')").mouseover(function(){
+  $("#ShowExample .footer-wrapper").css("border-right","5px solid black");
+  $("#ShowExample .footer-wrapper").css("border-left","5px solid black");
+ })
+}
+mr = function(){
+    jQuery("#righter").resizable(
+    {
+        autoHide: true,
+        handles: \'w\',
+        resize: function(e, ui) 
+        {
+            var parent = ui.element.parent();
+            var remainingSpace = parent.width() - ui.element.outerWidth() - 10,
+                divTwo = ui.element.prev(),
+                divTwoWidth = (remainingSpace - (divTwo.outerWidth() - divTwo.width()))/parent.width()*100+"%";
+                divTwo.width(divTwoWidth);
+            jQuery(ui.element).css("left",0);
+        },
+        stop: function(e, ui) 
+        {
+            var parent = ui.element.parent();
+            ui.element.css(
+            {
+                width: ui.element.width()/parent.width()*100+"%",
+            });
+        }
+    });
+}
+
+})( jQuery );
+
+//Next section is due to Chrome being unable to shrink an item past original size with css resize (FF works with css resize shrinking)
+function contains(container, maybe) {
+    return container.contains ? container.contains(maybe) :
+        !!(container.compareDocumentPosition(maybe) & 16);
+}
+function mouseEnterLeave(elem, type, method) {
+    var mouseEnter = type === \'mouseenter\',
+        ie = mouseEnter ? \'fromElement\' : \'toElement\';
+    return function (e) {
+        e = e || window.event;
+        var target = e.target || e.srcElement,
+            related = e.relatedTarget || e[ie];
+        if ((elem === target || contains(elem, target)) &&
+            !contains(elem, related)) {
+            method.call(elem, e);
+        }
+    };
+}
+function resizableStart(e){
+    this.originalW = this.clientWidth;
+    this.originalH = this.clientHeight;
+    this.onmousemove = resizableCheck;
+    this.onmouseup = resizableEnd;
+    this.onmouseout = mouseEnterLeave(this, \'mouseleave\', resizableEnd);
+}
+function resizableCheck(e){
+    if(this.clientWidth !== this.originalW || this.clientHeight !== this.originalH) {
+        this.originalX = e.clientX;
+        this.originalY = e.clientY;
+        this.onmousemove = resizableMove;
+    }
+}
+function resizableMove(e){
+    var newW = this.originalW + e.clientX - this.originalX,
+        newH = this.originalH + e.clientY - this.originalY;
+    if(newW < this.originalW){
+        this.style.width = newW + \'px\';
+    }
+    if(newH < this.originalH){
+        this.style.height = newH + \'px\';
+    }
+}
+function resizableEnd(){
+    this.onmousemove = this.onmouseout = this.onmouseup = null;
+}
+jQuery(document).ready(function(){
+
+var els = document.getElementsByClassName(\'resizable\');
+for(var i=0, len=els.length; i<len; ++i){
+    els[i].onmouseover = mouseEnterLeave(els[i], \'mouseenter\', resizableStart);
+}
+});
+</script>
+';
+  $form['#attributes'] = array('enctype' => "multipart/form-data");
+  $form['pid'] = array(
+    '#prefix' => $full,
+    '#type' => 'hidden',
+    '#title' => t('Islandora PID'),
+    '#default_value' => $pid,
+  );
+  $form['is_available'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Show publicly'),
+    '#default_value' => $row['is_available'],
+    '#description' => t('This must be checked to view the exhibition, otherwise the exhibition is hidden (default).'),
+  );
+  $customUrl = $row['custom_url'];
+  if (!empty($customUrl)){
+    $savedUrlFullPath = variable_get('sidora_exhibit_url','').'/public/'.$customUrl;
+    $customUrl = 'Current Saved Custom Url:<br/> <a target="_blank" href="'.$savedUrlFullPath.'">'.$savedUrlFullPath.'</a>';
+  }
+  $form['custom_url'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Custom URL'),
+    '#prefix' => $customUrl,
+    '#default_value' => $row['custom_url'],
+    '#description' => t('The custom URL will be "/exhibition/public/" plus your entry. The URL entered must be alphanumeric: no slashes or special characters.'),
+  );
+  $form['top'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Top'),
+    '#collapsible' => TRUE,
+    '#collapsed' => TRUE, 
+  );
+  $form['top']['logo_upload'] = array(
+    '#type' => 'file',
+    '#title' => t('New Logo Upload'),
+  );
+  $form['top']['logo'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Logo'),
+    '#maxlength' => 1024, 
+    '#default_value' => $row['logo'],
+    '#description' => t('This can be a URL or an uploaded image.'),
+  );
+  $form['top']['logo_width'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Logo Width'),
+    '#description' => t('Width of the logo (leave blank for default width, based on height)'),
+    '#default_value' => $row['logo_width'],
+  );
+  $form['top']['logo_height'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Logo Height'),
+    '#description' => t('Height of the logo (leave blank for default height, based on width'),
+    '#default_value' => $row['logo_height'],
+  );
+  $form['top']['title'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Title'),
+    '#default_value' => $row['title'],
+  );
+  $form['top']['header'] = array(
+    '#type' => 'text_format',
+    '#format' => 'full_html',
+    '#title' => t('Header'),
+    '#default_value' => $row['header_html'],
+  );
+  $form['top']['link_order'] = array(
+    '#type' => 'item',
+    '#title' => t('Link Ordering'),
+    '#description' => t('Clear the Link Title from a row to remove that entry'),
+  );
+  //The design here is going to be that the links are all written out, then saved on submit.  It will not use the standard Drupal methodology instead relying on POST data directly for these
+  // Build form
+  $existingCount = count($links['names']);
+  for($currLinkNum = 0; $currLinkNum < $existingCount; $currLinkNum++){
+    $cl_name = '<input type="textfield" name="link_name['.$currLinkNum.']" value="'.($links['names'][$currLinkNum]).'" />';
+    $cl_url = '<input type="textfield" name="link_url['.$currLinkNum.']" value="'.($links['urls'][$currLinkNum]).'" size="47"/>';
+
+    $form['rows'][$currLinkNum]['data'] = array ('#type' => 'value', '#value' => array(0=>$cl_name, 1=>$cl_url));
+    $form['rows'][$currLinkNum]['weight['.$currLinkNum.']'] = array(
+      '#type' => 'hidden',
+      '#name' => 'weight['.$currLinkNum.']',
+      '#size' => 5,
+      '#default_value' => $currLinkNum,
+      '#attributes' => array('class' => 'weight'),
+    );
+  }
+    if (!empty($form['rows']) && is_array($form['rows'])){
+      $table_rows = array();
+      //loop through each "row" in the table array
+      foreach($form['rows'] as $id => $table_row){
+        //we are only interested in numeric keys
+        if (is_numeric($id)){  
+          $this_row = $table_row['data']['#value'];
+
+          //Add the weight field to the row
+          $this_row[] = drupal_render($form['rows'][$id]['weight['.$id.']']);
+   
+          //Add the row to the array of rows
+          $table_rows[] = array('data'=>$this_row, 'class'=>array('draggable'));
+        }
+      }
+    
+      //Make sure the header count matches the column count
+      $header=array(
+        "Link Title", "URL", '',
+      );
+      $to_table_theme = array('header'=>$header,'rows'=>$table_rows, 'attributes'=>array('id'=>array('link-order-table')));
+      $myTable = theme('table',$to_table_theme);
+      //$myTable .= theme_table(array('header'=>$header,'rows'=>$table_rows,'attributes'=>array('id'=>'link-order-table')));
+      $form['top']['link_order']['#markup'] = $myTable;
+    }else{
+      $form['top']['link_order']['#markup'] = '<div>'.t('This area is used for reordering links.  No links have been saved for this exhibition.').'</div>';
+    }
+
+    // Call add_tabledrag to add and setup the JS for us
+    // The key thing here is the first param - the table ID
+    // and the 4th param, the class of the form item which holds the weight
+  $existingCount = count($links['names']);
+  $form['top']['new_links'] = array(
+    '#type' => 'textfield',
+    '#attributes' => array('style' => 'display:none;'),
+    '#title' => t('Add Links'),
+    '#field_suffix' => '<table id="newLinksTable"><tr><th>Link Text</th><th>Link URL</th></tr><tr><td><input type="text" name="link_name['.$existingCount.']" size="20"/></td><td><input type="text" name="link_url['.$existingCount.']" size="57"/></td></tr></table><div><a href="#" id="addLink" onclick="addRowToLinksTable(); return false;">Add another link</a></div>',
+    '#description' => 'Links can be reordered once they are saved.  By default the links are added to the end of the ordering. If a link does not start with a protocol such as "http://" or "https://" then "http://" is assumed.',
+  );
+  $form['content_area'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Content Area'),
+    '#collapsible' => TRUE,
+    '#collapsed' => TRUE, 
+  );
+  $form['bottom'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Bottom'),
+    '#collapsible' => TRUE,
+    '#collapsed' => TRUE, 
+  );
+  $form['colors'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Colors and Font'),
+    '#collapsible' => TRUE,
+    '#collapsed' => TRUE, 
+  );
+  
+  
+  $form['css'] = array(
+    '#type' => 'hidden',
+    '#title' => t('CSS'),
+    '#default_value' => $my_css['actual'],
+  );
+  $form['bottom']['footer'] = array(
+    '#type' => 'text_format',
+    '#format' => 'full_html',
+    '#title' => t('Footer'),
+    '#default_value' => $row['footer_html'],
+  );
+  $form['content_area']['precontent'] = array(
+    '#type' => 'text_format',
+    '#format' => 'full_html',
+    '#title' => t('Precontent'),
+    '#default_value' => $row['precontent_html'],
+  );
+  $form['content_area']['postcontent'] = array(
+    '#type' => 'text_format',
+    '#format' => 'full_html',
+    '#title' => t('Postcontent'),
+    '#default_value' => $row['postcontent_html'],
+  );
+  $form['content_area']['sidebar_left'] = array(
+    '#type' => 'text_format',
+    '#format' => 'full_html',
+    '#title' => t('Sidebar Left'),
+    '#default_value' => $row['sidebar_left_html'],
+  );
+  $form['content_area']['sidebar_right'] = array(
+    '#type' => 'text_format',
+    '#format' => 'full_html',
+    '#title' => t('Sidebar Right'),
+    '#default_value' => $row['sidebar_right_html'],
+  );
+  $form['content_area']['nav_location'] = array(
+    '#type' => 'select',
+    '#title' => t('Navigation Location'),
+    '#default_value' => $row['nav_location'],
+    '#options' => array(
+      'left' => t('Above Sidebar Left Text'),
+      'bleft' => t('Under Sidebar Left Text'),
+      'right' => t('Above Sidebar Right Text'),
+      'bright' => t('Under Sidebar Right Text'),
+      'none' => t('None'),
+    ),
+  );
+  $form['content_area']['nav_type'] = array(
+    '#type' => 'select',
+    '#title' => t('Navigation Type'),
+    '#default_value' => $row['nav_type'],
+    '#options' => array(
+      'parents_children' => t('Only Parents and Children'),
+      'tree' => t('Tree'),
+    ),
+  );
+  drupal_add_css('misc/farbtastic/farbtastic.css');
+  drupal_add_js('misc/farbtastic/farbtastic.js');
+  drupal_add_css(drupal_get_path('module', 'exhibition_config') . '/css/exhibition_config.css', array('group' => CSS_THEME, 'weight' => 111));
+  drupal_add_css(drupal_get_path('module', 'exhibition_config') . '/css/jstree_static/style.min.css');
+  //drupal_add_js(drupal_get_path('module', 'exhibition_config') . '/js/jQuery-Scoped-CSS-plugin/jquery.scoped.js');
+  $form['colors']['colorpicker_scripts'] = array(
+    '#type' => 'item',
+    '#prefix' => '<div id="cp-holder"></div>
+<div title="Choose or reset to a base set and then use the color selectors below with the color chooser to customize">
+Color Set:
+<select id="color_sets" class="form-select" name="color_sets">
+<option value="Custom" selected="selected">Custom</option>
+<option value="Default">Default</option>
+<option value="Blue_Orange">Blue/Orange</option>
+<option value="Yellow_Black">Yellows</option>
+<option value="Greens">Greens</option>
+<option value="Plum_Sea">Plum Sea</option>
+</select></div>',
+    '#description' => "<script type='text/javascript'>
+(function( $ ){
+
+    $(document).ready(function() {
+      $('#color_sets').change(function(){
+        setScheme($(this).val());
+      });
+      var setDefaults = false;
+      $('input[id^=\"edit-color\"]').each(function(){
+          if ($(this).val() == ''){
+            setDefaults = true;
+            $(this).val('#000000');
+          }
+          $('#cp-holder').append('<div class=\"cp\" id=\"cp-'+this.id+'\"></div>');
+          $('#'+this.id).focus(function(){
+            cpClick(this);
+          });
+          $('#'+this.id).blur(function(){
+            performRecolor(true);
+          });
+          $('#cp-'+this.id).farbtastic('#'+this.id);
+      });
+      if (setDefaults){
+         
+        setScheme('Default');
+      }
+      $('.cp').hide();
+      $('#cp-edit-color-background').show(); //Show initial one
+      constantCheck();
+      displayCorrectNav();
+      togglePreviewLocation();
+      $('#edit-nav-type').change(displayCorrectNav);
+      setFieldsetsToUncollapseWhenPreviewEditLinksClicked();
+      addHighlightsOnSectionMouseovers();
+    });
+    function displayCorrectNav(){
+      $('#pc_nav').hide();
+      $('#tree_nav').hide();
+      if ($('#edit-nav-type').val() == 'parents_children'){
+        $('#pc_nav').show();
+      }else{
+        $('#tree_nav').show();
+      }
+    }
+    function cpClick(clickedOn){
+      $('.cp').hide();
+      $('#cp-'+clickedOn.id).show();
+    }
+    window.performRecolor = function(previewOnly){
+      //Create a css from this set
+      //'save' the css in the form
+      //add the css to the page
+      var previewPrefix = '#ShowExample ';
+      if (!previewOnly) previewPrefix = '';
+      var totalCss = previewPrefix + '.main-inner { background:';
+      totalCss += $('#edit-color-background').val();
+      totalCss += '}';
+      totalCss += previewPrefix + 'a, '+previewPrefix+'a:link, '+previewPrefix+'a:visited { color:';
+      totalCss += $('#edit-color-link').val();
+      totalCss += '}';
+      totalCss += previewPrefix + '#si-resources-inner .controls ul li a.active { color:';
+      totalCss += $('#edit-color-active-link').val();
+      totalCss += '}';
+      totalCss += previewPrefix + 'div, '+previewPrefix+'h1, '+previewPrefix+'h2, #si-resources-inner .controls h3, #si-resources .showing { color:';
+      totalCss += $('#edit-color-text').val();
+      totalCss += '}';
+      totalCss += previewPrefix + '.main-wrapper a, .jstree-anchor:link, .jstree-anchor:hover, .jstree-clicked, .jstree-anchor:visited { color:';
+      totalCss += $('#edit-color-background-link').val();
+      totalCss += '}';
+      totalCss += previewPrefix + '.content-group-inner a { color:';
+      totalCss += $('#edit-color-inner-background-link').val();
+      totalCss += '}';
+      totalCss += previewPrefix + '.content-group-inner { background:';
+      totalCss += $('#edit-color-inner-background').val();
+      totalCss += '}';
+      totalCss += previewPrefix + 'table, '+previewPrefix+'.content-group-inner table a  { background:';
+      totalCss += $('#edit-color-table-main').val();
+      totalCss += '}';
+      totalCss += previewPrefix + '.content-group-inner table a { color:';
+      totalCss += $('#edit-color-table-link').val();
+      totalCss += '}';
+      totalCss += previewPrefix + 'tr.odd td{ background:';
+      totalCss += $('#edit-color-table-color-1').val();
+      totalCss += '}';
+      totalCss += previewPrefix + 'tr.even td{ background:';
+      totalCss += $('#edit-color-table-color-2').val();
+      totalCss += '}';
+      totalCss += previewPrefix + '.page-inner{ background-color:';
+      totalCss += $('#edit-color-page-background').val();
+      totalCss += '}';
+      totalCss += previewPrefix + '.page-inner, '+previewPrefix+'.page-inner h1, '+previewPrefix+'.page-inner h2{ font-family:';
+      totalCss += $('#edit-font').val();
+      totalCss += '}';
+      if (previewOnly){
+        totalCss += previewPrefix + '#primary-menu ul.sf-menu a { color: #ffffff }';
+        jQuery(\"input[name='css']\").val(performRecolor());
+        addCss(totalCss);
+      }
+      return totalCss;
+    }
+})( jQuery );
+
+    </script>",
+  );
+  $form['colors']['color-page-background'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Page Background'),
+    '#default_value' => $my_css['color-page-background'],
+  );
+  $form['colors']['color-link'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Main Page Links'),
+    '#default_value' => $my_css['color-link'],
+  );
+  $form['colors']['color-background'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Sidebar Background'),
+    '#default_value' => $my_css['color-background'],
+  );
+  $form['colors']['color-background-link'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Sidebar Links'),
+    '#default_value' => $my_css['color-background-link'],
+  );
+  $form['colors']['color-inner-background'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Interior Background'),
+    '#default_value' => $my_css['color-inner-background'],
+  );
+  $form['colors']['color-inner-background-link'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Interior Links'),
+    '#default_value' => $my_css['color-inner-background-link'],
+  );
+  $form['colors']['color-active-link'] = array(
+    '#type' => 'textfield',
+    '#title' => t('"Active" Links'),
+    '#default_value' => $my_css['color-active-link'],
+  );
+  $form['colors']['color-text'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Text'),
+    '#default_value' => $my_css['color-text'],
+  );
+  $form['colors']['color-table-main'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Table Accent Color'),
+    '#default_value' => $my_css['color-table-main'],
+  );
+  $form['colors']['color-table-color-1'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Table Color 1'),
+    '#default_value' => $my_css['color-table-color-1'],
+  );
+  $form['colors']['color-table-color-2'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Table Color 2'),
+    '#default_value' => $my_css['color-table-color-2'],
+  );
+  $form['colors']['color-table-link'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Table Links'),
+    '#default_value' => $my_css['color-table-link'],
+  );
+  $form['colors']['font'] = array(
+    '#type' => 'select',
+    '#title' => t('Font Family'),
+    '#default_value' => $my_css['font'],
+    '#options' => array(
+      'Georgia' => t('Georgia'),
+      'Arial' => t('Arial'),
+      'Tahoma' => t('Tahoma'),
+      'Verdana' => t('Verdana'),
+    ),
+  );
+  /*
+  for ($i = 1; $i < 5; $i++){
+    $form['rows'][$i]['data'] = array ('#type' => 'value', '#value' => array('data'.$i));
+    $form['rows'][$i]['weight-'.$i] = array(
+      '#type' => 'textfield',
+      '#size' => 5,
+      '#default_value' => $i,
+      '#attributes' => array('class' => 'weight'),
+    );
+  }
+  */
+  /*
+  $form['use_parent_config'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Do not use a custom configuration, use parent configuration'),
+    '#default_value' => $row['use_parent_config'],
+  );
+  */
+  /*
+  $form['use_current_config_for_children'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Allow all child concepts that can be reached from this concept through the tree to be viewable and use this configuration for all children of this concept that you own that have not yet been specified. This will not overwrite any exhibition configuration for concepts that have already been set.  If this is unchecked, child concepts will not show publicly unless explictly set to show publicly.'),
+    '#default_value' => TRUE, //TODO going to need to save this
+  );
+  */
+  /*
+  $form['use_current_config_overwrite_children'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Overwrite the configuration of all children of this concept that you own with this configuration.'),
+    '#default_value' => FALSE,
+  );
+  */
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => 'Submit',
+  );
+  return $form;
+}
+function theme_exhibition_config_form($form){
+    drupal_add_tabledrag('link-order-table', 'order', 'sibling', 'weight');      
+}
+function exhibition_config_theme(){
+  return array(
+    'exhibition_config_form' => array(
+      'variables' => array('form' => NULL),
+    ),
+  );
+}

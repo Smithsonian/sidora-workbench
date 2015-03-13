@@ -1,0 +1,294 @@
+/*
+  background: #ddd;
+  background: rgba(221, 221, 221, 0.5);
+*/
+
+#si-exhibition
+{
+  width: 100%;
+  height: auto;
+}
+
+#si-exhibition-top
+{
+
+}
+
+.primary-menu ul li {
+  float: left;
+  list-style: none;
+  position: relative;
+}
+
+#si-content
+{
+  float: left;
+  width: 67%;
+  height: auto;
+
+  position: relative;
+}
+
+.si-exhibition-full-width #si-content
+{
+  width: 100%;
+}
+
+#si-exhibition table
+{
+  margin: 15px 0;
+}
+
+span.si-icon
+{
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 40px;
+  height: 40px;
+  /* background: #ddd; */
+  /* background: rgba(221, 221, 221, 0.5); */
+  overflow: hidden;
+}
+
+span.si-collectioncmodel
+{
+  background: url('../images/icons/photo-album-blue.png') center center no-repeat transparent;
+}
+
+span.si-peoplecollectioncmodel
+{
+  background: url('../images/icons/users.png') center center no-repeat transparent;
+}
+
+span.si-peoplecmodel
+{
+  background: url('../images/icons/user.png') center center no-repeat transparent;
+}
+
+span.si-expeditioncmodel
+{
+  background: url('../images/icons/globe-green.png') center center no-repeat transparent;
+}
+
+span.si-ncdcollectioncmodel
+{
+  background: url('../images/icons/grid-dot.png') center center no-repeat transparent;
+}
+
+span.si-orgcollectioncmodel
+{
+  background: url('../images/icons/building.png') center center no-repeat transparent;
+}
+
+span.si-organizationcmodel
+{
+  background: url('../images/icons/org.png') center center no-repeat transparent;
+}
+
+
+span.si-fieldbookcmodel
+{
+  background: url('../images/icons/notebook--pencil.png') center center no-repeat transparent;
+}
+
+
+div.r-icon
+{
+  width: 16px;
+  height: 16px;
+
+  overflow: hidden;
+  text-indent: -999em;
+}
+
+div.r-pdf
+{
+  background: url('../images/icons/document-pdf-text.png') center center no-repeat transparent;
+}
+
+div.r-jpg
+{
+  background: url('../images/icons/image.png') center center no-repeat transparent;
+}
+
+div.r-text
+{
+  background: url('../images/icons/document-text.png') center center no-repeat transparent;
+}
+
+div.r-csv
+{
+  background: url('../images/icons/	document-excel-csv.png') center center no-repeat transparent;
+}
+
+
+
+
+.si-exhibition-full-width .concept-icon
+{
+  top: -40px;
+}
+
+#si-content-inner
+{
+
+}
+
+.block #si-navigation
+{
+  width: 100%;
+  float: left;
+}
+
+#si-exhibition #si-navigation
+{
+  float: right;
+  width: 33%;
+  height: auto;
+}
+
+#si-exhibition #si-navigation #si-navigation-inner
+{
+  padding: 5px;
+}
+
+#si-exhibition-bottom
+{
+
+}
+
+#si-resources
+{
+  float: left;
+  width: 67%;
+  height: auto;
+
+}
+
+.si-exhibition-full-width #si-resources
+{
+  width: 100%;
+  margin: 20px 0px;
+}
+
+
+#si-resources-inner
+{
+
+}
+
+#si-resources ul.results-per-page li,
+#si-resources ul.limit-by-type li
+{
+  display: inline-block;
+  zoom: 1;
+  /*display: inline;*/
+}
+
+#si-resources .controls
+{
+  display: inline-block;
+  zoom: 1;
+  /*display: inline;*/
+  margin: 0px 30px 0px 0px;
+}
+
+#si-resources .controls ul
+{
+  margin-left: 0px;
+}
+
+#si-resources .showing
+{
+  width: 100%;
+}
+
+#si-resources .no-results
+{
+  width: 100%;
+}
+
+img.resource-tn
+{
+  height: 75px;
+}
+
+/* we deal with some long title */
+body #sb-title-inner,
+body #sb-title
+{
+  height: auto;
+}
+
+ul.parent-concepts li,
+ul.child-concepts li
+{
+  list-style: disc inside none;
+}
+
+ul.child-concepts
+{
+  max-height: 500px;
+  overflow: auto;
+}
+
+#sb-body-inner
+{
+
+}
+
+#sb-player.html
+{
+  background-color: #fff;
+}
+
+table.metadata-table td,
+table.metadata-table th,
+table.resources-table td,
+table.resources-table th,
+#sb-player table td
+{
+  padding: 7px;
+}
+
+#forjstree ul
+{
+  margin-left: 0;
+}
+
+table .regular-options a {
+	/*
+  font: normal 11px Arial;
+	text-decoration: none;
+	color: #333;
+  */
+	padding: 5px 10px;
+	margin: 2px 5px;
+	border-radius: 5px;
+}
+.content-inner.block{
+overflow:auto;
+}
+.regular-options
+{
+white-space: nowrap;
+}
+#si-navigation li
+{
+  background-color:inherit;
+}
+.ui-resizable-handle 
+{
+  border: 1px black;
+  background-color: lightgray;
+  width: 15px;
+}
+.form-item
+{
+  display:block; 
+}
+#exhibition-resources-form .form-item
+{
+  display:inline-block;
+}

@@ -1,0 +1,962 @@
+/* General settings */
+
+body
+{
+  background-color: #eee;
+  font-family: Verdana;
+  font-size: 0.7em ;
+}
+
+/* Default link styles - separate a:visited for a different visited link style */
+a,
+a:link,
+a:visited
+{
+    color: #006CA8;
+    text-decoration: none;
+}
+
+/* Hover/active link styles. Don't forget :focus for accessibility */
+a:hover,
+a:focus,
+a:active {
+    color: #676767;
+}
+
+p
+{
+    line-height: 15px;
+}
+
+
+/* Headers */
+h1,
+h2
+{
+    color: #323232;
+    font: 2em Georgia;
+    margin-bottom: 0.3em;
+}
+h3
+{
+    color: #323232;
+    font: 1.6em Georgia;
+    margin-bottom: 0.3em;
+}
+h6
+{
+    color: #323232;
+    font: bold 1em Verdana;
+    margin-bottom: 2px;
+    text-transform: none;
+}
+
+tr.even,
+tr.even td
+{
+  background-color: #F4F4F4;
+}
+
+td,
+th
+{
+  padding: 5px;
+}
+
+.block
+{
+    margin-bottom: 10px;
+}
+body .block .inner
+{
+    margin-left: 5px;
+    margin-right: 5px;
+}
+
+
+div.content-messages div.messages,
+div.content-help div.help
+{
+    border-width: 1px;
+}
+
+ul.pager a,
+ul.pager a:hover,
+ul.pager li.pager-current
+{
+    border: 0px;
+    padding: 3px 6px 2px 6px;
+    text-decoration: none;
+}
+
+#header-site-info
+{
+    width: 100%;
+}
+#mission
+{
+    float: right;
+    width: 250px;
+}
+#mission p
+{
+    border-bottom: 1px solid #CCCCCC;
+    color: #666;
+    padding-bottom: 10px;
+}
+
+/* Header */
+
+/* Drupal default Search box */
+
+.topbar,
+#header-top-inner
+{
+    height: 25px;
+    margin: 10px 5px 15px;
+    padding: 8px 0 3px;
+    background-color: #D8D7D7;
+    border-radius: 5px 5px 5px 5px;
+    z-index: 0;
+    behavior: url('/sites/all/themes/smithsonian/pie/PIE.htc');
+}
+
+#search-box,
+#header-top-inner #block-islandora_solr_search-simple
+{
+  float: right;
+  width: 270px;
+}
+
+.topbar #edit-search-theme-form-header,
+#header-top-inner #block-islandora_solr_search-simple #edit-islandora-simple-search-query
+{
+    background: url("../images/search_icon.png") no-repeat scroll 5px center #FFFFFF;
+    color: #929191;
+    line-height: 1.9em;
+    padding: 0 20px;
+    width: 155px;
+}
+
+.topbar form input,
+#header-top-inner #block-islandora_solr_search-simple form input
+{
+    background-color: #EBEBEB;
+    border: 1px solid #B2B2B2;
+    font: 0.8em Verdana;
+    height: 1.8em;
+    vertical-align: middle;
+}
+.topbar input.search_submit,
+#header-top-inner #block-islandora_solr_search-simple input.form-submit
+{
+    background: none repeat scroll 0 0 #017AAB;
+    color: #FFFFFF;
+    font-size: 0.9em;
+    font-weight: bold;
+    padding: 0px 5px;
+    cursor: pointer;
+}
+
+#header-top-inner #block-islandora_solr_search-simple #edit-islandora-simple-search-query-wrapper
+{
+  /*float: left;*/
+  /* display: inline; */
+  /* margin: 0px 0px 5px 0px; */
+  display: inline;
+  zoom: 1;
+  margin: 0px;
+}
+
+#header-top-inner ul.menu
+{
+  margin-bottom: 10px;
+}
+
+/* reverting some EXT-JS styling */
+.x-border-box .x-reset #header-top *
+{
+  -moz-box-sizing: content-box;
+  -webkit-box-sizing: content-box;
+  box-sizing: content-box;
+}
+
+.x-border-box .x-reset input.search_submit,
+.x-border-box .x-reset #header-top-inner #block-islandora_solr_search-simple input.form-submit
+{
+  height: 15px;
+}
+
+
+#logo
+{
+    float: left;
+}
+
+#site-name-wrapper
+{
+    float: left;
+    margin: 18px 0px 0px 30px;
+}
+#site-name
+{
+    font-size: 210%;
+    line-height: 150%;
+}
+
+#header-site-info .inner
+{
+    margin-left: 5px;
+}
+
+/* Default search block */
+
+
+
+
+/* Main navigation */
+
+ul.sf-menu
+{
+    list-style: none;
+    float: left;
+    width: 100%; /* width: 950px; */
+    background: #015F90 url('../images/nav_3_bg.png') repeat-x top left;
+    border: solid 1px #015A8A;
+    border-top: 0;
+
+    border-radius: 5px 5px 5px 5px;
+    -moz-border-radius-bottomleft: 5px;
+    -moz-border-radius-bottomright: 5px;
+    -moz-border-radius-topleft: 5px;
+    -moz-border-radius-topright: 5px;
+    behavior: url('/sites/all/themes/smithsonian/pie/PIE.htc');
+}
+
+ul.sf-menu a,
+ul.sf-menu .nolink,
+ul.sf-menu a:visited,
+ul.sf-menu a:hover
+{
+    text-decoration: none;
+    font-family: "Times New Roman", "Times";
+    color: #fff;
+    font-weight: normal;
+    font-size: 17px;
+
+/*    padding: 15px 15px;*/
+/*    line-height: 35px;*/
+}
+#primary-menu ul.sf-menu a,
+#primary-menu ul.sf-menu .nolink
+{
+    display: block;
+    padding: 0.65em 1em;
+
+}
+#primary-menu .inner
+{
+    margin-left: 5px;
+    margin-right: 5px;
+}
+ul.sf-menu li.active-trail a,
+ul.sf-menu li a:hover
+{
+    background: #004160 url('../images/nav_3_bg_over.png') repeat-x top left; /* darkest blue */
+}
+ul.sf-menu li.active-trail ul a,
+ul.sf-menu ul li a:hover,
+ul.sf-menu ul li a
+{
+    background-image: none;
+    background-color: #dedede; /* light grey */
+/*    width: 100px;*/
+/*    Fix some issues here... */
+}
+.sf-menu li:hover ul,
+.sf-menu li.sfHover ul
+{
+    top: 39px;
+}
+ul.sf-menu li
+{
+    border-right: solid 1px #4CA2C4; /* light blue */
+}
+.sf-menu ul,
+ul.sf-menu ul li
+{
+    background-image: none;
+    border-right: 0px;
+}
+
+ul.sf-menu ul li a,
+ul.sf-menu ul li a:visited
+{
+    color: #004160; /* darkest blue */
+    width: 150px;
+    text-decoration: none;
+}
+ul.sf-menu ul li a:hover,
+ul.sf-menu ul li a.active,
+ul.sf-menu ul li a.active:visited
+{
+    background-color: #4CA2C4; /* light blue */
+    background-image: none;
+    border-right: 0px;
+    text-decoration: none;
+    color: #fff;
+}
+/*ul.sf-menu ul a:hover,
+ul.sf-menu ul a.active
+{
+    color: #fff;
+}*/
+ul.sf-menu li li:hover ul,
+ul.sf-menu li li.sfHover ul
+{
+    left: 184px;
+    top: 0;
+}
+ul.sf-menu li li li:hover ul,
+ul.sf-menu li li li.sfHover ul
+{
+    left: 184px;
+    top: 0;
+}
+.sf-menu ul
+{
+    position: absolute;
+    top: -999em;
+    width: 150px;
+}
+
+
+/* Breadcrumbs */
+
+.breadcrumbs
+{
+    text-transform: uppercase;
+}
+#primary-menu,
+#breadcrumbs
+{
+    margin-bottom: 0.5em;
+}
+
+.front #primary-menu
+{
+    margin-bottom: 25px;
+}
+
+
+
+#sidebar-first-inner,
+#sidebar-last-inner,
+#content-group-inner
+{
+
+}
+#sidebar-first
+{
+  margin-left: 0px;
+}
+#sidebar-last
+{
+  margin-right: 0px;
+}
+#main-group
+{
+    margin-left: 0px;
+    margin-right: 0px;
+}
+/*body .block .inner
+{
+    margin-left: 5px;
+    margin-right: 5px;
+    padding-left: 5px;
+    padding-right: 5px;
+}*/
+
+
+#content-group-inner
+{
+    background: white;
+
+    border-radius: 5px 5px 5px 5px;
+    -webkit-border-radius: 5px;
+    -moz-border-radius: 5px;
+
+    -webkit-box-shadow: 0 1px 10px rgba(0, 0, 0, .2);
+    -moz-box-shadow: 0 1px 10px rgba(0, 0, 0, .2);
+    box-shadow: 0px 0px 6px 1px rgba(110, 110, 110, .1);
+    behavior: url('/sites/all/themes/smithsonian/pie/PIE.htc');
+    z-index: 0;
+
+    padding: 15px 10px;
+    margin: 0px 5px 10px 5px;
+}
+/* If the content type is panel, don't add a white background.
+   This would wrap around the entire page. */
+.node-type-panel #content-group-inner
+{
+    background-color: #eee;
+    border: 0px;
+
+    border-radius: 0px;
+    -webkit-border-radius: 0px;
+    -moz-border-radius: 0px;
+
+    -webkit-box-shadow: none;
+    -moz-box-shadow: none;
+    box-shadow: none;
+
+    padding: 0px;
+    margin: 0px;
+}
+
+
+
+/* Experimental wrapper */
+#bottom-inner
+{
+    background: white;
+
+    border-radius: 5px 5px 5px 5px;
+    -webkit-border-radius: 5px;
+    -moz-border-radius: 5px;
+
+    -webkit-box-shadow: 0 1px 10px rgba(0, 0, 0, .2);
+    -moz-box-shadow: 0 1px 10px rgba(0, 0, 0, .2);
+    box-shadow: 0px 0px 6px 1px rgba(110, 110, 110, .1);
+    behavior: url('/sites/all/themes/smithsonian/pie/PIE.htc');
+    z-index: 0;
+
+/*    padding: 15px 10px;*/
+/*    margin: 0px 5px 10px 5px;*/
+}
+
+
+#block-menu-menu-footer-demo
+{
+    margin: 20px 0px;
+}
+
+
+/* just to try this out on panels
+   I feel like all regions need some bottom margin, not just a few. */
+.inside
+{
+    margin-bottom: 0.5em;
+}
+
+
+
+
+#footer-message
+{
+    text-align: center;
+}
+
+
+
+/* Font Theme Settings: Overwrite custom settings.
+/-------------------------------------------------------------- */
+/* font size */
+.font-size-10,
+.font-size-11,
+.font-size-12,
+.font-size-13,
+.font-size-14,
+.font-size-15,
+.font-size-16,
+.font-size-17,
+.font-size-18
+{
+    font-size: 0.7em;
+}
+
+
+
+/* EXT-JS center body wrapper */
+
+.extjs-center-panel
+{
+  padding: 10px;
+}
+
+
+
+
+/* Table inside of EXT-JS center */
+
+.extjs-center-panel table,
+#content-model-viewer .extjs-center-panel table
+{
+  border: 1px solid #ccc;
+}
+
+.extjs-center-panel table caption
+{
+  font-weight: bold;
+  padding: 5px;
+}
+
+
+
+/* Repo Buttons */
+
+#content-model-viewer a.islandora-repo-button,
+#content-model-viewer a.islandora-repo-button:link
+{
+	-moz-box-shadow:inset 0px 1px 0px 0px #ffffff;
+	-webkit-box-shadow:inset 0px 1px 0px 0px #ffffff;
+	box-shadow:inset 0px 1px 0px 0px #ffffff;
+	background:-webkit-gradient( linear, left top, left bottom, color-stop(0.05, #f9f9f9), color-stop(1, #e9e9e9) );
+	background:-moz-linear-gradient( center top, #f9f9f9 5%, #e9e9e9 100% );
+	filter:progid:DXImageTransform.Microsoft.gradient(startColorstr='#f9f9f9', endColorstr='#e9e9e9');
+	background-color:#f9f9f9;
+	-moz-border-radius: 3px;
+	-webkit-border-radius: 3px;
+	border-radius: 3px;
+	border:1px solid #dcdcdc;
+
+	display:inline-block;
+	color:#555;
+	font-family:arial;
+	font-size:12px;
+	font-weight:normal;
+	padding: 4px 15px;
+	margin: 0px 10px 0px 0px;
+	text-decoration:none;
+	text-shadow:1px 1px 0px #ffffff;
+}
+
+#content-model-viewer a.islandora-repo-button:hover {
+	background:-webkit-gradient( linear, left top, left bottom, color-stop(0.05, #e9e9e9), color-stop(1, #f9f9f9) );
+	background:-moz-linear-gradient( center top, #e9e9e9 5%, #f9f9f9 100% );
+	filter:progid:DXImageTransform.Microsoft.gradient(startColorstr='#e9e9e9', endColorstr='#f9f9f9');
+	background-color:#e9e9e9;
+	color: #222;
+}
+
+#content-model-viewer a.islandora-repo-button:active {
+	/* position:relative;
+	top:1px; */
+}
+
+
+.islandora-repo-button:disabled {
+	color:rgba(0,0,0,0.4);
+	text-shadow:1px 1px 0px rgba(255,255,255,0.5);
+	background:rgba(220,220,220,1);
+}
+
+
+/* Solr Results */
+
+.islandora_solr_results
+{
+  color: #333;
+}
+
+.islandora_solr_results .islandora_solr_result
+{
+  float: left;
+  width: 100%;
+  margin: 0px 0px 8px 0px;
+  padding: 0px 0px 8px 0px;
+
+  border-bottom: 1px dotted #666;
+}
+
+.islandora_solr_results .islandora_solr_result .solr-field
+{
+  width: 100%;
+  margin: 1px 0px;
+
+  display: inline-block;
+  vertical-align: top;
+}
+
+.islandora_solr_results .islandora_solr_result .solr-field .label
+{
+  float: left;
+  width: 11%;
+  color: #555;
+}
+
+.islandora_solr_results .islandora_solr_result .solr-field .value
+{
+  float: right;
+  width: 89%;
+  color: #333;
+}
+
+.islandora_solr_results .islandora_solr_result .dc-title-s .value
+{
+
+}
+
+.islandora_solr_results .islandora_solr_result .solr-field .label label
+{
+
+}
+
+.item-list .pager
+{
+  float: left;
+  width: 100%;
+}
+
+
+
+
+/*Parent links in overview panel of content model viewer*/
+
+div#parentLinks {
+
+}
+
+div.parentLink {
+  float: left;
+  width: 100%;
+  margin: 5px 0px 5px 0px;
+  background: #f4f4f4;
+  font-size: 1em;
+  font-weight: normal;
+  text-decoration: none;
+  border: 1px solid #ccc;
+  border-radius: 4px 4px 4px 4px;
+  min-height: 20px;
+}
+
+#content-model-viewer div.parentLink a.content-model-viewer-parent-link,
+#content-model-viewer div.parentLink a.content-model-viewer-parent-link:link
+{
+    display: inline;
+    width: 100%;
+    padding: 6px 0px 5px 30px;
+    line-height: 2;
+    color: #555555;
+    background: url("/sites/all/modules/content_model_viewer/lib/ext/resources/themes/images/gray/tree/folder.gif") 8px 5px no-repeat transparent;
+}
+#content-model-viewer div.parentLink a.content-model-viewer-parent-link:hover {
+    color: #212121;
+    border-color: #777;
+    outline: medium none;
+    background: url("/sites/all/modules/content_model_viewer/lib/ext/resources/themes/images/gray/tree/folder-open.gif") 8px 5px no-repeat transparent;
+    cursor: pointer;
+}
+
+#content-model-viewer div.parentLink a.content-model-viewer-remove-parent-link
+{
+    float: right;
+    width: 16px;
+    height: 16px;
+    padding: 20px 5px 5px 30px;
+    background: url("/sites/all/modules/content_model_viewer/lib/ext/resources/themes/images/gray/dd/drop-no.gif") 8px 5px no-repeat transparent;
+}
+
+.x-panel-body
+{
+
+}
+
+/*content model viewer tree icons. icon class name = content model name minus prefix*/
+.orgCollectionCModel
+{
+  background-image: url("/sites/all/modules/content_model_viewer/lib/ext/resources/themes/images/gray/tree/org.png");
+  width: 16px
+}
+
+.x-grid-tree-node-expanded .orgCollectionCModel
+{
+  background-image: url("/sites/all/modules/content_model_viewer/lib/ext/resources/themes/images/gray/tree/org.png");
+  width: 16px
+}
+
+.organizationCModel
+{
+  background-image: url("/sites/all/modules/content_model_viewer/lib/ext/resources/themes/images/gray/tree/org.png");
+  width: 16px
+}
+
+.x-grid-tree-node-expanded .organizationCModel
+{
+  background-image: url("/sites/all/modules/content_model_viewer/lib/ext/resources/themes/images/gray/tree/org.png");
+  width: 16px;
+}
+
+.cameraTrapCModel
+{
+  background-image: url("/sites/all/modules/content_model_viewer/lib/ext/resources/themes/images/gray/tree/films.png");
+  width: 16px;
+}
+
+.x-grid-tree-node-expanded .cameraTrapCModel
+{
+  background-image: url("/sites/all/modules/content_model_viewer/lib/ext/resources/themes/images/gray/tree/films.png");
+  width: 16px;
+}
+
+.cameraTrapDeploymentCModel
+{
+  background-image: url("/sites/all/modules/content_model_viewer/lib/ext/resources/themes/images/gray/tree/film--arrow.png");
+  width: 16px;
+}
+
+.x-grid-tree-node-expanded .cameraTrapDeploymentCModel
+{
+  background-image: url("/sites/all/modules/content_model_viewer/lib/ext/resources/themes/images/gray/tree/film--arrow.png");
+  width: 16px;
+}
+
+
+.cameraTrapImageCModel
+{
+  background-image: url("/sites/all/modules/content_model_viewer/lib/ext/resources/themes/images/gray/tree/film.png");
+  width: 16px;
+}
+
+.x-grid-tree-node-expanded .cameraTrapImageCModel
+{
+  background-image: url("/sites/all/modules/content_model_viewer/lib/ext/resources/themes/images/gray/tree/film.png");
+  width: 16px;
+}
+
+.collectionCModel
+{
+  background-image: url("/sites/all/modules/content_model_viewer/lib/ext/resources/themes/images/gray/tree/photo-album-blue.png");
+  width: 16px;
+}
+
+.x-grid-tree-node-expanded .collectionCModel
+{
+  background-image: url("/sites/all/modules/content_model_viewer/lib/ext/resources/themes/images/gray/tree/photo-album-blue.png");
+  width: 16px;
+}
+
+.ctCollectionCModel
+{
+  background-image: url("/sites/all/modules/content_model_viewer/lib/ext/resources/themes/images/gray/tree/films.png");
+  width: 16px;
+}
+
+.x-grid-tree-node-expanded .ctCollectionCModel
+{
+  background-image: url("/sites/all/modules/content_model_viewer/lib/ext/resources/themes/images/gray/tree/films.png");
+  width: 16px;
+}
+
+.ctPlotCModel
+{
+  background-image: url("/sites/all/modules/content_model_viewer/lib/ext/resources/themes/images/gray/tree/film--pencil.png");
+  width: 16px;
+}
+
+.x-grid-tree-node-expanded .ctPlotCModel
+{
+  background-image: url("/sites/all/modules/content_model_viewer/lib/ext/resources/themes/images/gray/tree/film--pencil.png");
+  width: 16px;
+}
+
+.datasetCModel
+{
+  background-image: url("/sites/all/modules/content_model_viewer/lib/ext/resources/themes/images/gray/tree/disk-return-black.png");
+  width: 16px;
+}
+
+.x-grid-tree-node-expanded .datasetCModel
+{
+  background-image: url("/sites/all/modules/content_model_viewer/lib/ext/resources/themes/images/gray/tree/disk-return-black.png");
+  width: 16px;
+}
+
+.expeditionCModel
+{
+  background-image: url("/sites/all/modules/content_model_viewer/lib/ext/resources/themes/images/gray/tree/globe-green.png");
+  width: 16px;
+}
+
+.x-grid-tree-node-expanded .expeditionCModel
+{
+  background-image: url("/sites/all/modules/content_model_viewer/lib/ext/resources/themes/images/gray/tree/globe-green.png");
+  width: 16px;
+}
+
+.fbCollectionCModel
+{
+  background-image: url("/sites/all/modules/content_model_viewer/lib/ext/resources/themes/images/gray/tree/notebooks.png");
+  width: 16px;
+}
+
+.x-grid-tree-node-expanded .fbCollectionCModel
+{
+  background-image: url("/sites/all/modules/content_model_viewer/lib/ext/resources/themes/images/gray/tree/notebooks.png");
+  width: 16px;
+}
+
+.fieldbookCModel
+{
+  background-image: url("/sites/all/modules/content_model_viewer/lib/ext/resources/themes/images/gray/tree/notebook--pencil.png");
+  width: 16px;
+}
+
+.x-grid-tree-node-expanded .fieldbookCModel
+{
+  background-image: url("/sites/all/modules/content_model_viewer/lib/ext/resources/themes/images/gray/tree/notebook--pencil.png");
+  width: 16px;
+}
+
+.peopleCollectionCModel
+{
+  background-image: url("/sites/all/modules/content_model_viewer/lib/ext/resources/themes/images/gray/tree/users.png");
+  width: 16px;
+}
+
+.x-grid-tree-node-expanded .peopleCollectionCModel
+{
+  background-image: url("/sites/all/modules/content_model_viewer/lib/ext/resources/themes/images/gray/tree/users.png");
+  width: 16px;
+}
+
+.peopleCModel
+{
+  background-image: url("/sites/all/modules/content_model_viewer/lib/ext/resources/themes/images/gray/tree/user.png");
+  width: 16px;
+}
+
+.x-grid-tree-node-expanded .peopleCModel
+{
+  background-image: url("/sites/all/modules/content_model_viewer/lib/ext/resources/themes/images/gray/tree/user.png");
+  width: 16px;
+}
+
+.orgCollectionCModel
+{
+  background-image: url("/sites/all/modules/content_model_viewer/lib/ext/resources/themes/images/gray/tree/building.png");
+  width: 16px;
+}
+
+.x-grid-tree-node-expanded .orgCollectionCModel
+{
+  background-image: url("/sites/all/modules/content_model_viewer/lib/ext/resources/themes/images/gray/tree/building.png");
+  width: 16px;
+}
+
+.ncdCollectionCModel
+{
+  background-image: url("/sites/all/modules/content_model_viewer/lib/ext/resources/themes/images/gray/tree/grid-dot.png");
+  width: 16px;
+}
+
+.x-grid-tree-node-expanded .ncdCollectionCModel
+{
+  background-image: url("/sites/all/modules/content_model_viewer/lib/ext/resources/themes/images/gray/tree/grid-dot.png");
+  width: 16px;
+}
+
+.projectCModel
+{
+  background-image: url("/sites/all/modules/content_model_viewer/lib/ext/resources/themes/images/gray/tree/blueprint.png");
+  width: 16px;
+}
+
+.x-grid-tree-node-expanded .projectCModel
+{
+  background-image: url("/sites/all/modules/content_model_viewer/lib/ext/resources/themes/images/gray/tree/blueprint.png");
+  width: 16px;
+}
+
+.imageCModel
+{
+ Â background-image: url("/sites/all/modules/content_model_viewer/lib/ext/resources/themes/images/gray/tree/picture.png");
+ Â width: 16px;
+}
+
+.x-grid-tree-node-expanded .imageCModel
+{
+ Â background-image: url("/sites/all/modules/content_model_viewer/lib/ext/resources/themes/images/gray/tree/picture.png");
+ Â width: 16px;
+}
+
+
+
+/* header top region */
+
+
+
+
+/* Smithsonian exhibition piece theming */
+
+#si-resources-inner .controls h3
+{
+  font-size: 1.4em;
+}
+
+#si-resources-inner .controls ul li
+{
+  border-right: 1px solid #ccc;
+  padding: 0 10px 0 5px;
+}
+
+#si-resources-inner .controls ul li.last
+{
+  border-right: 0px;
+}
+
+#si-resources-inner .controls ul li a.active
+{
+  color: #006CA8;
+}
+
+#si-resources-inner .controls ul li a.active:hover
+{
+  color: #676767;
+}
+
+#si-resources .showing
+{
+  color: #333;
+}
+
+ul.parent-concepts,
+ul.child-concepts
+{
+  margin: 0px 0px 10px 0px;
+}
+
+ul.parent-concepts li,
+ul.child-concepts li
+{
+  list-style: none;
+  padding: 5px 3px;
+}
+
+ul.parent-concepts li:nth-child(2n),
+ul.child-concepts li:nth-child(2n),
+ul.parent-concepts li.odd,
+ul.child-concepts li.odd
+{
+  background-color: #f6f6f6;
+}
+
+
+/* iframe + fluid layout */
+
+.grid-type-fluid
+{
+  padding: 0 20px;
+}
+
+
+
+.grid-type-fluid .row
+{
+  max-width: 100%;
+}
+
+#content-region iframe
+{
+  width: 100%;
+}
