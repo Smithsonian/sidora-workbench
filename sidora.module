@@ -1481,10 +1481,33 @@ function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $ex
     return sidora_get_plupload_html($elements);
   }
 if ($one == 'exhibition'){ 
-		  if (module_exists('exhibition_config')){
-				$exhibition_data = exhibition_config_get_config_data($two);
-	var_dump($exhibition_data);
-	}
+//	if (module_exists('exhibition_config')){
+	//	$exhibition_data = exhibition_config_get_config_data($two);
+  	//var_dump($exhibition_data);
+//	}
+  $exhibitions['action'] = 'return false;';
+	$exhibitions['ui_state_disable'] = 'true';
+	 //can't do operations on blank pid
+	if (empty($two)){         
+     $exhibitions['action'] = 'return false;';
+		 $exhibitions['ui_state_disable'] = 'true';
+	}else{
+  		if (module_exists('exhibition_config')){
+  			$exhibition_data = exhibition_config_get_config_data($two);
+  			if (!(empty($exhibition_data)) && !(is_null($exhibition_data['pid'])) && ($exhibition_data['is_available'] != '')){
+           $exhibitions['action'] = 'return false;window.open(\'' . variable_get('si_exhibition_website_location', ''). '\'+window.sidora.concept.GetPid()); return false;';
+  				 $exhibitions['ui_state_disable'] = 'false';
+  		  }else{
+            $exhibitions['action'] = 'return false;';
+  				 $exhibitions['ui_state_disable'] = 'true';
+  			}
+		 }else{
+        $exhibitions['action'] = 'return false;';
+			  $exhibitions['ui_state_disable'] = 'true';
+		 }
+	}					
+  var_dump($exhibition_data);	
+	var_dump($exhibitions);
 	}
 	}
 /*
@@ -2407,26 +2430,29 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
           $to_output .= '</ul>';
         }
       break;
-	 // added by RA on 3/12/15 - to make the ajax call to see if there is an exhibition for the current concept.
+	 // added by RA on 3/12/15 - the ajax call to see if there is an exhibition for the current concept and enable/disable the "Exhibit" menu link accordingly
 		case 'exhibition': 
-		  $exhibitions['exist'] = 'false';
-			if (empty($pid))$exhibitions['exist'] = 'false-pid' ; //can't do operations on blank pid
-		  if (module_exists('exhibition_config')){
-				$exhibition_data = exhibition_config_get_config_data($pid);
-				if (!empty($exhibition_data)) {
-          if (is_null($exhibition_data['pid'])){
-      		  $exhibitions['exist'] = 'false-null';
-    			} else if ($exhibition_data['is_available']){
-              $exhibitions['exist'] = 'true';
+      $exhibitions['action'] = 'return false;';
+			$exhibitions['ui_state_disable'] = true;
+			 //can't do operations on blank pid
+			if (empty($pid)){         
+           $exhibitions['action'] = 'return false;';
+					 $exhibitions['ui_state_disable'] = true;
+			}else{
+    		  if (module_exists('exhibition_config')){
+    				$exhibition_data = exhibition_config_get_config_data($pid);
+    				if (!(empty($exhibition_data)) && !(is_null($exhibition_data['pid'])) && ($exhibition_data['is_available'])){
+               $exhibitions['action'] = 'window.open(\'' . variable_get('si_exhibition_website_location', ''). '\'+window.sidora.concept.GetPid()); return false;';
+    					 $exhibitions['ui_state_disable'] = false;
+    			  }else{
+               $exhibitions['action'] = 'return false;';
+    					 $exhibitions['ui_state_disable'] = true;
+    				}
 				  }else{
-				   $exhibitions['exist'] = 'false-available';
+            $exhibitions['action'] = 'return false;';
+					  $exhibitions['ui_state_disable'] = true;
 				  }
-				}else{
-				  $exhibitions['exist'] = 'false-empty';
-				}			
-				}else{
-				  $exhibitions['exist'] = 'false-module';
-				}			
+			}					
 			print json_encode($exhibitions);
       exit();
       break; 
@@ -2633,10 +2659,13 @@ function sidora_block_view($delta = ''){
  
       //Only show exhibition link if someone has administratively set a location for where exhibition exists
       if (variable_get('si_exhibition_website_location', '') != ''){
-        $block['content'] .= '
+    /*   $block['content'] .= '
                 <li id="exhibitConcept"><a href="#" onclick="return false;window.open(\''.
           variable_get('si_exhibition_website_location', '').
           '\'+window.sidora.concept.GetPid()); return false;">Exhibit</a></li>';
+					*/
+        $block['content'] .= '
+                <li id="exhibitConcept"><a href="#";>Exhibit</a></li>';
       }
       $block['content'] .= '
              </ul>
