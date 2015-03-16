@@ -177,7 +177,11 @@ jQuery(document).ready(function(){
   jQuery("#anf-button").click(function(){
     var myWin = window.open(Drupal.settings.basePath+"sidora/test/upload2","XSL_UPLOAD","width=550,height=250,0,status=0,");
   });
-  jQuery("#anr-button").click(function(){
+  // add jquery to the delete xsl button
+	jQuery("#dxsl-button").click(function(){
+    var delete_xslWin = window.open(Drupal.settings.basePath+"sidora/delete_xsl","XSL_DELETE","width=\'100%\',height=\'100%\',0,status=0,");
+ });
+	jQuery("#anr-button").click(function(){
     var tableRow = \'<tr><td>'.$form_names_dd.'</td><td>'.$model_names_dd.'</td><td><input type="textfield" class="form-text" /></td><td><select class="xsl-names-dd form-select">\'+jQuery(".xsl-names-dd")[0].innerHTML.replace(\'selected="selected"\',"")+\'</select></td><td><input type="button" class="form-submit remove-row" value="Remove"/></td></tr>\';
     jQuery(".sfc-table tbody").append(tableRow);
     recolorTable();
@@ -245,11 +249,14 @@ tr.removed.odd {
   $add_new_files_button = '<input id="anf-button" type="button" class="form-submit" value="Upload New XSL File"/>';
   $add_new_row_button = '<input id="anr-button" type="button" class="form-submit" value="Add New Row to Configure"/>';
   $sfc_label = '<label>Metadata Form XSL Configuration</label>';
-  
+  // create the delete xsl files button
+	$remove_xsl_file_button = '<input id="dxsl-button" type="button" class="form-submit" value="Remove a XSL File"/>';
+	
   $form['xsl_form_config'] = array(
       '#type' => 'hidden',
       '#default_value' => variable_get('xsl_form_config', ''),
-      '#suffix' => $sfc_label.$sfc_table.$add_new_row_button.$add_new_files_button,//.theme('table',$table),
+     // '#suffix' => $sfc_label.$sfc_table.$add_new_row_button.$add_new_files_button,//.theme('table',$table),
+      '#suffix' => $sfc_label.$sfc_table.$add_new_row_button.$add_new_files_button.$remove_xsl_file_button,//.theme('table',$table),
   );
 
   $models = array();

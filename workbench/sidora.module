@@ -137,6 +137,14 @@ function sidora_menu() {
       'access callback' => 'user_is_logged_in',
       'type' => MENU_CALLBACK,
     ),
+		'sidora/delete_xsl' => array(
+		  'title' => 'Delete XSL',
+			'description' => 'Delete a XSL',
+      'page callback' => 'drupal_get_form',
+      'page arguments' => array('sidora_delete_xsl_form'),
+      'access callback' => 'user_is_logged_in',
+      'type' => MENU_CALLBACK,
+   ),
   );
 }
 function sidora_management_ingest($pid, $dsid, $label = NULL, $mimeType = NULL){
@@ -806,7 +814,7 @@ function sidora_get_form_and_dsid($object_pid){
   module_load_include('inc','xml_forms','builder/includes/associations');
   $object = sidora_obj($object_pid);
     //Now that we have the object, check to see if it has the SIDORA datastream (which will tell us the model and form to use)
-    if ($object['SIDORA']){
+    if ($object['SIDORA'] && strpos($object['SIDORA']->content, '<form>') > 0 && strpos($object['SIDORA']->content, '<model>') > 0){
       $to_model = '
 <xsl:stylesheet version="1.0"
 xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
@@ -863,14 +871,70 @@ xmlns:cpf="urn:isbn:1-931666-33-4"
     }else{
       $info = sidora_guess_dsid_and_form_name($object);
       if (!empty($info['form_name'])){
+        //watchdog('sidora_workbench',$object_pid.' - Form was guessed, not included in information:'.$dsid.' "'.$form_name.'"');
         return $info;
-        //dsm('This form was guessed, not included in information:'.$dsid.' "'.$form_name.'"');
       }else{
         return FALSE;
       }
     }
   return $to_return; 
 }
+/* Show the form used to delete a XSL */
+function sidora_delete_xsl_form($form,&$form_state){
+  $form = array();
+  $directory_to_list_for_xsl = DRUPAL_ROOT.'/'.drupal_get_path('module','sidora').'/XSL';
+  $xsl_filenames = array_diff(scandir($directory_to_list_for_xsl), array('..', '.', '.htaccess'));
+
+  $xsl_names_dd = '<select class="xsl-names-dd form-select">';
+  $xsl_names_dd .= '<option value="">None - Direct metadata to browser</option>';
+  $xsl_form_dropdown = array();
+  foreach($xsl_filenames as $name){ 
+    if (sidora_endsWith(strtolower($name), ".xsl")){
+      $xsl_names_dd .= '<option value="'.$name.'">'.$name.'</option>'; 
+      	$xsl_form_dropdown[] = $name;
+    }
+  }
+  $xsl_names_dd .= '</select>';
+$js_for_form = '<script>
+jQuery(document).ready(function(){
+  	jQuery("#confirm-delete").click(function(){
+		alert("delete!!");
+		});
+    jQuery("#cancel-btn").click(function(){
+		  window.close();
+		});
+});
+</script>';
+$form['hidden_js'] = array(
+  '#type' => 'hidden',
+	'#suffix' => $js_for_form
+	);					  
+  $form['xsl_to_delete']= array(
+        '#type'=>'select',
+        '#title'=>t('Select a XSL file to delete'),
+        '#options'=>$xsl_form_dropdown
+      );
+
+$form['submit-btn']=array(
+        '#type'=>'button',
+        '#value'=>t('Delete'),
+				'#attributes' => array("id" => "confirm-delete")
+      );
+//$form['#attributes'] = 
+$form['cancel-btn'] = array(
+    '#type' => 'button',
+    '#value' => t('Cancel'),
+		'#attributes' => array("id" => "cancel-btn")
+  );	
+
+	return $form;
+	}		
+  function confirm_xsl_delete(){
+	   var_dump($form_state);
+	}
+	function close_delete_window(){
+	  echo 'window.close()';
+	}	
 /*
  * Show the form used to edit the object's metadata
  */
@@ -1509,6 +1573,7 @@ if ($one == 'exhibition'){
   var_dump($exhibition_data);	
 	var_dump($exhibitions);
 	}
+	  
 	}
 /*
  * Show the form to create a concept
