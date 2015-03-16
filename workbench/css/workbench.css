@@ -296,3 +296,25 @@ footer {
   bottom: 0;
   background: white;
 }
+/*
+Table paging
+*/
+#sidora-resources-button-row {
+  position: absolute;
+  top: 50px;
+  left: 270px;
+}
+.sidora-resources-icon.disabled{
+  opacity:0.2;
+}
+.sidora-resources-icon:not(.disabled):hover{
+  cursor:pointer;
+  opacity:1.0
+}
+.sidora-resources-icon {
+  background-image: url('../images/assorted_glass%20buttons.png');
+  opacity:0.7;
+  display:inline-block;
+  height: 36px;
+  width: 36px;
+}
