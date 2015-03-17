@@ -891,14 +891,15 @@ function sidora_delete_xsl_form($form,&$form_state){
   foreach($xsl_filenames as $name){ 
     if (sidora_endsWith(strtolower($name), ".xsl")){
       $xsl_names_dd .= '<option value="'.$name.'">'.$name.'</option>'; 
-      	$xsl_form_dropdown[] = $name;
+      	$xsl_form_dropdown[$name] = $name;
     }
   }
   $xsl_names_dd .= '</select>';
 $js_for_form = '<script>
 jQuery(document).ready(function(){
   	jQuery("#confirm-delete").click(function(){
-		alert("delete!!");
+		todelete = jQuery("#xsl-to-delete").val();
+		alert(todelete);
 		});
     jQuery("#cancel-btn").click(function(){
 		  window.close();
@@ -912,7 +913,8 @@ $form['hidden_js'] = array(
   $form['xsl_to_delete']= array(
         '#type'=>'select',
         '#title'=>t('Select a XSL file to delete'),
-        '#options'=>$xsl_form_dropdown
+        '#options'=>$xsl_form_dropdown,
+				'#attributes'=>array("id" => "xsl-to-delete")
       );
 
 $form['submit-btn']=array(
