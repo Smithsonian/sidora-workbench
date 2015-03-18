@@ -717,9 +717,21 @@ sidora.InitiateJSTree = function(){
   }
   jQuery('#forjstree').jstree('open_all');
 }
-
+sidora.RelocateTreeOnPage = function(){
+  jQuery("#branding").css("margin-left","300px");
+  jQuery("body").append("<div id='fjt-holder'></div>");
+  jQuery("#fjt-holder").append(jQuery("#forjstree"));
+  jQuery("#fjt-holder").css("position","fixed");
+  jQuery("#fjt-holder").css("top",parseInt(jQuery("body").css("padding-top"))+10+"px");
+  jQuery(window).resize(function(){
+    var newHeight = jQuery(window).height();
+    newHeight -= (parseInt(jQuery("body").css("padding-top"))+10);
+    jQuery("#fjt-holder").css("height",newHeight+"px");
+  });
+}
 sidora.InitiatePage = function(){
   sidora.InitiateJSTree();
+  sidora.RelocateTreeOnPage();
   jQuery('#concept_tabs').tabs();
   sidora.concept.LoadContent();
   jQuery("#page-title").after(jQuery("#workbench-menu"));
