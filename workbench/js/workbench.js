@@ -1568,7 +1568,6 @@ sidora.manage.removeDatastream = function(pid,dsid){
   jQuery("#removeDatastreamDialog").css("overflow", "hidden");
   jQuery("#removeDatastreamDialog").closest(".ui-dialog").css("z-index", 1000); //shadowbox is 998
 }
-
 jQuery(function () {
   window.sidora.InitiatePage()
 });
