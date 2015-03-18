@@ -32,6 +32,7 @@ sidora.concept.LoadContentHelp.Resources.TableLoad = function(conceptOfInterest)
             "sLengthMenu": "Show _MENU_"
                 },
 		 'sPaginationType': "input",
+     'lengthMenu':[5,10,50,100],
 		 'processing': true,
      'serverSide': true,
      'ordering' : false,
