@@ -177,9 +177,19 @@ jQuery(document).ready(function(){
   jQuery("#anf-button").click(function(){
     var myWin = window.open(Drupal.settings.basePath+"sidora/test/upload2","XSL_UPLOAD","width=550,height=250,0,status=0,");
   });
+ /* Delete XSL button - Lets user delete XSL files - Functionality added by ***REMOVED*** on 3/18/15 */
   // add jquery to the delete xsl button
 	jQuery("#dxsl-button").click(function(){
-    var delete_xslWin = window.open(Drupal.settings.basePath+"sidora/delete_xsl","XSL_DELETE","width=\'100%\',height=\'100%\',0,status=0,");
+ //   var delete_xslWin = window.open(Drupal.settings.basePath+"sidora/delete_xsl","XSL_DELETE","width=\'100%\',height=\'100%\',0,status=0,");
+    Shadowbox.open({
+      content:    Drupal.settings.basePath+"sidora/delete_xsl",
+      player:     "iframe",
+      title:      "Delete XSL",
+      options: {
+        onFinish:  function(){}
+      }
+    });
+
  });
 	jQuery("#anr-button").click(function(){
     var tableRow = \'<tr><td>'.$form_names_dd.'</td><td>'.$model_names_dd.'</td><td><input type="textfield" class="form-text" /></td><td><select class="xsl-names-dd form-select">\'+jQuery(".xsl-names-dd")[0].innerHTML.replace(\'selected="selected"\',"")+\'</select></td><td><input type="button" class="form-submit remove-row" value="Remove"/></td></tr>\';
