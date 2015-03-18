@@ -123,7 +123,14 @@ function sidora_menu() {
       'access callback' => 'user_is_logged_in',
       'type' => MENU_CALLBACK,
     ),
-    'sidora/codebook/autocomplete' => array(
+     'sidora/workbench/test' => array(
+      'title' => 'TESTING',
+      'description' => 'Not intended to be used in production',
+      'page callback' => 'sidora_testing',
+      'access callback' => 'user_is_logged_in',
+      'type' => MENU_CALLBACK,
+    ),
+   'sidora/codebook/autocomplete' => array(
       'title' => 'Codebook Autocomplete',
       'description' => 'Return codebook information',
       'page callback' => 'sidora_codebook_autocomplete',
@@ -137,6 +144,7 @@ function sidora_menu() {
       'access callback' => 'user_is_logged_in',
       'type' => MENU_CALLBACK,
     ),
+		/* Called by Delete XSL button in admin - sidora.admin.inc */
 		'sidora/delete_xsl' => array(
 		  'title' => 'Delete XSL',
 			'description' => 'Delete a XSL',
@@ -879,12 +887,11 @@ xmlns:cpf="urn:isbn:1-931666-33-4"
     }
   return $to_return; 
 }
-/* Show the form used to delete a XSL */
+/* Show the form used to delete a XSL file  */
 function sidora_delete_xsl_form($form,&$form_state){
   $form = array();
   $directory_to_list_for_xsl = DRUPAL_ROOT.'/'.drupal_get_path('module','sidora').'/XSL';
   $xsl_filenames = array_diff(scandir($directory_to_list_for_xsl), array('..', '.', '.htaccess'));
-
   $xsl_names_dd = '<select class="xsl-names-dd form-select">';
   $xsl_names_dd .= '<option value="">None - Direct metadata to browser</option>';
   $xsl_form_dropdown = array();
@@ -895,22 +902,70 @@ function sidora_delete_xsl_form($form,&$form_state){
     }
   }
   $xsl_names_dd .= '</select>';
-$js_for_form = '<script>
-jQuery(document).ready(function(){
-  	jQuery("#confirm-delete").click(function(){
-		todelete = jQuery("#xsl-to-delete").val();
-		alert(todelete);
+ // need to add the ui-dialog library here to be able to create a dialog box inside the Delete XSL Shadowbox
+  drupal_add_library('system','ui.dialog');
+  $js_for_form = '<script>
+  jQuery(document).ready(function(){
+	jQuery("body").css("padding-top","0px");
+  jQuery("#confirm-delete").click(function(e){
+		  e.preventDefault();
+		  todelete = jQuery("#xsl-to-delete").val();
+      jQuery("#deleteXSLdialog").remove();
+	    jQuery("body").append("<div id=\'deleteXSLdialog\' style=\'display:none;\' title=\'Delete XSL\'><p>Are you sure you want to delete this XSL?</p><p>"+jQuery("#xsl-to-delete").val()+"</p></div>");
+      jQuery("#deleteXSLdialog").dialog({
+      height: 300,
+      width: 350,
+      modal: true,
+      resizable: false,
+      buttons: {
+        "Delete XSL": function() {
+          var toClose = this;
+          var onDeleteWorked = function(){
+            jQuery( toClose ).dialog( "close" );
+            jQuery("#deleteXSLConfirm").remove();
+            /*jQuery("body").append("<div title=\'XSL Deleted\' id=\'deleteXSLConfirm\'><p>XSL Deleted</p><div>");
+            jQuery("#deleteXSLConfirm").dialog({
+              resizable:false, modal:true
+						}); */
+						self.parent.Shadowbox.close();
+          }
+          var onDeleteFailed = function(data){
+            jQuery( toClose ).dialog( "close" );
+            jQuery("#deleteXSLConfirm").remove();
+            jQuery("body").append("<div title=\'XSL Not Deleted\' id=\'deleteXSLConfirm\'><p>XSL Not Deleted</p><div>");
+            jQuery("#deleteXSLConfirm").dialog({
+              resizable:false, modal:true
+            });
+          };
+					deleteXSLfunction(todelete,onDeleteWorked,onDeleteFailed);
+        },
+        Cancel: function() {
+          jQuery( this ).dialog( "close" );
+        }
+      }
 		});
+	});
     jQuery("#cancel-btn").click(function(){
-		  window.close();
-		});
+      self.parent.Shadowbox.close();
+ 		});
+  deleteXSLfunction =function(todelete, onDeleteWorked, onDeleteFailed){
+     var url = Drupal.settings.basePath+"sidora/ajax_parts/delete_xsl_file/"+todelete;
+     jQuery.ajax ({
+      type: "POST",
+			url: url,
+			data: todelete,
+			success: onDeleteWorked,
+			error: onDeleteFailed,
+			dataType: "text"
+		});	 
+  }
 });
 </script>';
 $form['hidden_js'] = array(
   '#type' => 'hidden',
 	'#suffix' => $js_for_form
-	);					  
-  $form['xsl_to_delete']= array(
+	);	
+ $form['xsl_to_delete']= array(
         '#type'=>'select',
         '#title'=>t('Select a XSL file to delete'),
         '#options'=>$xsl_form_dropdown,
@@ -922,21 +977,13 @@ $form['submit-btn']=array(
         '#value'=>t('Delete'),
 				'#attributes' => array("id" => "confirm-delete")
       );
-//$form['#attributes'] = 
 $form['cancel-btn'] = array(
     '#type' => 'button',
     '#value' => t('Cancel'),
 		'#attributes' => array("id" => "cancel-btn")
   );	
-
 	return $form;
 	}		
-  function confirm_xsl_delete(){
-	   var_dump($form_state);
-	}
-	function close_delete_window(){
-	  echo 'window.close()';
-	}	
 /*
  * Show the form used to edit the object's metadata
  */
@@ -1575,7 +1622,26 @@ if ($one == 'exhibition'){
   var_dump($exhibition_data);	
 	var_dump($exhibitions);
 	}
-	  
+if ($one == 'deletexsl'){
+  echo "in deletexsl : ".$two;
+	   $curr_item = array();
+    if (sidora_endsWith(strtolower($two),'.xsl')){
+      $directory_to_list_for_xsl = DRUPAL_ROOT.'/'.drupal_get_path('module','sidora').'/XSL/';
+			if (file_exists($directory_to_list_for_xsl.$two)){
+        $rename_worked = rename($directory_to_list_for_xsl.$two,$directory_to_list_for_xsl.'backups/'.'Deleted_on_'.date('Ymd_His').'_'.$two);
+        $curr_item['existing_moved'] = $rename_worked;
+        $curr_item['description'] = t('Attempted file write');
+        $curr_item['success'] = $rename_worked;
+     }else{
+       $curr_item['success'] = FALSE;
+       $curr_item['description'] = t('XSL File not found');
+    }
+    }else{
+       $curr_item['success'] = FALSE;
+       $curr_item['description'] = t('Wrong file extension for xsl delete');
+    }
+ 	 var_dump($curr_item);
+	 } 
 	}
 /*
  * Show the form to create a concept
@@ -2892,6 +2958,10 @@ function sidora_ajax_parts($call_type, $param1 = '', $param2 = '', $param3 = '')
   if ($call_type == 'lock'){
     return sidora_ajax_lock($param1, $param2);
   }
+	if ($call_type == 'delete_xsl_file'){
+   //error_log("in ajax parts for ".$param1,3,DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
+	   return sidora_remove_xsl($param1);
+	}	 
   drupal_not_found();
 }
 /**
@@ -5666,4 +5736,25 @@ function sidora_endsWith($haystack, $needle) {
     // search forward starting from end minus needle length characters
     return $needle === "" || strpos($haystack, $needle, strlen($haystack) - strlen($needle)) !== FALSE;
 }
-
+function sidora_remove_xsl($param1, $param2, $param3){
+ // error_log("in the sidora remove xsl function for ".$param1,3,DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
+    $curr_item = array();
+    if (sidora_endsWith(strtolower($param1),'.xsl')){
+      $directory_to_list_for_xsl = DRUPAL_ROOT.'/'.drupal_get_path('module','sidora').'/XSL/';
+			if (file_exists($directory_to_list_for_xsl.$param1)){
+        $rename_worked = rename(DRUPAL_ROOT.'/'.drupal_get_path('module','sidora').'/XSL/'.$param1,$directory_to_list_for_xsl.'backups/'.'Deleted_on_'.date('Ymd_His').'_'.$param1);
+        $curr_item['existing_moved'] = $rename_worked;
+        $curr_item['description'] = t('Attempted file write');
+        $curr_item['success'] = $rename_worked;
+     }else{
+       $curr_item['success'] = FALSE;
+       $curr_item['description'] = t('XSL File not found');
+    }
+    }else{
+       $curr_item['success'] = FALSE;
+       $curr_item['description'] = t('Wrong file extension for xsl delete');
+    }
+		$return_when_encoded['files'][] = $curr_item;
+    print json_encode($return_when_encoded);
+    exit();
+}
