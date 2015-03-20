@@ -115,10 +115,11 @@ function exhibition_config_get_config_data($pid){
   return $row;
 }
 function exhibition_config_custom_url($custom_url){
-  $result = db_query("Select pid FROM {exhibition_config} where custom_url = '%s'", array($custom_url));
+  $result = db_query("Select pid FROM {exhibition_config} where custom_url = :custom_url", array(':custom_url'=>$custom_url));
   $row = null;
-  if ($result) $row = db_fetch_array($result);
-  print($row['pid']);
+  foreach ($result as $row){
+    print($row->pid);
+  }
   exit();
 }
 function exhibition_config_json_data($pid){
