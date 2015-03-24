@@ -32,6 +32,7 @@ sidora.concept.LoadContentHelp.Resources.TableLoad = function(conceptOfInterest)
             "sLengthMenu": "Show _MENU_"
                 },
 		 'sPaginationType': "input",
+     'lengthMenu':[5,10,50,100],
 		 'processing': true,
      'serverSide': true,
      'ordering' : false,
@@ -717,6 +718,13 @@ sidora.InitiateJSTree = function(){
   }
   jQuery('#forjstree').jstree('open_all');
 }
+sidora.ReformatPage = function(){
+  jQuery(".breadcrumb").hide();
+  jQuery("#page").css("padding","0");
+  jQuery("#concept_tabs").css("position","fixed");
+  jQuery("#concept-resource-list").css("padding","0");
+  jQuery("#concept-resource-list").css("height","100%");
+}
 sidora.RelocateTreeOnPage = function(){
   jQuery("#branding").css("margin-left","300px");
   jQuery("body").append("<div id='fjt-holder'></div>");
@@ -729,13 +737,52 @@ sidora.RelocateTreeOnPage = function(){
 }
 sidora.ResizeTreeToBrowser = function(){
   console.log('resizing tree');
+  jQuery("#sidora_content_concept_info").css("min-width",0);
+  jQuery("#concept_tabs").css("min-width",0);
   var newHeight = jQuery(window).height();
   newHeight -= (parseInt(jQuery("body").css("padding-top"))+10);
   jQuery("#fjt-holder").css("height",newHeight+"px");
+
+  var tabsHeight = newHeight-50;
+  jQuery("#concept_tabs").css("height",tabsHeight+"px");
+  jQuery("#concept_tabs").css("width",(jQuery(window).width()-310)+"px");
+  var tabContentHeight = tabsHeight - jQuery(".ui-tabs-nav").height();
+  jQuery("#concept-resource-list").css("height",tabContentHeight);
+  jQuery("#resourceResizable").css("height",'99%');
+  jQuery("#resourceInformationPane").css("height",tabContentHeight+'px')
+  jQuery("#resourceInformationPane").css("padding-right",'15px');
+  jQuery("#concept-resource-list-internal").css("height",'100%');
+  var conceptMetaHeight = tabContentHeight - (56);
+  jQuery("#concept-meta div.metadata-table").height(conceptMetaHeight+"px");
+  jQuery("#concept-meta div.metadata-table").css("overflow","auto");
+  var resourceTabContentHeight = tabContentHeight - jQuery(".ui-tabs-nav").height() - 5; //5 for padding and border
+  jQuery("#resourceIframeHolder").css("width",'99%');
+  jQuery("#resourceIframeHolder").css("height",resourceTabContentHeight+'px');
+  jQuery("#resource-relationships").css("height",resourceTabContentHeight+'px');
+  jQuery("#resource-relationships").css("overflow",'auto');
+  jQuery("#resource-relationships").css("border",'0');
+  jQuery("#resource-relationships").css("padding",'0');
+  jQuery("#resource-relationships").css("margin",'0');
+  jQuery("#resource-meta").css("height",resourceTabContentHeight+'px');
+  jQuery("#resource-meta").css("overflow",'auto');
+  jQuery("#resource-meta").css("border",'0');
+  jQuery("#resource-meta").css("padding",'0');
+  jQuery("#resource-meta").css("margin",'0');
+  if (jQuery("#rt").length == 0) jQuery("#res_table").before("<div id='rt'></div>"); 
+  jQuery("#rt").append(jQuery("#res_table"));
+  if (jQuery("input[name='titleFilter']").length > 0){
+    var additionalPushDown = jQuery("input[name='titleFilter']").offset().top - jQuery("#concept-resource-list").offset().top + jQuery("input[name='titleFilter']").height();
+    var tableHeight = resourceTabContentHeight - additionalPushDown;
+  }
+  jQuery("#rt").css("height",tableHeight+'px');
+  jQuery("#rt").css("overflow",'auto');
+
+  
 }
 sidora.InitiatePage = function(){
   sidora.InitiateJSTree();
   sidora.RelocateTreeOnPage();
+  sidora.ReformatPage();
   jQuery('#concept_tabs').tabs();
   sidora.concept.LoadContent();
   jQuery("#page-title").after(jQuery("#workbench-menu"));
@@ -942,9 +989,6 @@ sidora.ResizeOnWindowResize = function(){
   var bodywidth = jQuery(window).width();
   var menuwidth = 360;
   var newwidth = bodywidth-menuwidth;
-  if (newwidth < parseInt(jQuery("#sidora_content_concept_info").css("min-width"))){
-    newwidth = parseInt(jQuery("#sidora_content_concept_info").css("min-width"));
-  }
   jQuery("#sidora_content_concept_info").width(newwidth);
 
   //Resize the resource information pane for the resource page 
@@ -1438,26 +1482,24 @@ sidora.resources.individualPanel.ResizeIt = function (e, ui)
   if (parseInt(divTwo.css("min-width")) > divTwoWidthPixels){
     divTwoWidthPixels = parseInt(divTwo.css("min-width"));
   }
-  divTwoWidthPixels = divTwoWidthPixels - 20; //to make room for the padding
   divTwoWidth = (divTwoWidthPixels) / parent.width() * 100 + '%';
   
   divTwo.width(divTwoWidth);
   jQuery(ui.element).css('left', 15);
-  jQuery(ui.element).css('min-height', divTwo.height() + 'px');
 
   //Give the max width of the resizable element to be the entire parent minus what the left element has declared as its min-width
   var maxWidth = parent.width() - parseInt(jQuery(parent.children()[1]).css('min-width'));
   jQuery(ui.element).resizable('option', 'maxWidth', maxWidth); 
 
   var newMinHeight = Math.max(600,jQuery("#resourceResizable").height(),jQuery("#res_table_wrapper").height(), jQuery("#resource-meta").height()+jQuery("#resourceResizable ul").height()+10);
-  jQuery("#concept-resource-list-internal").css('min-height',newMinHeight);
-  jQuery("#resourceIframeHolder").height(newMinHeight-40);
+  //jQuery("#concept-resource-list-internal").css('min-height',newMinHeight);
+  //jQuery("#resourceIframeHolder").height(newMinHeight-40);
   //Protect the cursor input from being taken into the iframe by making the overlay displayable
   jQuery("#iframeOverlay").show();
   
   //Move items around to fit the menu in the best place
   if (jQuery("#res_table_wrapper").width() < 470){
-    jQuery("#res_table_wrapper").css("margin-top","70px");
+    jQuery("#res_table_wrapper").css("margin-top","83px");
     jQuery("#sidora-resources-button-row").css("top","90px").css("left","20px");
   }else{
     jQuery("#res_table_wrapper").css("margin-top","50px");
@@ -1571,7 +1613,6 @@ sidora.manage.removeDatastream = function(pid,dsid){
   jQuery("#removeDatastreamDialog").css("overflow", "hidden");
   jQuery("#removeDatastreamDialog").closest(".ui-dialog").css("z-index", 1000); //shadowbox is 998
 }
-
 jQuery(function () {
   window.sidora.InitiatePage()
 });
