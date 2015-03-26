@@ -204,11 +204,6 @@ div.metadata-table {
 button.ui-button-text-only .ui-button-text {
   padding: 0;
 }
-#forjstree {
-  overflow: auto;
-  width:300px;
-  height:700px;
-}
 
 #concept-meta-menu, .resource-menu-holder {
   position: absolute;
