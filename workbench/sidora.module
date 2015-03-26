@@ -1046,7 +1046,8 @@ function sidora_edit_metadata($object_id = '', $dsid = '', $form_name = ''){
    var sidora = window.parent.sidora;
    jQuery("#workbench-submit").click(function(){
    jQuery("body").append("<div class=\'theoverlay\' style=\'width:100%;height:100%;overflow:hidden;opacity:0.5;position:fixed;top:0;left:0;background-color:black;z-index:4000\'></div>");
-     jQuery.ajax({
+   console.log(jQuery("#xml-form-builder-datastream-form-metadata-form").serialize()+"&op=Submit");
+	   jQuery.ajax({
        type: "POST",
        url: "",
        data: jQuery("#xml-form-builder-datastream-form-metadata-form").serialize()+"&op=Submit",
@@ -1974,6 +1975,8 @@ function sidora_create_resource_get_metadata_form_html($parent_pid, $model, $for
  * extra info is whether or not the page should be refreshed to the first page, clearing out the existing session (if they stopped mid session last time)
  */
 function sidora_create_resource($parent_pid = 'si:root', $model = 'si:collectionCModel', $form_name = '', $ontology_location = '', $extra_info = ''){
+    error_log("sidora create resource : parent pid = ".$parent_pid,3,DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
+
   drupal_add_css(drupal_get_path('module','sidora').'/css/workbench_metadata_screens.css',array('weight' => '1000000', 'group' => CSS_THEME));
   global $user;
   //if the parent pid is locked, can't do it
@@ -2009,6 +2012,7 @@ function sidora_create_resource($parent_pid = 'si:root', $model = 'si:collection
   $current_uploads = sidora_create_resource_get_current_uploads();
   $ask_for_codebook = sidora_create_resource_determine_codebook_complete($model);
   if (empty($current_uploads)){
+   error_log("in sidora create resource : empty current uploads ",3,DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
     if ($ask_for_codebook){
       $check_for_uploads = FALSE;
       $show_form = FALSE;
@@ -3505,6 +3509,7 @@ function sidora_block_content_navigation(){
   drupal_add_js(drupal_get_path('module','sidora').'/js/workbench_menus.js');
   drupal_add_js(drupal_get_path('module','sidora').'/js/workbench_sidora_request.js');
   drupal_add_js(drupal_get_path('module','sidora').'/js/paging.js'); // adds paging capability to resources
+  drupal_add_js(drupal_get_path('module','sidora').'/js/fq-ui-extenddialog.js');
   return $to_return;
 }
 // For Ingestion
@@ -3714,6 +3719,7 @@ $_SESSION['file_uploads'][$form_id][] = $file_info;
 // Chunking might be enabled
 $chunk = isset($_REQUEST["chunk"]) ? intval($_REQUEST["chunk"]) : 0;
 $chunks = isset($_REQUEST["chunks"]) ? intval($_REQUEST["chunks"]) : 0;
+error_log("in sidora upload function : ".$filePath,3,DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
 
 
 // Remove old temp files
@@ -3781,7 +3787,6 @@ if (!$chunks || $chunk == $chunks - 1) {
         // Strip the temp .part suffix off
         rename("{$filePath}.part", $filePath);
 }
-
 // Return Success JSON-RPC response
 //print_r ($_SESSION['file_uploads']);
 //die('{"jsonrpc" : "2.0", "result" : null, "id" : "id"}');
@@ -3795,6 +3800,7 @@ if ($outputDebugCleanup) {
 }else{
   print 'upload complete';
 }
+ // error_log("in sidora upload : ". var_dump($files1,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
 exit();
 }
 /*

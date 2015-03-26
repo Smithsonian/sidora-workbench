@@ -8,6 +8,8 @@ SidoraQueue.prototype.completedRequests = [];
 SidoraQueue.prototype.completedSuccessfulRequests = [];
 SidoraQueue.prototype.completedFailedRequests = [];
 SidoraQueue.prototype.requests = [];
+SidoraQueue.prototype.requestsbkup = [];  // this array was created to keep a copy of the original requests submitted to the queue since the requests array was being overwritten during the Next() function call
+SidoraQueue.prototype.timer = {"startTime":'0',"endTime":'0',"elapsedTime":'0'};
 SidoraQueue.prototype.pidsInProcess = [];
 SidoraQueue.prototype.requestInProcess = null;
 SidoraQueue.prototype.incomingRequestsAreSilent = false;
@@ -18,7 +20,7 @@ SidoraQueue.prototype.showMessage = function(message){
   console.log(message);
 }
 SidoraQueue.prototype.RequestPost = function(userFriendlyName, ajaxRequestUrl, postData, doneFunction, failFunction, pidsBeingProcessed){
-  console.log("Requested post '"+userFriendlyName+"' to post to:"+ajaxRequestUrl);
+  console.log("Requested post '"+userFriendlyName+"' to post to:"+ajaxRequestUrl+postData);
   if (typeof(pidsBeingProcessed) == 'string') pidsBeingProcessed = [pidsBeingProcessed];
   if (typeof(doneFunction) == 'undefined' || !jQuery.isFunction(doneFunction)) doneFunction = function(){};
   if (typeof(failFunction) == 'undefined' || !jQuery.isFunction(failFunction)) failFunction = function(){};
@@ -71,6 +73,8 @@ SidoraQueue.prototype.SidoraRequest = function(sidoraRequest){
   var myself = this;
   sidoraRequest.pidsBeingProcessed.forEach(function(v){myself.pidsInProcess.push(v);});
   myself.requests.push(sidoraRequest);
+	myself.requestsbkup.push(sidoraRequest);
+	console.log("in sidorarequest function : "+myself.requestsbkup);
 }
 SidoraQueue.prototype.Fail = function(completedItem, ajaxReturn){
   completedItem.ajaxReturn = ajaxReturn;
@@ -162,15 +166,90 @@ SidoraQueue.prototype.NotificationWindow.Hide = function(){
   jQuery("#queueMessage").fadeOut('fast');
   jQuery(".notification-window-message").children().fadeOut('fast');
 }
+SidoraQueue.prototype.createQueueMessageBox = function(){
+    var messageBoxforFooter = "<div id ='showUploadprogress' style='width:60%;'><div id='toolbar' style='position:relative;background: #FEFEFE;height: 15px;width: 100%;margin:0;padding:0;'><div class='togglesizebutton' style='border:solid 1px;width: 20px;height: 12px;float:right;cursor:pointer;vertical-align:middle;text-align:center;font-weight:bold;color:black;'>"+"-"+"</div></div><div id='progress-window-message' style='padding-top:15px;background:#DFDFDF;width:100%'><div></div></div></div>";
+    jQuery("footer").html(messageBoxforFooter);
+		jQuery(".togglesizebutton").click(function(){
+	  jQuery('#progress-window-message').css({
+      'width': jQuery('#progress-window-message').width(),
+      'height': jQuery('#progress-window-message').height()
+   });
+      if(jQuery(".togglesizebutton").html() == "-"){
+         jQuery('#progress-window-message').animate({'width': 'toggle'});
+         jQuery(".togglesizebutton").html("+");
+         var windowHeight = jQuery("#showUploadprogress").height();
+         var lineHeight = jQuery('#showUploadprogress #toolbar').height();
+         var desiredBottom = jQuery('#progress-window-message').height();
+         var newPosition = Math.abs(windowHeight);
+				 //    jQuery('#showUploadprogress').animate({ "top": "-=30px" }, 900);
+        jQuery('#showUploadprogress #toolbar').animate({top:newPosition},1000,function () {
+        jQuery('#showUploadprogress #toolbar').css({
+            bottom: 'auto',
+            top: newPosition
+        });
+    });        
+		  }
+      else{
+         jQuery(".togglesizebutton").html("-");
+ jQuery('#showUploadprogress #toolbar').animate({top:'auto'},1000,function () {
+        jQuery('#showUploadprogress #toolbar').css({
+            bottom: 'auto',
+            top: 'auto'
+        });
+    });        
+   jQuery('#progress-window-message').animate({'width': 'toggle'});
+      }		
+ //  jQuery('#showUploadprogress #toolbar').slideDown();
+//   jQuery('#showUploadprogress #toolbar').animate({'height': 'toggle'});
+	//jQuery("#progress-window-message").slideToggle();
+			 });
+}  
 SidoraQueue.prototype.updateFooterWithRequestInProcess = function(){
+		console.log("requestbkup : "+this.requestsbkup);
   if (this.requestInProcess != null && !this.requestInProcess.isSilent){
-    if (!jQuery("footer").is(":visible")) jQuery("footer").fadeIn();
-    jQuery("footer").html("In Queue: <span class='items-left'>"+(1+this.requests.length)+"</span> Currently working on:"+this.requestInProcess.userFriendlyName);
+  if (jQuery("#showUploadprogress").length == 0) this.createQueueMessageBox();
+     if (!jQuery("footer").is(":visible")){
+		 console.log("footer not visible");
+		 jQuery("footer").fadeIn();
+		 }
+		 var uploadProgress = 1+this.requests.length;
+			//	var message = "<span id='uploadProgress'>In Queue: <span class='items-left'>"+uploadProgress+"</span> Currently working on:"+this.requestInProcess.userFriendlyName+" time elapsed "+elapsedTime+"</span>";
+			var requestAction = '';
+			var requestuserFriendlyname = this.requestInProcess.userFriendlyName.toLowerCase();
+			if (requestuserFriendlyname.indexOf("create") >= 0){
+			  requestAction = "Uploading";
+			}else{
+			  if (requestuserFriendlyname.indexOf("remove") >= 0){
+			   requestAction = "Deleting";	
+				}else{
+				 requestAction = "Working on";
+				} 
+			}	
+			if (this.timer.elapsedTime > 0){
+			  	var timeLeft = parseInt((uploadProgress*this.timer.elapsedTime)/1000) ;
+					if (timeLeft < 60){
+					  var message = "<span id='uploadProgress'>"+requestAction+" <span class='items-left'>"+(this.requestsbkup.length - this.requests.length)+"</span> of "+this.requestsbkup.length+" "+Math.ceil(timeLeft)+" seconds to completion</span>";
+					}else{
+					  var message = "<span id='uploadProgress'>"+requestAction+" <span class='items-left'>"+(this.requestsbkup.length - this.requests.length)+"</span> of "+this.requestsbkup.length+" "+Math.ceil(timeLeft/60)+" "+((Math.ceil(timeLeft/60) > 1)?"minutes":"minute")+" to completion</span>";
+          }
+       }else{
+			 		var message = "<span id='uploadProgress'>"+requestAction+" <span class='items-left'>"+(this.requestsbkup.length - this.requests.length)+"</span> of "+this.requestsbkup.length+"</span>";
+       }
+	       jQuery("#progress-window-message").html(message);
+			console.log("in update footer the request being currently processed is "+this.requestInProcess.userFriendlyName);
+
   }else{
-    if (jQuery("footer").is(":visible")) jQuery("footer").html("").fadeOut();
+   if (jQuery("footer").is(":visible"))jQuery("footer").html("").fadeOut();
+			if (this.requests.length == '0'){
+		   this.requestsbkup = [];
+			 this.timer.startTime ='0';
+		   this.timer.endTime = '0';
+			 this.timer.elapsedTime = '0';
+			 console.log("just reset the timer and requestsbkup in updatefooter method");
+		 }
   }
 }
-SidoraQueue.prototype.Next = function(){
+/*SidoraQueue.prototype.Next = function(){
   if (jQuery("footer").length == 0) jQuery("body").parent().append("<footer></footer");
   if (this.requestInProcess == null){
     var nextItem = this.requests.shift();
@@ -180,5 +259,33 @@ SidoraQueue.prototype.Next = function(){
     this.requestInProcess = nextItem;
   }
   this.updateFooterWithRequestInProcess();
+}*/
+SidoraQueue.prototype.Next = function(){
+  if (jQuery("footer").length == 0) jQuery("body").parent().append("<footer></footer");
+  console.log("in queue next currently processing "+this.requestInProcess);
+  if (this.requestInProcess == null){
+    var nextItem = this.requests.shift();
+    if (nextItem instanceof SidoraRequest){
+	if (this.timer.elapsedTime == '0'){
+		if (this.timer.startTime == '0'){
+	   this.timer.startTime = jQuery.now();
+		 console.log("start time is :"+this.timer.startTime);
+		 console.log(this.requestsbkup.indexOf(nextItem));
+		}else{
+		if (this.timer.endTime == '0'){
+			this.timer.endTime = jQuery.now();
+		 console.log("end time is :"+this.timer.endTime);
+		 console.log(this.requestsbkup.indexOf(nextItem));
+		  this.timer.elapsedTime = this.timer.endTime - this.timer.startTime;
+			console.log("elapsed time is : "+this.timer.elapsedTime);
+		}else{
+		  this.timer.elapsedTime = this.timer.endTime - this.timer.startTime;
+		}
+		}
+	}		
+			   nextItem.performAjax();
+    }
+		this.requestInProcess = nextItem;
+  }
+	this.updateFooterWithRequestInProcess();
 }
-

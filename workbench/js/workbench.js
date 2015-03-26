@@ -226,8 +226,8 @@ sidora.concept.LoadContentHelp.Exhibition_view = function(conceptOfInterest){
 		//	jQuery("#exhibitConcept").off('click','a');
 			jQuery("#exhibitConcept").children('a').attr('onclick',exhibitions.action);
 			jQuery("#exhibitConcept").children('a').toggleClass('ui-state-disabled',exhibitions.ui_state_disable);
-			console.log("Action : " +exhibitions.action);
-			console.log("uistate : "+exhibitions.ui_state_disable);
+			//console.log("Action : " +exhibitions.action);
+			//console.log("uistate : "+exhibitions.ui_state_disable);
     }
   });
 }
@@ -1397,7 +1397,7 @@ sidora.util.deletePid = function(pidOfInterest, onSuccess, onFailure){
   }
   var url = '../ajax_parts/unassociate_delete_orphan/'+unassociateFrom+'/'+pidOfInterest;
   var userFriendlyToastName = "Remove "+pidOfInterest+" from "+unassociateFrom;
-  sidora.queue.RequestPost(userFriendlyToastName,url,"",onSuccess,onFailure,[pidOfInterest,unassociateFrom]);
+	sidora.queue.RequestPost(userFriendlyToastName,url,"",onSuccess,onFailure,[pidOfInterest,unassociateFrom]);
   sidora.queue.Next();
 }
 /*
