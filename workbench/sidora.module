@@ -997,42 +997,24 @@ function sidora_edit_metadata($object_id = '', $dsid = '', $form_name = ''){
     return $to_return;
   }
 
-
   $to_return = '';
   $sidora_data = sidora_get_form_and_dsid($object_id);
   $dsid = $sidora_data['dsid'];
   $form_name = $sidora_data['form_name'];
   
-  //print_r($object->models);
-  //$dsid = 'MODS';
-  //print "<br>-<br>";
-  //print_r($form_name);
-  //print "<br>-<br>";
   $tuque = islandora_get_tuque_connection();
   $object = $tuque->repository->getObject($object_id);
   $form_state = array();
   $associations = xml_form_builder_datastream_form_get_associations($form_state,$object->models, $dsid);  //first param goes unused
   $association = null;
-  //print "<br>-<br>";
-  //print_r($associations);
   foreach($associations as $curr_association){
     if ($curr_association['form_name'] == $form_name){
       $association = $curr_association;
     }
   }
-  //print "<br>-<br>";
-  //print_r($association);
-  //if (sizeof($associations) == 0){
-    //No known form, should not allow showing
-    //But for demo, will show a form anyway BBB TODO REMOVE
-  //  $associations = xml_form_builder_datastream_form_get_associations($form_state,array("si:generalImageCModel"), 'MODS');
-  //}
-  //if (empty($association)) $association = $associations[0];
   if (empty($association)){
     print "The form is not configured correctly.  The form specified is not associated to this model";
   }
-  //print "<br>-<br>";
-  //print_r($association);
   $tform = drupal_get_form('xml_form_builder_datastream_form_metadata_form',$object,$association);
   drupal_add_css(drupal_get_path('module','sidora').'/css/workbench_metadata_screens.css',array('weight' => '1000000', 'group' => CSS_THEME));
   drupal_add_js(drupal_get_path('module','sidora').'/js/workbench_util.js',array('weight' => '1000000', 'group' => JS_THEME));
@@ -1080,18 +1062,12 @@ function sidora_edit_metadata($object_id = '', $dsid = '', $form_name = ''){
       if (!empty($object['TN']) && in_array($object['TN']->mimetype, $vmt)){
         $tn = '<img src="'.$GLOBALS['base_url'].'/sidora/info/'.$object_id.'/meta/TN/browser" />';
       }
-      //if (in_array($object['OBJ']->mimetype, $vmt) || true){//BBB
-      {
-        $obj_pic = '<img src="'.$GLOBALS['base_url'].'/sidora/resource_viewer/'.$object_id.'" />';
-      }
+      $obj_pic = '<img src="'.$GLOBALS['base_url'].'/sidora/resource_viewer/'.$object_id.'" />';
       $to_return .= '<div style="width:45%;display:inline-block;overflow:auto;vertical-align:top;">';
       $to_return .= $tn;
-      //if (in_array($object['OBJ']->mimetype, $vmt))
-      {
-        $to_return .= '<div style="width:100%;height:600px;overflow:auto;">';
-        $to_return .= $obj_pic;
-        $to_return .= '</div>';
-      }
+      $to_return .= '<div style="width:100%;height:600px;overflow:auto;">';
+      $to_return .= $obj_pic;
+      $to_return .= '</div>';
       $to_return .= '</div>';
       $pic_shown = TRUE;
     }
@@ -2203,7 +2179,7 @@ function sidora_user_view($account, $view_mode, $langcode){
   if ($is_logged_in_as_admin){
     $account->content['reset_islandora_user_pid'] = array(
       '#title' => t('View / Set this user\'s Islandora Pid (Their root concept / user project)'),
-      '#markup' => '<form id="reset_user_pid" method="post"><input type="text" name="user_pid" value="'.$user_pid.'"/><input type="submit" class="form-submit"/></form>', //BBB
+      '#markup' => '<form id="reset_user_pid" method="post"><input type="text" name="user_pid" value="'.$user_pid.'" class="form-text"/><input type="submit" class="form-submit"/></form>',
       '#class' => 'islandora_user_pid',
       '#type' => 'user_profile_item',
     );
@@ -3518,8 +3494,7 @@ function sidora_islandora_ingest_steps_alter(array &$steps, array &$form_state) 
   $shared_storage = islandora_ingest_form_get_shared_storage($form_state);
   $associations = xml_form_builder_get_associations(array(), $shared_storage['models'], array());
   // ... Find the association you want to use, iterate over the values and
-  // choose the one you want. Here we'll just mock it for testing purposes, and
-  // grab the first one.
+  // choose the one you want.
   $form_name = drupal_static('form_of_interest'); 
   $association = NULL;
   foreach($associations as $curr_association){
@@ -3530,11 +3505,11 @@ function sidora_islandora_ingest_steps_alter(array &$steps, array &$form_state) 
   if (!empty($association)){
     $association_step_storage = &islandora_ingest_form_get_step_storage($form_state, 'xml_form_builder_metadata_step');
     // Make $association_step_storage have only the association you want to use.
-    $association_step_storage['association'] = $association;  //For RESOURCES ONLY ??
+    $association_step_storage['association'] = $association; 
     // Remove the selection step as we've already forced it's value above.
     unset($steps['xml_form_builder_association_step']);
     if (!empty($steps['xml_form_builder_metadata_step'])){
-      $steps['xml_form_builder_metadata_step']['args'][0] = $association;  //For CONCEPTS ONLY ??
+      $steps['xml_form_builder_metadata_step']['args'][0] = $association;
     }
   }
 }
