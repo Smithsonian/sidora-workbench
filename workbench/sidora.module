@@ -2740,8 +2740,8 @@ function sidora_block_view($delta = ''){
       $block['content'] .= '
   <div id="concept_tabs">
     <ul>
-      <li><a href="#concept-meta">Concept Metadata</a></li>
-      <li><a href="#concept-relationships">Concept Relationships</a></li>
+      <li><a href="#concept-meta">Concept Overview</a></li>
+      <li><a href="#concept-relationships">Relationships</a></li>
       <li><a href="#concept-resource-list">Resource List</a></li>
     </ul>
     <div id="concept-meta">

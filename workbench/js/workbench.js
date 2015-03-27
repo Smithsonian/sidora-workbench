@@ -1285,7 +1285,7 @@ sidora.resources.individualPanel.Create = function() {
   var forAfterWrapper =   '<div id=\'resourceInformationPane\'><div id="resourceResizable"><div id="resource-meta"></div><div id="resource-relationships"></div><div id="resourceIframeHolder">';
   forAfterWrapper += '</div></div><div id="iframeOverlay" style="position:absolute;width:100%;height:100%;"></div></div></div>';
   jQuery('#res_table_wrapper').after(forAfterWrapper);
-  jQuery("#resourceResizable").prepend("<ul><li><a href='#resource-meta'>Resource Metadata</a></li><li><a href='#resource-relationships'>Relationships</a></li><li><a href='#resourceIframeHolder'>Viewer</a></li></ul>");
+  jQuery("#resourceResizable").prepend("<ul><li><a href='#resource-meta'>Resource Overview</a></li><li><a href='#resource-relationships'>Relationships</a></li><li><a href='#resourceIframeHolder'>Viewer</a></li></ul>");
   jQuery('#resourceResizable').tabs();
   jQuery('#delete-resource').unbind('click');
   jQuery('#delete-resource').click(function(){
