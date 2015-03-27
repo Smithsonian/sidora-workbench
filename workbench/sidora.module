@@ -1115,7 +1115,7 @@ function sidora_get_parent_table($pid){
   $object = sidora_obj($pid);
   $parents = sidora_get_parent_concepts($object);
     
-  $header = array(t('Pid'), t('Label'));
+  $header = array(t('Title'), t('Type'));
   if (sizeof($parents) > 1) $header[] = t('Remove');
   $unassociate_location = $GLOBALS['base_url'].'/sidora/ajax_parts/unassociate/';
 
@@ -1126,9 +1126,11 @@ function sidora_get_parent_table($pid){
       '#value' => 'Remove',
       '#attributes' => array("ppid"=>$parent['pid'], "class"=>array('parent-removal')),
     );
+    $sidora_data = sidora_get_form_and_dsid($parent['pid']);
+    $form_name = $sidora_data['form_name'];
     $row = array(
-      array('data' => $parent['pid']),
       array('data' => $parent['label']),
+      array('data' => $form_name),
     );
     if (sizeof($parents) > 1) $row[] = array('data' => drupal_render($text_link));
     $rows[] = $row;
