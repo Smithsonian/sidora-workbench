@@ -1797,7 +1797,7 @@ function sidora_create_resource_get_upload_form_html($model, $upload_button_text
     );
     $to_return .= "<div id='create-resource-upload'>";
     $to_return .= sidora_get_plupload_html($elements, $upload_button_text);
-    $to_return .= "<input class=\"form-submit\" value=\"Next\" onclick=\"jQuery('#create-resource-upload').hide(); location.reload();\"></input>";
+    $to_return .= "<input class=\"form-submit\" id=\"Next\" value=\"Next\" onclick=\"jQuery('#create-resource-upload').hide(); location.reload();\"></input>";
     $to_return .= "</div>";
     $_SESSION['file_uploads'][$user->uid] = array();
   }
@@ -3551,7 +3551,9 @@ function sidora_get_plupload_html($elements, $button_text = 'Upload Files'){
    if (typeof fileref!="undefined")
     document.getElementsByTagName("head")[0].appendChild(fileref)
   }
-  runtimesBrowserSpecific = "flash,html5,html4";
+  runtimesBrowserSpecific = "html5,flash,html4";
+  //changed by RAmlani - SID 364
+	//runtimesBrowserSpecific = "flash,html5,html4";   
   if (navigator.userAgent.match(/(Firefox)/i) != null){
     //Firefox gets weird with the flash version between http and https, sometimes http doesnt work
     runtimesBrowserSpecific = "html5,html4";
@@ -3590,14 +3592,19 @@ function sidora_get_plupload_html($elements, $button_text = 'Upload Files'){
     init: {
       PostInit: function() {
         document.getElementById("filelist").innerHTML = "";
-
         document.getElementById("uploadfiles").onclick = function() {
-          uploader.start();
+					uploader.start();
           return false;
         };
       },
-
-      FilesAdded: function(up, files) {
+      // added by RAmlani -SID 350
+			 Browse: function(up) {
+         // Called when file picker is clicked
+        //console.log("browse");
+				document.getElementById("Next").disabled=true;
+				jQuery("#Next").addClass("form-button-disabled");
+           },
+			 FilesAdded: function(up, files) {
         plupload.each(files, function(file) {
                              //alert(file.id+" "+file.name+" "+file.size);
                              var item = jQuery("<div></div>");
@@ -3607,16 +3614,19 @@ function sidora_get_plupload_html($elements, $button_text = 'Upload Files'){
         });
         uploader.start();
       },
-
       UploadProgress: function(up, file) {
         document.getElementById(file.id).getElementsByTagName("b")[0].innerHTML = "<span>" + file.percent + "%</span>";
       },
-
       Error: function(up, err) {
         document.getElementById("console").innerHTML += "\n" + err.file.name + ": " + err.message;
         if (err.code == -601) document.getElementById("console").innerHTML += "  Usable extensions are:';
   print implode(",",$elements['#extensions']);
   print '";
+      },
+      // added by RAmlani -SID 350
+			UploadComplete: function(up,files){
+        document.getElementById("Next").disabled=false;
+				jQuery("#Next").removeClass("form-button-disabled");
       }
     }
   });
