@@ -1019,7 +1019,7 @@ function sidora_edit_metadata($object_id = '', $dsid = '', $form_name = ''){
   drupal_add_css(drupal_get_path('module','sidora').'/css/workbench_metadata_screens.css',array('weight' => '1000000', 'group' => CSS_THEME));
   drupal_add_js(drupal_get_path('module','sidora').'/js/workbench_util.js',array('weight' => '1000000', 'group' => JS_THEME));
   $is_concept = sidora_is_concept($object);
-  drupal_add_js('window.isConcept = '.$is_concept.';
+  drupal_add_js('window.isConcept = '.$is_concept?'true':'false'.';
   ',array('type' => 'inline', 'weight' => '1000000', 'group' => JS_THEME));
   drupal_add_js('
   jQuery().ready(function(){
@@ -1031,7 +1031,7 @@ function sidora_edit_metadata($object_id = '', $dsid = '', $form_name = ''){
      jQuery.ajax({
        type: "POST",
        url: "",
-       data: jQuery("#xml-form-builder-datastream-form-metadata-form").serialize()+"&op=Submit",
+       data: jQuery("#xml-form-builder-datastream-form-metadata-form").serialize()+"&op=Submit&update=Update",
        success: function( data ) {
          window.aa = data;
          if (data.indexOf("<h2 class=\"element-invisible\">Error message</h2")>0){
