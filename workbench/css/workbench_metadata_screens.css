@@ -3,4 +3,7 @@
 body { padding-top:0px; }
 body.toolbar-drawer { padding-top: 0px; }
 body.toolbar {padding-top: 0px;}
+/* noclose added by RAmlani to create a dialog for edit metadata ajax failure */
+.no-close .ui-dialog-titlebar-close { display: none;}
+
 

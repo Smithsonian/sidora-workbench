@@ -1018,6 +1018,7 @@ function sidora_edit_metadata($object_id = '', $dsid = '', $form_name = ''){
   $tform = drupal_get_form('xml_form_builder_datastream_form_metadata_form',$object,$association);
   drupal_add_css(drupal_get_path('module','sidora').'/css/workbench_metadata_screens.css',array('weight' => '1000000', 'group' => CSS_THEME));
   drupal_add_js(drupal_get_path('module','sidora').'/js/workbench_util.js',array('weight' => '1000000', 'group' => JS_THEME));
+	drupal_add_library('system','ui.dialog');
   $is_concept = sidora_is_concept($object);
   drupal_add_js('window.isConcept = '.$is_concept.';
   ',array('type' => 'inline', 'weight' => '1000000', 'group' => JS_THEME));
@@ -1050,6 +1051,27 @@ function sidora_edit_metadata($object_id = '', $dsid = '', $form_name = ''){
            }
          }
        },
+			// status code 500 section added by RAmlani on 3/30/15 to capture a 500 error from the Ajax call and throw an appropriate error message.
+			statusCode: {
+      500: function() {
+      jQuery("#edit-update").click();
+      jQuery(".theoverlay").remove();
+      jQuery("body").append("<div id=\'editmetafailed\' style=\'display:none;\' title=\'Edit MetaData Failed\'><p>Internal Server Error code 500 returned.</p><p>Please contact the Site Administrator</p></div>");
+      jQuery("#editmetafailed").dialog({
+      height: 300,
+      width: 350,
+      modal: true,
+      resizable: false,
+      dialogClass: "no-close",
+		  buttons: {
+        "OK": function() {
+						self.parent.Shadowbox.close();
+						jQuery( this ).dialog( "close" );
+     }
+		 }
+		});
+			}
+			},
        dataType: "text"
      });
    });
@@ -1619,6 +1641,9 @@ if ($one == 'deletexsl'){
     }
  	 var_dump($curr_item);
 	 } 
+if ($one == "edit_metadata"){
+ header($_SERVER['SERVER_PROTOCOL'] . ' 500 Internal Server Error', true, 500);
+}		 
 	}
 /*
  * Show the form to create a concept
@@ -1951,7 +1976,7 @@ function sidora_create_resource_get_metadata_form_html($parent_pid, $model, $for
  * extra info is whether or not the page should be refreshed to the first page, clearing out the existing session (if they stopped mid session last time)
  */
 function sidora_create_resource($parent_pid = 'si:root', $model = 'si:collectionCModel', $form_name = '', $ontology_location = '', $extra_info = ''){
-    error_log("sidora create resource : parent pid = ".$parent_pid,3,DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
+  //  error_log("sidora create resource : parent pid = ".$parent_pid,3,DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
 
   drupal_add_css(drupal_get_path('module','sidora').'/css/workbench_metadata_screens.css',array('weight' => '1000000', 'group' => CSS_THEME));
   global $user;
@@ -1988,7 +2013,7 @@ function sidora_create_resource($parent_pid = 'si:root', $model = 'si:collection
   $current_uploads = sidora_create_resource_get_current_uploads();
   $ask_for_codebook = sidora_create_resource_determine_codebook_complete($model);
   if (empty($current_uploads)){
-   error_log("in sidora create resource : empty current uploads ",3,DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
+   //error_log("in sidora create resource : empty current uploads ",3,DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
     if ($ask_for_codebook){
       $check_for_uploads = FALSE;
       $show_form = FALSE;
@@ -3485,7 +3510,6 @@ function sidora_block_content_navigation(){
   drupal_add_js(drupal_get_path('module','sidora').'/js/workbench_menus.js');
   drupal_add_js(drupal_get_path('module','sidora').'/js/workbench_sidora_request.js');
   drupal_add_js(drupal_get_path('module','sidora').'/js/paging.js'); // adds paging capability to resources
-  drupal_add_js(drupal_get_path('module','sidora').'/js/fq-ui-extenddialog.js');
   return $to_return;
 }
 // For Ingestion
@@ -3704,7 +3728,7 @@ $_SESSION['file_uploads'][$form_id][] = $file_info;
 // Chunking might be enabled
 $chunk = isset($_REQUEST["chunk"]) ? intval($_REQUEST["chunk"]) : 0;
 $chunks = isset($_REQUEST["chunks"]) ? intval($_REQUEST["chunks"]) : 0;
-error_log("in sidora upload function : ".$filePath,3,DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
+//error_log("in sidora upload function : ".$filePath,3,DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
 
 
 // Remove old temp files
