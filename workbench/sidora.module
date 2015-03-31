@@ -1533,12 +1533,13 @@ function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $ex
     $fileinfo = $_SESSION['file_uploads'][$user->uid][$two];
     $filename = $fileinfo->filename;
     $filepath = $fileinfo->filepath;
+		echo $filepath;
     //dsm($_SESSION['file_uploads'][$user->uid]);
     //dsm($two);
     //return '';
     $handle = fopen($filepath, "r");
     $contents = fread($handle, filesize($filepath));
-    sidora_direct_jpg_output($contents);
+   // sidora_direct_jpg_output($contents);
     //header("Content-type: image/jpeg");
     //print $contents;
     exit();
@@ -1925,8 +1926,10 @@ function sidora_create_resource_get_metadata_form_html($parent_pid, $model, $for
       if (!empty($current_uploads[$form_total]) && $at_least_one_pic){
         $to_return .= "<div class='picHolder' id='picHolder-".$form_total."'>";
         if (sidora_is_displayable_image_with_convert($current_uploads[$form_total]->filename)){
-          $to_return .= "<img src='/sidora/test/sessionImage/".$form_total."'/>";
-        }else{
+          // $to_return .= "<img src='".$GLOBALS['base_url']."/sidora/test/sessionImage/".$form_total."'/>";
+				  // Changed by RAmlani on 3/31/15 to stop using the testing function for displaying the uploaded resources on production site. Instead use Sidora/info.
+				  $to_return .= "<img src='".$GLOBALS['base_url']."/sidora/info/".$form_total."/previewUploadedResources'/>";
+				}else{
           $to_return .= $current_uploads[$form_total]->filename.' is not displayable at this time.';
         }
         $to_return .= "</div>";
@@ -2247,7 +2250,7 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
   global $user;
   $to_output = '';
   //$pid = 'si:257075';
-  switch ($type) {
+ 	switch ($type) {
     case 'relationships':
       print sidora_get_parent_table($pid);
       break;
@@ -2594,6 +2597,32 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
 			print json_encode($exhibitions);
       exit();
       break; 
+		// added by RAmlani on 3/31/15 to stop using sidora/testing for displaying uploaded resources on production site.
+		case 'previewUploadedResources' :
+		  // the pid in this case will be the count of current item in the uploaded resources in temp directory
+		  $fileinfo = $_SESSION['file_uploads'][$user->uid][$pid];
+      $filename = $fileinfo->filename;
+      $filepath = $fileinfo->filepath;
+		  $handle = fopen($filepath, "r");
+      $contents = fread($handle, filesize($filepath));
+      sidora_direct_jpg_output($contents);
+      exit();
+	    break;
+		// added by RAmlani on 3/31/15 to stop using sidora/testing for uploading new xsl files in sidora admin on production site.
+		case 'upload2': 
+		   $configure = array(
+      'file_types' => array('xsl'),
+      'post_location_js' => 'Drupal.settings.basePath+"sidora/info/xsl_save/xsl_upload"',
+      'success_function_js' => 'if (window.opener != null){
+         window.opener.filesUpdated(jQuery.parseJSON(arguments[0]));
+         window.close();
+       }else{
+         console.log("not child");
+       }',
+     );
+     $to_return = sidora_generic_upload($configure);
+     return 'Upload XSL files:'.$to_return;
+	   break;
 	}
   print $to_output;
 }
