@@ -169,6 +169,7 @@ SidoraQueue.prototype.updateFooterWithRequestInProcess = function(){
   }else{
     if (jQuery("footer").is(":visible")) jQuery("footer").html("").fadeOut();
   }
+  setTimeout(sidora.ResizeTreeToBrowser,1000);
 }
 SidoraQueue.prototype.Next = function(){
   if (jQuery("footer").length == 0) jQuery("body").parent().append("<footer></footer");
