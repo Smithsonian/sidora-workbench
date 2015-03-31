@@ -297,7 +297,7 @@ jQuery(document).ready(function(){
   }
   if (!sidora_allow($user,$pid,'view')) drupal_not_found();
 
-      $object = sidora_meta($pid);
+  $object = sidora_meta($pid);
   print '
 <style>
 .object-properties {
@@ -309,6 +309,7 @@ jQuery(document).ready(function(){
     background: whitesmoke;
     width:100%;
     height:100%;
+    overflow: auto;
 "><div id="objectManagementObjProperties" class="object-properties"><table>
     <tbody><tr><td>Label:</td><td><input type="text" name="label" style="border: solid 1px lightblue;" id="objPropLabel" value="'.$object->label.'" size="50"></td></tr>
     <tr><td>Owner:</td><td><input type="text" name="owner" style="border: solid 1px lightblue;" id="objPropOwner" value="'.$object->owner.'" size="50"></td></tr>
@@ -320,17 +321,22 @@ jQuery(document).ready(function(){
 <div id="objectManagementDatastreams" class="object-properties"><table>
     <tbody><tr><th>ID</th><th>Label</th><th>State</th><th>Mime Type</th><th>Date Created</th><th>Actions</th></tr>
 ';
-      foreach($object as $dsid=>$datastream){
-print '<tr><td>'.$datastream->id.'</td><td>'.$datastream->label.'</td><td>'.$datastream->state.'</td><td>'.$datastream->mimetype.'</td><td>'.$datastream->createdDate.'</td><td>';
-print '<a href="/sidora/info/'.$pid.'/meta/'.$datastream->id.'/download">Download</a> ';
-print '<a href="/sidora/info/'.$pid.'/meta/'.$datastream->id.'/browser" target="_blank">View</a> ';
-print '<a href="#" onclick="window.sidora.manage.removeDatastream(\''.$pid.'\',\''.$datastream->id.'\'); return false;">Remove</a> ';
-print '</td></tr>'."\n";
-      }
-print '
-  </tbody></table>
-  <input class="form-submit" value="Add Datastream" onclick="" id="addDatastream">
-  </div></div>
+  foreach($object as $dsid=>$datastream){
+    print '<tr><td>'.$datastream->id.'</td><td>'.$datastream->label.'</td><td>'.$datastream->state.'</td><td>'.$datastream->mimetype.'</td><td>'.$datastream->createdDate.'</td><td>';
+    $viewer_filename = $datastream->id.'.';
+    if (strpos($datastream->mimetype,'image/') === 0)
+      $viewer_filename .= substr($datastream->mimetype,6);
+    else
+      $viewer_filename .= 'txt'; //Attempt to have the browser view any other type of file
+    print '<a href="'.base_path().'sidora/info/'.$pid.'/meta/'.$datastream->id.'/download">Download</a> ';
+    print '<a href="'.base_path().'sidora/info/'.$pid.'/meta/'.$datastream->id.'/browser/'.$viewer_filename.'" target="_blank">View</a> ';
+    print '<a href="#" onclick="window.sidora.manage.removeDatastream(\''.$pid.'\',\''.$datastream->id.'\'); return false;">Remove</a> ';
+    print '</td></tr>'."\n";
+  }
+  print '
+    </tbody></table>
+    <input class="form-submit" value="Add Datastream" onclick="" id="addDatastream">
+    </div></div>
 ';
   exit();
 }
@@ -2407,8 +2413,7 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
           $datastream_content = '<xml_root><general_info><owner>'.$object->owner.'</owner><label>'.$object->label.'</label></general_info>'."\n".$datastream_content."\n".'</xml_root>';
           $mime_type = 'text/xml';
         }
-
-        if ($download=='browser' && strpos($mime_type,"text") !== FALSE){ //html, text, csv
+        if ($download=='browser' && (strpos($mime_type,"xml") !== FALSE || strpos($mime_type,"text") !== FALSE)){ //html, text, csv
           header("Content-type: html");
         }else{
           header("Content-type: $mime_type");
