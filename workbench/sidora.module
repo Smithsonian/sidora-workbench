@@ -1018,6 +1018,7 @@ function sidora_edit_metadata($object_id = '', $dsid = '', $form_name = ''){
   $tform = drupal_get_form('xml_form_builder_datastream_form_metadata_form',$object,$association);
   drupal_add_css(drupal_get_path('module','sidora').'/css/workbench_metadata_screens.css',array('weight' => '1000000', 'group' => CSS_THEME));
   drupal_add_js(drupal_get_path('module','sidora').'/js/workbench_util.js',array('weight' => '1000000', 'group' => JS_THEME));
+	drupal_add_library('system','ui.dialog');
   $is_concept = sidora_is_concept($object);
   drupal_add_js('window.isConcept = '.$is_concept?'true':'false'.';
   ',array('type' => 'inline', 'weight' => '1000000', 'group' => JS_THEME));
@@ -1028,7 +1029,8 @@ function sidora_edit_metadata($object_id = '', $dsid = '', $form_name = ''){
    var sidora = window.parent.sidora;
    jQuery("#workbench-submit").click(function(){
    jQuery("body").append("<div class=\'theoverlay\' style=\'width:100%;height:100%;overflow:hidden;opacity:0.5;position:fixed;top:0;left:0;background-color:black;z-index:4000\'></div>");
-     jQuery.ajax({
+   console.log(jQuery("#xml-form-builder-datastream-form-metadata-form").serialize()+"&op=Submit");
+	   jQuery.ajax({
        type: "POST",
        url: "",
        data: jQuery("#xml-form-builder-datastream-form-metadata-form").serialize()+"&op=Submit&update=Update",
@@ -1049,6 +1051,27 @@ function sidora_edit_metadata($object_id = '', $dsid = '', $form_name = ''){
            }
          }
        },
+			// status code 500 section added by RAmlani on 3/30/15 to capture a 500 error from the Ajax call and throw an appropriate error message.
+			statusCode: {
+      500: function() {
+      jQuery("#edit-update").click();
+      jQuery(".theoverlay").remove();
+      jQuery("body").append("<div id=\'editmetafailed\' style=\'display:none;\' title=\'Edit MetaData Failed\'><p>Internal Server Error code 500 returned.</p><p>Please contact the Site Administrator</p></div>");
+      jQuery("#editmetafailed").dialog({
+      height: 300,
+      width: 350,
+      modal: true,
+      resizable: false,
+      dialogClass: "no-close",
+		  buttons: {
+        "OK": function() {
+						self.parent.Shadowbox.close();
+						jQuery( this ).dialog( "close" );
+     }
+		 }
+		});
+			}
+			},
        dataType: "text"
      });
    });
@@ -1620,6 +1643,9 @@ if ($one == 'deletexsl'){
     }
  	 var_dump($curr_item);
 	 } 
+if ($one == "edit_metadata"){
+ header($_SERVER['SERVER_PROTOCOL'] . ' 500 Internal Server Error', true, 500);
+}		 
 	}
 /*
  * Show the form to create a concept
@@ -1798,7 +1824,7 @@ function sidora_create_resource_get_upload_form_html($model, $upload_button_text
     );
     $to_return .= "<div id='create-resource-upload'>";
     $to_return .= sidora_get_plupload_html($elements, $upload_button_text);
-    $to_return .= "<input class=\"form-submit\" value=\"Next\" onclick=\"jQuery('#create-resource-upload').hide(); location.reload();\"></input>";
+    $to_return .= "<input class=\"form-submit\" id=\"Next\" value=\"Next\" onclick=\"jQuery('#create-resource-upload').hide(); location.reload();\"></input>";
     $to_return .= "</div>";
     $_SESSION['file_uploads'][$user->uid] = array();
   }
@@ -1952,6 +1978,8 @@ function sidora_create_resource_get_metadata_form_html($parent_pid, $model, $for
  * extra info is whether or not the page should be refreshed to the first page, clearing out the existing session (if they stopped mid session last time)
  */
 function sidora_create_resource($parent_pid = 'si:root', $model = 'si:collectionCModel', $form_name = '', $ontology_location = '', $extra_info = ''){
+  //  error_log("sidora create resource : parent pid = ".$parent_pid,3,DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
+
   drupal_add_css(drupal_get_path('module','sidora').'/css/workbench_metadata_screens.css',array('weight' => '1000000', 'group' => CSS_THEME));
   global $user;
   //if the parent pid is locked, can't do it
@@ -1987,6 +2015,7 @@ function sidora_create_resource($parent_pid = 'si:root', $model = 'si:collection
   $current_uploads = sidora_create_resource_get_current_uploads();
   $ask_for_codebook = sidora_create_resource_determine_codebook_complete($model);
   if (empty($current_uploads)){
+   //error_log("in sidora create resource : empty current uploads ",3,DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
     if ($ask_for_codebook){
       $check_for_uploads = FALSE;
       $show_form = FALSE;
@@ -3548,7 +3577,9 @@ function sidora_get_plupload_html($elements, $button_text = 'Upload Files'){
    if (typeof fileref!="undefined")
     document.getElementsByTagName("head")[0].appendChild(fileref)
   }
-  runtimesBrowserSpecific = "flash,html5,html4";
+  runtimesBrowserSpecific = "html5,flash,html4";
+  //changed by RAmlani - SID 364
+	//runtimesBrowserSpecific = "flash,html5,html4";   
   if (navigator.userAgent.match(/(Firefox)/i) != null){
     //Firefox gets weird with the flash version between http and https, sometimes http doesnt work
     runtimesBrowserSpecific = "html5,html4";
@@ -3587,14 +3618,19 @@ function sidora_get_plupload_html($elements, $button_text = 'Upload Files'){
     init: {
       PostInit: function() {
         document.getElementById("filelist").innerHTML = "";
-
         document.getElementById("uploadfiles").onclick = function() {
-          uploader.start();
+					uploader.start();
           return false;
         };
       },
-
-      FilesAdded: function(up, files) {
+      // added by RAmlani -SID 350
+			 Browse: function(up) {
+         // Called when file picker is clicked
+        //console.log("browse");
+				document.getElementById("Next").disabled=true;
+				jQuery("#Next").addClass("form-button-disabled");
+           },
+			 FilesAdded: function(up, files) {
         plupload.each(files, function(file) {
                              //alert(file.id+" "+file.name+" "+file.size);
                              var item = jQuery("<div></div>");
@@ -3604,16 +3640,19 @@ function sidora_get_plupload_html($elements, $button_text = 'Upload Files'){
         });
         uploader.start();
       },
-
       UploadProgress: function(up, file) {
         document.getElementById(file.id).getElementsByTagName("b")[0].innerHTML = "<span>" + file.percent + "%</span>";
       },
-
       Error: function(up, err) {
         document.getElementById("console").innerHTML += "\n" + err.file.name + ": " + err.message;
         if (err.code == -601) document.getElementById("console").innerHTML += "  Usable extensions are:';
   print implode(",",$elements['#extensions']);
   print '";
+      },
+      // added by RAmlani -SID 350
+			UploadComplete: function(up,files){
+        document.getElementById("Next").disabled=false;
+				jQuery("#Next").removeClass("form-button-disabled");
       }
     }
   });
@@ -3691,6 +3730,7 @@ $_SESSION['file_uploads'][$form_id][] = $file_info;
 // Chunking might be enabled
 $chunk = isset($_REQUEST["chunk"]) ? intval($_REQUEST["chunk"]) : 0;
 $chunks = isset($_REQUEST["chunks"]) ? intval($_REQUEST["chunks"]) : 0;
+//error_log("in sidora upload function : ".$filePath,3,DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
 
 
 // Remove old temp files
@@ -3758,7 +3798,6 @@ if (!$chunks || $chunk == $chunks - 1) {
         // Strip the temp .part suffix off
         rename("{$filePath}.part", $filePath);
 }
-
 // Return Success JSON-RPC response
 //print_r ($_SESSION['file_uploads']);
 //die('{"jsonrpc" : "2.0", "result" : null, "id" : "id"}');
@@ -3772,6 +3811,7 @@ if ($outputDebugCleanup) {
 }else{
   print 'upload complete';
 }
+ // error_log("in sidora upload : ". var_dump($files1,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
 exit();
 }
 /*
