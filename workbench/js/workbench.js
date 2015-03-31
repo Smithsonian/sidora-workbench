@@ -18,7 +18,7 @@ sidora.concept.GetPid = function(){
   if (window.location.hash.indexOf('?') > -1){
     return window.location.hash.substring(1,window.location.hash.indexOf('?'));
   }else{
-    return window.location.hash.substring(1);//,window.location.hash.indexOf('?'));
+    return window.location.hash.substring(1);
   }
 }
 sidora.concept.LoadContentHelp ={};
@@ -31,9 +31,9 @@ sidora.concept.LoadContentHelp.Resources.TableLoad = function(conceptOfInterest)
      "oLanguage": {
             "sLengthMenu": "Show _MENU_"
                 },
-		 'sPaginationType': "input",
+     'sPaginationType': "input",
      'lengthMenu':[5,10,50,100],
-		 'processing': true,
+     'processing': true,
      'serverSide': true,
      'ordering' : false,
      'ajax': jQuery.fn.dataTable.pipeline({
@@ -223,12 +223,12 @@ sidora.concept.LoadContentHelp.Exhibition_view = function(conceptOfInterest){
     dataType: "json",
     url: '../info/'+conceptOfInterest+'/exhibition',
     success: function(exhibitions){
-			jQuery("#exhibitConcept").attr('onclick', '');
-		//	jQuery("#exhibitConcept").off('click','a');
-			jQuery("#exhibitConcept").children('a').attr('onclick',exhibitions.action);
-			jQuery("#exhibitConcept").children('a').toggleClass('ui-state-disabled',exhibitions.ui_state_disable);
-			console.log("Action : " +exhibitions.action);
-			console.log("uistate : "+exhibitions.ui_state_disable);
+      jQuery("#exhibitConcept").attr('onclick', '');
+    //  jQuery("#exhibitConcept").off('click','a');
+      jQuery("#exhibitConcept").children('a').attr('onclick',exhibitions.action);
+      jQuery("#exhibitConcept").children('a').toggleClass('ui-state-disabled',exhibitions.ui_state_disable);
+      console.log("Action : " +exhibitions.action);
+      console.log("uistate : "+exhibitions.ui_state_disable);
     }
   });
 }
@@ -345,6 +345,7 @@ sidora.concept.LoadContentHelp.FullTableReload = function(conceptOfInterest){
     sidora.concept.LoadContentHelp.Resources.TableActionsSetup();
     sidora.concept.LoadContentHelp.CreateMenu(conceptOfInterest);
     sidora.concept.LoadContentHelp.Relationships();
+    sidora.ResizeTreeToBrowser();
   }).fail(function(failure_obj){
     var myDiv = sidora.util.getErrorMessageHtml();
     jQuery('#concept-resource-list-internal').children().not('.workbench-nav').remove();
@@ -373,10 +374,11 @@ sidora.concept.LoadContent = function(leaveContentIfAlreadyLoaded){
   jQuery('#concept-meta .error-message').remove();
 
   sidora.concept.LoadContentHelp.Permissions(conceptOfInterest);
-	sidora.concept.LoadContentHelp.Exhibition_view(conceptOfInterest);
+  sidora.concept.LoadContentHelp.Exhibition_view(conceptOfInterest);
   sidora.concept.LoadContentHelp.Metadata(conceptOfInterest);
   sidora.concept.LoadContentHelp.FullTableReload(conceptOfInterest);
   sidora.concept.loadedContentPid = conceptOfInterest;
+  sidora.ReformatPage();
 }
 /*
  * Used to see if there is at least a tag in there someplace
@@ -718,6 +720,13 @@ sidora.InitiateJSTree = function(){
   }
   jQuery('#forjstree').jstree('open_all');
 }
+sidora.ReformatPage = function(){
+  jQuery(".breadcrumb").hide();
+  jQuery("#page").css("padding","0");
+  jQuery("#concept_tabs").css("position","fixed");
+  jQuery("#concept-resource-list").css("padding","0");
+  jQuery("#concept-resource-list").css("height","100%");
+}
 sidora.RelocateTreeOnPage = function(){
   jQuery("#branding").css("margin-left","300px");
   jQuery("body").append("<div id='fjt-holder'></div>");
@@ -729,14 +738,55 @@ sidora.RelocateTreeOnPage = function(){
   sidora.ResizeTreeToBrowser();
 }
 sidora.ResizeTreeToBrowser = function(){
-  console.log('resizing tree');
+  jQuery("#sidora_content_concept_info").css("min-width",0);
+  jQuery("#concept_tabs").css("min-width",0);
   var newHeight = jQuery(window).height();
   newHeight -= (parseInt(jQuery("body").css("padding-top"))+10);
+  if (jQuery("footer").is(":visible")){
+    newHeight -= jQuery("footer").height();
+  }
   jQuery("#fjt-holder").css("height",newHeight+"px");
+
+  var tabsHeight = newHeight-50;
+  jQuery("#concept_tabs").css("height",tabsHeight+"px");
+  jQuery("#concept_tabs").css("width",(jQuery(window).width()-310)+"px");
+  var tabContentHeight = tabsHeight - jQuery(".ui-tabs-nav").height();
+  jQuery("#concept-resource-list").css("height",tabContentHeight);
+  jQuery("#resourceResizable").css("height",'99%');
+  jQuery("#resourceInformationPane").css("height",tabContentHeight+'px')
+  jQuery("#resourceInformationPane").css("padding-right",'15px');
+  jQuery("#concept-resource-list-internal").css("height",'100%');
+  var conceptMetaHeight = tabContentHeight - (56);
+  jQuery("#concept-meta div.metadata-table").height(conceptMetaHeight+"px");
+  jQuery("#concept-meta div.metadata-table").css("overflow","auto");
+  var resourceTabContentHeight = tabContentHeight - jQuery(".ui-tabs-nav").height() - 5; //5 for padding and border
+  jQuery("#resourceIframeHolder").css("width",'99%');
+  jQuery("#resourceIframeHolder").css("height",resourceTabContentHeight+'px');
+  jQuery("#resource-relationships").css("height",resourceTabContentHeight+'px');
+  jQuery("#resource-relationships").css("overflow",'auto');
+  jQuery("#resource-relationships").css("border",'0');
+  jQuery("#resource-relationships").css("padding",'0');
+  jQuery("#resource-relationships").css("margin",'0');
+  jQuery("#resource-meta").css("height",resourceTabContentHeight+'px');
+  jQuery("#resource-meta").css("overflow",'auto');
+  jQuery("#resource-meta").css("border",'0');
+  jQuery("#resource-meta").css("padding",'0');
+  jQuery("#resource-meta").css("margin",'0');
+  if (jQuery("#rt").length == 0) jQuery("#res_table").before("<div id='rt'></div>"); 
+  jQuery("#rt").append(jQuery("#res_table"));
+  if (jQuery("input[name='titleFilter']").length > 0){
+    var additionalPushDown = jQuery("input[name='titleFilter']").offset().top - jQuery("#concept-resource-list").offset().top + jQuery("input[name='titleFilter']").height();
+    var tableHeight = resourceTabContentHeight - additionalPushDown;
+  }
+  jQuery("#rt").css("height",tableHeight+'px');
+  jQuery("#rt").css("overflow",'auto');
+
+  
 }
 sidora.InitiatePage = function(){
   sidora.InitiateJSTree();
   sidora.RelocateTreeOnPage();
+  sidora.ReformatPage();
   jQuery('#concept_tabs').tabs();
   sidora.concept.LoadContent();
   jQuery("#page-title").after(jQuery("#workbench-menu"));
@@ -943,9 +993,6 @@ sidora.ResizeOnWindowResize = function(){
   var bodywidth = jQuery(window).width();
   var menuwidth = 360;
   var newwidth = bodywidth-menuwidth;
-  if (newwidth < parseInt(jQuery("#sidora_content_concept_info").css("min-width"))){
-    newwidth = parseInt(jQuery("#sidora_content_concept_info").css("min-width"));
-  }
   jQuery("#sidora_content_concept_info").width(newwidth);
 
   //Resize the resource information pane for the resource page 
@@ -1285,7 +1332,7 @@ sidora.resources.individualPanel.Create = function() {
   var forAfterWrapper =   '<div id=\'resourceInformationPane\'><div id="resourceResizable"><div id="resource-meta"></div><div id="resource-relationships"></div><div id="resourceIframeHolder">';
   forAfterWrapper += '</div></div><div id="iframeOverlay" style="position:absolute;width:100%;height:100%;"></div></div></div>';
   jQuery('#res_table_wrapper').after(forAfterWrapper);
-  jQuery("#resourceResizable").prepend("<ul><li><a href='#resource-meta'>Resource Overview</a></li><li><a href='#resource-relationships'>Relationships</a></li><li><a href='#resourceIframeHolder'>Viewer</a></li></ul>");
+  jQuery("#resourceResizable").prepend("<ul><li><a href='#resource-meta'>Resource Metadata</a></li><li><a href='#resource-relationships'>Relationships</a></li><li><a href='#resourceIframeHolder'>Viewer</a></li></ul>");
   jQuery('#resourceResizable').tabs();
   jQuery('#delete-resource').unbind('click');
   jQuery('#delete-resource').click(function(){
@@ -1367,6 +1414,7 @@ sidora.resources.individualPanel.LoadContent = function(suppressResourceViewerRe
     sidora.recentAjaxFailure(meta_html);
   });;
   sidora.resources.individualPanel.LoadRelationships();
+  sidora.ResizeTreeToBrowser();
 }
 /*
  * Information to give to user if we get a bad response from an ajax query
@@ -1439,26 +1487,24 @@ sidora.resources.individualPanel.ResizeIt = function (e, ui)
   if (parseInt(divTwo.css("min-width")) > divTwoWidthPixels){
     divTwoWidthPixels = parseInt(divTwo.css("min-width"));
   }
-  divTwoWidthPixels = divTwoWidthPixels - 20; //to make room for the padding
   divTwoWidth = (divTwoWidthPixels) / parent.width() * 100 + '%';
   
   divTwo.width(divTwoWidth);
   jQuery(ui.element).css('left', 15);
-  jQuery(ui.element).css('min-height', divTwo.height() + 'px');
 
   //Give the max width of the resizable element to be the entire parent minus what the left element has declared as its min-width
   var maxWidth = parent.width() - parseInt(jQuery(parent.children()[1]).css('min-width'));
   jQuery(ui.element).resizable('option', 'maxWidth', maxWidth); 
 
   var newMinHeight = Math.max(600,jQuery("#resourceResizable").height(),jQuery("#res_table_wrapper").height(), jQuery("#resource-meta").height()+jQuery("#resourceResizable ul").height()+10);
-  jQuery("#concept-resource-list-internal").css('min-height',newMinHeight);
-  jQuery("#resourceIframeHolder").height(newMinHeight-40);
+  //jQuery("#concept-resource-list-internal").css('min-height',newMinHeight);
+  //jQuery("#resourceIframeHolder").height(newMinHeight-40);
   //Protect the cursor input from being taken into the iframe by making the overlay displayable
   jQuery("#iframeOverlay").show();
   
   //Move items around to fit the menu in the best place
   if (jQuery("#res_table_wrapper").width() < 470){
-    jQuery("#res_table_wrapper").css("margin-top","70px");
+    jQuery("#res_table_wrapper").css("margin-top","83px");
     jQuery("#sidora-resources-button-row").css("top","90px").css("left","20px");
   }else{
     jQuery("#res_table_wrapper").css("margin-top","50px");
@@ -1600,3 +1646,4 @@ http://learn.jquery.com/using-jquery-core/faq/how-do-i-select-an-element-by-an-i
 function jq( myid ) {
   return "#" + myid.replace( /(:|\.|\[|\])/g, "\\$1" );
 }
+
