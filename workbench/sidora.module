@@ -1020,7 +1020,7 @@ function sidora_edit_metadata($object_id = '', $dsid = '', $form_name = ''){
   drupal_add_js(drupal_get_path('module','sidora').'/js/workbench_util.js',array('weight' => '1000000', 'group' => JS_THEME));
 	drupal_add_library('system','ui.dialog');
   $is_concept = sidora_is_concept($object);
-  drupal_add_js('window.isConcept = '.$is_concept.';
+  drupal_add_js('window.isConcept = '.$is_concept?'true':'false'.';
   ',array('type' => 'inline', 'weight' => '1000000', 'group' => JS_THEME));
   drupal_add_js('
   jQuery().ready(function(){
@@ -1033,7 +1033,7 @@ function sidora_edit_metadata($object_id = '', $dsid = '', $form_name = ''){
 	   jQuery.ajax({
        type: "POST",
        url: "",
-       data: jQuery("#xml-form-builder-datastream-form-metadata-form").serialize()+"&op=Submit",
+       data: jQuery("#xml-form-builder-datastream-form-metadata-form").serialize()+"&op=Submit&update=Update",
        success: function( data ) {
          window.aa = data;
          if (data.indexOf("<h2 class=\"element-invisible\">Error message</h2")>0){
@@ -1138,7 +1138,7 @@ function sidora_get_parent_table($pid){
   $object = sidora_obj($pid);
   $parents = sidora_get_parent_concepts($object);
     
-  $header = array(t('Pid'), t('Label'));
+  $header = array(t('Title'), t('Type'));
   if (sizeof($parents) > 1) $header[] = t('Remove');
   $unassociate_location = $GLOBALS['base_url'].'/sidora/ajax_parts/unassociate/';
 
@@ -1149,9 +1149,11 @@ function sidora_get_parent_table($pid){
       '#value' => 'Remove',
       '#attributes' => array("ppid"=>$parent['pid'], "class"=>array('parent-removal')),
     );
+    $sidora_data = sidora_get_form_and_dsid($parent['pid']);
+    $form_name = $sidora_data['form_name'];
     $row = array(
-      array('data' => $parent['pid']),
       array('data' => $parent['label']),
+      array('data' => $form_name),
     );
     if (sizeof($parents) > 1) $row[] = array('data' => drupal_render($text_link));
     $rows[] = $row;
@@ -2796,8 +2798,8 @@ function sidora_block_view($delta = ''){
       $block['content'] .= '
   <div id="concept_tabs">
     <ul>
-      <li><a href="#concept-meta">Concept Metadata</a></li>
-      <li><a href="#concept-relationships">Concept Relationships</a></li>
+      <li><a href="#concept-meta">Concept Overview</a></li>
+      <li><a href="#concept-relationships">Relationships</a></li>
       <li><a href="#concept-resource-list">Resource List</a></li>
     </ul>
     <div id="concept-meta">
