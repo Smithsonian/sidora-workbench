@@ -1548,7 +1548,7 @@ sidora.manage.OpenCurrentConfig = function(){
   var title = this.recent.title;
   var userFriendlyToastName = this.recent.uftn;
   Shadowbox.close();
-  jQuery.ajax("/sidora/manage/"+pid).done(function(html){
+  jQuery.ajax(Drupal.settings.basePath+"sidora/manage/"+pid).done(function(html){
     Shadowbox.open({
         content:    html,
         player:     "html",
