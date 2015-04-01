@@ -560,6 +560,10 @@ variable_get('si_exhibition_website_location', '').
 //variable_get('sidora_exhibit_url','').'/fedora/repository/'.
 $pid.'\')" title="Opens the current exhibit in a new window">Direct Link to Exhibition</a>
 <script>
+window.sidora = {
+  "exhibitionServerMain" : "'.variable_get('si_exhibition_website_location', '').'",
+  "exhibitionServerFriendly" : "'.variable_get('si_exhibition_friendly_website_location', '').'"
+}
 function setScheme(schemeName){
   if (schemeName == "Blue_Orange"){
     jQuery.farbtastic("#cp-edit-color-page-background").setColor("#fbf5ed");
@@ -1286,8 +1290,11 @@ for(var i=0, len=els.length; i<len; ++i){
   );
   $customUrl = $row['custom_url'];
   if (!empty($customUrl)){
-    $savedUrlFullPath = variable_get('sidora_exhibit_url','').'/public/'.$customUrl;
+    $savedUrlFullPath = variable_get('si_exhibition_friendly_website_location','').$customUrl;
     $customUrl = 'Current Saved Custom Url:<br/> <a target="_blank" href="'.$savedUrlFullPath.'">'.$savedUrlFullPath.'</a>';
+  }else{
+    $savedUrlFullPath = variable_get('si_exhibition_website_location', '').$pid;
+    $customUrl = 'Current Url: <div id="highlight-to-copy-exhibition-url"><a target="_blank" href="'.$savedUrlFullPath.'">'.$savedUrlFullPath.'</a></div>';
   }
   $form['custom_url'] = array(
     '#type' => 'textfield',
