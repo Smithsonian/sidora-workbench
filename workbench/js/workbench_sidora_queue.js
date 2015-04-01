@@ -1,5 +1,5 @@
 /**
- * This class is fully created by Robert Anderson of Quotient-inc.  
+ * This class is fully created by Quotient-inc: Robert Anderson and Rashmi Amlani.  
  * This class implements a ajax queueing system with a popup notification when complete
  *
  */
