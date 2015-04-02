@@ -84,13 +84,17 @@ function exhibition_config_user_view($account, $view_mode, $langcode){
       $epid_html .= '<tr>';
       $epid_html .= '<td>'.$epid['pid'].'</td>';
       $epid_html .= '<td>'.$epid['label'].'</td>';
-      $epid_html .= '<td><a href ="'.base_path().'exhibition_config/config/'.$epid['pid'].'">Configure</a></td>';
-      $epid_html .= '<td><a href ="'.variable_get('si_exhibition_website_location', '').''.$epid['pid'].'">Open</a></td>';
-      $epid_html .= '<td><a href ="'.
+      $epid_html .= '<td><a target="_blank" href ="'.base_path().'exhibition_config/config/'.$epid['pid'].'">Configure</a></td>';
+      $epid_html .= '<td><a target="_blank" href ="'.variable_get('si_exhibition_website_location', '').''.$epid['pid'].'">'.variable_get('si_exhibition_website_location', '').$epid['pid'].'</a></td>';
+      if ($epid['custom_url']){
+        $epid_html .= '<td><a target="_blank" href ="'.
                     variable_get('si_exhibition_friendly_website_location', '').
                     $epid['custom_url'].'">'.
                     variable_get('si_exhibition_friendly_website_location', '').
                     $epid['custom_url'].'</a></td>';
+      }else{
+        $epid_html .= '<td>None set</td>';
+      }
       $epid_html .= '</tr>';
     }
     $epid_html .= '</table>';
