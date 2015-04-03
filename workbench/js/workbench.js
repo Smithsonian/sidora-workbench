@@ -357,7 +357,10 @@ sidora.concept.loadedContentPid = null;
 sidora.concept.forceRefreshOnNextLoadContent = false;
 sidora.concept.LoadContent = function(leaveContentIfAlreadyLoaded){
   if (typeof(leaveContentIfAlreadyLoaded) == 'undefined') leaveContentIfAlreadyLoaded = false;
-  if (this.forceRefreshOnNextLoadContent == true) { leaveContentIfAlreadyLoaded = false; this.forceRefreshOnNextLoadContent = false; }
+  if (this.forceRefreshOnNextLoadContent) {
+    leaveContentIfAlreadyLoaded = false; 
+    this.forceRefreshOnNextLoadContent = false;
+  }
   conceptOfInterest = sidora.concept.GetPid();
   //Don't continue if we want to leave the current concept info (e.g. only load a new one)
   console.log("Concept Pid:"+conceptOfInterest+" currently loaded:"+sidora.concept.loadedContentPid+" leaveContentIfAlreadyLoaded:"+leaveContentIfAlreadyLoaded);
@@ -1329,7 +1332,7 @@ sidora.resources.individualPanel.Create = function() {
   var forAfterWrapper =   '<div id=\'resourceInformationPane\'><div id="resourceResizable"><div id="resource-meta"></div><div id="resource-relationships"></div><div id="resourceIframeHolder">';
   forAfterWrapper += '</div></div><div id="iframeOverlay" style="position:absolute;width:100%;height:100%;"></div></div></div>';
   jQuery('#res_table_wrapper').after(forAfterWrapper);
-  jQuery("#resourceResizable").prepend("<ul><li><a href='#resource-meta'>Resource Metadata</a></li><li><a href='#resource-relationships'>Relationships</a></li><li><a href='#resourceIframeHolder'>Viewer</a></li></ul>");
+  jQuery("#resourceResizable").prepend("<ul><li><a href='#resource-meta'>Resource Overview</a></li><li><a href='#resource-relationships'>Relationships</a></li><li><a href='#resourceIframeHolder'>Viewer</a></li></ul>");
   jQuery('#resourceResizable').tabs();
   jQuery('#delete-resource').unbind('click');
   jQuery('#delete-resource').click(function(){
