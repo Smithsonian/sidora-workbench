@@ -340,16 +340,24 @@ jQuery(document).ready(function(){
 ';
   exit();
 }
-function sidora_direct_jpg_output($content){
+/*
+* Attempts to load the item to get output as a JPEG
+* $content - the original file content
+* $output_to_browser - if TRUE then outputs direct to browser or gives message that there is not available view
+&                    - if FALSE then returns whether or not the item can be output as JPEG
+*/
+function sidora_direct_jpg_output($content, $output_to_browser = TRUE){
   $tempfilename = tempnam('','Sidora_temp_pic_');
   file_put_contents($tempfilename, $content);
   $tempimage = image_load($tempfilename);
   if (!empty($tempimage)){
+    if (!$output_to_browser) return TRUE;
     image_scale($tempimage, 800, 700);
     $save_info = image_save($tempimage);
     header("Content-type: image/jpeg");
     readfile($tempfilename);
   }else{
+    if (!$output_to_browser) return FALSE;
     print t('There is no available view for this content');
   }
   exit();
@@ -392,7 +400,9 @@ function sidora_resource_viewer($pid){
                 if (in_array($ds->mimetype, $viewable_mime_types)){
                   return sidora_info_json($pid, 'meta', $dsid, 'browser');
                 }else{
-                  sidora_direct_jpg_output($ds->content);
+                  if (sidora_direct_jpg_output($ds->content, FALSE)){
+                    sidora_direct_jpg_output($ds->content);
+                  }
                 }
                 break;
               case 'flexpaper_pdf':
@@ -2725,6 +2735,17 @@ function sidora_main_non_block_content(){
  */
 function sidora_xml_form_builder_get_transforms(){
   $module_path = drupal_get_path('module', 'sidora');
+  $mp_prefix = realpath('.');
+  //All of the following were NOT correct ways to get to the file system path.  Included for future reference:
+  //file_default_scheme(); //file_create_url(file_default_scheme()."://");//file_directory_path();//base_path();//$_SERVER['DOCUMENT_ROOT'].base_path();
+  $t_dir = $mp_prefix.'/'.$module_path.'/transforms';
+  $files = array_diff(scandir($t_dir),array('..','.'));
+  $to_return = array();
+  foreach($files as $file){
+    $to_return[$file] = "$module_path/transforms/$file";
+  }
+  return $to_return;
+  /* For reference, how to include items in the returned array
   return array(
     'customCT_to_dc.xsl' => "$module_path/transforms/customCT_to_dc.xsl",
     'darwinCore_to_dublinCore_ver5.xsl' => "$module_path/transforms/darwinCore_to_dublinCore_ver5.xsl",
@@ -2734,6 +2755,7 @@ function sidora_xml_form_builder_get_transforms(){
     'eac_to_dc.xsl' => "$module_path/transforms/eac_to_dc.xsl",
     'fgdc_to_dc.xsl' => "$module_path/transforms/fgdc_to_dc.xsl",
   );
+  */
 }
 
 /**
