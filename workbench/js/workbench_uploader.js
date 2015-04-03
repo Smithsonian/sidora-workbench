@@ -107,12 +107,13 @@ window.submitAll=function(){
 window.startBatch = function(){
 	var sidora = window.parent.sidora;
 	if (typeof(sidora) != "undefined"){
+		console.log("Total requests in this batch :"+window.batchRequests.length);
 		for (var i = 0; i < window.batchRequests.length; i++){
 			var ajaxSettings = window.batchRequests[i];
 			var postData = ajaxSettings.data;
 			var ccSuccess = oldSuccess;
 			var friendlyName = "Create "+currentInfo.formname+" Resource:"+(i+1)+" of "+window.batchRequests.length;
-			var onSuccess = function(){alert("FINISH! "+friendlyName);};
+			var onSuccess = function(){console.log("FINISH! "+friendlyName);};
 			sidora.queue.RequestPost(friendlyName,window.location.href,postData, onSuccess, function(){}, currentInfo.parentPid);
 		}
 		sidora.queue.Next();
