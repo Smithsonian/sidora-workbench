@@ -760,7 +760,7 @@ PDF metadata:
   Expedition
   Research Project
 */
-        $EACCPF_content = $object['EACCPF']->content;
+        $EACCPF_content = $object['EAC-CPF']->content;
         if (strpos($EACCPF_content, "<localControl localType=\"Publication Date\">") !== FALSE){
           $to_return['form_name'] = 'Research Project'; 
         }else{
@@ -1036,8 +1036,11 @@ function sidora_edit_metadata($object_id = '', $dsid = '', $form_name = ''){
   drupal_add_js(drupal_get_path('module','sidora').'/js/workbench_util.js',array('weight' => '1000000', 'group' => JS_THEME));
 	drupal_add_library('system','ui.dialog');
   $is_concept = sidora_is_concept($object);
-  drupal_add_js('window.isConcept = '.$is_concept?'true':'false'.';
-  ',array('type' => 'inline', 'weight' => '1000000', 'group' => JS_THEME));
+  if ($is_concept) 
+    drupal_add_js('window.isConcept = true;',array('type' => 'inline', 'weight' => '1000000', 'group' => JS_THEME));
+  else
+    drupal_add_js('window.isConcept = false;',array('type' => 'inline', 'weight' => '1000000', 'group' => JS_THEME));
+    
   drupal_add_js('
   jQuery().ready(function(){
    jQuery("body").css("padding-top","0px");
@@ -1060,7 +1063,7 @@ function sidora_edit_metadata($object_id = '', $dsid = '', $form_name = ''){
            //If successful, kill itself.
            newPid = data.substring(0,data.indexOf(")"+" has been ingested")).substring(data.substring(0,data.indexOf(")"+" has been ingested")).lastIndexOf("si:"))
            if (sidora && sidora.CloseIFrame){
-             if (window.isConcept) sidora.concept.forceRefreshOnNextLoadContent = true;
+             sidora.concept.forceRefreshOnNextLoadContent = true;
              sidora.CloseIFrame(newPid, "edit metadata");
            }else{
              console.log("This is not in the expected IFrame");
