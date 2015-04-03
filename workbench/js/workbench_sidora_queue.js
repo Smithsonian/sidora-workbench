@@ -18,7 +18,7 @@ SidoraQueue.prototype.showMessage = function(message){
   console.log(message);
 }
 SidoraQueue.prototype.RequestPost = function(userFriendlyName, ajaxRequestUrl, postData, doneFunction, failFunction, pidsBeingProcessed){
-  console.log("Requested post '"+userFriendlyName+"' to post to:"+ajaxRequestUrl);
+  console.log("in RequestPost of queue : Requested post '"+userFriendlyName+"' to post to:"+ajaxRequestUrl);
   if (typeof(pidsBeingProcessed) == 'string') pidsBeingProcessed = [pidsBeingProcessed];
   if (typeof(doneFunction) == 'undefined' || !jQuery.isFunction(doneFunction)) doneFunction = function(){};
   if (typeof(failFunction) == 'undefined' || !jQuery.isFunction(failFunction)) failFunction = function(){};
@@ -71,6 +71,7 @@ SidoraQueue.prototype.SidoraRequest = function(sidoraRequest){
   var myself = this;
   sidoraRequest.pidsBeingProcessed.forEach(function(v){myself.pidsInProcess.push(v);});
   myself.requests.push(sidoraRequest);
+  console.log("In SidoraRequest of the Queue : added a request to the requests array of the queue.");
 }
 SidoraQueue.prototype.Fail = function(completedItem, ajaxReturn){
   completedItem.ajaxReturn = ajaxReturn;
@@ -109,7 +110,7 @@ SidoraQueue.prototype.Done = function(completedItem, ajaxReturn){
       }
     }
   }
-  console.log("done:"+completedItem);
+  console.log("done function of queue:"+completedItem.userFriendlyName);
 }
 SidoraQueue.prototype.NotificationWindow = {"showingError":false};
 SidoraQueue.prototype.NotificationWindow.MouseIsInside = false;
