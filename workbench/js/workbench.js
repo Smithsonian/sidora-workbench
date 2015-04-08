@@ -798,6 +798,7 @@ sidora.InitiatePage = function(){
   jQuery(document).tooltip(
   { position: { my: "left-7 bottom", at: "right center" } }
   );
+  jQuery("#branding").append("<div class='branding-user-info' style='float:right'> <a href='"+Drupal.settings.basePath+"user' target='_blank'>Profile</a> <a href='"+Drupal.settings.basePath+"user/logout'>Logout</a></div>");
 };
 /*
  * Get the pids of the highlighed resources
