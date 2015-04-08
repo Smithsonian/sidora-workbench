@@ -1739,7 +1739,7 @@ function sidora_form_alter(&$form, &$form_state, $form_id){
   switch ($form_id) {
     case 'user_login':
     case 'user_login_block':
-      $form['link'] = array('#markup' => 'Not a member?'.l(t(' To request an account click here.'),'mailto:'.variable_get('site_mail', '').'?Subject=Request SIdora Account&body=My name is:-Enter Name- and my Email is:-Enter Email- and I would like to request a new SIdora Account').'<script>jQuery("body").append(\'<div style="padding:20px">'.l(t('Can\'t access your account?'),'mailto:'.variable_get('site_mail', '').'?Subject=SIdora Account Help&body=My name is:-Enter Name- and my Email is:-Enter Email- and I am requesting help with my SIdora Account.  -Enter more information that indicates the kind of assistance you would like-').'</div>\');</script>');
+      $form['link'] = array('#markup' => 'Not a member?'.l(t(' To request an account click here.'),'mailto:'.variable_get('site_mail', '').'?Subject=Request SIdora Account&body=My name is:-Enter Name- and my Email is:-Enter Email- and I would like to request a new SIdora Account').'<script>jQuery(".page-title").html("Welcome to the SIdora Workbench");jQuery("body").append(\'<div style="padding:20px">'.l(t('Can\'t access your account?'),'mailto:'.variable_get('site_mail', '').'?Subject=SIdora Account Help&body=My name is:-Enter Name- and my Email is:-Enter Email- and I am requesting help with my SIdora Account.  -Enter more information that indicates the kind of assistance you would like-').'</div>\');</script>');
       break;
   }
 }
@@ -2237,7 +2237,7 @@ function sidora_user_view($account, $view_mode, $langcode){
   $account->content['workbench'] = array();
   $account->content['workbench']['link'] = array(
       '#title' => '',
-      '#markup' => '<a href="'.base_path().'sidora/workbench/">Open Workbench</a>',
+      '#markup' => '<a href="'.base_path().'sidora/workbench/">Open Workbench</a><div style="float:right"><a href="'.base_path().'user/logout">Logout</a><div>',
       '#type' => 'user_profile_item',
   );
   if ($is_logged_in_as_admin){
