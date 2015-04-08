@@ -564,6 +564,13 @@ function sidora_get_parent_concepts(AbstractObject $object) {
           <fedora-model:hasModel> ?model.
         FILTER(!sameTerm(?model, <info:fedora/fedora-system:FedoraObject-3.0>) &&
                !sameTerm(?model, <info:fedora/si:resourceCModel>))
+      } UNION {
+        ?pid  <fedora-rels-ext:managesCodebook> <info:fedora/{$object->id}>;
+          <fedora-model:state> <fedora-model:Active>;
+          <fedora-model:label> ?label;
+          <fedora-model:hasModel> ?model.
+        FILTER(!sameTerm(?model, <info:fedora/fedora-system:FedoraObject-3.0>) &&
+               !sameTerm(?model, <info:fedora/si:resourceCModel>))
       }
     } ORDER BY ?label";
   $results = $object->repository->ri->query($query, 'sparql');
