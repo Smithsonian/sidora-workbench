@@ -2234,8 +2234,14 @@ function sidora_user_view($account, $view_mode, $langcode){
       }
     }
   }
+  $account->content['workbench'] = array();
+  $account->content['workbench']['link'] = array(
+      '#title' => '',
+      '#markup' => '<a href="'.base_path().'sidora/workbench/">Open Workbench</a>',
+      '#type' => 'user_profile_item',
+  );
   if ($is_logged_in_as_admin){
-    $account->content['reset_islandora_user_pid'] = array(
+    $account->content['workbench']['reset_islandora_user_pid'] = array(
       '#title' => t('View / Set this user\'s Islandora Pid (Their root concept / user project)'),
       '#markup' => '<form id="reset_user_pid" method="post"><input type="text" name="user_pid" value="'.$user_pid.'" class="form-text"/><input type="submit" class="form-submit"/></form>',
       '#class' => 'islandora_user_pid',
@@ -2243,7 +2249,7 @@ function sidora_user_view($account, $view_mode, $langcode){
     );
   }
   $codebook_html = '<table><tr><th>ID</th><th>Label</th><th>Link</th></tr>'.$codebook_html.'</table>';
-  $account->content['islandora_user_pid'] = array(
+  $account->content[] = array(//['workbench_islandora_user_pid'] = array(
     '#title' => t('Codebooks'),
     '#markup' => $codebook_html,
     '#class' => 'islandora_user_pid',
