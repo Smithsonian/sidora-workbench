@@ -1181,7 +1181,7 @@ function sidora_get_parent_table($pid){
   if (!empty($rows)){
     $output .= theme('table', array('header'=>$header, 'rows'=>$rows, 'attributes'=>$table_attributes));
   }else{
-    $output .= 'This is an orphan.';
+    $output .= '<div>This is an orphan.</div>';
   }
   $output .= '<script>jQuery(document).ready(function(){
   jQuery("input.parent-removal").click(function(){
@@ -1198,14 +1198,14 @@ function sidora_get_parent_table($pid){
           cp.children().remove();
           cp.append("<div>Problem removing: "+data.description+"</div>");
         }else{
-          cp.children().remove();
-          cp.append("<div>Removed</div>");
           //When I unassociate from the currently selected concept, reload the resources table,
           if (ppid == sidora.concept.GetPid()){
             sidora.concept.LoadContentHelp.FullTableReload(ppid);
+            sidora.concept.LoadContentHelp.Relationships();
           }else{
             //otherwise reload the tree? TBD
             sidora.util.RefreshTree();
+            sidora.resources.individualPanel.LoadRelationships();
           }
         }
         window.lastArgs = arguments;
@@ -1719,6 +1719,9 @@ function sidora_create_concept($parent_pid = 'si:root', $model = 'si:collectionC
  * Implementation of hook_form_alter
  * We want to remove "required" fields, but also know when user's didn't enter info in the field
  * TBD / TODO: Create a system that will track if users entered info in the field
+ *
+ * Add a link to tell Dan/Beth there is a request for an account
+  
  */
 function sidora_form_alter(&$form, &$form_state, $form_id){
   if (!array_key_exists('#submit', $form)) $form['#submit'] = array();
@@ -1732,6 +1735,12 @@ function sidora_form_alter(&$form, &$form_state, $form_id){
       '#description' => '',
       '#required' => false,
     );
+  }
+  switch ($form_id) {
+    case 'user_login':
+    case 'user_login_block':
+      $form['link'] = array('#markup' => 'Not a member?'.l(t(' To request an account click here.'),'mailto:'.variable_get('site_mail', '').'?Subject=Request SIdora Account&body=My name is:-Enter Name- and my Email is:-Enter Email- and I would like to request a new SIdora Account').'<script>jQuery("body").append(\'<div style="padding:20px">'.l(t('Can\'t access your account?'),'mailto:'.variable_get('site_mail', '').'?Subject=SIdora Account Help&body=My name is:-Enter Name- and my Email is:-Enter Email- and I am requesting help with my SIdora Account.  -Enter more information that indicates the kind of assistance you would like-').'</div>\');</script>');
+      break;
   }
 }
 /**
