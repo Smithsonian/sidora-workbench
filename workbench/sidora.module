@@ -3663,6 +3663,7 @@ function sidora_get_plupload_html($elements, $button_text = 'Upload Files'){
     runtimes : runtimesBrowserSpecific, //No silverlight - gets bad if user does not allow it and it tries to use.
     browse_button : "pickfiles", // you can pass in id...
     container: document.getElementById("container"), // ... or DOM Element itself
+    chunk_size: "900kb",
     url : "';
   print base_path();
   print 'sidora/upload/';
