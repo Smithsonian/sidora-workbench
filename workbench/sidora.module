@@ -3663,6 +3663,7 @@ function sidora_get_plupload_html($elements, $button_text = 'Upload Files'){
     runtimes : runtimesBrowserSpecific, //No silverlight - gets bad if user does not allow it and it tries to use.
     browse_button : "pickfiles", // you can pass in id...
     container: document.getElementById("container"), // ... or DOM Element itself
+    chunk_size: "900kb",
     url : "';
   print base_path();
   print 'sidora/upload/';
@@ -3777,30 +3778,16 @@ if (!file_exists($targetDir)) {
 }
 
 // Get a file name
-$file_info = new stdClass();
 
 if (isset($_REQUEST["name"])) {
-//  $fileName = $_REQUEST["name"];
-  $file_info->filename = $_REQUEST["name"];
+  $fileName = $_REQUEST["name"];
 } elseif (!empty($_FILES)) {
-  $file_info->filename = $_FILES["file"]["name"];
+  $fileName = $_FILES["file"]["name"];
 } 
 
 
-$fileName = uniqid("file_").$file_info->filename;
-/*
-print '----Session----';
-print_r($_SESSION);
-print '----Session END----';
-global $base_path;
-print $base_path;
-*/
-if (isset($_SESSION['file_uploads'])){
-}else{
-}
+//$fileName = uniqid("file_").$file_info->filename;
 $filePath = $targetDir . DIRECTORY_SEPARATOR . $fileName;
-$file_info->filepath = $filePath;//$base_path . 'sites/all' .$filePath;
-$_SESSION['file_uploads'][$form_id][] = $file_info;
 // Chunking might be enabled
 $chunk = isset($_REQUEST["chunk"]) ? intval($_REQUEST["chunk"]) : 0;
 $chunks = isset($_REQUEST["chunks"]) ? intval($_REQUEST["chunks"]) : 0;
@@ -3865,6 +3852,10 @@ while ($buff = fread($in, 4096)) {
 if (!$chunks || $chunk == $chunks - 1) {
   // Strip the temp .part suffix off
   rename("{$filePath}.part", $filePath);
+  $file_info = new stdClass();
+  $file_info->filename = $fileName;
+  $file_info->filepath = $filePath;//$base_path . 'sites/all' .$filePath;
+  $_SESSION['file_uploads'][$form_id][] = $file_info;
 }
 // Return Success JSON-RPC response
 //print_r ($_SESSION['file_uploads']);
