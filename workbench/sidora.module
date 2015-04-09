@@ -1034,7 +1034,7 @@ function sidora_edit_metadata($object_id = '', $dsid = '', $form_name = ''){
   $tform = drupal_get_form('xml_form_builder_datastream_form_metadata_form',$object,$association);
   drupal_add_css(drupal_get_path('module','sidora').'/css/workbench_metadata_screens.css',array('weight' => '1000000', 'group' => CSS_THEME));
   drupal_add_js(drupal_get_path('module','sidora').'/js/workbench_util.js',array('weight' => '1000000', 'group' => JS_THEME));
-	drupal_add_library('system','ui.dialog');
+  drupal_add_library('system','ui.dialog');
   $is_concept = sidora_is_concept($object);
   if ($is_concept) 
     drupal_add_js('window.isConcept = true;',array('type' => 'inline', 'weight' => '1000000', 'group' => JS_THEME));
@@ -1724,9 +1724,22 @@ function sidora_create_concept($parent_pid = 'si:root', $model = 'si:collectionC
   
  */
 function sidora_form_alter(&$form, &$form_state, $form_id){
+  module_load_include('inc', 'xml_form_builder', 'includes/associations');
+  module_load_include('inc', 'islandora','includes/ingest.form');
   if (!array_key_exists('#submit', $form)) $form['#submit'] = array();
   array_unshift($form['#submit'], 'sidora_form_submit_alter');
+  $association = NULL;
   if ($form_id == 'xml_form_builder_ingest_form' || $form_id == 'islandora_ingest_form'){
+
+    if (array_key_exists('form_build_id', $_POST)){
+      $submitted_form_id = $_POST['form_build_id'];
+      $association = sidora_find_association($form_state, $submitted_form_id);
+      if (!empty($association)){
+        $association_step_storage = &islandora_ingest_form_get_step_storage($form_state, 'xml_form_builder_metadata_step');
+        // Make $association_step_storage have only the association you want to use.
+        $association_step_storage['association'] = $association; 
+      }
+    }
     remove_validation_for_this_and_children($form);
     $form['all_meta_entered'] = array(
       '#name' => 'all_meta_entered',
@@ -3590,20 +3603,30 @@ function sidora_block_content_navigation(){
   drupal_add_js(drupal_get_path('module','sidora').'/js/paging.js'); // adds paging capability to resources
   return $to_return;
 }
-// For Ingestion
-function sidora_islandora_ingest_steps_alter(array &$steps, array &$form_state) {
+function sidora_find_association(array &$form_state, $form_build_id = ''){
   module_load_include('inc', 'xml_form_builder', 'includes/associations');
   $shared_storage = islandora_ingest_form_get_shared_storage($form_state);
   $associations = xml_form_builder_get_associations(array(), $shared_storage['models'], array());
   // ... Find the association you want to use, iterate over the values and
   // choose the one you want.
   $form_name = drupal_static('form_of_interest'); 
+  if (empty($form_name)){
+    $cache =  cache_get("sidora:form_id_to_creation_info");
+    $my_data = $cache->data;
+    $my_info = $my_data[$form_build_id];
+    $form_name = $my_info['form'];
+  }
   $association = NULL;
   foreach($associations as $curr_association){
     if ($curr_association['form_name'] == $form_name){
       $association = $curr_association;
     }
   }
+  return $association;
+}
+// For Ingestion
+function sidora_islandora_ingest_steps_alter(array &$steps, array &$form_state) {
+  $association = sidora_find_association($form_state);
   if (!empty($association)){
     $association_step_storage = &islandora_ingest_form_get_step_storage($form_state, 'xml_form_builder_metadata_step');
     // Make $association_step_storage have only the association you want to use.
