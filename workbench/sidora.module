@@ -742,6 +742,7 @@ PDF metadata:
   if ($is_concept){
     if (!empty($object['EAC-CPF'])){
       $to_return['dsid'] = 'EAC-CPF'; 
+//  error_log("In sidora_guess_form_and_dsid, eaccpf :".print_r($object['EAC-CPF'],true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
       if (sidora_startsWith($object->id, 'si-user:')){
         $to_return['form_name'] = 'Person'; 
       }else{
@@ -750,7 +751,7 @@ PDF metadata:
   Expedition
   Research Project
 */
-        $EACCPF_content = $object['EACCPF']->content;
+        $EACCPF_content = $object['EAC-CPF']->content;
         if (strpos($EACCPF_content, "<localControl localType=\"Publication Date\">") !== FALSE){
           $to_return['form_name'] = 'Research Project'; 
         }else{
@@ -1007,11 +1008,12 @@ function sidora_edit_metadata($object_id = '', $dsid = '', $form_name = ''){
   $sidora_data = sidora_get_form_and_dsid($object_id);
   $dsid = $sidora_data['dsid'];
   $form_name = $sidora_data['form_name'];
-  
   $tuque = islandora_get_tuque_connection();
   $object = $tuque->repository->getObject($object_id);
   $form_state = array();
-  $associations = xml_form_builder_datastream_form_get_associations($form_state,$object->models, $dsid);  //first param goes unused
+ var_dump($object->models);
+	$associations = xml_form_builder_datastream_form_get_associations($form_state,$object->models, $dsid);  //first param goes unused
+  //var_dump($associations);
   $association = null;
   foreach($associations as $curr_association){
     if ($curr_association['form_name'] == $form_name){
@@ -1021,7 +1023,8 @@ function sidora_edit_metadata($object_id = '', $dsid = '', $form_name = ''){
   if (empty($association)){
     print "The form is not configured correctly.  The form specified is not associated to this model";
   }
-  $tform = drupal_get_form('xml_form_builder_datastream_form_metadata_form',$object,$association);
+  //var_dump($association);
+	$tform = drupal_get_form('xml_form_builder_datastream_form_metadata_form',$object,$association);
   drupal_add_css(drupal_get_path('module','sidora').'/css/workbench_metadata_screens.css',array('weight' => '1000000', 'group' => CSS_THEME));
   drupal_add_js(drupal_get_path('module','sidora').'/js/workbench_util.js',array('weight' => '1000000', 'group' => JS_THEME));
 	drupal_add_library('system','ui.dialog');
@@ -1651,7 +1654,13 @@ if ($one == 'deletexsl'){
  	 var_dump($curr_item);
 	 } 
 if ($one == "edit_metadata"){
- header($_SERVER['SERVER_PROTOCOL'] . ' 500 Internal Server Error', true, 500);
+  module_load_include('inc', 'sidora', 'includes/utils'); //for is_concept
+  module_load_include('inc', 'islandora', 'includes/utilities');
+  module_load_include('inc', 'islandora', 'includes/ingest.form');
+  module_load_include('inc','xml_forms','builder/includes/datastream.form');
+  module_load_include('inc','xml_forms','builder/includes/associations');
+  $object = sidora_obj($two);
+  var_dump($object);
 }		 
 	}
 /*
@@ -1898,7 +1907,9 @@ function sidora_is_displayable_image($filename, $extensions = array()){
  */
 function sidora_create_resource_get_metadata_form_html($parent_pid, $model, $form_name, $current_uploads){
   global $user;
-  $tuque = islandora_get_tuque_connection();
+ // var_dump($model);
+	//var_dump($form_name);
+	$tuque = islandora_get_tuque_connection();
   $to_return = '';
   $to_return .= "<div id='create-resource-form'>";
   if (count($current_uploads) == 0 || empty($current_uploads)){  //if no files
@@ -1919,7 +1930,7 @@ function sidora_create_resource_get_metadata_form_html($parent_pid, $model, $for
 
     $id_to_creation_info[$form['#build_id']] = $creation_info;
     cache_set("sidora:form_id_to_creation_info",$id_to_creation_info);
-    $to_return .= drupal_render( $form);
+	  $to_return .= drupal_render( $form);
   }else{
     $at_least_one_pic = false;
     foreach ($current_uploads as $cu){
@@ -1951,12 +1962,26 @@ function sidora_create_resource_get_metadata_form_html($parent_pid, $model, $for
         'objects' => array($page),
         'parent' => $parent_pid,
       ));
-      if (!empty($current_uploads[$form_total])){
+		  if (!empty($current_uploads[$form_total])){
         $filename = $current_uploads[$form_total]->filename;
-        if (!empty($form['mods']['titleInfo']['title'])){
-          $form['mods']['titleInfo']['title']['#value'] = $filename;  //Should try to acquire this from the Islandora XML form title field instead of hardcode TODO TBD BBB
+				$associations = xml_form_builder_get_associations(array($form_name), array(), array(), FALSE); // get the association for the current form to get the title field label
+        $association = null;
+        foreach($associations as $curr_association){
+          if ($curr_association['form_name'] == $form_name){
+            $association = $curr_association;
+          }
         }
-
+			  $form_copy_array = $form;
+			  for ($title_total = 0; $title_total < count($association['title_field']); $title_total++){
+				  $form_copy_key = $association['title_field'][$title_total];
+				  if (array_key_exists($form_copy_key,$form_copy_array)){
+				    $form_copy_array = $form_copy_array[$form_copy_key];
+				  } 
+			  }	 
+			  if (!empty($form_copy_array)){
+			    $form_copy_array['#value'] = substr($filename,0,strpos($filename,'.'));
+				  drupal_array_set_nested_value($form,$form_copy_array['#array_parents'],$form_copy_array);
+			  }	 	
         $id_to_filename = cache_get("sidora:form_id_to_filename");
         if (empty($id_to_filename)){ $id_to_filename = array(); }else{ $id_to_filename = $id_to_filename->data; }
         $id_to_filename[$form['#build_id']] = $current_uploads[$form_total]->filepath;
@@ -1972,6 +1997,7 @@ function sidora_create_resource_get_metadata_form_html($parent_pid, $model, $for
       $creation_info['ontology_id'] = $ontology_id;
       $id_to_creation_info[$form['#build_id']] = $creation_info;
       cache_set("sidora:form_id_to_creation_info",$id_to_creation_info);
+			//	var_dump($id_to_creation_info);
       $to_return .= drupal_render( $form);
       $to_return .= "</div>";
     }
@@ -2024,7 +2050,6 @@ function sidora_create_resource($parent_pid = 'si:root', $model = 'si:collection
   $current_uploads = sidora_create_resource_get_current_uploads();
   $ask_for_codebook = sidora_create_resource_determine_codebook_complete($model);
   if (empty($current_uploads)){
-   //error_log("in sidora create resource : empty current uploads ",3,DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
     if ($ask_for_codebook){
       $check_for_uploads = FALSE;
       $show_form = FALSE;
