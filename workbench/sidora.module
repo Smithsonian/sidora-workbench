@@ -1151,6 +1151,27 @@ function sidora_get_proper_dsid($model_id, $form_name){
   }
   return $to_return;
 }
+function sidora_get_related_codebook_table($pid){
+  module_load_include('inc', 'sidora', 'includes/utils');
+  $output = 'Codebook';
+  $cbs = sidora_get_codebooks($pid);
+  $rows = array(); 
+  $header = array(t('Title'), t('Codebook ID'));
+  foreach ($cbs as $cb) {
+    $row = array(
+      array('data' => $cb->label),
+      array('data' => $cb->id),
+    );
+    $rows[] = $row;
+  }
+  $table_attributes = array();//'id' => 'codebook_table');
+  if (!empty($rows)){
+    $output .= theme('table', array('header'=>$header, 'rows'=>$rows, 'attributes'=>$table_attributes));
+  }else{
+    $output = ''; //No codebook table if no codebooks
+  }
+  return $output;
+}
 function sidora_get_parent_table($pid){
   module_load_include('inc', 'sidora', 'includes/utils');
   $output = 'Parents';
@@ -1298,6 +1319,15 @@ function sidora_get_html_flexpaper($pid,$dsid = 'OBJ.swf'){
  */
 function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $extra = ''){
   global $user;
+  if ($one == 'codebooks'){
+    print 'ding';
+    $pid = $two;
+    $cbs = sidora_get_codebooks($pid);
+    var_dump($cbs);
+    print 'dong';
+    print sidora_get_related_codebook_table($pid);
+    exit();
+  }
   if ($one == 'flexpaper'){
   $pid = $two;
   //$to_return .= '<li><a href="'.base_path().'sidora/workbench/#'.$root_pid.'" pid="'.$root_pid.'" fullname="'.$root->label.'">';
@@ -2304,6 +2334,7 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
  	switch ($type) {
     case 'relationships':
       print sidora_get_parent_table($pid);
+      print sidora_get_related_codebook_table($pid);
       break;
     case 'xsl_upload':
       $return_when_encoded = array();
@@ -3181,6 +3212,21 @@ function sidora_move($move_from_id, $copy_to_id, $pid, $show_output = TRUE){
   sidora_release_lock($move_from_id);
   return $unassociated;
   //if ($sidora_debug) print 'Move:'.$pid." from:".$move_from_id." to:".$copy_to_id;
+}
+/**
+ * Return the codebook pids that have been associated with this item (hasCodebook)
+ * Should only exist on tabular data objects
+ */
+function sidora_get_codebooks($pid){
+  $object = sidora_obj($pid);
+  $to_return = array();
+  if (!empty($object)){
+    $codebooks = $object->relationships->get(FEDORA_RELS_EXT_URI, 'hasCodebook');
+    foreach($codebooks as $codebook_info){
+      $to_return[] = sidora_obj($codebook_info['object']['value']);
+    }
+  }
+  return $to_return;
 }
 /**
  * Unassociates one object from another
