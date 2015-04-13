@@ -313,3 +313,6 @@ Table paging
   height: 36px;
   width: 36px;
 }
+.jMenu li ul li a {
+  padding: 2px 2px 2px 6px;
+}
