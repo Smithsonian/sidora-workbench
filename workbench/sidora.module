@@ -2000,8 +2000,6 @@ function sidora_create_resource_get_metadata_form_html($parent_pid, $model, $for
  * extra info is whether or not the page should be refreshed to the first page, clearing out the existing session (if they stopped mid session last time)
  */
 function sidora_create_resource($parent_pid = 'si:root', $model = 'si:collectionCModel', $form_name = '', $ontology_location = '', $extra_info = ''){
-  //  error_log("sidora create resource : parent pid = ".$parent_pid,3,DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
-
   drupal_add_css(drupal_get_path('module','sidora').'/css/workbench_metadata_screens.css',array('weight' => '1000000', 'group' => CSS_THEME));
   global $user;
   //if the parent pid is locked, can't do it
@@ -2037,7 +2035,6 @@ function sidora_create_resource($parent_pid = 'si:root', $model = 'si:collection
   $current_uploads = sidora_create_resource_get_current_uploads();
   $ask_for_codebook = sidora_create_resource_determine_codebook_complete($model);
   if (empty($current_uploads)){
-   //error_log("in sidora create resource : empty current uploads ",3,DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
     if ($ask_for_codebook){
       $check_for_uploads = FALSE;
       $show_form = FALSE;
@@ -3025,9 +3022,11 @@ function sidora_ajax_parts($call_type, $param1 = '', $param2 = '', $param3 = '')
     return sidora_ajax_lock($param1, $param2);
   }
 	if ($call_type == 'delete_xsl_file'){
-   //error_log("in ajax parts for ".$param1,3,DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
 	   return sidora_remove_xsl($param1);
-	}	 
+	}
+	if ($call_type == 'generate_resource_list'){
+		return sidora_generate_resource_list($param1);
+	}		 
   drupal_not_found();
 }
 /**
@@ -3136,7 +3135,9 @@ function sidora_move($move_from_id, $copy_to_id, $pid, $show_output = TRUE){
   $copied = sidora_copy($copy_to_id, $pid, FALSE);
   sidora_release_lock($copy_to_id);
   sidora_release_lock($move_from_id);
-  if ($copied['error']){
+ 	// SID-141- When moving duplicate resources, resources were not being removed from the source.
+	if (($copied['error']) && ($copied['code'] != 'copy4')){
+	//if ($copied['error']){
     if ($show_output){
       print json_encode($copied);
       exit();
@@ -3789,8 +3790,6 @@ $_SESSION['file_uploads'][$form_id][] = $file_info;
 // Chunking might be enabled
 $chunk = isset($_REQUEST["chunk"]) ? intval($_REQUEST["chunk"]) : 0;
 $chunks = isset($_REQUEST["chunks"]) ? intval($_REQUEST["chunks"]) : 0;
-//error_log("in sidora upload function : ".$filePath,3,DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
-
 
 // Remove old temp files
 if ($cleanupTargetDir) {
@@ -3870,7 +3869,6 @@ if ($outputDebugCleanup) {
 }else{
   print 'upload complete';
 }
- // error_log("in sidora upload : ". var_dump($files1,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
 exit();
 }
 /*
@@ -5813,7 +5811,6 @@ function sidora_endsWith($haystack, $needle) {
     return $needle === "" || strpos($haystack, $needle, strlen($haystack) - strlen($needle)) !== FALSE;
 }
 function sidora_remove_xsl($param1, $param2, $param3){
- // error_log("in the sidora remove xsl function for ".$param1,3,DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
     $curr_item = array();
     if (sidora_endsWith(strtolower($param1),'.xsl')){
       $directory_to_list_for_xsl = DRUPAL_ROOT.'/'.drupal_get_path('module','sidora').'/XSL/';
@@ -5833,4 +5830,35 @@ function sidora_remove_xsl($param1, $param2, $param3){
 		$return_when_encoded['files'][] = $curr_item;
     print json_encode($return_when_encoded);
     exit();
+}
+/* The following 2 functions - sidora_generate_resource_list and  sidora_generate_child_resource_pid_only_sparql_query
+were created by RAmlani on 4/10/15. They are currently not being used anywhere.
+These functions will generate a list of resources for a given PID. 
+These functions are used by checkForDuplicateResourcesRA function in workbench.js for the move resources functionality
+*/
+function sidora_generate_resource_list($pid){
+  $to_return = array();
+  $tuque = islandora_get_tuque_connection();
+  $concept_pid = $pid;
+  if ($tuque) {
+    $query = sidora_generate_child_resource_pid_only_sparql_query($concept_pid, array());
+    $ri = $tuque->repository->ri;
+    $results = $ri->sparqlQuery($query);
+    $resources_array = array();
+		foreach($results as $resindex=>$result){
+      $resources_array[] = $result['object']['value'];
+		}
+		print json_encode($resources_array);
+	}else{
+	  print json_encode("Error connecting to the repository");
+	}			
+	exit();
+}			
+function sidora_generate_child_resource_pid_only_sparql_query($pid) {
+       $query = "select ?object ?title from <#ri> where {
+          <info:fedora/{$pid}> <fedora-rels-ext:hasResource> ?object .
+          ?object <fedora-model:state> <fedora-model:Active>;
+          <fedora-model:label> ?title;
+        }";
+  return $query;
 }

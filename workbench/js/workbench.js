@@ -542,20 +542,20 @@ sidora.InitiateJSTree = function(){
                 );
               }else{
                 //is a move
-                var showText = "Move the following resources to "+jQuery("#"+mouseOverObject.id).children("a").attr("fullname")+" ("+jQuery("#"+mouseOverObject.id).children("a").attr("pid")+"):";
-                showText += "<ul>";
-                for (var i = 0; i < sidora.util.dragResources.length; i++){
-                  showText += "<li>"+jQuery(jq(sidora.util.dragResources[i])).find(".resource-list-label").text();
-                  showText += " ("+sidora.util.dragResources[i]+")</li>";
-                }
-                showText += "</ul>";
-                sidora.util.Confirm("Move resource",showText,
-                  function(){
-                    sidora.resources.performCopyOrMove("move",mouseOverObject.id);
-                  }
-                );
-              }
-              return false; //Dont immediately perform the copy
+  							var showText = "Move the following resources to "+jQuery("#"+mouseOverObject.id).children("a").attr("fullname")+" ("+jQuery("#"+mouseOverObject.id).children("a").attr("pid")+"):";
+          			showText += "<ul>";
+          			for (var i = 0; i < sidora.util.dragResources.length; i++){
+            			showText += "<li>"+jQuery(jq(sidora.util.dragResources[i])).find(".resource-list-label").text();
+            			showText += " ("+sidora.util.dragResources[i]+")</li>";
+          			}
+          			showText += "</ul>";
+          			sidora.util.Confirm("Move resource",showText,
+            		function(){
+              		sidora.resources.performCopyOrMove("move",mouseOverObject.id);
+            		}
+          			);
+							}	
+	            return false; //Dont immediately perform the copy
             }
           }else{
             if (sidora.util.userConfirmedCopy){
@@ -856,6 +856,28 @@ sidora.resources.performCopyOrMove = function(copyOrMove, toLocationId){
     console.log(userFriendlyName);
   }
   sidora.queue.Next();
+}
+/* This function was created by RAmlani on 4/10/15. This function is currently not being used anywhere.
+When moving resources this function can check if any of those resources already exist on the target PID. 
+This function can possibly be used in future to generate a message alerting the user of duplicate resources
+and also possibly providing the user with some custom actions like move & replace, ignore move etc.
+*/
+sidora.resources.checkForDuplicateResourcesRA = function(copyOrMove, toLocationId){
+	// get the pid of the target 
+	var targetPid = jQuery("#"+toLocationId).children("a").attr("pid");
+	// ajax call to generate a list of the resources currently on the target
+ jQuery.ajax({
+			url: "../ajax_parts/generate_resource_list/"+targetPid,
+			success: function(resourceList){
+          var currentChildrenPids = JSON.parse(resourceList);;
+          for (var i = 0; i < sidora.util.dragResources.length; i++){
+            if (jQuery.inArray(sidora.util.dragResources[i],currentChildrenPids) > -1)
+           { 
+					 //alert('we found a duplicate');
+					 }
+          }
+			}
+ });
 }
 /*
  * Gets the current concept json object and creates a menu from it
