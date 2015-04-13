@@ -62,17 +62,9 @@ function exhibition_config_get_exhibition_pids_for_user($user_id){
 function exhibition_config_user_view($account, $view_mode, $langcode){
   global $user;
   $is_logged_in_as_admin = FALSE;
-  //if they came in trying to change the user pid, see if they are an administrator and then do it
-  if (sidora_is_admin($user)){
-    $is_logged_in_as_admin = TRUE;
-    $new_user_pid = filter_input(INPUT_POST, 'user_pid', FILTER_SANITIZE_URL);
-    if (!empty($new_user_pid)) sidora_set_user_object($account, $new_user_pid);
-  }
-
   module_load_include('inc', 'sidora', 'includes/utils');
   $account_data = ($account->data);
 
-  //dsm($account);
   $codebook_pid = '';
   $codebook_html = '';
   $user_pid = sidora_get_user_object($account);
@@ -98,7 +90,7 @@ function exhibition_config_user_view($account, $view_mode, $langcode){
       $epid_html .= '</tr>';
     }
     $epid_html .= '</table>';
-    $account->content['exhibition_config_pids'] = array(
+    $account->content[] = array(//['Wexhibition_config_pids'] = array(
       '#title' => 'Exhibitions',
       '#markup' => $epid_html,
       '#type' => 'user_profile_item',
