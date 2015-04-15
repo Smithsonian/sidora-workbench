@@ -278,7 +278,7 @@ sidora.concept.LoadContentHelp.Metadata = function(conceptOfInterest){
     jQuery("#resource-open-window").click(function(){
       sidora.resources.openInNewWindow();
     });
-
+    sidora.ResizeToBrowser();
   }).fail(function(meta_html){
     var myDiv = sidora.util.getErrorMessageHtml();
     jQuery('#concept-meta .metadata-table').remove();
@@ -342,7 +342,7 @@ sidora.concept.LoadContentHelp.FullTableReload = function(conceptOfInterest){
     sidora.concept.LoadContentHelp.Resources.TableActionsSetup();
     sidora.concept.LoadContentHelp.CreateMenu(conceptOfInterest);
     sidora.concept.LoadContentHelp.Relationships();
-    sidora.ResizeTreeToBrowser();
+    sidora.ResizeToBrowser();
   }).fail(function(failure_obj){
     var myDiv = sidora.util.getErrorMessageHtml();
     jQuery('#concept-resource-list-internal').children().not('.workbench-nav').remove();
@@ -735,9 +735,9 @@ sidora.RelocateTreeOnPage = function(){
   jQuery("#fjt-holder").css("position","fixed");
   jQuery("#fjt-holder").css("overflow","auto");
   jQuery("#fjt-holder").css("top",parseInt(jQuery("body").css("padding-top"))+10+"px");
-  sidora.ResizeTreeToBrowser();
+  sidora.ResizeToBrowser();
 }
-sidora.ResizeTreeToBrowser = function(){
+sidora.ResizeToBrowser = function(){
   jQuery("#sidora_content_concept_info").css("min-width",0);
   jQuery("#concept_tabs").css("min-width",0);
   var newHeight = jQuery(window).height();
@@ -798,7 +798,7 @@ sidora.InitiatePage = function(){
   jQuery(document).tooltip(
   { position: { my: "left-7 bottom", at: "right center" } }
   );
-  jQuery("#branding").append("<div class='branding-user-info' style='float:right'> <a href='"+Drupal.settings.basePath+"user' target='_blank'>Profile</a> <a href='"+Drupal.settings.basePath+"user/logout'>Logout</a></div>");
+  jQuery("#branding").append("<div class='branding-user-info' style='float:right'> <a href='"+Drupal.settings.basePath+"user'>Profile</a> <a href='"+Drupal.settings.basePath+"user/logout'>Logout</a></div>");
 };
 /*
  * Get the pids of the highlighed resources
@@ -1437,7 +1437,7 @@ sidora.resources.individualPanel.LoadContent = function(suppressResourceViewerRe
     sidora.recentAjaxFailure(meta_html);
   });;
   sidora.resources.individualPanel.LoadRelationships();
-  sidora.ResizeTreeToBrowser();
+  sidora.ResizeToBrowser();
 }
 /*
  * Information to give to user if we get a bad response from an ajax query
@@ -1647,7 +1647,7 @@ jQuery(function () {
 
 jQuery(window).resize(function() {
   sidora.ResizeOnWindowResize();
-  sidora.ResizeTreeToBrowser();
+  sidora.ResizeToBrowser();
 });
 
 /*
