@@ -323,6 +323,21 @@ tr.removed.odd {
     );
 
   }
+  $form['govt_msg'] = array(
+    'fieldset' => array(
+      '#type' => 'fieldset',
+      '#title' => 'Log In Message',
+      '#description' => t(''),
+      '#collapsible' => TRUE,
+      '#collapsed' => TRUE,
+      'sidora_login_message' => array(
+        '#type' => 'textarea',
+        '#title' => t('Government Warning text'),
+        '#default_value' => variable_get('sidora_login_message', ''),
+        '#description' => t('This message is shown on the log in screen.'),
+      ),
+    ),
+  );
   $form['one'] = array(
     'fieldset' => array(
       '#type' => 'fieldset',
