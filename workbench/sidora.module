@@ -2409,6 +2409,7 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
       var_dump($object);
       break;
     case 'meta':
+      module_load_include('inc', 'sidora', 'includes/utils');
       $object = sidora_meta($pid);
       if (empty($object)){
         print t('Object not found');
@@ -2477,13 +2478,18 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
           print t('Datastream not found by that name');
           exit();
         }
-        //datastream_content is now set.  perform the output
+        //var_dump($datastream);
+				//datastream_content is now set.  perform the output
         $mime_type = (empty($datastream))?'text/xml':$datastream->mimeType;
 
         if ($specific_meta == 'all'){
           $datastream_content = '<xml_root><general_info><owner>'.$object->owner.'</owner><label>'.$object->label.'</label></general_info>'."\n".$datastream_content."\n".'</xml_root>';
           $mime_type = 'text/xml';
         }
+				$file_extension = '';
+				if ($mime_type != ''){
+				  $file_extension = sidora_get_file_extension_from_mime($mime_type);
+				}	
         if ($download=='browser' && (strpos($mime_type,"xml") !== FALSE || strpos($mime_type,"text") !== FALSE)){ //html, text, csv
           header("Content-type: html");
         }else{
@@ -2491,7 +2497,8 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
         }
         if ($download=='download'){
           $content_size = strlen($datastream_content);
-          $filename = $pid.'_'.$specific_meta;//get_suggest_filename($label, $mime_type);
+          //$filename = $pid.'_'.$specific_meta;//get_suggest_filename($label, $mime_type);
+          $filename = $pid.'_'.$specific_meta.$file_extension;//get_suggest_filename($label, $mime_type);
           if ($content_size > 0) {
             header("Content-length: $content_size");
           }
