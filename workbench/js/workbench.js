@@ -455,6 +455,36 @@ sidora.InitiateJSTree = function(){
       sidora.queue.incomingRequestsAreSilent = false;
       sidora.queue.Next();
     });
+
+    jQuery('#forjstree').bind('delete_node.jstree',function(event,data){
+      var toMovePid = data.node.a_attr.pid;
+      var moveFromPid = jQuery("#"+data.parent+" a").attr('pid');
+      var actionUrl = '../ajax_parts/unassociate/'+moveFromPid+'/'+toMovePid;
+
+      var jst = jQuery("#forjstree").jstree(true);
+      var poi = data.parent;
+      //Old Parent renumber
+      var oldParentExistingHtml = jst.get_node(poi).text;
+      var oldParentExistingChildConceptsNumber = parseInt(jQuery("#"+poi).children("a").attr("conceptchildren"));
+      var opReplacer = oldParentExistingChildConceptsNumber-1;
+      if (opReplacer == 0){
+        jst.rename_node(poi,oldParentExistingHtml.substring(0,oldParentExistingHtml.lastIndexOf(" ("))); 
+      }else{
+        jst.rename_node(poi,oldParentExistingHtml.substring(0,oldParentExistingHtml.lastIndexOf(" ("))+" ("+opReplacer+")");
+      }
+      jQuery("#"+poi).children("a").attr("conceptchildren",""+opReplacer);
+      jst.get_node(poi).a_attr.conceptchildren = ""+opReplacer;
+
+      //next requests are silent
+      sidora.queue.incomingRequestsAreSilent = true;
+      sidora.queue.Request('TBD: Silence this', actionUrl, function(){
+        sidora.concept.LoadContentHelp.Relationships();
+      }, null, [toMovePid,moveFromPid]);
+      sidora.queue.incomingRequestsAreSilent = false;
+      sidora.queue.Next();
+
+    });
+
     jQuery('#forjstree').bind('move_node.jstree',function(event,data){
      //   jQuery.jstree.rollback(data.rlbk);
       //`jQuery('#forjstree').jstree().restore_state();
@@ -650,20 +680,26 @@ sidora.InitiateJSTree = function(){
               var showText = "Move the following concepts to ";
               showText += jQuery("#"+mouseOverObject.id).children("a").attr("fullname");
               showText += " ("+jQuery("#"+mouseOverObject.id).children("a").attr("pid")+"):<ul>";
+              
+              var showTextForUnassociate = "The concepts listed below existed on the target already and will not be overwritten. They will be removed from the concepts that they were dragged from:<ul>";
               var selected = jQuery("#forjstree").jstree(true).get_selected();
               var objectsToCopyOver = [];
+              var objectsToUnassociate = [];
               for(i=0; i<selected.length; i++){
                 var currSel = jQuery(jq(selected[i])).children("a");
                 if (jQuery.inArray(currSel.attr("pid"),currentChildrenPids) > -1){
-                  showText += "<li>"+currSel.attr("fullname")+" ("+currSel.attr("pid")+") - Already exists on target, will not copy</li>";
+                  showTextForUnassociate += "<li>"+currSel.attr("fullname")+" ("+currSel.attr("pid")+")</li>";
+                  objectsToUnassociate.push(selected[i]);
                 }else{
                   showText += "<li>"+currSel.attr("fullname")+" ("+currSel.attr("pid")+")</li>";
                   objectsToCopyOver.push(selected[i]);
                 }
               }
               showText += "</ul>";
+              showTextForUnassociate += "</ul>";
               if (objectsToCopyOver.length > 0){
                 if (!sidora.util.isConfirmShowing()){
+                  if (objectsToUnassociate.length > 0) showText += showTextForUnassociate;
                   sidora.util.Confirm("Move Concept",showText,
                     function(){
                       sidora.util.userConfirmedMove = true;
@@ -672,6 +708,11 @@ sidora.InitiateJSTree = function(){
                         var currToCopyNode = jst.get_node(currToCopyId);
                         jQuery("#forjstree").jstree(true).move_node(currToCopyNode,mouseOverObject); 
                       }
+                      for(var objIndex = 0; objIndex < objectsToUnassociate.length; objIndex++){
+                        var currToUnassociateId = objectsToUnassociate[objIndex];
+                        var currToUnassociateNode = jst.get_node(currToUnassociateId);
+                        jQuery("#forjstree").jstree(true).delete_node(currToUnassociateNode);
+                      }
                       sidora.util.userConfirmedMove = false;
                     },null,null,null,function(){
                       sidora_util.lock.Release(parentPid);
@@ -679,11 +720,19 @@ sidora.InitiateJSTree = function(){
                   );
                 }
               }else{
-                sidora.util.Confirm("Move Concept","All items selected for move already exist on the target.",
-                  null,null,null,null,function(){
-                    sidora_util.lock.Release(parentPid);
-                  }
-                );
+                if (!sidora.util.isConfirmShowing()){
+                  sidora.util.Confirm("Move Concept","<h4>All items selected for move already exist on the target.</h4>"+showTextForUnassociate,
+                    function(){
+                      for(var objIndex = 0; objIndex < objectsToUnassociate.length; objIndex++){
+                        var currToUnassociateId = objectsToUnassociate[objIndex];
+                        var currToUnassociateNode = jst.get_node(currToUnassociateId);
+                        jQuery("#forjstree").jstree(true).delete_node(currToUnassociateNode);
+                      }
+                    },null,null,null,function(){
+                      sidora_util.lock.Release(parentPid);
+                    }
+                  );
+                }
               }
             });
             return false; //Dont immediately perform the move
@@ -1141,7 +1190,7 @@ sidora.util.Confirm = function(title, questionText, onConfirmation, onCancel, co
   if (typeof(confirmButtonText) != 'string') confirmButtonText = "Confirm";
   if (typeof(cancelButtonText) != 'string') cancelButtonText = "Cancel";
   jQuery('#userConfirm').remove();
-  jQuery("body").append("<div id='userConfirm' style='display:none;' title='"+title+"'><p>"+questionText+"</p></div>");
+  jQuery("body").append("<div id='userConfirm' style='display:none;' title='"+title+"'><div>"+questionText+"</div></div>");
   var dialogConfig = {
     resizable: true,
     height:305,
@@ -1406,8 +1455,10 @@ sidora.recentAjaxFailure = function(failure_object){
   console.log("Ajax failure logged to window.ajaxer");
 }
 sidora.resources.individualPanel.LoadRelationships = function(){
-  var roipid = sidora.resources.individualPanel.resourceOfInterest.pid;
-  sidora.concept.LoadContentHelp.Relationships(roipid,"#resource-relationships");
+  if (sidora.resources.individualPanel.resourceOfInterest != null){
+    var roipid = sidora.resources.individualPanel.resourceOfInterest.pid;
+    sidora.concept.LoadContentHelp.Relationships(roipid,"#resource-relationships");
+  }
 }
 /*
  * Loads the viewer once an item has been clicked on
