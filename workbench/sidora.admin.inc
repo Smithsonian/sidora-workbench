@@ -355,22 +355,25 @@ tr.removed.odd {
       '#description' => t(''),
       '#collapsible' => TRUE,
       '#collapsed' => TRUE,
-      'sidora_automatic_person_form' => array(
-        '#type' => 'textfield',
-        '#title' => t('When automatically generating an object for a newly created user, this is the default form name'),
-        '#default_value' => variable_get('sidora_automatic_person_form', 'Person 2015'),
-      ),
+      '#description' => t('When automatically generating an object for a newly created user, the model is checked for associations.  If there is more than one association or no associations available the additional defaults below are used.'),
       'sidora_automatic_person_model' => array(
         '#type' => 'textfield',
-        '#title' => t('When automatically generating an object for a newly created user, this is the default model'),
-        '#default_value' => variable_get('sidora_automatic_person_form', 'si:HeirarchyObject'),
+        '#title' => t('Model'),
+        '#default_value' => variable_get('sidora_automatic_person_model', 'si:HeirarchyObject'),
+      ),
+      'sidora_automatic_person_form' => array(
+        '#type' => 'textfield',
+        '#title' => t('Form name'),
+        '#default_value' => variable_get('sidora_automatic_person_form', 'Person 2015'),
+        '#description' => t('This value will only be used if there is not exactly one association with the model listed above'),
       ),
       'sidora_automatic_person_dsid' => array(
         '#type' => 'textfield',
-        '#title' => t('When automatically generating an object for a newly created user, this is the default dsid for editing'),
-        '#default_value' => variable_get('sidora_automatic_person_form', 'DESCMETA'),
+        '#title' => t('DSID for editing'),
+        '#default_value' => variable_get('sidora_automatic_person_dsid', 'DESCMETA'),
+        '#description' => t('This value will only be used if there is not exactly one association with the model listed above'),
       ),
-
+    ),
   );
 /*
   $form['one']['si_exhibition_data_urli3'] = array(
