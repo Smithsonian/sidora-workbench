@@ -1880,7 +1880,7 @@ function sidora_create_resource_get_current_uploads(){
  * gives the proper upload form for the model selected
  * returns string of HTML
  */
-function sidora_create_resource_get_upload_form_html($model, $upload_button_text = 'Upload Files'){
+function sidora_create_resource_get_upload_form_html($model, $upload_button_text = 'Browse'){
   global $user;
   $to_return = '';
   $file_extensions = array(
@@ -1896,7 +1896,6 @@ function sidora_create_resource_get_upload_form_html($model, $upload_button_text
       '#extensions' => $extensions_for_model
     );
     $to_return .= "<div id='create-resource-upload'>";
-		//$to_return .= "<div id='plUploader'></div>";
     $to_return .= sidora_get_plupload_html($elements, $upload_button_text);
     $to_return .= "<input class=\"form-submit\" id=\"Next\" value=\"Next\" onclick=\"jQuery('#create-resource-upload').hide(); location.reload();\"></input>";
     $to_return .= "</div>";
@@ -3733,7 +3732,7 @@ function sidora_get_plupload_html($elements, $button_text = 'Browse'){
   print '</ul></div></div></div>
   <div id="container" class="-uploader">
       <button class="islandora-repo-button" id="pickfiles" href="javascript:;">'.$button_text.'</button> 
-      <a id="uploadfiles" style="display:none;" href="javascript:;">[Upload files]</a>
+      <a id="uploadfiles" style="display:none;" href="javascript:;">[Browse]</a>
   </div>
   <br />
   <pre id="console"></pre>';
@@ -3754,9 +3753,9 @@ function sidora_get_plupload_html($elements, $button_text = 'Browse'){
    if (typeof fileref!="undefined")
     document.getElementsByTagName("head")[0].appendChild(fileref)
   }
-  //runtimesBrowserSpecific = "html5,flash,html4";
+  runtimesBrowserSpecific = "html5,flash,html4";
   //changed by RAmlani - SID 364
-	runtimesBrowserSpecific = "flash,html5,html4";   
+	//runtimesBrowserSpecific = "flash,html5,html4";   
   if (navigator.userAgent.match(/(Firefox)/i) != null){
     //Firefox gets weird with the flash version between http and https, sometimes http doesnt work
     runtimesBrowserSpecific = "html5,html4";
