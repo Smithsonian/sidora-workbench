@@ -348,6 +348,30 @@ tr.removed.odd {
       'models' => $models,
     ),
   );
+  $form['sidora_person'] = array(
+    'fieldset' => array(
+      '#type' => 'fieldset',
+      '#title' => 'Account Creation',
+      '#description' => t(''),
+      '#collapsible' => TRUE,
+      '#collapsed' => TRUE,
+      'sidora_automatic_person_form' => array(
+        '#type' => 'textfield',
+        '#title' => t('When automatically generating an object for a newly created user, this is the default form name'),
+        '#default_value' => variable_get('sidora_automatic_person_form', 'Person 2015'),
+      ),
+      'sidora_automatic_person_model' => array(
+        '#type' => 'textfield',
+        '#title' => t('When automatically generating an object for a newly created user, this is the default model'),
+        '#default_value' => variable_get('sidora_automatic_person_form', 'si:HeirarchyObject'),
+      ),
+      'sidora_automatic_person_dsid' => array(
+        '#type' => 'textfield',
+        '#title' => t('When automatically generating an object for a newly created user, this is the default dsid for editing'),
+        '#default_value' => variable_get('sidora_automatic_person_form', 'DESCMETA'),
+      ),
+
+  );
 /*
   $form['one']['si_exhibition_data_urli3'] = array(
       '#type' => 'textfield',
