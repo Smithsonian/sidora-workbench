@@ -543,11 +543,11 @@ function sidora_islandora_object_ingested(AbstractObject $object){
   module_load_include('inc', 'islandora', 'includes/ingest.form');
   module_load_include('inc', 'sidora', 'includes/utils');
 
-  drupal_set_message("Sidora Object Ingested");
+  //dsm("Sidora Object Ingested");
   $parent_pid = drupal_static('parent_collection_pid');
   $ontology_id = drupal_static('ontology_id');
-  drupal_set_message("Object:".$object->id);
-  drupal_set_message("Parent:".$parent_pid);
+  //dsm("Object:".$object->id);
+  //dsm("Parent:".$parent_pid);
 
   $id_to_filename = cache_get("sidora:form_id_to_filename");
   if (empty($id_to_filename)){ $id_to_filename = array(); }else{ $id_to_filename = $id_to_filename->data; }
@@ -686,7 +686,7 @@ function sidora_islandora_datastream_modified(AbstractObject $object, AbstractDa
  * Implements hook_islandora_datastream_ingested
  */
 function sidora_islandora_datastream_ingested(AbstractObject $object, AbstractDatastream $datastream) {
-  drupal_set_message("Sidora Datastream Ingested");
+  //dsm("Sidora Datastream Ingested");
 }
 /** 
  * Implements hook_islandora_datastream_alter
