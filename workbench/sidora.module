@@ -837,9 +837,9 @@ function sidora_get_form_and_dsid($object_pid){
   module_load_include('inc','xml_forms','builder/includes/datastream.form');
   module_load_include('inc','xml_forms','builder/includes/associations');
   $object = sidora_obj($object_pid);
-    //Now that we have the object, check to see if it has the SIDORA datastream (which will tell us the model and form to use)
-    if ($object['SIDORA'] && strpos($object['SIDORA']->content, '<form>') > 0 && strpos($object['SIDORA']->content, '<model>') > 0){
-      $to_model = '
+  //Now that we have the object, check to see if it has the SIDORA datastream (which will tell us the model and form to use)
+  if ($object['SIDORA'] && strpos($object['SIDORA']->content, '<form>') > 0 && strpos($object['SIDORA']->content, '<model>') > 0){
+    $to_model = '
 <xsl:stylesheet version="1.0"
 xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
 xmlns:mods="http://www.loc.gov/mods/v3"
@@ -847,13 +847,13 @@ xmlns:fits="http://hul.harvard.edu/ois/xml/ns/fits/fits_output"
 xmlns:cpf="urn:isbn:1-931666-33-4"
 >
 <xsl:template match="/">
-    <xsl:for-each select="//model">
-        <xsl:value-of select="current()"/>
-      </xsl:for-each>
+  <xsl:for-each select="//model">
+      <xsl:value-of select="current()"/>
+    </xsl:for-each>
 </xsl:template>
 </xsl:stylesheet>';
 
-      $to_form_name = '
+    $to_form_name = '
 <xsl:stylesheet version="1.0"
 xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
 xmlns:mods="http://www.loc.gov/mods/v3"
@@ -861,36 +861,43 @@ xmlns:fits="http://hul.harvard.edu/ois/xml/ns/fits/fits_output"
 xmlns:cpf="urn:isbn:1-931666-33-4"
 >
 <xsl:template match="/">
-    <xsl:for-each select="//form">
-        <xsl:value-of select="current()"/>
-      </xsl:for-each>
+  <xsl:for-each select="//form">
+      <xsl:value-of select="current()"/>
+    </xsl:for-each>
 </xsl:template>
 </xsl:stylesheet>';
 
-      $doc = new DOMDocument();
-      $xsl = new XSLTProcessor();
-      $doc->loadXML($to_form_name);
-      $xsl->importStyleSheet($doc);
-      $docToLoad = ('<?xml version="1.0" encoding="UTF-8"?>'.$object['SIDORA']->content);
-      $doc->loadXML($docToLoad);
-      $form_name = trim($xsl->transformToDoc($doc)->firstChild->wholeText);
+    $doc = new DOMDocument();
+    $xsl = new XSLTProcessor();
+    $doc->loadXML($to_form_name);
+    $xsl->importStyleSheet($doc);
+    $docToLoad = ('<?xml version="1.0" encoding="UTF-8"?>'.$object['SIDORA']->content);
+    $doc->loadXML($docToLoad);
+    $form_name = trim($xsl->transformToDoc($doc)->firstChild->wholeText);
 
-      $doc->loadXML($to_model);
-      $xsl->importStyleSheet($doc);
-      $docToLoad = ('<?xml version="1.0" encoding="UTF-8"?>'.$object['SIDORA']->content);
-      $doc->loadXML($docToLoad);
-      $model = trim($xsl->transformToDoc($doc)->firstChild->wholeText);
+    $doc->loadXML($to_model);
+    $xsl->importStyleSheet($doc);
+    $docToLoad = ('<?xml version="1.0" encoding="UTF-8"?>'.$object['SIDORA']->content);
+    $doc->loadXML($docToLoad);
+    $model = trim($xsl->transformToDoc($doc)->firstChild->wholeText);
 
-      $checker = xml_form_builder_get_associations(array(), array(), array(), FALSE);   
-      //Sidora assumes that we will only have one form that we care about as metadata, and that we will only have one association of model to form
-      $found_dsid = '';
-      foreach($checker as $check_association){
-        if ($check_association['content_model'] == $model && $check_association['form_name'] == $form_name){
-          $found_dsid = $check_association['dsid'];
-        }
+    $checker = xml_form_builder_get_associations(array(), array(), array(), FALSE);   
+    //Sidora assumes that we will only have one form that we care about as metadata, and that we will only have one association of model to form
+    $found_dsid = '';
+    foreach($checker as $check_association){
+      if ($check_association['content_model'] == $model && $check_association['form_name'] == $form_name){
+        $found_dsid = $check_association['dsid'];
       }
-      $to_return['dsid'] = $found_dsid;
-      $to_return['form_name'] = $form_name;
+    }
+    $to_return['dsid'] = $found_dsid;
+    $to_return['form_name'] = $form_name;
+    return $to_return;
+  }else{
+    $associations = xml_form_builder_get_associations(array(), $object->models, array());
+    if (count($associations) == 1){
+      $curr_association = $associations[0];
+      $to_return['form_name'] = $curr_association['form_name'];
+      $to_return['dsid'] = $curr_association['dsid'];
       return $to_return;
     }else{
       $info = sidora_guess_dsid_and_form_name($object);
@@ -901,6 +908,7 @@ xmlns:cpf="urn:isbn:1-931666-33-4"
         return FALSE;
       }
     }
+  }
   return $to_return; 
 }
 /* Show the form used to delete a XSL file  */
@@ -3661,6 +3669,7 @@ function sidora_find_association(array &$form_state, $form_build_id = ''){
   if (empty($form_name)){
     $cache =  cache_get("sidora:form_id_to_creation_info");
     $my_data = $cache->data;
+    if (empty($my_data[$form_build_id])) return null; //If we don't have this form in the cache
     $my_info = $my_data[$form_build_id];
     $form_name = $my_info['form'];
   }
