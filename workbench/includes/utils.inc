@@ -787,7 +787,7 @@ function sidora_create_user_object(stdClass $account) {
   $user_object = $user_projects->repository->constructObject('si-user');
   $user_object->owner = $account->name;
   $user_object->label = "{$account->name} Projects";
-  $user_object->models = array('si:conceptCModel', 'si:peopleCModel');
+  $user_object->models = array('si:conceptCModel', variable_get('sidora_automatic_person_form', 'si:HeirarchyObject'));
   $eaccpf = sidora_create_default_person_eaccpf($user_object, $account);
   sidora_update_datastream($user_object, $eaccpf, 'EAC-CPF');
   $collection_policy = drupal_get_path('module', 'sidora') . '/data/policies/default_COLLECTION_POLICY.xml';
@@ -798,9 +798,17 @@ function sidora_create_user_object(stdClass $account) {
     sidora_update_datastream($user_object, '<sidora>
 <model>'.$associations[0]['content_model'].'</model>
 <form>'.$associations[0]['form_name'].'</form>
-<ontology_location_id>AUTOMATIC_USER_CREATION_NONE</ontology_location_id>
+<ontology_location_id>AUTOMATIC_USER_CREATION_FROM_ASSOCIATION</ontology_location_id>
 <meta_requirements_fulfilled>FALSE</meta_requirements_fulfilled>
 <initial_dsid>'.$associations[0]['dsid'].'</initial_dsid>
+</sidora>', 'SIDORA');
+  }else{
+    sidora_update_datastream($user_object, '<sidora>
+<model>'.variable_get('sidora_automatic_person_form', 'si:HeirarchyObject').'</model>
+<form>'. variable_get('sidora_automatic_person_form', 'Person 2015').'</form>
+<ontology_location_id>AUTOMATIC_USER_CREATION_FROM_SIDORA_DEFAULT</ontology_location_id>
+<meta_requirements_fulfilled>FALSE</meta_requirements_fulfilled>
+<initial_dsid>'.variable_get('sidora_automatic_person_form', 'DESCMETA').'</initial_dsid>
 </sidora>', 'SIDORA');
   }
 
