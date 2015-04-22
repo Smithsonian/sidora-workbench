@@ -449,9 +449,11 @@ sidora.InitiateJSTree = function(){
       jQuery("#"+data.parent).children("a").attr("conceptchildren",""+npReplacer);
       jst.get_node(data.parent).a_attr.conceptchildren = ""+npReplacer;
       sidora.queue.incomingRequestsAreSilent = true;
-      sidora.queue.Request('TBD: Silence this', actionUrl, function(){
+      sidora.queue.Request('Copy Concept', actionUrl, function(){
         sidora.concept.LoadContentHelp.Relationships();
-      }, null, [moveToPid,toMovePid]);
+      }, function(){
+        sidora.util.RefreshTree();
+      }, [moveToPid,toMovePid]);
       sidora.queue.incomingRequestsAreSilent = false;
       sidora.queue.Next();
     });
@@ -477,9 +479,11 @@ sidora.InitiateJSTree = function(){
 
       //next requests are silent
       sidora.queue.incomingRequestsAreSilent = true;
-      sidora.queue.Request('TBD: Silence this', actionUrl, function(){
+      sidora.queue.Request('Remove concept association', actionUrl, function(){
         sidora.concept.LoadContentHelp.Relationships();
-      }, null, [toMovePid,moveFromPid]);
+      },  function(){
+        sidora.util.RefreshTree();
+      }, [toMovePid,moveFromPid]);
       sidora.queue.incomingRequestsAreSilent = false;
       sidora.queue.Next();
 
@@ -522,9 +526,11 @@ sidora.InitiateJSTree = function(){
 
       //next requests are silent
       sidora.queue.incomingRequestsAreSilent = true;
-      sidora.queue.Request('TBD: Silence this', actionUrl, function(){
+      sidora.queue.Request('Concept move', actionUrl, function(){
         sidora.concept.LoadContentHelp.Relationships();
-      }, null, [moveToPid,toMovePid,moveFromPid]);
+      }, function(){
+        sidora.util.RefreshTree();
+      }, [moveToPid,toMovePid,moveFromPid]);
       sidora.queue.incomingRequestsAreSilent = false;
       sidora.queue.Next();
     });
