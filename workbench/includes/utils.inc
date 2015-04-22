@@ -804,7 +804,7 @@ function sidora_create_user_object(stdClass $account) {
 </sidora>', 'SIDORA');
   }else{
     sidora_update_datastream($user_object, '<sidora>
-<model>'.variable_get('sidora_automatic_person_model', 'si:HeirarchyObject').'</model>
+<model>'.variable_get('sidora_automatic_person_model', 'si:HierarchyObject').'</model>
 <form>'. variable_get('sidora_automatic_person_form', 'Person 2015').'</form>
 <ontology_location_id>AUTOMATIC_USER_CREATION_FROM_SIDORA_DEFAULT</ontology_location_id>
 <meta_requirements_fulfilled>FALSE</meta_requirements_fulfilled>
