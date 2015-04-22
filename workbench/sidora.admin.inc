@@ -359,7 +359,7 @@ tr.removed.odd {
       'sidora_automatic_person_model' => array(
         '#type' => 'textfield',
         '#title' => t('Model'),
-        '#default_value' => variable_get('sidora_automatic_person_model', 'si:HeirarchyObject'),
+        '#default_value' => variable_get('sidora_automatic_person_model', 'si:HierarchyObject'),
       ),
       'sidora_automatic_person_form' => array(
         '#type' => 'textfield',
