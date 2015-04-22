@@ -793,6 +793,17 @@ function sidora_create_user_object(stdClass $account) {
   $collection_policy = drupal_get_path('module', 'sidora') . '/data/policies/default_COLLECTION_POLICY.xml';
   sidora_update_datastream($user_object, $collection_policy, 'COLLECTION_POLICY');
   sidora_update_datastream($user_object, sidora_create_default_xacml($account), 'POLICY');
+  $associations = xml_form_builder_get_associations(array(), $user_object->models, array());
+  if (count($associations) == 1){
+    sidora_update_datastream($user_object, '<sidora>
+<model>'.$associations[0]['content_model'].'</model>
+<form>'.$associations[0]['form_name'].'</form>
+<ontology_location_id>AUTOMATIC_USER_CREATION_NONE</ontology_location_id>
+<meta_requirements_fulfilled>FALSE</meta_requirements_fulfilled>
+<initial_dsid>'.$associations[0]['dsid'].'</initial_dsid>
+</sidora>', 'SIDORA');
+  }
+
   sidora_add_child($user_projects, $user_object);
   return islandora_add_object($user_object);
 }
