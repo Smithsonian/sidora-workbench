@@ -787,7 +787,7 @@ function sidora_create_user_object(stdClass $account) {
   $user_object = $user_projects->repository->constructObject('si-user');
   $user_object->owner = $account->name;
   $user_object->label = "{$account->name} Projects";
-  $user_object->models = array('si:conceptCModel', variable_get('sidora_automatic_person_form', 'si:HeirarchyObject'));
+  $user_object->models = array('si:conceptCModel', variable_get('sidora_automatic_person_model', 'si:HierarchyObject'));
   $eaccpf = sidora_create_default_person_eaccpf($user_object, $account);
   sidora_update_datastream($user_object, $eaccpf, 'EAC-CPF');
   $collection_policy = drupal_get_path('module', 'sidora') . '/data/policies/default_COLLECTION_POLICY.xml';
