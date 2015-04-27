@@ -50,7 +50,7 @@ function exhibition_config_get_exhibition_pids_for_user($user_id){
         $object = $repo->getObject($pid_to_test); 
         $curr_label = $object->label;
         $to_add = array('pid'=>$pid_to_test, 'label'=>$curr_label, 'custom_url'=>$records->custom_url);
-        if ($user_id == $object->owner) $exhibition_pids[] = $to_add;
+        if ($user_id == $object->owner || $user_id === '') $exhibition_pids[] = $to_add;
       }
     }catch(Exception $hce){
       dsm('exception trying to get:'.$pid_to_test);
@@ -175,10 +175,10 @@ function exhibition_config_form_validate($form, &$form_state){
     $pid = $form['pid']['#value'];
     $check_url =  $form['custom_url']['#value'];
     if (!empty($check_url)){
-      $url_in_use_result = db_query("select pid from {exhibition_config} where pid != '%s' and custom_url = '%s'", 
+      $url_in_use_result = db_query("select pid from {exhibition_config} where pid <> :pid and custom_url = :cus_url", 
         array(
-          $pid, 
-          $form['custom_url']['#value'],
+          ':pid' => $pid, 
+          ':cus_url' => $form['custom_url']['#value'],
         )
       );
       $first_hit = $url_in_use_result->fetchAssoc();;
