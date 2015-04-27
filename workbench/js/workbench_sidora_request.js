@@ -41,7 +41,7 @@ SidoraRequest.prototype.pullFromConfig = function(configObject){
 SidoraRequest.prototype.performAjax = function(){
   var myself = this;
   if (this.fullObject != null){
-    console.log("In performAjax of Sidora request to execute this request:"+this.fullObject.ajaxRequest);
+    console.log("In performAjax of Sidora request to execute this request:"+this.fullObject.ajaxRequest.url);
     jQuery.ajax(this.fullObject.ajaxRequest);
   }else{
     jQuery.ajax({
