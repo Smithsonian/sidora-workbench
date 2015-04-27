@@ -39,8 +39,15 @@ sidora.concept.LoadContentHelp.Resources.TableLoad = function(conceptOfInterest)
      'ajax': jQuery.fn.dataTable.pipeline({
        url: '../info/'+conceptOfInterest+'/resources/all/browser/dataTableServerSideProcessing',
        pages: 2
-     })
-  });
+			// success: function
+     }),
+     "createdRow" : function( row, data, dataIndex ) {
+      if ((sidora.resources.individualPanel.resourceOfInterest) && (sidora.resources.individualPanel.resourceOfInterest.pid == data.DT_RowId)){
+			   jQuery(row).addClass("selected");
+				 jQuery(row).trigger("click");
+			}	 
+  }
+	});
   (function($){
     var table = $('#res_table').DataTable();
    $('#res_table tbody').on( 'click', 'tr', function (e) {
@@ -1415,10 +1422,12 @@ sidora.resources.individualPanel.LoadRelationships = function(){
 sidora.resources.individualPanel.LoadContent = function(suppressResourceViewerReload){
   if (typeof(suppressResourceViewerReload) == 'undefined'){ suppressResourceViewerReload = false; }
   roipid = sidora.resources.individualPanel.resourceOfInterest.pid;
-    //<iframe frameborder="0" height="100%" width="100%" src="http://***REMOVED***/~***REMOVED***/sidora/GitMain/viewer/si:258581/IMAGE/ids_iframe"></iframe>
+  console.log("resource of interest is "+roipid);
+	  //<iframe frameborder="0" height="100%" width="100%" src="http://***REMOVED***/~***REMOVED***/sidora/GitMain/viewer/si:258581/IMAGE/ids_iframe"></iframe>
   if (!suppressResourceViewerReload){
     var resourceViewerHtml = '<iframe frameborder="0" height="100%" width="100%" src="'+Drupal.settings.basePath+'sidora/resource_viewer/'+sidora.resources.individualPanel.resourceOfInterest.pid+'"></iframe> ';
-    jQuery('#resourceIframeHolder').children().remove();
+    console.log("in individual panel : "+resourceViewerHtml);
+		jQuery('#resourceIframeHolder').children().remove();
     jQuery('#resourceIframeHolder').append(resourceViewerHtml);
   }
   jQuery('#resource-meta .error-message').remove();
@@ -1669,4 +1678,8 @@ http://learn.jquery.com/using-jquery-core/faq/how-do-i-select-an-element-by-an-i
 function jq( myid ) {
   return "#" + myid.replace( /(:|\.|\[|\])/g, "\\$1" );
 }
-
+function getPid( jsonString ) {
+	var pidString = jsonString.slice(jsonString.indexOf("New Pid:"),jsonString.indexOf(":End New Pid"));
+	var pidArray = pidString.split(":");
+	return (pidArray[1]+":"+pidArray[2]);
+}	
