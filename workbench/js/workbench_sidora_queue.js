@@ -109,29 +109,21 @@ SidoraQueue.prototype.Done = function(completedItem, ajaxReturn){
       if (sidora.concept.GetPid() == completedItem.pidsBeingProcessed[i]){
 			 sidora.concept.LoadContent();
         var processedResourceCountArray = processedResourceArray[1].split(' of ');
-				if (processedResourceCountArray[0] == 1){
+				if (processedResourceCountArray[0] == processedResourceCountArray[1]){
            var newPid = getPid(jsonString);
 					 console.log("new pid : "+newPid);
 					 if (newPid != ''){
 					   sidora.resources.individualPanel.resourceOfInterest = {
              	'pid': newPid
 						 };
+						 
 					 }	
 				}
       }
     }
   }
   console.log("done function of queue:"+completedItem.userFriendlyName);
-  if (sidora.resources.individualPanel.resourceOfInterest){
-  	var escapePidArray = sidora.resources.individualPanel.resourceOfInterest.pid.split(":");
-  	var getHighlightedPids = sidora.resources.getHighlighted();
-  	if (escapePidArray.length && (jQuery.inArray(escapePidArray,getHighlightedPids) == "-1")){
-    	if (jQuery("#"+escapePidArray[0]+"\\:"+escapePidArray[1]).length){
-    	 jQuery("#"+escapePidArray[0]+"\\:"+escapePidArray[1]).trigger("click");
-    	} 
-    }
-	}
-}
+ }
 SidoraQueue.prototype.NotificationWindow = {"showingError":false};
 SidoraQueue.prototype.NotificationWindow.MouseIsInside = false;
 SidoraQueue.prototype.NotificationWindow.SecondsOnScreen = 4;

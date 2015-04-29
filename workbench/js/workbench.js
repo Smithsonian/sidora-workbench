@@ -39,14 +39,7 @@ sidora.concept.LoadContentHelp.Resources.TableLoad = function(conceptOfInterest)
      'ajax': jQuery.fn.dataTable.pipeline({
        url: '../info/'+conceptOfInterest+'/resources/all/browser/dataTableServerSideProcessing',
        pages: 2
-			// success: function
      }),
-     "createdRow" : function( row, data, dataIndex ) {
-      if ((sidora.resources.individualPanel.resourceOfInterest) && (sidora.resources.individualPanel.resourceOfInterest.pid == data.DT_RowId)){
-			   jQuery(row).addClass("selected");
-				 jQuery(row).trigger("click");
-			}	 
-  }
 	});
   (function($){
     var table = $('#res_table').DataTable();
@@ -115,7 +108,13 @@ sidora.concept.LoadContentHelp.Resources.TableActionsSetup = function(){
     if (info.page > 0) jQuery("#sidora-resources-button-prev").removeClass("disabled");
     jQuery('#sidora-resources-page-number').val((1+info.page));
     jQuery('#sidora-resources-page-count').html(' of '+info.pages );
-  } );
+    if (sidora.resources.individualPanel.resourceOfInterest){
+      	var escapePidArray = sidora.resources.individualPanel.resourceOfInterest.pid.split(":");
+      	if (escapePidArray.length){
+        	jQuery(this).find("#"+escapePidArray[0]+"\\:"+escapePidArray[1]).trigger("click");
+				}
+		}		 
+	} );
   }
 
   //Drag and drop enabling
