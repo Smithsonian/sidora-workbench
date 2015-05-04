@@ -1910,7 +1910,7 @@ function sidora_create_resource_get_current_uploads(){
  * gives the proper upload form for the model selected
  * returns string of HTML
  */
-function sidora_create_resource_get_upload_form_html($model, $upload_button_text = 'Upload Files'){
+function sidora_create_resource_get_upload_form_html($model, $upload_button_text = 'Browse'){
   global $user;
   $to_return = '';
   $file_extensions = array(
@@ -3122,7 +3122,8 @@ function sidora_ontology_json_default(){
  * Catch all for ajax
  */
 function sidora_ajax_parts($call_type, $param1 = '', $param2 = '', $param3 = ''){
-  if ($call_type == 'ontology'){
+  global $user;
+	if ($call_type == 'ontology'){
     return sidora_ontology_object();
   }
   if ($call_type == 'tree'){
@@ -3147,10 +3148,26 @@ function sidora_ajax_parts($call_type, $param1 = '', $param2 = '', $param3 = '')
     return sidora_ajax_lock($param1, $param2);
   }
 	if ($call_type == 'delete_xsl_file'){
-	   return sidora_remove_xsl($param1);
+	    return sidora_remove_xsl($param1);
 	}
 	if ($call_type == 'generate_resource_list'){
-		return sidora_generate_resource_list($param1);
+		 return sidora_generate_resource_list($param1);
+	}	
+  if ($call_type == 'testinguploads'){
+    $test_array = array();
+		$test_array["param"] = $param1;
+		return(json_encode($test_array));
+	}	
+	if ($call_type == 'remove_file_from_upload_queue'){
+			if ((array_key_exists('file_uploads', $_SESSION)) && (!empty($_SESSION['file_uploads']))){
+        foreach($_SESSION['file_uploads'][$user->uid] as $index => $file_obj){
+            if ($file_obj->filename == $param1){
+              unset($_SESSION['file_uploads'][$user->uid][$index]);
+              $_SESSION['file_uploads'][$user->uid] = array_values($_SESSION['file_uploads'][$user->uid]);
+							return(json_encode($_SESSION));
+            }
+  			  }	
+			}
 	}		 
   drupal_not_found();
 }
@@ -3750,29 +3767,34 @@ function sidora_islandora_ingest_steps_alter(array &$steps, array &$form_state) 
     }
   }
 }
-function sidora_get_plupload_html($elements, $button_text = 'Upload Files'){
+function sidora_get_plupload_html($elements, $button_text = 'Browse'){
   global $user;
   drupal_add_js(drupal_get_path('module', 'sidora') . '/plupload-2.1.2/js/plupload.full.min.js');
+  drupal_add_js(drupal_get_path('module', 'sidora') . '/plupload-2.1.2/js/jquery.ui.plupload/jquery.ui.plupload.js');
+	drupal_add_css(drupal_get_path('module', 'sidora') . '/plupload-2.1.2/js/jquery.ui.plupload/css/jquery.ui.plupload.css');
+  drupal_add_css(drupal_get_path('module', 'sidora') . '/css/themes/smoothness/jquery-ui.min.css',array('weight' => '1000000', 'group' => CSS_THEME));
+	$path_for_remove_icon = base_path() . drupal_get_path('module', 'xml_forms') . '/elements/images/';
   ob_start();
   print '
-  <div id="edit-0-wrapper">
-  <div id="filelist" ></div>
-  <br />
-  <!--';
-  //print_r($elements);
-  //print implode(",",$elements['#extensions']);
-  print '-->
+	<div class="plupload_wrapper"><div class="ui-widget-content plupload_container" id="create-resource-upload_container">
+	<table class="plupload_filelist plupload_filelist_header ui-widget-header"><tr>
+	<td class="plupload_cell plupload_file_name">Filename</td>
+	<td class="plupload_cell plupload_file_size">Size</td>
+	<td class="plupload_cell plupload_file_status">Status</td>
+	<td class="plupload_cell plupload_file_action">&nbsp;</td>
+	</tr></table>';
+	print '
+	<div class="plupload_content plupload_drop plupload_dropbox" id="create-resource-upload_dropbox" style="top:28px;bottom:3px;"><div class="plupload_droptext" id="plupload_droptext">Drag Files here</div>
+	<ul class="plupload_filelist_content" id="create-resource-upload_filelist" unselectable="on" style="margin:0px;">';
+  print '</ul></div></div></div>
   <div id="container" class="-uploader">
       <button class="islandora-repo-button" id="pickfiles" href="javascript:;">'.$button_text.'</button> 
-      <a id="uploadfiles" style="display:none;" href="javascript:;">[Upload files]</a>
+      <a id="uploadfiles" style="display:none;" href="javascript:;">[Browse]</a>
   </div>
-
   <br />
-  <pre id="console"></pre>
-  </div>
-
-
-  <script type="text/javascript">
+  <pre id="console"></pre>';
+  print '
+ <script type="text/javascript">
   function loadjscssfile(filename, filetype){
    if (filetype=="js"){ //if filename is a external JavaScript file
     var fileref=document.createElement("script")
@@ -3795,13 +3817,15 @@ function sidora_get_plupload_html($elements, $button_text = 'Upload Files'){
     //Firefox gets weird with the flash version between http and https, sometimes http doesnt work
     runtimesBrowserSpecific = "html5,html4";
   }
-
   window.uploader = new plupload.Uploader({
     runtimes : runtimesBrowserSpecific, //No silverlight - gets bad if user does not allow it and it tries to use.
     browse_button : "pickfiles", // you can pass in id...
-    container: document.getElementById("container"), // ... or DOM Element itself
-    chunk_size: "900kb",
-    url : "';
+    container : document.getElementById("container"), // ... or DOM Element itself
+    dragdrop : true,
+	  drop_element : "create-resource-upload_dropbox",
+		button_browse_hover : true,
+		chunk_size: "900kb",
+		url : "';
   print base_path();
   print 'sidora/upload/';
   print $user->uid;
@@ -3811,10 +3835,10 @@ function sidora_get_plupload_html($elements, $button_text = 'Upload Files'){
   print ',
     flash_swf_url : "';
   print base_path();
-  print 'sites/all/modules/sidora/plupload-2.1.2/js/Moxie.swf",
+  print 'sites/all/modules/sidora/workbench/plupload-2.1.2/js/Moxie.swf",
     silverlight_xap_url : "';
   print base_path();
-  print 'sites/all/modules/sidora/plupload-2.1.2/js/Moxie.xap",
+  print 'sites/all/modules/sidora/workbench/plupload-2.1.2/js/Moxie.xap",
     
     filters : {
       max_file_size : "1000mb",
@@ -3826,10 +3850,19 @@ function sidora_get_plupload_html($elements, $button_text = 'Upload Files'){
   print '"}
       ]
     },
-
+    preinit : {
+        Init: function(up, info) {
+          if(!!FileReader && !((info["runtime"] == "flash") || (info["runtime"] == "silverlight"))){
+          	jQuery(".plupload_droptext").css( "display", "inline !important");
+					}else{
+            jQuery(".plupload_droptext").css( "display", "none !important");
+          }        
+					},
+		},		
     init: {
-      PostInit: function() {
-        document.getElementById("filelist").innerHTML = "";
+				PostInit: function() {
+        //document.getElementById("create-resource-upload_dropbox ").empty();
+				//document.getElementById("filelist").innerHTML = "";
         document.getElementById("uploadfiles").onclick = function() {
 					uploader.start();
           return false;
@@ -3843,14 +3876,33 @@ function sidora_get_plupload_html($elements, $button_text = 'Upload Files'){
 				jQuery("#Next").addClass("form-button-disabled");
            },
 			 FilesAdded: function(up, files) {
-        plupload.each(files, function(file) {
-                             //alert(file.id+" "+file.name+" "+file.size);
-                             var item = jQuery("<div></div>");
-                             item.attr("id",file.id);
-                             item.html(file.name + "(" + plupload.formatSize(file.size) + ")<b></b>");
-                             jQuery("#filelist").append(item);
-        });
-        uploader.start();
+				document.getElementById("Next").disabled=true;
+				jQuery("#Next").addClass("form-button-disabled");
+				 plupload.each(files, function(file) {
+						 var item = jQuery("<li class=\"plupload_view_list plupload_file ui-state-default plupload_file_loading plupload_delete\"></li>");
+             item.attr("id",file.id);
+             item.html("<div class=\"plupload_file_name\">"+file.name + "</div><div class=\"plupload_file_size\" style=\"width:100px;\">" + plupload.formatSize(file.size) + "   <b></b></div>" + "<div class=\"plupload_file_action\"><a class=\'remove-file-btn\' href=\'\'><img src=\'' . $path_for_remove_icon . 'minus_small.png\'/></a></div>");
+						 // <a class=\'remove_btn_error\' href=\'\'>-</a>");
+	           jQuery("#create-resource-upload_filelist").append(item);
+						 jQuery("#" + file.id + " .remove-file-btn").first().click(function(event) {
+              event.preventDefault();
+							up.removeFile(file);
+              jQuery("#" + file.id).remove();
+               var toDelete = file.name;
+							 console.log(toDelete);
+							 var url = Drupal.settings.basePath+"sidora/ajax_parts/remove_file_from_upload_queue/"+toDelete;
+               jQuery.ajax ({
+                type: "POST",
+          			url: url,
+								done: function(msg){
+								  console.log("Return from ajax delete"+msg);
+								},	
+          			dataType: "text"
+          		});	 
+		
+            });
+				});
+				uploader.start();
       },
       UploadProgress: function(up, file) {
         document.getElementById(file.id).getElementsByTagName("b")[0].innerHTML = "<span>" + file.percent + "%</span>";
@@ -3868,9 +3920,15 @@ function sidora_get_plupload_html($elements, $button_text = 'Upload Files'){
       }
     }
   });
-
-  uploader.init();
-  </script>
+  uploader.bind("Init", function(up, info){
+    if(!!FileReader && !((info["runtime"] == "flash") || (info["runtime"] == "silverlight"))){
+    	jQuery("#plupload_droptext").show();
+    }else{
+      jQuery("#plupload_droptext").hide();
+    } 
+	});      
+	uploader.init();
+ </script>
   ';
   $result = ob_get_clean();
   return $result;
