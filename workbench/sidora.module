@@ -546,10 +546,10 @@ function sidora_islandora_object_ingested(AbstractObject $object){
   //dsm("Sidora Object Ingested");
   $parent_pid = drupal_static('parent_collection_pid');
   $ontology_id = drupal_static('ontology_id');
-  //dsm("Object:".$object->id);
-  //dsm("Parent:".$parent_pid);
-
-  $id_to_filename = cache_get("sidora:form_id_to_filename");
+  drupal_set_message("Object:".$object->id);
+  drupal_set_message("Parent:".$parent_pid);
+  drupal_set_message("New Pid:" . $object->id . ":End New Pid");
+	$id_to_filename = cache_get("sidora:form_id_to_filename");
   if (empty($id_to_filename)){ $id_to_filename = array(); }else{ $id_to_filename = $id_to_filename->data; }
   $file_location = '';
   if (array_key_exists('form_build_id', $_POST)){
@@ -1555,7 +1555,20 @@ function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $ex
   }
   if ($one == 'queries'){
     print 'ok';
-    print sidora_generate_child_resource_sparql_query('si:288599', array(), 'Ch');
+  $tuque = islandora_get_tuque_connection();
+  if ($tuque) {
+    $query = sidora_generate_child_resource_sparql_query('si-user:124', Array(),'' , '', 'created');
+    //var_dump($query);
+		$ri = $tuque->repository->ri;
+    $results = $ri->sparqlQuery($query);
+		foreach ($results as $key => $row){
+			 $dates[$key] = strtotime($row['created']['value']);
+			 
+		}	 
+    array_multisort($dates, SORT_DESC, $results);
+		var_dump($results);
+		//print sidora_generate_child_resource_sparql_query('si:387917', Array());
+	}	
   }
   if ($one == 'permissions'){
     if (sidora_allow($two, $parent_pid, $extra)){
@@ -1995,7 +2008,7 @@ function sidora_create_resource_get_metadata_form_html($parent_pid, $model, $for
     cache_set("sidora:form_id_to_creation_info",$id_to_creation_info);
     $to_return .= drupal_render( $form);
   }else{
-    $at_least_one_pic = false;
+		$at_least_one_pic = false;
     foreach ($current_uploads as $cu){
       $at_least_one_pic = $at_least_one_pic ||  sidora_is_displayable_image_with_convert($cu->filename);
     }
@@ -2756,7 +2769,12 @@ function sidora_concept_resource_listing($pid, $resource_types, $limit, $offset,
     $query = sidora_generate_child_resource_sparql_query($concept_pid, $resource_types[$specific_resource_type], $title_search, '', 'created', $limit, $offset);
     $ri = $tuque->repository->ri;
     $results = $ri->sparqlQuery($query);
-    foreach($results as $resindex=>$result){
+ 	  foreach ($results as $key => $row){
+			 $dates[$key] = strtotime($row['created']['value']);
+			 
+		}	 
+    array_multisort($dates, SORT_DESC, $results);
+		foreach($results as $resindex=>$result){
       $tobj = $tuque->repository->getObject($result['object']['value']);
       //$results[$resindex]['object'] = $tobj;
       $original_metadata = 'FALSE';
