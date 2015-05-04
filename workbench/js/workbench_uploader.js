@@ -16,8 +16,13 @@ jQuery().ready(function(){
 	jQuery(".sidora-ingest-form-holder").append("<input value=\"Next\" class='form-submit sidora-form-button sidora-form-next'></input>");
 	jQuery(".sidora-form-prev").first().addClass("form-button-disabled");
 	jQuery(".sidora-form-next").last().addClass("form-button-disabled");
-	jQuery("#create-resource-form").append("<input value=\"Finish\" class='form-submit sidora-form-finish'></input>");
+	if (jQuery("#create-resource-form").length){
+	  jQuery("#create-resource-form").append("<input value=\"Finish\" class='form-submit sidora-form-finish'></input>");
+	}
 	//jQuery("#create-resource-form").append("<input value=\"Cancel\" class='form-submit sidora-form-cancel'></input>");
+	if (jQuery("#edit-metadata").length){
+		jQuery("#edit-metadata").append("<input value=\"Finish\" class='form-submit sidora-form-finish'></input>");
+	}	
 	jQuery(".picHolder").css("height",window.innerHeight - 250 + "px");
 	jQuery(".sidora-form-prev").not(".form-button-disabled").click(function(e){ window.showPrev(); });
 	jQuery(".sidora-form-next").not(".form-button-disabled").click(function(e){ window.showNext(); });
@@ -209,21 +214,66 @@ window.prepIslandoraFormForSubmit = function(formName, onSuccessfulFormSubmit, o
 				jQuery("#edit-next").click();
 		}
 	}
-
-	ajaxSettings = ({
-		type: "POST",
-		url: window.location,
-		//url: Drupal.settings.basePath+"/pure",
-		data: jQuery("#"+formName).serialize()+"&ingest=Ingest",
-		success: function( data ) {
-			if (data.indexOf(")"+" has been ingested") > 0){ //it would trigger success off of reading this inline JS, so break it up
-				onSuccessfulFormSubmit(formName, this, data);
-			}else{
-				onFailureOfFormSubmit(formName, this, data);
-			}
-		},
-		dataType: "text"
-	});//ends ajax settings
+  if (jQuery("#create-resource-form").length){
+		ajaxSettings = ({
+		  type: "POST",
+		  url: window.location,
+		  //url: Drupal.settings.basePath+"/pure",
+		  data: jQuery("#"+formName).serialize()+"&ingest=Ingest",
+		  success: function( data ) {
+			  if (data.indexOf(")"+" has been ingested") > 0){ //it would trigger success off of reading this inline JS, so break it up
+				  onSuccessfulFormSubmit(formName, this, data);
+			  }else{
+				  onFailureOfFormSubmit(formName, this, data);
+			  }
+		  },
+		  dataType: "text"
+	  });//ends ajax settings
+	}else{
+	  ajaxSettings = ({
+		  type: "POST",
+		  url: window.location,
+		  data: jQuery("#"+formName).serialize()+"&op=Submit&update=Update",
+      success: function( data ) {
+         window.aa = data;
+         if (data.indexOf("<h2 class=\"element-invisible\">Error message</h2")>0){
+           //If not successful, reload the page so that the user can see why
+           jQuery("#edit-update").click();
+           jQuery(".theoverlay").remove();
+         }else{
+           //If successful, kill itself.
+           newPid = data.substring(0,data.indexOf(")"+" has been ingested")).substring(data.substring(0,data.indexOf(")"+" has been ingested")).lastIndexOf("si:"))
+           if (sidora && sidora.CloseIFrame){
+             sidora.concept.forceRefreshOnNextLoadContent = true;
+             sidora.CloseIFrame(newPid, "edit metadata");
+           }else{
+             console.log("This is not in the expected IFrame");
+           }
+         }
+      },
+			statusCode: {
+        500: function() {
+          jQuery("#edit-update").click();
+      		jQuery(".theoverlay").remove();
+      		jQuery("body").append("<div id=\'editmetafailed\' style=\'display:none;\' title=\'Edit MetaData Failed\'><p>Internal Server Error code 500 returned.</p><p>Please contact the Site Administrator</p></div>");
+      		jQuery("#editmetafailed").dialog({
+      				height: 300,
+      				width: 350,
+      				modal: true,
+      				resizable: false,
+      				dialogClass: "no-close",
+		  				buttons: {
+        			  "OK": function() {
+								  self.parent.Shadowbox.close();
+								  jQuery( this ).dialog( "close" );
+     						}
+		 					}
+					});
+			  }
+			},
+		  dataType: "text"
+	  });//ends ajax settings
+	}
 	window.batchRequests.push(ajaxSettings);
 }//ends function prepIslandoraFormForSubmit
 

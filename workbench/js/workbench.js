@@ -73,13 +73,13 @@ sidora.concept.LoadContentHelp.Resources.TableLoad = function(conceptOfInterest)
           sidora.resources.individualPanel.CreateAndInit();
       }
       //Edit metadata and delete are only available per resource (no batch yet) so disable them if not exactly one left
-      if (pids.length != 1){
-        jQuery("#edit-resource-metadata-menu").addClass("ui-state-disabled");
-        jQuery("#manage-resource").addClass("ui-state-disabled");
-      }else{
+    //  if (pids.length != 1){
+    //    jQuery("#edit-resource-metadata-menu").addClass("ui-state-disabled");
+  //      jQuery("#manage-resource").addClass("ui-state-disabled");
+   //   }else{
         jQuery("#edit-resource-metadata-menu").removeClass("ui-state-disabled");
         jQuery("#manage-resource").removeClass("ui-state-disabled");
-      }
+   //  }
     });
   }(jQuery));
 
@@ -1372,12 +1372,13 @@ sidora.resources.individualPanel.Create = function() {
   });
   jQuery('#edit-resource-metadata-menu').unbind('click');
   jQuery('#edit-resource-metadata-menu').click(function(){
-    var pids = sidora.resources.getHighlighted();
-    if (pids.length != 1) return;
-    Shadowbox.open({
-      content:    "../edit_metadata/"+sidora.resources.individualPanel.resourceOfInterest.pid+"",
+    var pids_array = sidora.resources.getHighlighted();
+  //  if (pids.length != 1) return;
+  pids = pids_array.join("&");
+	  Shadowbox.open({
+      content:    "../edit_metadata/"+pids+"",
       player:     "iframe",
-      title:      "Edit Metadata",
+      title:      "Edit Metadata-Multi",
       options: {
         onFinish:  function(){}
       }

@@ -95,7 +95,7 @@ sidora_util.lock.Release = function(pidToKill){
 
 sidora_util.ParentPid = function(){
   var pid = '';
-  var checkAgainst = ["/sidora/create_concept","/sidora/create_resource","/sidora/edit_metadata"];
+  var checkAgainst = ["/sidora/create_concept","/sidora/create_resource","/sidora/edit_metadata","/sidora/edit_metamulti"];
   for (var i = 0; i < checkAgainst.length; i++){ 
     var piecesToCheck = checkAgainst[i];
     var ptcLocation = window.location.href.indexOf(piecesToCheck);
