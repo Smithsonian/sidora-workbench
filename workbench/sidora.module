@@ -80,6 +80,12 @@ function sidora_menu() {
       'access callback' => 'user_is_logged_in',
       'type' => MENU_CALLBACK,
     ),
+    'sidora/open_access' => array(
+      'description' => 'This is information that is available to all, regardless of log-in status',
+      'page callback' => 'sidora_open_access',
+      'access callback' => TRUE,
+      'type' => MENU_CALLBACK,
+    ),
     'sidora/edit_metadata' => array(
       'title' => 'Edit Metadata',
       'description' => 'Edit the metadata of a datastream with a specified form',
@@ -1322,11 +1328,35 @@ function sidora_get_html_flexpaper($pid,$dsid = 'OBJ.swf'){
 ';
   return $to_return;
 }
+function sidora_xsl_information($pid, $return_file_content = FALSE){
+  $xsl_config = sidora_get_xsl_file_config_for_object($pid);
+  if (empty($xsl_config)) return;
+  if ($return_file_content === FALSE){
+    print(json_encode($xsl_config));
+  }else{
+    print(sidora_xsl_string($xsl_config->file));
+  }
+}
 /**
  * Used only for testing purposes.  Should not be called by the main application
  */
 function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $extra = ''){
   global $user;
+  if ($one == 'xsls'){
+    if ($two != 'two'){
+      //$object = sidora_obj($two);
+      $xsl_file = sidora_get_xsl_file_for_object($two); 
+      dsm($xsl_file);
+      dsm(sidora_xsl_string($xsl_file));
+    }
+    $existing_json_sidora_form_config = variable_get('xsl_form_config', '');
+    $sfc = json_decode($existing_json_sidora_form_config);
+    dsm($sfc);
+    foreach ($sfc->xsl_config as $config_line){
+      
+    }
+    return 'xsl_file_information';
+  }
   if ($one == 'codebooks'){
     print 'ding';
     $pid = $two;
@@ -2333,6 +2363,62 @@ function sidora_user_table($members, $user_pid) {
 
   return $output;
 }
+function sidora_get_xsl_file_config_for_object($pid){
+  $xsl_file = '';
+  $existing_json_sidora_form_config = variable_get('xsl_form_config', '');
+  $sfc = json_decode($existing_json_sidora_form_config);
+  //determine the current form and model
+  $sidora_data = sidora_get_form_and_dsid($pid);
+  $object = sidora_obj($pid);
+  $preferred_dsid = $sidora_data['dsid'];
+  $form_name = $sidora_data['form_name'];
+  $models = $object->models;
+  $perfect_match = FALSE;
+  //So search through the sfc until you find one that matches
+  //Cut out early if a perfect match is found (matches form/model/preferred_dsid)
+  $dsid_to_use = '';
+  $curr_check = NULL;
+  for ($sfci = 0; $sfci < sizeof($sfc->xsl_config) && !$perfect_match; $sfci++){
+
+    $curr_check = $sfc->xsl_config[$sfci];
+    //var_dump($curr_check);
+    $model_match = in_array($curr_check->model,$models);
+    $form_match = $curr_check->form == $form_name;
+    //$dsid_match = $curr_check->dsid == $preferred_dsid;
+    //print 'mm:'.$model_match.' for:'.$curr_check->model;
+    //var_dump($models);
+    //print 'fm:'.$form_match.' for:'.$form_name.' vs:'.$curr_check->form;
+
+    if ($model_match && $form_match){
+      $perfect_match = TRUE;
+      $dsid_to_use = $curr_check->dsid;
+      //print 'Setting dsid to use to '.$dsid_to_use;
+    }
+    if ($model_match && $form_match){
+      $xsl_file = $curr_check->file;
+    }
+  }
+  //print "\n";
+  //print 'perfect match:'.$perfect_match;
+  //print "\n";
+  //var_dump($curr_check);
+  if ($perfect_match) return $curr_check;
+  return NULL;
+}
+function sidora_get_xsl_file_for_object($pid){
+  $curr_check = sidora_get_xsl_file_config_for_object($pid);
+  if (empty($curr_check)) return NULL;
+  return $curr_check->file;
+}
+function sidora_open_access($info_type, $pid){
+  switch($info_type) {
+    case 'xsl':
+    case 'xsl_config':
+      sidora_xsl_information($pid, $info_type == 'xsl');
+      break;
+  }
+  exit();
+}
 function sidora_info_json($pid, $type='resources', $specific_meta = '', $download = '', $formatted = '', $limit = NULL, $offset = NULL){
   global $user;
   $to_output = '';
@@ -2429,36 +2515,7 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
         //If this is to be based on the xsl_form_config
         $xsl_file = '';
         if ($specific_meta == 'sidora_xsl_config_variable'){
-          //determine the current form and model
-          $sidora_data = sidora_get_form_and_dsid($pid);
-          $preferred_dsid = $sidora_data['dsid'];
-          $form_name = $sidora_data['form_name'];
-          $models = $object->models;
-          $perfect_match = FALSE;
-          //So search through the sfc until you find one that matches
-          //Cut out early if a perfect match is found (matches form/model/preferred_dsid)
-          $dsid_to_use = '';
-          for ($sfci = 0; $sfci < sizeof($sfc->xsl_config) && !$perfect_match; $sfci++){
-            
-            $curr_check = $sfc->xsl_config[$sfci];
-            //var_dump($curr_check);
-            $model_match = in_array($curr_check->model,$models);
-            $form_match = $curr_check->form == $form_name;
-            //$dsid_match = $curr_check->dsid == $preferred_dsid;
-            //print 'mm:'.$model_match.' for:'.$curr_check->model;
-            //var_dump($models);
-            //print 'fm:'.$form_match.' for:'.$form_name.' vs:'.$curr_check->form;
-            
-            if ($model_match && $form_match){
-              $perfect_match = TRUE;
-              $dsid_to_use = $curr_check->dsid;
-              //print 'Setting dsid to use to '.$dsid_to_use;
-            }
-            if ($model_match && $form_match){
-              $xsl_file = $curr_check->file;
-             
-            }
-          }
+          $xsl_file = sidora_get_xsl_file_for_object($pid);
           if (empty($dsid_to_use)){
             $specific_meta = 'all';
           }else{
