@@ -33,6 +33,7 @@ sidora.concept.LoadContentHelp.Resources.TableLoad = function(conceptOfInterest)
                 },
      'sPaginationType': "input",
      'lengthMenu':[5,10,50,100],
+		 'pageLength' : (readCookie('Drupal.pageLength') == '')?'5':readCookie('Drupal.pageLength'),
      'processing': true,
      'serverSide': true,
      'ordering' : false,
@@ -81,6 +82,11 @@ sidora.concept.LoadContentHelp.Resources.TableLoad = function(conceptOfInterest)
         jQuery("#manage-resource").removeClass("ui-state-disabled");
       }
     });
+		table.on( 'length', function ( e, settings, len ) {
+    console.log( 'New page length: '+len );
+		writeCookie('Drupal.pageLength',len,'30')
+		
+} );
   }(jQuery));
 
 }
@@ -1739,3 +1745,28 @@ function getPid( jsonString ) {
 	var pidArray = pidString.split(":");
 	return (pidArray[1]+":"+pidArray[2]);
 }	
+function writeCookie(name,value,days) {
+    var date, expires;
+    if (days) {
+        date = new Date();
+        date.setTime(date.getTime()+(days*24*60*60*1000));
+        expires = "; expires=" + date.toGMTString();
+            }else{
+        expires = "";
+    }
+    document.cookie = name + "=" + value + expires;
+}
+function readCookie(name) {
+    var i, c, ca, nameEQ = name + "=";
+    ca = document.cookie.split(';');
+    for(i=0;i < ca.length;i++) {
+        c = ca[i];
+        while (c.charAt(0)==' ') {
+            c = c.substring(1,c.length);
+        }
+        if (c.indexOf(nameEQ) == 0) {
+            return c.substring(nameEQ.length,c.length);
+        }
+    }
+    return '';
+}
