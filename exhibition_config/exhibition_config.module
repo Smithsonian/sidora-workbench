@@ -412,11 +412,7 @@ function exhibition_config_form_submit($form, &$form_state) {
     }
     */
     if ($output !== FALSE){
-     if ($form['is_available']['#value']){		
-       drupal_set_message(t('Configuration saved.'));
-		 }else{
-			 drupal_set_message(t('Configuration saved. Exhibition not set to show publicly!!'),'warning');
-		 }	
+      drupal_set_message(t('Configuration saved.'));
     }else{
       drupal_set_message(t('Database Error.'), 'error');
     }
