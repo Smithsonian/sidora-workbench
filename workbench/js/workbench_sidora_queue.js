@@ -104,14 +104,26 @@ SidoraQueue.prototype.Done = function(completedItem, ajaxReturn){
     this.NotificationWindow.Show(toShow, true);
   }else{
     if (!completedItem.isSilent) this.NotificationWindow.Show(completedItem.userFriendlyName);
-    for (var i = 0; i < completedItem.pidsBeingProcessed.length; i++){
+    var processedResourceArray = completedItem.userFriendlyName.split(':');
+		for (var i = 0; i < completedItem.pidsBeingProcessed.length; i++){
       if (sidora.concept.GetPid() == completedItem.pidsBeingProcessed[i]){
-        sidora.concept.LoadContent();
+			 sidora.concept.LoadContent();
+        var processedResourceCountArray = processedResourceArray[1].split(' of ');
+				if (processedResourceCountArray[0] == processedResourceCountArray[1]){
+           var newPid = getPid(jsonString);
+					 console.log("new pid : "+newPid);
+					 if (newPid != ''){
+					   sidora.resources.individualPanel.resourceOfInterest = {
+             	'pid': newPid
+						 };
+						 
+					 }	
+				}
       }
     }
   }
   console.log("done function of queue:"+completedItem.userFriendlyName);
-}
+ }
 SidoraQueue.prototype.NotificationWindow = {"showingError":false};
 SidoraQueue.prototype.NotificationWindow.MouseIsInside = false;
 SidoraQueue.prototype.NotificationWindow.SecondsOnScreen = 4;
