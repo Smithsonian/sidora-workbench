@@ -33,14 +33,15 @@ sidora.concept.LoadContentHelp.Resources.TableLoad = function(conceptOfInterest)
                 },
      'sPaginationType': "input",
      'lengthMenu':[5,10,50,100],
+		 'pageLength' : (readCookie('Drupal.pageLength') == '')?'5':readCookie('Drupal.pageLength'),
      'processing': true,
      'serverSide': true,
      'ordering' : false,
      'ajax': jQuery.fn.dataTable.pipeline({
        url: '../info/'+conceptOfInterest+'/resources/all/browser/dataTableServerSideProcessing',
        pages: 2
-     })
-  });
+     }),
+	});
   (function($){
     var table = $('#res_table').DataTable();
    $('#res_table tbody').on( 'click', 'tr', function (e) {
@@ -73,14 +74,19 @@ sidora.concept.LoadContentHelp.Resources.TableLoad = function(conceptOfInterest)
           sidora.resources.individualPanel.CreateAndInit();
       }
       //Edit metadata and delete are only available per resource (no batch yet) so disable them if not exactly one left
-      if (pids.length != 1){
-        jQuery("#edit-resource-metadata-menu").addClass("ui-state-disabled");
-        jQuery("#manage-resource").addClass("ui-state-disabled");
-      }else{
+    //  if (pids.length != 1){
+    //    jQuery("#edit-resource-metadata-menu").addClass("ui-state-disabled");
+  //      jQuery("#manage-resource").addClass("ui-state-disabled");
+   //   }else{
         jQuery("#edit-resource-metadata-menu").removeClass("ui-state-disabled");
         jQuery("#manage-resource").removeClass("ui-state-disabled");
-      }
+   //  }
     });
+		table.on( 'length', function ( e, settings, len ) {
+    console.log( 'New page length: '+len );
+		writeCookie('Drupal.pageLength',len,'30')
+		
+} );
   }(jQuery));
 
 }
@@ -108,7 +114,13 @@ sidora.concept.LoadContentHelp.Resources.TableActionsSetup = function(){
     if (info.page > 0) jQuery("#sidora-resources-button-prev").removeClass("disabled");
     jQuery('#sidora-resources-page-number').val((1+info.page));
     jQuery('#sidora-resources-page-count').html(' of '+info.pages );
-  } );
+    if (sidora.resources.individualPanel.resourceOfInterest){
+      	var escapePidArray = sidora.resources.individualPanel.resourceOfInterest.pid.split(":");
+      	if (escapePidArray.length){
+        	jQuery(this).find("#"+escapePidArray[0]+"\\:"+escapePidArray[1]).trigger("click");
+				}
+		}		 
+	} );
   }
 
   //Drag and drop enabling
@@ -1427,12 +1439,13 @@ sidora.resources.individualPanel.Create = function() {
   });
   jQuery('#edit-resource-metadata-menu').unbind('click');
   jQuery('#edit-resource-metadata-menu').click(function(){
-    var pids = sidora.resources.getHighlighted();
-    if (pids.length != 1) return;
-    Shadowbox.open({
-      content:    "../edit_metadata/"+sidora.resources.individualPanel.resourceOfInterest.pid+"",
+    var pids_array = sidora.resources.getHighlighted();
+  //  if (pids.length != 1) return;
+  pids = pids_array.join("&");
+	  Shadowbox.open({
+      content:    "../edit_metadata/"+pids+"",
       player:     "iframe",
-      title:      "Edit Metadata",
+      title:      "Edit Metadata-Multi",
       options: {
         onFinish:  function(){}
       }
@@ -1472,10 +1485,12 @@ sidora.resources.individualPanel.LoadRelationships = function(){
 sidora.resources.individualPanel.LoadContent = function(suppressResourceViewerReload){
   if (typeof(suppressResourceViewerReload) == 'undefined'){ suppressResourceViewerReload = false; }
   roipid = sidora.resources.individualPanel.resourceOfInterest.pid;
-    //<iframe frameborder="0" height="100%" width="100%" src="http://sidora07.dev1.myquotient.net/~randerson/sidora/GitMain/viewer/si:258581/IMAGE/ids_iframe"></iframe>
+  console.log("resource of interest is "+roipid);
+	  //<iframe frameborder="0" height="100%" width="100%" src="http://sidora07.dev1.myquotient.net/~randerson/sidora/GitMain/viewer/si:258581/IMAGE/ids_iframe"></iframe>
   if (!suppressResourceViewerReload){
     var resourceViewerHtml = '<iframe frameborder="0" height="100%" width="100%" src="'+Drupal.settings.basePath+'sidora/resource_viewer/'+sidora.resources.individualPanel.resourceOfInterest.pid+'"></iframe> ';
-    jQuery('#resourceIframeHolder').children().remove();
+    console.log("in individual panel : "+resourceViewerHtml);
+		jQuery('#resourceIframeHolder').children().remove();
     jQuery('#resourceIframeHolder').append(resourceViewerHtml);
   }
   jQuery('#resource-meta .error-message').remove();
@@ -1726,4 +1741,33 @@ http://learn.jquery.com/using-jquery-core/faq/how-do-i-select-an-element-by-an-i
 function jq( myid ) {
   return "#" + myid.replace( /(:|\.|\[|\])/g, "\\$1" );
 }
-
+function getPid( jsonString ) {
+	var pidString = jsonString.slice(jsonString.indexOf("New Pid:"),jsonString.indexOf(":End New Pid"));
+	var pidArray = pidString.split(":");
+	return (pidArray[1]+":"+pidArray[2]);
+}	
+function writeCookie(name,value,days) {
+    var date, expires;
+    if (days) {
+        date = new Date();
+        date.setTime(date.getTime()+(days*24*60*60*1000));
+        expires = "; expires=" + date.toGMTString();
+            }else{
+        expires = "";
+    }
+    document.cookie = name + "=" + value + expires;
+}
+function readCookie(name) {
+    var i, c, ca, nameEQ = name + "=";
+    ca = document.cookie.split(';');
+    for(i=0;i < ca.length;i++) {
+        c = ca[i];
+        while (c.charAt(0)==' ') {
+            c = c.substring(1,c.length);
+        }
+        if (c.indexOf(nameEQ) == 0) {
+            return c.substring(nameEQ.length,c.length);
+        }
+    }
+    return '';
+}
