@@ -24,8 +24,14 @@ jQuery().ready(function(){
 		jQuery("#edit-metadata").append("<input value=\"Finish\" class='form-submit sidora-form-finish'></input>");
 	}	
 	jQuery(".picHolder").css("height",window.innerHeight - 250 + "px");
-	jQuery(".sidora-form-prev").not(".form-button-disabled").click(function(e){ window.showPrev(); });
-	jQuery(".sidora-form-next").not(".form-button-disabled").click(function(e){ window.showNext(); });
+	jQuery(".sidora-form-prev").not(".form-button-disabled").click(function(e){ 
+	  window.showPrev(); 	
+		jQuery(".form-submit[value=Update]").hide();
+  });
+	jQuery(".sidora-form-next").not(".form-button-disabled").click(function(e){ 
+	  window.showNext();
+		jQuery(".form-submit[value=Update]").hide();
+  });
 	jQuery("#create-new-codebook").click(function(e){ window.createCodebook(); });
 	if (window.currentInfo.formname == 'Codebook'){
 		jQuery(".sidora-form-button").hide();
