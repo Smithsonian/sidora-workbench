@@ -74,13 +74,13 @@ sidora.concept.LoadContentHelp.Resources.TableLoad = function(conceptOfInterest)
           sidora.resources.individualPanel.CreateAndInit();
       }
       //Edit metadata and delete are only available per resource (no batch yet) so disable them if not exactly one left
-    //  if (pids.length != 1){
-    //    jQuery("#edit-resource-metadata-menu").addClass("ui-state-disabled");
-  //      jQuery("#manage-resource").addClass("ui-state-disabled");
-   //   }else{
+      if (pids.length != 1){
+        jQuery("#edit-resource-metadata-menu").addClass("ui-state-disabled");
+        jQuery("#manage-resource").addClass("ui-state-disabled");
+      }else{
         jQuery("#edit-resource-metadata-menu").removeClass("ui-state-disabled");
         jQuery("#manage-resource").removeClass("ui-state-disabled");
-   //  }
+     }
     });
 		table.on( 'length', function ( e, settings, len ) {
     console.log( 'New page length: '+len );
@@ -1440,12 +1440,13 @@ sidora.resources.individualPanel.Create = function() {
   jQuery('#edit-resource-metadata-menu').unbind('click');
   jQuery('#edit-resource-metadata-menu').click(function(){
     var pids_array = sidora.resources.getHighlighted();
-  //  if (pids.length != 1) return;
-  pids = pids_array.join("&");
+    if (pids_array.length != 1) return;
+    pids = pids_array.join("&");
 	  Shadowbox.open({
       content:    "../edit_metadata/"+pids+"",
       player:     "iframe",
-      title:      "Edit Metadata-Multi",
+      //title:      "Edit Metadata-Multi",
+      title:      "Edit Metadata",
       options: {
         onFinish:  function(){}
       }
