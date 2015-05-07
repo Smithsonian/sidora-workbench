@@ -170,10 +170,8 @@ sidora.concept.LoadContentHelp.Resources.TableActionsSetup = function(){
     (function($){
       var lastIdx = null;
       var table = $('#res_table').DataTable();
-      console.log("BBB1");
       $('#res_table tbody')
         .on( 'mouseover', 'td', function () {
-      console.log("BBB2");
             var colIdx = table.cell(this).index().column;
  
             if ( colIdx !== lastIdx ) {
