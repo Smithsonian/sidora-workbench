@@ -2030,12 +2030,6 @@ function sidora_create_resource_get_metadata_form_html($parent_pid, $model, $for
       ));
 		  if (!empty($current_uploads[$form_total])){
         $filename = $current_uploads[$form_total]->filename;
-        //BBB Hardcoded filename to title fields
-        //Should try to acquire this from the Islandora XML form title field instead of hardcode TODO TBD BBB
-        //if (!empty($form['mods']['titleInfo']['title'])) $form['mods']['titleInfo']['title']['#value'] = $filename;
-        //if (!empty($form['titleInfo']['title'])) $form['titleInfo']['title']['#value'] = $filename;
-        //if (!empty($form['metadata']['idinfo']['citation']['citeinfo']['title'])) $form['metadata']['idinfo']['citation']['citeinfo']['title']['#value'] = $filename;
-        //BBB End Hardcoded filename to title fields
 				$associations = xml_form_builder_get_associations(array($form_name), array(), array(), FALSE); // get the association for the current form to get the title field label
         $association = null;
         foreach($associations as $curr_association){
