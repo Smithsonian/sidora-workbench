@@ -533,7 +533,7 @@ function sidora_codebook_autocomplete($s1){
   drupal_json_output($matches);
 }
 function sidora_title_callback(){
-  return 'Sidora Workbench';
+  return 'SIdora Workbench';
 }
 /**
  * Implementation for hook_islandora_object_ingested
@@ -1764,6 +1764,7 @@ function sidora_create_concept($parent_pid = 'si:root', $model = 'si:collectionC
   
  */
 function sidora_form_alter(&$form, &$form_state, $form_id){
+  sidora_login_form_alter($form, $form_state, $form_id);
   module_load_include('inc', 'xml_form_builder', 'includes/associations');
   module_load_include('inc', 'islandora','includes/ingest.form');
   if (!array_key_exists('#submit', $form)) $form['#submit'] = array();
@@ -6058,3 +6059,63 @@ function sidora_generate_child_resource_pid_only_sparql_query($pid) {
         }";
   return $query;
 }
+/*
+ * Login dev by Gor
+ */
+
+/**
+ * Implements hook_theme().
+ *
+ * Defines the theming capabilities provided by this module.
+ */
+function sidora_theme() {
+  $themes = array (
+    'user_login' => array(
+      'render element' => 'form',
+      'template' => 'user-login', // template file user-login.tpl.php
+      'path' => drupal_get_path('module', 'sidora') . '/templates',
+      'preprocess functions' => array(
+        'sidora_preprocess_user_login'
+      )
+    )
+    // 'user_register_form' => array(
+    //   'render element' => 'form',
+    //   'template' => 'user-register-form', // template file user-register-form.tpl.php
+    //   'path' => drupal_get_path('module', 'sidora') . '/templates',
+    //   'preprocess functions' => array(
+    //     'sidora_preprocess_user_register_form'
+    //   )
+    // ),
+    // 'user_pass' => array(
+    //   'render element' => 'form',
+    //   'template' => 'user-pass', // template file user-pass.tpl.php
+    //   'path' => drupal_get_path('module', 'sidora') . '/templates',
+    //   'preprocess functions' => array(
+    //     'sidora_preprocess_user_pass'
+    //   )
+    // )
+  );
+  return $themes;
+}
+
+/*
+ *  Remove labels and add HTML5 placeholder attribute to login form
+ */
+function sidora_login_form_alter(&$form, &$form_state, $form_id) {
+  if ( TRUE === in_array( $form_id, array( 'user_login', 'user_login_block', 'user_pass') ) ) {
+    $form['name']['#attributes']['placeholder'] = t( 'Username' );
+    $form['pass']['#attributes']['placeholder'] = t( 'Password' );
+    $form['name']['#title_display'] = "invisible";
+    $form['pass']['#title_display'] = "invisible";
+  }
+}
+
+/*
+ *  Remove login form descriptions
+ */
+
+function sidora_form_user_login_alter(&$form, &$form_state) {
+    $form['name']['#description'] = t('');
+    $form['pass']['#description'] = t('');
+}
+
