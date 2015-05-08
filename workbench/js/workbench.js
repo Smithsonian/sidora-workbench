@@ -34,7 +34,10 @@ sidora.concept.LoadContentHelp.Resources.TableLoad = function(conceptOfInterest)
      'sPaginationType': "input",
      'lengthMenu':[5,10,50,100],
 		 'pageLength' : (readCookie('Drupal.pageLength') == '')?'5':readCookie('Drupal.pageLength'),
-     'processing': true,
+     'search': {
+       'search': (readCookie('Drupal.dtFilter') == '')?'':readCookie('Drupal.dtFilter')
+      },
+		 'processing': true,
      'serverSide': true,
      'ordering' : false,
      'ajax': jQuery.fn.dataTable.pipeline({
@@ -187,7 +190,10 @@ sidora.concept.LoadContentHelp.Resources.TableActionsSetup = function(){
     }(jQuery));
     */
     jQuery('#res_table_filter').after('<select id=\"sidora-resource-type-dropdown\" class="form-select" name=\"search\"><option value=\"\">All</option><option value=\"images\">Image</option><option value=\"pdf\">Digitized Text</option><option value=\"csv\">Tabular Dataset</option></select><input type="text" name="titleFilter" id="titleFilter" style="border: solid 1px lightblue;">');
-    jQuery("#res_table_length select").addClass("form-select");
+    if (readCookie('Drupal.dtFilter') != ''){
+		    jQuery("#sidora-resource-type-dropdown").val(readCookie('Drupal.dtFilter'));
+		}		
+		jQuery("#res_table_length select").addClass("form-select");
     sidora.resources.reloadDatatableBasedOnCurrentFilters = function(){
       var changeTo = jQuery('#sidora-resource-type-dropdown').val();
       jQuery('#res_table_filter input').val(changeTo);
@@ -208,7 +214,9 @@ sidora.concept.LoadContentHelp.Resources.TableActionsSetup = function(){
       },3000); //Start the search if there is no key press for 3 seconds
     });
     jQuery('#sidora-resource-type-dropdown').change(function(){
-      sidora.resources.reloadDatatableBasedOnCurrentFilters();
+      console.log( 'Filter: '+jQuery('#sidora-resource-type-dropdown').val() );
+		  writeCookie('Drupal.dtFilter',jQuery('#sidora-resource-type-dropdown').val(),'30')
+			sidora.resources.reloadDatatableBasedOnCurrentFilters();
     });
 }
 /*
