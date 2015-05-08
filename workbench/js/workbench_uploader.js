@@ -125,8 +125,8 @@ window.startBatch = function(){
 			var ccSuccess = oldSuccess;
 			var friendlyName = "Create "+currentInfo.formname+" Resource:"+(i+1)+" of "+window.batchRequests.length;
 			var onSuccess = function(){console.log("FINISH! "+friendlyName);};
-			sidora.queue.RequestPost(friendlyName,ajaxSettings.url+'/'+i,postData, onSuccess, function(){}, currentInfo.parentPid);
-			//sidora.queue.RequestPost(friendlyName,window.location.href,postData, onSuccess, function(){}, currentInfo.parentPid);
+			//sidora.queue.RequestPost(friendlyName,ajaxSettings.url+'/'+i,postData, onSuccess, function(){}, currentInfo.parentPid);
+			sidora.queue.RequestPost(friendlyName,window.location.href,postData, onSuccess, function(){}, currentInfo.parentPid);
 		}
 		sidora.queue.Next();
 		window.closeMyself();
@@ -207,7 +207,7 @@ window.setWhetherMetaEntered = function(){
  *        "edit-next" performs the Islandora submit default so the error can be shown to the user
  */
 window.prepIslandoraFormForSubmit = function(formName, onSuccessfulFormSubmit, onFailureOfFormSubmit){
-	if (jQuery("#edit-metadata").length){
+	if (jQuery("#create-resource-form").length){
 	  window.setWhetherMetaEntered();
 	}
 	if (onSuccessfulFormSubmit == null || typeof(onSuccessfulFormSubmit) != "function"){
@@ -226,10 +226,10 @@ window.prepIslandoraFormForSubmit = function(formName, onSuccessfulFormSubmit, o
   if (jQuery("#create-resource-form").length){
 		ajaxSettings = ({
 		  type: "POST",
-		  //url: window.location,
+		  url: window.location,
 		  //url: Drupal.settings.basePath+"/pure",
-		  url: window.location.origin+Drupal.settings.basePath+'sidora/test/edit_metadata',
-			//data: jQuery("#"+formName).serialize()+"&ingest=Ingest",
+		  //url: window.location.origin+Drupal.settings.basePath+'sidora/test/edit_metadata',
+			data: jQuery("#"+formName).serialize()+"&ingest=Ingest",
 		  success: function( data ) {
 			  if (data.indexOf(")"+" has been ingested") > 0){ //it would trigger success off of reading this inline JS, so break it up
 				  onSuccessfulFormSubmit(formName, this, data);
