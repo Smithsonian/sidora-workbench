@@ -1706,6 +1706,10 @@ if ($one == 'deletexsl'){
     }
  	 var_dump($curr_item);
 	 } 
+  if ($one == 'edit_metadata'){
+	  if ($two != '0'){
+		header($_SERVER['SERVER_PROTOCOL'] . ' 500 Internal Server Error', true, 500);}
+	}	
 }
 /*
  * Show the form to create a concept
