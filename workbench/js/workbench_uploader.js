@@ -207,7 +207,9 @@ window.setWhetherMetaEntered = function(){
  *        "edit-next" performs the Islandora submit default so the error can be shown to the user
  */
 window.prepIslandoraFormForSubmit = function(formName, onSuccessfulFormSubmit, onFailureOfFormSubmit){
-	window.setWhetherMetaEntered();
+	if (jQuery("#edit-metadata").length){
+	  window.setWhetherMetaEntered();
+	}
 	if (onSuccessfulFormSubmit == null || typeof(onSuccessfulFormSubmit) != "function"){
 		onSuccessfulFormSubmit = function(formName, ajaxCall, data){
 				//If successful, kill itself.
