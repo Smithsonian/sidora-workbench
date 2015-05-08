@@ -100,7 +100,7 @@ window.submitAll=function(){
 	for (var i = 0; i < toIterate.length; i++){
 		var formId = jQuery(toIterate[i]).find("form").attr('id');
 		var toConsole = function(){console.log('finished');};
-		window.prepIslandoraFormForSubmit(formId, toConsole );
+		window.prepIslandoraFormForSubmit(formId, toConsole);
 	}
 	window.startBatch();
 
@@ -125,7 +125,8 @@ window.startBatch = function(){
 			var ccSuccess = oldSuccess;
 			var friendlyName = "Create "+currentInfo.formname+" Resource:"+(i+1)+" of "+window.batchRequests.length;
 			var onSuccess = function(){console.log("FINISH! "+friendlyName);};
-			sidora.queue.RequestPost(friendlyName,window.location.href,postData, onSuccess, function(){}, currentInfo.parentPid);
+			sidora.queue.RequestPost(friendlyName,ajaxSettings.url+'/'+i,postData, onSuccess, function(){}, currentInfo.parentPid);
+			//sidora.queue.RequestPost(friendlyName,window.location.href,postData, onSuccess, function(){}, currentInfo.parentPid);
 		}
 		sidora.queue.Next();
 		window.closeMyself();
@@ -223,9 +224,10 @@ window.prepIslandoraFormForSubmit = function(formName, onSuccessfulFormSubmit, o
   if (jQuery("#create-resource-form").length){
 		ajaxSettings = ({
 		  type: "POST",
-		  url: window.location,
+		  //url: window.location,
 		  //url: Drupal.settings.basePath+"/pure",
-		  data: jQuery("#"+formName).serialize()+"&ingest=Ingest",
+		  url: window.location.origin+Drupal.settings.basePath+'sidora/test/edit_metadata',
+			//data: jQuery("#"+formName).serialize()+"&ingest=Ingest",
 		  success: function( data ) {
 			  if (data.indexOf(")"+" has been ingested") > 0){ //it would trigger success off of reading this inline JS, so break it up
 				  onSuccessfulFormSubmit(formName, this, data);
@@ -238,9 +240,10 @@ window.prepIslandoraFormForSubmit = function(formName, onSuccessfulFormSubmit, o
 	}else{
 	  ajaxSettings = ({
 		  type: "POST",
-		  url: window.location,
-		  data: jQuery("#"+formName).serialize()+"&op=Submit&update=Update",
-      success: function( data ) {
+		  //url: window.location,
+		  //data: jQuery("#"+formName).serialize()+"&op=Submit&update=Update",
+      url: window.location.origin+Drupal.settings.basePath+'sidora/test/edit_metadata',
+			success: function( data ) {
          window.aa = data;
          if (data.indexOf("<h2 class=\"element-invisible\">Error message</h2")>0){
            //If not successful, reload the page so that the user can see why
@@ -257,26 +260,6 @@ window.prepIslandoraFormForSubmit = function(formName, onSuccessfulFormSubmit, o
            }
          }
       },
-			statusCode: {
-        500: function() {
-          jQuery("#edit-update").click();
-      		jQuery(".theoverlay").remove();
-      		jQuery("body").append("<div id=\'editmetafailed\' style=\'display:none;\' title=\'Edit MetaData Failed\'><p>Internal Server Error code 500 returned.</p><p>Please contact the Site Administrator</p></div>");
-      		jQuery("#editmetafailed").dialog({
-      				height: 300,
-      				width: 350,
-      				modal: true,
-      				resizable: false,
-      				dialogClass: "no-close",
-		  				buttons: {
-        			  "OK": function() {
-								  self.parent.Shadowbox.close();
-								  jQuery( this ).dialog( "close" );
-     						}
-		 					}
-					});
-			  }
-			},
 		  dataType: "text"
 	  });//ends ajax settings
 	}
