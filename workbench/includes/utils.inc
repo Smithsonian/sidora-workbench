@@ -68,18 +68,13 @@ function sidora_update_relationship($uri, $predicate, $recipient, $related, $rem
 }
 function sidora_update_relationship_choose_exit($uri, $predicate, $recipient, $related, $remove = FALSE, $should_exit = FALSE) {
   $toReturn = array();
-  //watchdog("BBBSIU", "surce ($uri, $predicate, $recipient, $related, $remove, $should_exit) --");
   // get the repository from the tuque wrapper
   $repo = tuque_wrapper_get_repository_instance();
 
   try {
     $description = $repo->api->a->describeRepository(); // Check for repository access
-    //watchdog("BBBSIU","desc: $description --");
     $parent = $repo->getObject($recipient); // Check for object access
-    //watchdog("BBBSIU","parent: $parent class: ".get_class($parent)."--");
-    //watchdog("BBBSIU","parent rels:".get_class($parent->relationships)."--");
     if (!$remove) {
-      //watchdog("BBBSIU","pra: $uri, $predicate, $related --");
       $parent->relationships->add($uri, $predicate, $related);
     }
     else {
