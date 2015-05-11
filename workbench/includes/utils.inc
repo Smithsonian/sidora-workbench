@@ -784,6 +784,7 @@ function sidora_create_user_object(stdClass $account) {
   if (!is_object($user_projects)) {
     return FALSE;
   }
+  module_load_include('inc', 'xml_form_builder', 'includes/associations');
   $user_object = $user_projects->repository->constructObject('si-user');
   $user_object->owner = $account->name;
   $user_object->label = "{$account->name} Projects";

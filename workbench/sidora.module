@@ -543,12 +543,8 @@ function sidora_islandora_object_ingested(AbstractObject $object){
   module_load_include('inc', 'islandora', 'includes/ingest.form');
   module_load_include('inc', 'sidora', 'includes/utils');
 
-  //dsm("Sidora Object Ingested");
   $parent_pid = drupal_static('parent_collection_pid');
   $ontology_id = drupal_static('ontology_id');
-  //dsm("Object:".$object->id);
-  //dsm("Parent:".$parent_pid);
-
   $id_to_filename = cache_get("sidora:form_id_to_filename");
   if (empty($id_to_filename)){ $id_to_filename = array(); }else{ $id_to_filename = $id_to_filename->data; }
   $file_location = '';
@@ -2137,12 +2133,17 @@ function sidora_get_thumbnail_image_for_mime_type($mime_type){
  * Create a Projects folder for the user and put information about it into the Drupal db
  */
 function sidora_user_login(&$edit, $account){
+  global $user;
   try{
     if (!$account->data || !array_key_exists("islandora_user_pid",$account->data)){
       module_load_include('inc', 'sidora', 'includes/utils');
       $object = sidora_create_user_object($account);
       $data['data']['islandora_user_pid'] = $object->id;
       user_save($account,$data);
+
+      //If it's the current user, then this is their first time logging in so send them to change their password
+      if ($user->uid == $account->uid) drupal_goto($GLOBALS['base_url'] . '/user/'.$account->uid.'/edit');
+     
       //dsm("Created Sidora object for user:".$object->id);
     }
   }catch(Exception $exc){
