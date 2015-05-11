@@ -3873,10 +3873,12 @@ function sidora_get_plupload_html($elements, $button_text = 'Browse'){
 			 Browse: function(up) {
          // Called when file picker is clicked
         //console.log("browse");
-				document.getElementById("Next").disabled=true;
+				if (jQuery("#Next").length > 0)
+	  			document.getElementById("Next").disabled=true;
 				jQuery("#Next").addClass("form-button-disabled");
            },
 			 FilesAdded: function(up, files) {
+				if (jQuery("#Next").length > 0)
 				document.getElementById("Next").disabled=true;
 				jQuery("#Next").addClass("form-button-disabled");
 				 plupload.each(files, function(file) {
@@ -3916,7 +3918,8 @@ function sidora_get_plupload_html($elements, $button_text = 'Browse'){
       },
       // added by RAmlani -SID 350
 			UploadComplete: function(up,files){
-        document.getElementById("Next").disabled=false;
+				if (jQuery("#Next").length > 0)
+          document.getElementById("Next").disabled=false;
 				jQuery("#Next").removeClass("form-button-disabled");
       }
     }
