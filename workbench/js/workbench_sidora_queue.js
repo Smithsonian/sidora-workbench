@@ -78,7 +78,24 @@ SidoraQueue.prototype.Fail = function(completedItem, ajaxReturn){
   this.completedRequests.push(completedItem);
   this.completedFailedRequests.push(completedItem);
   this.NotificationWindow.Show("FAILED: " + completedItem.userFriendlyName);
-  console.log("fail:"+completedItem);
+  console.log("fail:"+ajaxReturn[0].status);
+	if (ajaxReturn[0].status == '500'){
+    this.NotificationWindow.Show("Error code 500 returned. Contact site administrator",true);
+	/*  jQuery("body").append("<div id='ajaxErrors' style='display:none;' title='"+completedItem.userFriendlyName+"'><p>The Server has returned an error code of 500.</p><p>"+completedItem.userFriendlyName+" has failed</p><p>Please contact the Site Administrator</p></div>");
+		jQuery("#ajaxErrors").dialog({
+       height: 300,
+       width: 350,
+       modal: true,
+       resizable: false,
+       dialogClass: "no-close",
+ 		  buttons: {
+         "OK": function() {
+ 						self.parent.Shadowbox.close();
+ 						jQuery( this ).dialog( "close" );
+      }
+ 		 }
+ 		});*/
+	}	
 }
 SidoraQueue.prototype.Done = function(completedItem, ajaxReturn){
   completedItem.ajaxReturn = ajaxReturn;
