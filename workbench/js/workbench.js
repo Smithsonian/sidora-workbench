@@ -118,10 +118,11 @@ sidora.concept.LoadContentHelp.Resources.TableActionsSetup = function(){
     jQuery('#sidora-resources-page-number').val((1+info.page));
     jQuery('#sidora-resources-page-count').html(' of '+info.pages );
     if (sidora.resources.individualPanel.resourceOfInterest){
-      	var escapePidArray = sidora.resources.individualPanel.resourceOfInterest.pid.split(":");
-      	if (escapePidArray.length){
-        	jQuery(this).find("#"+escapePidArray[0]+"\\:"+escapePidArray[1]).trigger("click");
-				}
+      //	var escapePidArray = sidora.resources.individualPanel.resourceOfInterest.pid.split(":");
+      //	if (escapePidArray.length){
+     //   	jQuery(this).find("#"+escapePidArray[0]+"\\:"+escapePidArray[1]).trigger("click");
+        	jQuery(this).find(jq(sidora.resources.individualPanel.resourceOfInterest.pid)).trigger("click");
+			//	}
 		}		 
 	} );
   }
@@ -456,14 +457,16 @@ sidora.InitiateJSTree = function(){
       }
       //console.log("Copy:"+toMovePid+" to:"+moveToPid);
       var jst = jQuery("#forjstree").jstree(true);
-      var newParentExistingHtml = jst.get_node(data.parent).text;
+			//var newParentExistingHtml = jst.get_node(data.parent).text;
       var newParentExistingChildConceptsNumber = parseInt(jQuery("#"+data.parent).children("a").attr("conceptchildren"));
       var npReplacer = newParentExistingChildConceptsNumber+1;
-      if (newParentExistingChildConceptsNumber == 0){
+      /*
+			if (newParentExistingChildConceptsNumber == 0){
         jst.rename_node(data.parent, newParentExistingHtml+" ("+npReplacer+")");
       }else{
         jst.rename_node(data.parent, newParentExistingHtml.substring(0,newParentExistingHtml.lastIndexOf(" ("))+" ("+npReplacer+")");
       }
+			*/
       jQuery("#"+data.parent).children("a").attr("conceptchildren",""+npReplacer);
       jst.get_node(data.parent).a_attr.conceptchildren = ""+npReplacer;
       sidora.queue.incomingRequestsAreSilent = true;
@@ -484,17 +487,18 @@ sidora.InitiateJSTree = function(){
       var jst = jQuery("#forjstree").jstree(true);
       var poi = data.parent;
       //Old Parent renumber
-      var oldParentExistingHtml = jst.get_node(poi).text;
+      //var oldParentExistingHtml = jst.get_node(poi).text;
       var oldParentExistingChildConceptsNumber = parseInt(jQuery("#"+poi).children("a").attr("conceptchildren"));
       var opReplacer = oldParentExistingChildConceptsNumber-1;
-      if (opReplacer == 0){
+      /*
+			if (opReplacer == 0){
         jst.rename_node(poi,oldParentExistingHtml.substring(0,oldParentExistingHtml.lastIndexOf(" ("))); 
       }else{
         jst.rename_node(poi,oldParentExistingHtml.substring(0,oldParentExistingHtml.lastIndexOf(" ("))+" ("+opReplacer+")");
       }
+			*/
       jQuery("#"+poi).children("a").attr("conceptchildren",""+opReplacer);
       jst.get_node(poi).a_attr.conceptchildren = ""+opReplacer;
-
       //next requests are silent
       sidora.queue.incomingRequestsAreSilent = true;
       sidora.queue.Request('Remove concept association', actionUrl, function(){
@@ -519,29 +523,31 @@ sidora.InitiateJSTree = function(){
 
       var jst = jQuery("#forjstree").jstree(true);
       //New Parent renumber
-      var newParentExistingHtml = jst.get_node(data.parent).text;
+      //var newParentExistingHtml = jst.get_node(data.parent).text;
       var newParentExistingChildConceptsNumber = parseInt(jQuery("#"+data.parent).children("a").attr("conceptchildren"));
       var npReplacer = newParentExistingChildConceptsNumber+1;
-      if (newParentExistingChildConceptsNumber == 0){
+      /*
+			if (newParentExistingChildConceptsNumber == 0){
         jst.rename_node(data.parent, newParentExistingHtml+" ("+npReplacer+")");
       }else{
         jst.rename_node(data.parent, newParentExistingHtml.substring(0,newParentExistingHtml.lastIndexOf(" ("))+" ("+npReplacer+")");
       }
+			*/
       jQuery("#"+data.parent).children("a").attr("conceptchildren",""+npReplacer);
       jst.get_node(data.parent).a_attr.conceptchildren = ""+npReplacer;
-
       //Old Parent renumber
-      var oldParentExistingHtml = jst.get_node(data.old_parent).text;
+      //var oldParentExistingHtml = jst.get_node(data.old_parent).text;
       var oldParentExistingChildConceptsNumber = parseInt(jQuery("#"+data.old_parent).children("a").attr("conceptchildren"));
       var opReplacer = oldParentExistingChildConceptsNumber-1;
-      if (opReplacer == 0){
+      /*
+			if (opReplacer == 0){
         jst.rename_node(data.old_parent,oldParentExistingHtml.substring(0,oldParentExistingHtml.lastIndexOf(" ("))); 
       }else{
         jst.rename_node(data.old_parent,oldParentExistingHtml.substring(0,oldParentExistingHtml.lastIndexOf(" ("))+" ("+opReplacer+")");
       }
+			*/
       jQuery("#"+data.old_parent).children("a").attr("conceptchildren",""+opReplacer);
       jst.get_node(data.old_parent).a_attr.conceptchildren = ""+opReplacer;
-
       //next requests are silent
       sidora.queue.incomingRequestsAreSilent = true;
       sidora.queue.Request('Concept move', actionUrl, function(){
@@ -916,16 +922,59 @@ sidora.resources.performCopyOrMove = function(copyOrMove, toLocationId){
   var action = 'move/'+fromParent;
   if (copyOrMove == 'copy'){ action = 'copy'; }
   console.log("FCR "+action+" pids:"+pids.join(",")+" dropped on:"+jQuery("#"+toLocationId).find("a").attr("pid"));
-  for(var i=0;i<pids.length;i++){
-    droppedPid = pids[i];
-    var userFriendlyName = 'Unknown action';
+	var newParentExistingChildResourcesCount = parseInt(jQuery("#"+toLocationId).find("a").attr("resourcechildren")); // the original number of resources in the target pid
+  var jst = jQuery("#forjstree").jstree(true);
+	var onSuccessfulMove = function(ajaxRequest,ajaxReturn){
+     var newParentExistingChildResourceNumber = parseInt(jQuery("#"+toLocationId).find("a").attr("resourcechildren")); // current number of resources in target pid
+     var newParentNewChildResourceNumber = newParentExistingChildResourceNumber+1;
+		 var newParentExistingHtml = jQuery("#"+toLocationId).text();
+		 if (newParentExistingChildResourceNumber == 0){
+        jst.rename_node("#"+toLocationId, newParentExistingHtml + " (" + newParentNewChildResourceNumber + ")");
+      }else{
+        jst.rename_node("#"+toLocationId, newParentExistingHtml.substring(0,newParentExistingHtml.lastIndexOf(" ("))+" (" + newParentNewChildResourceNumber + ")");
+      }
+     jQuery("#"+toLocationId).find("a").attr("resourcechildren",""+newParentNewChildResourceNumber);
+     var fromSource = jq(fromParent).substring(1);
+     var oldParentExistingChildResourceNumber = parseInt(jQuery("[pid=" + fromSource + "]").attr("resourcechildren"));
+     console.log("old parent resources = "+parseInt(jQuery("[pid=" + fromSource + "]").attr("resourcechildren")));
+     var oldParentNewChildResourceNumber = oldParentExistingChildResourceNumber - 1;
+     console.log("oldParentNewChildResourceNumber : "+oldParentNewChildResourceNumber);
+     var oldParentNode = jst.get_node(jQuery("[pid='" + fromSource + "']").closest("li").attr("id"));
+		 var oldParentExistingHtml = jQuery("#"+oldParentNode.id).text();
+		 if (oldParentNewChildResourceNumber == 0){
+        jst.rename_node(oldParentNode,oldParentExistingHtml.substring(0,oldParentExistingHtml.lastIndexOf(" ("))); 
+      }else{
+        jst.rename_node(oldParentNode,oldParentExistingHtml.substring(0,oldParentExistingHtml.lastIndexOf(" ("))+" ("+oldParentNewChildResourceNumber+")");
+      }
+      jQuery("[pid=" + fromSource + "]").attr("resourcechildren",""+oldParentNewChildResourceNumber);
+     if (newParentNewChildResourceNumber == (pids.length + newParentExistingChildResourcesCount)){
+       sidora.util.RefreshTree();
+    }	 
+   }	 
+  var onSuccessfulCopy = function(ajaxRequest,ajaxReturn){
+     var newParentExistingChildResourceNumber = parseInt(jQuery("#"+toLocationId).find("a").attr("resourcechildren"));
+     var newParentNewChildResourceNumber = newParentExistingChildResourceNumber+1;
+		 var newParentExistingHtml = jQuery("#"+toLocationId).text();
+		 if (newParentExistingChildResourceNumber == 0){
+        jst.rename_node("#"+toLocationId, newParentExistingHtml + " (" + newParentNewChildResourceNumber + ")");
+      }else{
+        jst.rename_node("#"+toLocationId, newParentExistingHtml.substring(0,newParentExistingHtml.lastIndexOf(" ("))+" (" + newParentNewChildResourceNumber + ")");
+      }
+     jQuery("#"+toLocationId).find("a").attr("resourcechildren",""+newParentNewChildResourceNumber);
+     if (newParentNewChildResourceNumber == (pids.length + newParentExistingChildResourcesCount)){
+       sidora.util.RefreshTree();
+    }	 
+   }	 
+	for(var i=0;i<pids.length;i++){
+		droppedPid = pids[i];
+		var userFriendlyName = 'Unknown action';
     if (action != 'copy'){
       jQuery(jq(pids[i])).addClass("is-being-moved");
       userFriendlyName = "Moving "+droppedPid+" from "+fromParent+" to "+droppedOn;
-      sidora.queue.Request(userFriendlyName, '../ajax_parts/'+action+'/'+droppedOn+'/'+droppedPid, null, null, [fromParent,droppedOn,droppedPid]);
+			sidora.queue.Request(userFriendlyName, '../ajax_parts/'+action+'/'+droppedOn+'/'+droppedPid, onSuccessfulMove, null, [fromParent,droppedOn,droppedPid]);
     }else{
       userFriendlyName = "Copying "+droppedPid+" from "+fromParent+" to "+droppedOn;
-      sidora.queue.Request(userFriendlyName, '../ajax_parts/'+action+'/'+droppedOn+'/'+droppedPid, null, null, [droppedOn,droppedPid]);
+      sidora.queue.Request(userFriendlyName, '../ajax_parts/'+action+'/'+droppedOn+'/'+droppedPid, onSuccessfulCopy, null, [droppedOn,droppedPid]);
     }
     console.log(userFriendlyName);
   }
@@ -1097,24 +1146,13 @@ sidora.ResizeOnWindowResize = function(){
 /*
  * Attempts to pull the number of child concepts from the tree
  */
-sidora.concept.GetConceptChildrenLength = function(suggestedName){
-  var conceptName = suggestedName;
-  //If didn't send in concept name, try to get it from tree
-  if (typeof(conceptName) == 'undefined' || conceptName == null){
-    var itemSelectorForCurrentItemInTree = 'a[href=\"'+window.location.pathname + window.location.search + window.location.hash +'\"]';
-    var directPull = jQuery(itemSelectorForCurrentItemInTree).attr("conceptchildren");
-    if (typeof(directPull) != 'undefined'){
-      return parseInt(directPull);
-    }
-    conceptName = jQuery(itemSelectorForCurrentItemInTree).text();
+sidora.concept.GetConceptChildrenLength = function(){
+  var itemSelectorForCurrentItemInTree = 'a[href=\"'+window.location.pathname + window.location.search + window.location.hash +'\"]';
+  var directPull = jQuery(itemSelectorForCurrentItemInTree).attr("conceptchildren");
+  if (typeof(directPull) != 'undefined'){
+    return parseInt(directPull);
   }
-  //If there's a (num) at the end, take number from there
-  var numConceptChildren = conceptName;
-  var newTitle = "0";
-  if (conceptName.lastIndexOf(" (") > 0){
-    newTitle = conceptName.substring(conceptName.lastIndexOf(" (")+2, conceptName.lastIndexOf(")"));
-  }
-  return parseInt(newTitle);
+  return parseInt("-1"); // return -1 if there's any error in retrieving the conceptchildren value.
 }
 /*
  * Attempts to pull a concept name from the tree or just returns whatever is passed in
@@ -1241,7 +1279,22 @@ sidora.util.Confirm = function(title, questionText, onConfirmation, onCancel, co
  */
 sidora.concept.DeleteConcept = function(){
   jQuery('#deleteConceptDialog').remove();
-  if (sidora.concept.GetConceptChildrenLength() + sidora.resources.GetLength() > 0){
+  if (sidora.concept.GetConceptChildrenLength() == "-1"){
+    jQuery("body").append("<div id='deleteConceptDialog' style='display:none;' title='Delete Concept'><p>Error getting the child concepts for this concept. Cannot delete this concept</p><p>"+sidora.concept.GetName()+" ("+sidora.concept.GetPid()+")</p></div>");
+    jQuery("#deleteConceptDialog").dialog({
+      resizable: false,
+      height:250,
+      width: 400,
+      modal: true,
+      buttons: {
+        "Close": function() {
+          jQuery( this ).dialog( "close" );
+        }
+      }
+    });
+    return;
+	}
+	if (sidora.concept.GetConceptChildrenLength() + sidora.resources.GetLength() > 0){
     jQuery("body").append("<div id='deleteConceptDialog' style='display:none;' title='Delete Concept'><p>This concept has "+sidora.concept.GetConceptChildrenLength()+" concept(s) and has "+sidora.resources.GetLength()+" resource(s) as children. It cannot be deleted while it has children.</p><p>"+sidora.concept.GetName()+" ("+sidora.concept.GetPid()+")</p></div>");
     jQuery("#deleteConceptDialog").dialog({
       resizable: false,
@@ -1748,7 +1801,7 @@ http://learn.jquery.com/using-jquery-core/faq/how-do-i-select-an-element-by-an-i
 function jq( myid ) {
   return "#" + myid.replace( /(:|\.|\[|\])/g, "\\$1" );
 }
-function getPid( jsonString ) {
+function getNewPid( jsonString ) {
 	var pidString = jsonString.slice(jsonString.indexOf("New Pid:"),jsonString.indexOf(":End New Pid"));
 	var pidArray = pidString.split(":");
 	return (pidArray[1]+":"+pidArray[2]);
