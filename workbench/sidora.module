@@ -2022,6 +2022,7 @@ function sidora_create_resource_get_upload_form_html($model, $upload_button_text
     'si:generalImageCModel' => array('jpg', 'png', 'gif', 'tiff', 'tif', 'jp2'),
     'si:datasetCModel' => array('csv', 'xml', 'xlsx', 'xls', 'dat', 'med', 'arg', 'slt'),
     'si:fieldbookCModel' => array('pdf'),
+    'si:siBasicObject' => array('mp3','mp4','aiff','aac','ogg','wav','wma'),
     '*' => array('*'),
   );
   if (array_key_exists($model, $file_extensions)){
@@ -2700,10 +2701,11 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
       break;
     case 'resources':
       $resource_types = array(
-        'all' => array('si:imageCModel', 'si:generalImageCModel','si:fieldbookCModel','si:datasetCModel'),
+        'all' => array('si:imageCModel', 'si:generalImageCModel','si:fieldbookCModel','si:datasetCModel','si:siBasicObject'),
         'images' => array('si:imageCModel', 'si:generalImageCModel'),
         'pdf' => array('si:fieldbookCModel'),
         'csv' => array('si:datasetCModel'),
+        'audio' => array('si:siBasicObject'),
         'text' => FALSE,
         'video' => FALSE
       );
@@ -2830,6 +2832,7 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
           $to_output .=   '<li><a href="" model="si:generalImageCModel" formname="General Image Description" ontology-id="GeneralImage_GeneralImage">General&nbsp;Image&nbsp;Description&nbsp;(MODS)</a></li>';
           $to_output .=   '<li><a href="" model="si:generalImageCModel" formname="Camera Trap Image" ontology-id="GeneralImage_CameraTrapImage">Camera&nbsp;Trap&nbsp;Image&nbsp;(MODS)</a></li>';
           $to_output .= '</ul></li>';
+          $to_output .= '<li><a href="" model="si:siBasicObject" formname="Dataset" ontology-id="Datasets">Audio&nbsp;Files</a></li>';
           $to_output .= '</ul>';
         }
       break;
@@ -6195,7 +6198,7 @@ function sidora_generate_child_resource_pid_only_sparql_query($pid) {
  *
  * Defines the theming capabilities provided by this module.
  */
-function sidora_theme() {
+function seven_theme() {
   $themes = array (
     'user_login' => array(
       'render element' => 'form',
