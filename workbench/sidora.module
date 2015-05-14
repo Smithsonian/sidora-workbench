@@ -533,7 +533,7 @@ function sidora_codebook_autocomplete($s1){
   drupal_json_output($matches);
 }
 function sidora_title_callback(){
-  return 'Sidora Workbench';
+  return 'SIdora Workbench';
 }
 /**
  * Implementation for hook_islandora_object_ingested
@@ -1896,7 +1896,7 @@ function sidora_form_alter(&$form, &$form_state, $form_id){
   if (!array_key_exists('#submit', $form)) $form['#submit'] = array();
   array_unshift($form['#submit'], 'sidora_form_submit_alter');
   $association = NULL;
-  if ($form_id == 'xml_form_builder_ingest_form' || $form_id == 'islandora_ingest_form'){  // || $form_id == 'xml_form_builder_datastream_form_metadata_form'){
+  if ($form_id == 'xml_form_builder_ingest_form' || $form_id == 'islandora_ingest_form'){
     if (array_key_exists('form_build_id', $_POST)){
       $submitted_form_id = $_POST['form_build_id'];
       $association = sidora_find_association($form_state, $submitted_form_id);
@@ -3410,9 +3410,7 @@ function sidora_move($move_from_id, $copy_to_id, $pid, $show_output = TRUE){
   $copied = sidora_copy($copy_to_id, $pid, FALSE);
   sidora_release_lock($copy_to_id);
   sidora_release_lock($move_from_id);
- 	// SID-141- When moving duplicate resources, resources were not being removed from the source.
 	if (($copied['error']) && ($copied['code'] != 'copy4')){
-	//if ($copied['error']){
     if ($show_output){
       print json_encode($copied);
       exit();
@@ -4005,10 +4003,12 @@ function sidora_get_plupload_html($elements, $button_text = 'Browse'){
 			 Browse: function(up) {
          // Called when file picker is clicked
         //console.log("browse");
-				document.getElementById("Next").disabled=true;
+				if (jQuery("#Next").length > 0)
+	  			document.getElementById("Next").disabled=true;
 				jQuery("#Next").addClass("form-button-disabled");
            },
 			 FilesAdded: function(up, files) {
+				if (jQuery("#Next").length > 0)
 				document.getElementById("Next").disabled=true;
 				jQuery("#Next").addClass("form-button-disabled");
 				 plupload.each(files, function(file) {
@@ -4048,7 +4048,8 @@ function sidora_get_plupload_html($elements, $button_text = 'Browse'){
       },
       // added by RAmlani -SID 350
 			UploadComplete: function(up,files){
-        document.getElementById("Next").disabled=false;
+				if (jQuery("#Next").length > 0)
+          document.getElementById("Next").disabled=false;
 				jQuery("#Next").removeClass("form-button-disabled");
       }
     }
