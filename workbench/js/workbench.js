@@ -86,7 +86,7 @@ sidora.concept.LoadContentHelp.Resources.TableLoad = function(conceptOfInterest)
      }
     });
 		table.on( 'length', function ( e, settings, len ) {
-    console.log( 'New page length: '+len );
+    //console.log( 'New page length: '+len );
 		writeCookie('Drupal.pageLength',len,'30')
 		
 } );
@@ -118,15 +118,10 @@ sidora.concept.LoadContentHelp.Resources.TableActionsSetup = function(){
     jQuery('#sidora-resources-page-number').val((1+info.page));
     jQuery('#sidora-resources-page-count').html(' of '+info.pages );
     if (sidora.resources.individualPanel.resourceOfInterest){
-      //	var escapePidArray = sidora.resources.individualPanel.resourceOfInterest.pid.split(":");
-      //	if (escapePidArray.length){
-     //   	jQuery(this).find("#"+escapePidArray[0]+"\\:"+escapePidArray[1]).trigger("click");
-        	jQuery(this).find(jq(sidora.resources.individualPanel.resourceOfInterest.pid)).trigger("click");
-			//	}
+      jQuery(this).find(jq(sidora.resources.individualPanel.resourceOfInterest.pid)).trigger("click");
 		}		 
 	} );
-  }
-
+}
   //Drag and drop enabling
   jQuery('#res_table tbody').on('mousedown','tr', function (e) {
     //If the mousedown is on something that is in the middle of a move process, ignore the mousedown
@@ -213,7 +208,7 @@ sidora.concept.LoadContentHelp.Resources.TableActionsSetup = function(){
       },3000); //Start the search if there is no key press for 3 seconds
     });
     jQuery('#sidora-resource-type-dropdown').change(function(){
-      console.log( 'Filter: '+jQuery('#sidora-resource-type-dropdown').val() );
+      //console.log( 'Filter: '+jQuery('#sidora-resource-type-dropdown').val() );
 		  writeCookie('Drupal.dtFilter',jQuery('#sidora-resource-type-dropdown').val(),'30')
 			sidora.resources.reloadDatatableBasedOnCurrentFilters();
     });
@@ -327,7 +322,7 @@ sidora.concept.LoadContentHelp.CreateMenu = function(conceptOfInterest){
           if (typeof(form) != 'undefined') {
             url += form + "/" + ontologyId + "/fresh";
           }
-          console.log('form:'+form);
+          //console.log('form:'+form);
           Shadowbox.close();
           setTimeout(function(){
           Shadowbox.open({
@@ -924,33 +919,6 @@ sidora.resources.performCopyOrMove = function(copyOrMove, toLocationId){
   console.log("FCR "+action+" pids:"+pids.join(",")+" dropped on:"+jQuery("#"+toLocationId).find("a").attr("pid"));
 	var newParentExistingChildResourcesCount = parseInt(jQuery("#"+toLocationId).find("a").attr("resourcechildren")); // the original number of resources in the target pid
   var jst = jQuery("#forjstree").jstree(true);
-	var onSuccessfulMove = function(ajaxRequest,ajaxReturn){
-     var newParentExistingChildResourceNumber = parseInt(jQuery("#"+toLocationId).find("a").attr("resourcechildren")); // current number of resources in target pid
-     var newParentNewChildResourceNumber = newParentExistingChildResourceNumber+1;
-		 var newParentExistingHtml = jQuery("#"+toLocationId).text();
-		 if (newParentExistingChildResourceNumber == 0){
-        jst.rename_node("#"+toLocationId, newParentExistingHtml + " (" + newParentNewChildResourceNumber + ")");
-      }else{
-        jst.rename_node("#"+toLocationId, newParentExistingHtml.substring(0,newParentExistingHtml.lastIndexOf(" ("))+" (" + newParentNewChildResourceNumber + ")");
-      }
-     jQuery("#"+toLocationId).find("a").attr("resourcechildren",""+newParentNewChildResourceNumber);
-     var fromSource = jq(fromParent).substring(1);
-     var oldParentExistingChildResourceNumber = parseInt(jQuery("[pid=" + fromSource + "]").attr("resourcechildren"));
-     console.log("old parent resources = "+parseInt(jQuery("[pid=" + fromSource + "]").attr("resourcechildren")));
-     var oldParentNewChildResourceNumber = oldParentExistingChildResourceNumber - 1;
-     console.log("oldParentNewChildResourceNumber : "+oldParentNewChildResourceNumber);
-     var oldParentNode = jst.get_node(jQuery("[pid='" + fromSource + "']").closest("li").attr("id"));
-		 var oldParentExistingHtml = jQuery("#"+oldParentNode.id).text();
-		 if (oldParentNewChildResourceNumber == 0){
-        jst.rename_node(oldParentNode,oldParentExistingHtml.substring(0,oldParentExistingHtml.lastIndexOf(" ("))); 
-      }else{
-        jst.rename_node(oldParentNode,oldParentExistingHtml.substring(0,oldParentExistingHtml.lastIndexOf(" ("))+" ("+oldParentNewChildResourceNumber+")");
-      }
-      jQuery("[pid=" + fromSource + "]").attr("resourcechildren",""+oldParentNewChildResourceNumber);
-     if (newParentNewChildResourceNumber == (pids.length + newParentExistingChildResourcesCount)){
-       sidora.util.RefreshTree();
-    }	 
-   }	 
   var onSuccessfulCopy = function(ajaxRequest,ajaxReturn){
      var newParentExistingChildResourceNumber = parseInt(jQuery("#"+toLocationId).find("a").attr("resourcechildren"));
      var newParentNewChildResourceNumber = newParentExistingChildResourceNumber+1;
@@ -965,6 +933,31 @@ sidora.resources.performCopyOrMove = function(copyOrMove, toLocationId){
        sidora.util.RefreshTree();
     }	 
    }	 
+	var onSuccessfulMove = function(ajaxRequest,ajaxReturn){
+     var newParentExistingChildResourceNumber = parseInt(jQuery("#"+toLocationId).find("a").attr("resourcechildren"));
+     var newParentNewChildResourceNumber = newParentExistingChildResourceNumber+1;
+		 var newParentExistingHtml = jQuery("#"+toLocationId).text();
+		 if (newParentExistingChildResourceNumber == 0){
+        jst.rename_node("#"+toLocationId, newParentExistingHtml + " (" + newParentNewChildResourceNumber + ")");
+      }else{
+        jst.rename_node("#"+toLocationId, newParentExistingHtml.substring(0,newParentExistingHtml.lastIndexOf(" ("))+" (" + newParentNewChildResourceNumber + ")");
+      }
+     jQuery("#"+toLocationId).find("a").attr("resourcechildren",""+newParentNewChildResourceNumber);
+		 var fromSource = jq(fromParent).substring(1);
+     var oldParentExistingChildResourceNumber = parseInt(jQuery("[pid=" + fromSource + "]").attr("resourcechildren"));
+     var oldParentNewChildResourceNumber = oldParentExistingChildResourceNumber - 1;
+     var oldParentNode = jst.get_node(jQuery("[pid='" + fromSource + "']").closest("li").attr("id"));
+		 var oldParentExistingHtml = jQuery("#"+oldParentNode.id).text();
+		 if (oldParentNewChildResourceNumber == 0){
+        jst.rename_node(oldParentNode,oldParentExistingHtml.substring(0,oldParentExistingHtml.lastIndexOf(" ("))); 
+      }else{
+        jst.rename_node(oldParentNode,oldParentExistingHtml.substring(0,oldParentExistingHtml.lastIndexOf(" ("))+" ("+oldParentNewChildResourceNumber+")");
+      }
+      jQuery("[pid=" + fromSource + "]").attr("resourcechildren",""+oldParentNewChildResourceNumber);
+			if (newParentNewChildResourceNumber == (pids.length + newParentExistingChildResourcesCount)){
+        sidora.util.RefreshTree();
+      }	 
+  }	 
 	for(var i=0;i<pids.length;i++){
 		droppedPid = pids[i];
 		var userFriendlyName = 'Unknown action';
