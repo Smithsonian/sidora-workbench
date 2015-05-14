@@ -1715,7 +1715,7 @@ sidora.manage.OpenCurrentConfig = function(){
             });
             jQuery("#addDatastream").click(function(){
               jQuery('#addDatastreamDialog').remove();
-              jQuery("body").append("<div id='addDatastreamDialog' style='display:none;' title='Add Datastream'><iframe height='1000%' width='100%' style='height:100%;width:100%' src='/sidora/manage/"+pid+"/upload' frameborder='0' marginwidth='0' marginheight='0' allowfullscreen></iframe></div>");
+              jQuery("body").append("<div id='addDatastreamDialog' style='display:none;' title='Add Datastream'><iframe height='1000%' width='100%' style='height:100%;width:100%' src='"+Drupal.settings.basePath+"sidora/manage/"+pid+"/upload' frameborder='0' marginwidth='0' marginheight='0' allowfullscreen></iframe></div>");
               jQuery("#addDatastreamDialog").dialog({
                 resizable: true,
                 height:600,
