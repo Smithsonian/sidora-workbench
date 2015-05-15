@@ -1651,7 +1651,6 @@ function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $ex
 if ($one == 'exhibition'){ 
 //	if (module_exists('exhibition_config')){
 	//	$exhibition_data = exhibition_config_get_config_data($two);
-  	//var_dump($exhibition_data);
 //	}
   $exhibitions['action'] = 'return false;';
 	$exhibitions['ui_state_disable'] = 'true';
@@ -1758,6 +1757,17 @@ function sidora_create_concept($parent_pid = 'si:root', $model = 'si:collectionC
   
  */
 function sidora_form_alter(&$form, &$form_state, $form_id){
+  drupal_add_http_header(
+    'Pragma',
+    'no-Cache',
+    FALSE
+  );
+  drupal_add_http_header(
+    'Cache-Control', 
+    'no-store, no-cache, must-revalidate, post-check=0, pre-check=0', 
+    FALSE
+  );
+
   module_load_include('inc', 'xml_form_builder', 'includes/associations');
   module_load_include('inc', 'islandora','includes/ingest.form');
   if (!array_key_exists('#submit', $form)) $form['#submit'] = array();
@@ -1786,7 +1796,7 @@ function sidora_form_alter(&$form, &$form_state, $form_id){
   switch ($form_id) {
     case 'user_login':
     case 'user_login_block':
-      $form['link'] = array('#markup' => 'Not a member?'.l(t(' To request an account click here.'),'mailto:'.variable_get('site_mail', '').'?Subject=Request SIdora Account&body=My name is:-Enter Name- and my Email is:-Enter Email- and I would like to request a new SIdora Account').'<script>jQuery(".page-title").html("Welcome to the SIdora Workbench");jQuery("body").append(\'<div style="padding:20px">'.l(t('Can\'t access your account?'),'mailto:'.variable_get('site_mail', '').'?Subject=SIdora Account Help&body=My name is:-Enter Name- and my Email is:-Enter Email- and I am requesting help with my SIdora Account.  -Enter more information that indicates the kind of assistance you would like-').'</div>\');</script>');
+      $form['link'] = array('#markup' => 'Not a member?'.l(t(' To request an account click here.'),'mailto:'.variable_get('site_mail', '').'?Subject=Request SIdora Account&body=My name is:-Enter Name- and my Email is:-Enter Email- and I would like to request a new SIdora Account').'<script>jQuery(".page-title").html("Welcome to the SIdora Workbench");jQuery("body").append(\'<div style="padding:20px">'.l(t('Can\'t access your account?'),'mailto:'.variable_get('site_mail', '').'?Subject=SIdora Account Help&body=My name is:-Enter Name- and my Email is:-Enter Email- and I am requesting help with my SIdora Account.  -Enter more information that indicates the kind of assistance you would like-').'</div>\');</script><br/>');
       $form['login_message'] = array('#markup' => ''.variable_get('sidora_login_message', '').'');
       break;
   }
@@ -2142,7 +2152,12 @@ function sidora_user_login(&$edit, $account){
       user_save($account,$data);
 
       //If it's the current user, then this is their first time logging in so send them to change their password
-      if ($user->uid == $account->uid) drupal_goto($GLOBALS['base_url'] . '/user/'.$account->uid.'/edit');
+      if ($user->uid == $account->uid){
+        //$the_url = user_pass_reset_url($account);
+        //drupal_set_message($the_url);
+        //drupal_goto($the_url);
+      }
+      //drupal_goto($GLOBALS['base_url'] . '/user/'.$account->uid.'/edit');
      
       //dsm("Created Sidora object for user:".$object->id);
     }
@@ -5946,3 +5961,79 @@ function sidora_generate_child_resource_pid_only_sparql_query($pid) {
         }";
   return $query;
 }
+
+/**
+ * Implements hook_theme().
+ *
+ * Defines the theming capabilities provided by this module.
+ */
+function seven_theme() {
+  $themes = array (
+    'user_login_form' => array(
+      'render element' => 'form',
+      'template' => 'user-login', // template file user-login.tpl.php
+      'path' => drupal_get_path('module', 'sidora') . '/templates',
+      'preprocess functions' => array(
+        'sidora_preprocess_user_login'
+      )
+    ),
+    'user_login' => array(
+      'render element' => 'form',
+      'template' => 'user-login', // template file user-login.tpl.php
+      'path' => drupal_get_path('module', 'sidora') . '/templates',
+      'preprocess functions' => array(
+        'sidora_preprocess_user_login'
+      )
+    ),
+    'user_pass' => array(
+       'render element' => 'form',
+       'template' => 'user-pass', // template file user-pass.tpl.php
+       'path' => drupal_get_path('module', 'sidora') . '/templates',
+       'preprocess functions' => array(
+         'sidora_preprocess_user_pass'
+       )
+     )
+  );
+  return $themes;
+}
+
+function seven_status_messages(){
+  global $variables;
+  $messages = (drupal_get_messages());
+  foreach($messages as $message_type=>$message_group){
+    foreach($message_group as $message){
+      if (sidora_startsWith($message, 'Sorry, unrecognized username or password.')){
+        drupal_set_message('Sorry, unrecognized username or password.', $message_type); //Remove the link and the user name (security issue)
+      }else if (strpos($message, 'is not recognized as a user name or an e-mail address.') !== FALSE){
+        drupal_set_message('Sorry, your entry was not recognized as a user name or an e-mail address.', $message_type);
+      }else{
+        drupal_set_message($message, $message_type);
+      }
+    } 
+  }
+  $output = theme_status_messages($variables);
+  return $output;
+}
+/*
+ *  Remove labels and add HTML5 placeholder attribute to login form
+ */
+function sidora_login_form_alter(&$form, &$form_state, $form_id) {
+  if ( TRUE === in_array( $form_id, array( 'user_login', 'user_login_block', 'user_pass') ) ) {
+    $form['name']['#attributes']['placeholder'] = t( 'Username' );
+    $form['pass']['#attributes']['placeholder'] = t( 'Password' );
+    $form['name']['#title_display'] = "invisible";
+    $form['pass']['#title_display'] = "invisible";
+  }
+}
+
+/*
+ *  Remove login form descriptions
+ */
+
+function sidora_form_user_login_alter(&$form, &$form_state) {
+    $form['name']['#description'] = t('');
+    $form['pass']['#description'] = t('');
+}
+
+
+
