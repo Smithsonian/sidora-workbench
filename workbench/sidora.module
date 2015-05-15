@@ -1827,9 +1827,12 @@ if ($one == 'deletexsl'){
    var_dump($curr_item);
    } 
   if ($one == 'edit_metadata'){
-    if ($two != '0'){
-    header($_SERVER['SERVER_PROTOCOL'] . ' 500 Internal Server Error', true, 500);}
-  } 
+	  if ($two != '0'){
+		header($_SERVER['SERVER_PROTOCOL'] . ' 500 Internal Server Error', true, 500);}
+	}	
+	if ($one == 'get_cache'){
+	  var_dump(cache_get("sidora:children_results:".$two));
+	}   
 }
 /*
  * Show the form to create a concept
@@ -1888,13 +1891,12 @@ function sidora_create_concept($parent_pid = 'si:root', $model = 'si:collectionC
   
  */
 function sidora_form_alter(&$form, &$form_state, $form_id){
-  sidora_login_form_alter($form, $form_state, $form_id);
   module_load_include('inc', 'xml_form_builder', 'includes/associations');
   module_load_include('inc', 'islandora','includes/ingest.form');
   if (!array_key_exists('#submit', $form)) $form['#submit'] = array();
   array_unshift($form['#submit'], 'sidora_form_submit_alter');
   $association = NULL;
-  if ($form_id == 'xml_form_builder_ingest_form' || $form_id == 'islandora_ingest_form'){// || $form_id == 'xml_form_builder_datastream_form_metadata_form'){
+  if ($form_id == 'xml_form_builder_ingest_form' || $form_id == 'islandora_ingest_form'){
     if (array_key_exists('form_build_id', $_POST)){
       $submitted_form_id = $_POST['form_build_id'];
       $association = sidora_find_association($form_state, $submitted_form_id);
@@ -4206,9 +4208,11 @@ function sidora_html_tree($query_result_tree, $input_path = ''){
     $current_path = $input_path;
     if ($input_path != '') $current_path .= ',';
     $current_path .= $pid;
-    $to_return .= '<li><a href="'.base_path().'sidora/workbench/#'.$pid.'?path='.$input_path.'" pid="'.$pid.'" fullname="'.$t_element['t']['value'].'" conceptchildren="'.$t_element['k0']['value'].'">';
+   // $to_return .= '<li><a href="'.base_path().'sidora/workbench/#'.$pid.'?path='.$input_path.'" pid="'.$pid.'" fullname="'.$t_element['t']['value'].'" conceptchildren="'.$t_element['k0']['value'].'">';
+    $to_return .= '<li><a href="'.base_path().'sidora/workbench/#'.$pid.'?path='.$input_path.'" pid="'.$pid.'" fullname="'.$t_element['t']['value'].'" conceptchildren="'.$t_element['k0']['value'].'" resourcechildren="'.$t_element['k1']['value'].'">';
     $to_return .= $t_element['t']['value'];
-    if ($t_element['k0']['value'] > 0) $to_return .= ' ('.$t_element['k0']['value'].')';
+    //if ($t_element['k0']['value'] > 0) $to_return .= ' ('.$t_element['k0']['value'].')';
+    if ($t_element['k1']['value'] > 0) $to_return .= ' ('.$t_element['k1']['value'].')';
     $to_return .= '</a>';
     if (array_key_exists('children',$t_element)){
       $to_return .= '<ul>';
@@ -5147,14 +5151,26 @@ function wb_si_exhibition_generate_child_resource_query($pid, array $resource_ty
 }
 
 function wb_si_exhibition_generate_child_concept_query($pid) {
-  $count = 'count(select $c from <#ri> where
-    $o <fedora-rels-ext:hasConcept> $c and
+/*  $count = 'count(select $c from <#ri> where
+    $o <fedora-rels-ext:hasResource> $c and
     $c <fedora-model:state> <fedora-model:Active>)';
   return 'select $o $t ' . $count . ' from <#ri> where
      $o <fedora-model:state> <fedora-model:Active> and
      $o <fedora-model:label> $t and
      <info:fedora/' . $pid . '> <fedora-rels-ext:hasConcept> $o
      order by $t';
+		 */
+	$count_resource = 'count(select $c from <#ri> where
+    $o <fedora-rels-ext:hasResource> $c and
+    $c <fedora-model:state> <fedora-model:Active>)';
+	$count_concept = 'count(select $c from <#ri> where
+    $o <fedora-rels-ext:hasConcept> $c and
+    $c <fedora-model:state> <fedora-model:Active>)';
+  return 'select $o $t ' . $count_concept . $count_resource . ' from <#ri> where
+     $o <fedora-model:state> <fedora-model:Active> and
+     $o <fedora-model:label> $t and
+     <info:fedora/' . $pid . '> <fedora-rels-ext:hasConcept> $o
+     order by $t';	 
 }
 function wb_si_exhibition_xsl_string_default(){
   return '<?xml version="1.0" encoding="UTF-8"?>
@@ -6245,4 +6261,3 @@ function sidora_form_user_login_alter(&$form, &$form_state) {
     $form['name']['#description'] = t('');
     $form['pass']['#description'] = t('');
 }
-
