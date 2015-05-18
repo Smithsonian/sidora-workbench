@@ -121,7 +121,6 @@ sidora.concept.LoadContentHelp.Resources.TableActionsSetup = function(){
 		}		 
 	} );
 }
->>>>>>> 52b155a0555db2491b23ce76ce7ff34b871b3792
   //Drag and drop enabling
   jQuery('#res_table tbody').on('mousedown','tr', function (e) {
     //If the mousedown is on something that is in the middle of a move process, ignore the mousedown

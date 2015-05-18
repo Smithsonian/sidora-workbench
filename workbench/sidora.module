@@ -552,9 +552,11 @@ function sidora_islandora_object_ingested(AbstractObject $object){
   //dsm("Sidora Object Ingested");
   $parent_pid = drupal_static('parent_collection_pid');
   $ontology_id = drupal_static('ontology_id');
+  /*
   drupal_set_message("Object:".$object->id);
   drupal_set_message("Parent:".$parent_pid);
   drupal_set_message("New Pid:" . $object->id . ":End New Pid");
+  */
   $id_to_filename = cache_get("sidora:form_id_to_filename");
   if (empty($id_to_filename)){ $id_to_filename = array(); }else{ $id_to_filename = $id_to_filename->data; }
   $file_location = '';
@@ -878,13 +880,13 @@ xmlns:cpf="urn:isbn:1-931666-33-4"
     $xsl = new XSLTProcessor();
     $doc->loadXML($to_form_name);
     $xsl->importStyleSheet($doc);
-    $docToLoad = ('<?xml version="1.0" encoding="UTF-8"?>'.$object['SIDORA']->content);
+    $docToLoad = ('<?xml version="1.0" encoding="UTF-8"?'.'>'.$object['SIDORA']->content);
     $doc->loadXML($docToLoad);
     $form_name = trim($xsl->transformToDoc($doc)->firstChild->wholeText);
 
     $doc->loadXML($to_model);
     $xsl->importStyleSheet($doc);
-    $docToLoad = ('<?xml version="1.0" encoding="UTF-8"?>'.$object['SIDORA']->content);
+    $docToLoad = ('<'.'?xml version="1.0" encoding="UTF-8"?'.'>'.$object['SIDORA']->content);
     $doc->loadXML($docToLoad);
     $model = trim($xsl->transformToDoc($doc)->firstChild->wholeText);
 
@@ -1018,126 +1020,7 @@ function sidora_delete_xsl_form($form,&$form_state){
 /*
  * Show the form used to edit the object's metadata
  */
-function sidora_edit_metadata($object_id = '', $dsid = '', $form_name = ''){
-  drupal_add_css(drupal_get_path('module','sidora').'/css/workbench_metadata_screens.css',array('weight' => '1000000', 'group' => CSS_THEME));
-  global $user;
-  //if the pid is locked, can't do it
-  if (!sidora_obtain_lock($object_id)){
-    $to_return = '';
-    $to_return .= t('The object is currently locked by another user');
-    return $to_return;
-  }
-
-  $to_return = '';
-  $sidora_data = sidora_get_form_and_dsid($object_id);
-  $dsid = $sidora_data['dsid'];
-  $form_name = $sidora_data['form_name'];
-  
-  $tuque = islandora_get_tuque_connection();
-  $object = $tuque->repository->getObject($object_id);
-  $form_state = array();
-  $associations = xml_form_builder_datastream_form_get_associations($form_state,$object->models, $dsid);  //first param goes unused
-  $association = null;
-  foreach($associations as $curr_association){
-    if ($curr_association['form_name'] == $form_name){
-      $association = $curr_association;
-    }
-  }
-  if (empty($association)){
-    print "The form is not configured correctly.  The form specified is not associated to this model";
-  }
-  $tform = drupal_get_form('xml_form_builder_datastream_form_metadata_form',$object,$association);
-  drupal_add_css(drupal_get_path('module','sidora').'/css/workbench_metadata_screens.css',array('weight' => '1000000', 'group' => CSS_THEME));
-  drupal_add_js(drupal_get_path('module','sidora').'/js/workbench_util.js',array('weight' => '1000000', 'group' => JS_THEME));
-  drupal_add_library('system','ui.dialog');
-  $is_concept = sidora_is_concept($object);
-  if ($is_concept) 
-    drupal_add_js('window.isConcept = true;',array('type' => 'inline', 'weight' => '1000000', 'group' => JS_THEME));
-  else
-    drupal_add_js('window.isConcept = false;',array('type' => 'inline', 'weight' => '1000000', 'group' => JS_THEME));
-    
-  drupal_add_js('
-  jQuery().ready(function(){
-   jQuery("body").css("padding-top","0px");
-   jQuery(".content").append("<input id=\"workbench-submit\" class=\"form-submit\" value=\"Update\" style=\"float:right;\"></input>");
-   var sidora = window.parent.sidora;
-   jQuery("#workbench-submit").click(function(){
-   jQuery("body").append("<div class=\'theoverlay\' style=\'width:100%;height:100%;overflow:hidden;opacity:0.5;position:fixed;top:0;left:0;background-color:black;z-index:4000\'></div>");
-   console.log(jQuery("#xml-form-builder-datastream-form-metadata-form").serialize()+"&op=Submit");
-     jQuery.ajax({
-       type: "POST",
-       url: "",
-       //url: Drupal.settings.basePath+"sidora/test/edit_metadata",
-       data: jQuery("#xml-form-builder-datastream-form-metadata-form").serialize()+"&op=Submit&update=Update",
-       success: function(data) {
-         window.aa = data;
-         if (data.indexOf("<h2 class=\"element-invisible\">Error message</h2")>0){
-           //If not successful, reload the page so that the user can see why
-           jQuery("#edit-update").click();
-           jQuery(".theoverlay").remove();
-         }else{
-           //If successful, kill itself.
-           newPid = data.substring(0,data.indexOf(")"+" has been ingested")).substring(data.substring(0,data.indexOf(")"+" has been ingested")).lastIndexOf("si:"))
-           if (sidora && sidora.CloseIFrame){
-             sidora.concept.forceRefreshOnNextLoadContent = true;
-             sidora.CloseIFrame(newPid, "edit metadata");
-           }else{
-             console.log("This is not in the expected IFrame");
-           }
-         }
-       },
-      // status code 500 section added by RAmlani on 3/30/15 to capture a 500 error from the Ajax call and throw an appropriate error message.
-      statusCode: {
-      500: function() {
-      //jQuery("#edit-update").click();
-      jQuery(".theoverlay").remove();
-      jQuery("body").append("<div id=\'editmetafailed\' style=\'display:none;\' title=\'Edit MetaData Failed\'><p>Error code 500 returned.</p><p>Please contact the Site Administrator</p></div>");
-      jQuery("#editmetafailed").dialog({
-      height: 300,
-      width: 350,
-      modal: true,
-      resizable: false,
-      dialogClass: "no-close",
-      buttons: {
-        "OK": function() {
-            self.parent.Shadowbox.close();
-            jQuery( this ).dialog( "close" );
-     }
-     }
-    });
-      }
-      },
-       dataType: "text"
-     });
-   });
-  });
-  ',array('type' => 'inline', 'weight' => '1000000', 'group' => JS_THEME));
-  $pic_shown = FALSE;
-  if (!$is_concept){
-    $vmt = sidora_get_viewable_mime_types();
-    if (!empty($object['OBJ']) &&  strpos($object['OBJ']->mimetype, 'image') !== FALSE){
-      if (!empty($object['TN']) && in_array($object['TN']->mimetype, $vmt)){
-        $tn = '<img src="'.$GLOBALS['base_url'].'/sidora/info/'.$object_id.'/meta/TN/browser" />';
-      }
-      $obj_pic = '<img src="'.$GLOBALS['base_url'].'/sidora/resource_viewer/'.$object_id.'" />';
-      $to_return .= '<div style="width:45%;display:inline-block;overflow:auto;vertical-align:top;">';
-      $to_return .= $tn;
-      $to_return .= '<div style="width:100%;height:600px;overflow:auto;">';
-      $to_return .= $obj_pic;
-      $to_return .= '</div>';
-      $to_return .= '</div>';
-      $pic_shown = TRUE;
-    }
-  }
-  if ($pic_shown){
-    $to_return .= '<div style="width:49%;display:inline-block;margin-left:9px;">'.drupal_render($tform).'</div>';
-  }else{
-    $to_return .= '<div>'.drupal_render($tform).'</div>';
-  }
-  return $to_return;
-}
-/* 
-function sidora_edit_metadata_batch($object_id_string = '', $dsid = '', $form_name = ''){
+function sidora_edit_metadata($object_id_string = '', $dsid = '', $form_name = ''){
   drupal_add_css(drupal_get_path('module','sidora').'/css/workbench_create_resource.css',array('weight' => '1000000', 'group' => CSS_THEME));
    global $user;
   //if the pid is locked, can't do it
@@ -1215,7 +1098,6 @@ function sidora_edit_metadata_batch($object_id_string = '', $dsid = '', $form_na
   drupal_add_js(drupal_get_path('module','sidora').'/js/workbench_uploader.js',array('weight' => '1000000', 'group' => JS_THEME));
   return $to_return;
 }
-*/
 function sidora_get_viewable_mime_types(){
   return array(
     'image/jpeg',
@@ -1780,7 +1662,6 @@ function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $ex
 if ($one == 'exhibition'){ 
 //  if (module_exists('exhibition_config')){
   //  $exhibition_data = exhibition_config_get_config_data($two);
-    //var_dump($exhibition_data);
 //  }
   $exhibitions['action'] = 'return false;';
   $exhibitions['ui_state_disable'] = 'true';
@@ -1891,6 +1772,17 @@ function sidora_create_concept($parent_pid = 'si:root', $model = 'si:collectionC
   
  */
 function sidora_form_alter(&$form, &$form_state, $form_id){
+  sidora_login_form_alter($form, $form_state, $form_id);
+  drupal_add_http_header(
+    'Pragma',
+    'no-Cache',
+    FALSE
+  );
+  drupal_add_http_header(
+    'Cache-Control', 
+    'no-store, no-cache, must-revalidate, post-check=0, pre-check=0', 
+    FALSE
+  );
   module_load_include('inc', 'xml_form_builder', 'includes/associations');
   module_load_include('inc', 'islandora','includes/ingest.form');
   if (!array_key_exists('#submit', $form)) $form['#submit'] = array();
@@ -1918,7 +1810,7 @@ function sidora_form_alter(&$form, &$form_state, $form_id){
   switch ($form_id) {
     case 'user_login':
     case 'user_login_block':
-      $form['link'] = array('#markup' => 'Not a member?'.l(t(' To request an account click here.'),'mailto:'.variable_get('site_mail', '').'?Subject=Request SIdora Account&body=My name is:-Enter Name- and my Email is:-Enter Email- and I would like to request a new SIdora Account').'<script>jQuery(".page-title").html("Welcome to the SIdora Workbench");jQuery("body").append(\'<div style="padding:20px">'.l(t('Can\'t access your account?'),'mailto:'.variable_get('site_mail', '').'?Subject=SIdora Account Help&body=My name is:-Enter Name- and my Email is:-Enter Email- and I am requesting help with my SIdora Account.  -Enter more information that indicates the kind of assistance you would like-').'</div>\');</script>');
+      $form['link'] = array('#markup' => 'Not a member?'.l(t(' To request an account click here.'),'mailto:'.variable_get('site_mail', '').'?Subject=Request SIdora Account&body=My name is:-Enter Name- and my Email is:-Enter Email- and I would like to request a new SIdora Account').'<script>jQuery(".page-title").html("Welcome to the SIdora Workbench");jQuery("body").append(\'<div style="padding:20px">'.l(t('Can\'t access your account?'),'mailto:'.variable_get('site_mail', '').'?Subject=SIdora Account Help&body=My name is:-Enter Name- and my Email is:-Enter Email- and I am requesting help with my SIdora Account.  -Enter more information that indicates the kind of assistance you would like-').'</div>\');</script><br/>');
       $form['login_message'] = array('#markup' => ''.variable_get('sidora_login_message', '').'');
       break;
   }
@@ -2624,12 +2516,12 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
         exit();
       }
       if (!empty($specific_meta)){
-        $existing_json_sidora_form_config = variable_get('xsl_form_config', '');
-        $sfc = json_decode($existing_json_sidora_form_config);
         //If this is to be based on the xsl_form_config
         $xsl_file = '';
         if ($specific_meta == 'sidora_xsl_config_variable'){
-          $xsl_file = sidora_get_xsl_file_for_object($pid);
+          $curr_sfc = sidora_get_xsl_file_config_for_object($pid);
+          $xsl_file = $curr_sfc->file;
+          $dsid_to_use = $curr_sfc->dsid;
           if (empty($dsid_to_use)){
             $specific_meta = 'all';
           }else{
@@ -4005,7 +3897,7 @@ function sidora_get_plupload_html($elements, $button_text = 'Browse'){
            },
        FilesAdded: function(up, files) {
         if (jQuery("#Next").length > 0)
-        document.getElementById("Next").disabled=true;
+          document.getElementById("Next").disabled=true;
         jQuery("#Next").addClass("form-button-disabled");
          plupload.each(files, function(file) {
              var item = jQuery("<li class=\"plupload_view_list plupload_file ui-state-default plupload_file_loading plupload_delete\"></li>");
@@ -6211,8 +6103,16 @@ function sidora_generate_child_resource_pid_only_sparql_query($pid) {
  *
  * Defines the theming capabilities provided by this module.
  */
-function sidora_theme() {
+function seven_theme() {
   $themes = array (
+    'user_login_form' => array(
+      'render element' => 'form',
+      'template' => 'user-login', // template file user-login.tpl.php
+      'path' => drupal_get_path('module', 'sidora') . '/templates',
+      'preprocess functions' => array(
+        'sidora_preprocess_user_login'
+      )
+    ),
     'user_login' => array(
       'render element' => 'form',
       'template' => 'user-login', // template file user-login.tpl.php
@@ -6220,27 +6120,36 @@ function sidora_theme() {
       'preprocess functions' => array(
         'sidora_preprocess_user_login'
       )
-    )
-    // 'user_register_form' => array(
-    //   'render element' => 'form',
-    //   'template' => 'user-register-form', // template file user-register-form.tpl.php
-    //   'path' => drupal_get_path('module', 'sidora') . '/templates',
-    //   'preprocess functions' => array(
-    //     'sidora_preprocess_user_register_form'
-    //   )
-    // ),
-    // 'user_pass' => array(
-    //   'render element' => 'form',
-    //   'template' => 'user-pass', // template file user-pass.tpl.php
-    //   'path' => drupal_get_path('module', 'sidora') . '/templates',
-    //   'preprocess functions' => array(
-    //     'sidora_preprocess_user_pass'
-    //   )
-    // )
+    ),
+    'user_pass' => array(
+       'render element' => 'form',
+       'template' => 'user-pass', // template file user-pass.tpl.php
+       'path' => drupal_get_path('module', 'sidora') . '/templates',
+       'preprocess functions' => array(
+         'sidora_preprocess_user_pass'
+       )
+     )
   );
   return $themes;
 }
 
+function seven_status_messages(){
+  global $variables;
+  $messages = (drupal_get_messages());
+  foreach($messages as $message_type=>$message_group){
+    foreach($message_group as $message){
+      if (sidora_startsWith($message, 'Sorry, unrecognized username or password.')){
+        drupal_set_message('Sorry, unrecognized username or password.', $message_type); //Remove the link and the user name (security issue)
+      }else if (strpos($message, 'is not recognized as a user name or an e-mail address.') !== FALSE){
+        drupal_set_message('Sorry, your entry was not recognized as a user name or an e-mail address.', $message_type);
+      }else{
+        drupal_set_message($message, $message_type);
+      }
+    } 
+  }
+  $output = theme_status_messages($variables);
+  return $output;
+}
 /*
  *  Remove labels and add HTML5 placeholder attribute to login form
  */
