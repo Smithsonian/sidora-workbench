@@ -6031,8 +6031,13 @@ function sidora_login_form_alter(&$form, &$form_state, $form_id) {
  */
 
 function sidora_form_user_login_alter(&$form, &$form_state) {
-    $form['name']['#description'] = t('');
-    $form['pass']['#description'] = t('');
+  $form['pass']['#attributes']['autocomplete'] = 'off';  //Autocomplete off for password
+  $form['name']['#description'] = t('');
+  $form['pass']['#description'] = t('');
+}
+
+function sidora_form_user_login_block_alter(&$form, &$form_state) {
+  $form['pass']['#attributes']['autocomplete'] = 'off';  //Autocomplete off for password
 }
 
 
