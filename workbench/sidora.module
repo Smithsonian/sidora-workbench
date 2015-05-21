@@ -6155,7 +6155,7 @@ function seven_theme() {
       'preprocess functions' => array(
       'sidora_preprocess_user_login'
       )
-    )
+    ),
     // 'user_register_form' => array(
    //    'render element' => 'form',
    //    'template' => 'user-register-form', // template file user-register-form.tpl.php
