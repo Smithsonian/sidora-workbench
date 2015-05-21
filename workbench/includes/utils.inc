@@ -779,6 +779,7 @@ function sidora_create_user_object(stdClass $account) {
   if (!is_object($user_projects)) {
     return FALSE;
   }
+  module_load_include('inc', 'xml_form_builder', 'includes/associations');
   $user_object = $user_projects->repository->constructObject('si-user');
   $user_object->owner = $account->name;
   $user_object->label = "{$account->name} Projects";
@@ -798,13 +799,15 @@ function sidora_create_user_object(stdClass $account) {
 <initial_dsid>'.$associations[0]['dsid'].'</initial_dsid>
 </sidora>', 'SIDORA');
   }else{
+    $dsid = variable_get('sidora_automatic_person_dsid', 'DESCMETA');
     sidora_update_datastream($user_object, '<sidora>
 <model>'.variable_get('sidora_automatic_person_model', 'si:HierarchyObject').'</model>
 <form>'. variable_get('sidora_automatic_person_form', 'Person 2015').'</form>
 <ontology_location_id>AUTOMATIC_USER_CREATION_FROM_SIDORA_DEFAULT</ontology_location_id>
 <meta_requirements_fulfilled>FALSE</meta_requirements_fulfilled>
-<initial_dsid>'.variable_get('sidora_automatic_person_dsid', 'DESCMETA').'</initial_dsid>
+<initial_dsid>'.$dsid.'</initial_dsid>
 </sidora>', 'SIDORA');
+    if (empty($user_object[$dsid])) sidora_update_datastream($user_object, '<xml></xml>', $dsid);
   }
 
   sidora_add_child($user_projects, $user_object);
