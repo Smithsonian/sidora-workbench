@@ -158,8 +158,16 @@ function sidora_menu() {
       'page arguments' => array('sidora_delete_xsl_form'),
       'access callback' => 'user_is_logged_in',
       'type' => MENU_CALLBACK,
+		),	
+	 'sidora/request_account' => array(
+	    'title' => 'Request a new account',
+			'description' => 'Request a new account',
+			'page callback' => 'drupal_get_form',
+			'page arguments' => array('sidora_account_request_form'),
+			'access callback' => TRUE,
+			'type' => MENU_CALLBACK,
    ),
-  );
+ );
 }
 function sidora_management_ingest($pid, $dsid, $label = NULL, $mimeType = NULL){
   $object = sidora_obj($pid);
@@ -1424,7 +1432,19 @@ function sidora_xsl_information($pid, $return_file_content = FALSE){
  */
 function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $extra = ''){
   global $user;
-  if ($one == 'xsls'){
+  if ($one == 'request'){
+	  echo "request";
+		exit();
+	}	
+	if ($one == 'user_register'){
+	  return drupal_render(sidora_account_request_form());
+		exit();
+	} 
+	if ($one == 'user_register_form'){
+	  var_dump(user_register_form());
+		exit();
+	}	
+	if ($one == 'xsls'){
     if ($two != 'two'){
       //$object = sidora_obj($two);
       $xsl_file = sidora_get_xsl_file_for_object($two); 
@@ -1918,8 +1938,16 @@ function sidora_form_alter(&$form, &$form_state, $form_id){
   switch ($form_id) {
     case 'user_login':
     case 'user_login_block':
-      $form['link'] = array('#markup' => 'Not a member?'.l(t(' To request an account click here.'),'mailto:'.variable_get('site_mail', '').'?Subject=Request SIdora Account&body=My name is:-Enter Name- and my Email is:-Enter Email- and I would like to request a new SIdora Account').'<script>jQuery(".page-title").html("Welcome to the SIdora Workbench");jQuery("body").append(\'<div style="padding:20px">'.l(t('Can\'t access your account?'),'mailto:'.variable_get('site_mail', '').'?Subject=SIdora Account Help&body=My name is:-Enter Name- and my Email is:-Enter Email- and I am requesting help with my SIdora Account.  -Enter more information that indicates the kind of assistance you would like-').'</div>\');</script>');
-      $form['login_message'] = array('#markup' => ''.variable_get('sidora_login_message', '').'');
+			/*
+			$form['link'] = array('#markup' => 'Not a member?'.l(t(' To request an account click here.'),'mailto:'.variable_get('site_mail', '').'?Subject=Request SIdora Account&body=My name is:-Enter Name- and my Email is:-Enter Email- and I would like to request a new SIdora Account').
+			'<script>jQuery(".page-title").html("Welcome to the SIdora Workbench");jQuery("body").append(\'<div style="padding:20px">'.l(t('Can\'t access your account?'),'mailto:'.variable_get('site_mail', '').
+			'?Subject=SIdora Account Help&body=My name is:-Enter Name- and my Email is:-Enter Email- and I am requesting help with my SIdora Account.  -Enter more information that indicates the kind of assistance you would like-').'</div>\');</script>');
+			*/
+			//'<a href="'.base_path().'sidora/info/
+			$form['link'] = array('#markup' => 'Not a member?'.l(t(' To request an account click here.'),'sidora/request_account').
+			'<script>jQuery(".page-title").html("Welcome to the SIdora Workbench");jQuery("body").append(\'<div style="padding:20px">'.l(t('Can\'t access your account?'),'mailto:'.variable_get('site_mail', '').
+			'?Subject=SIdora Account Help&body=My name is:-Enter Name- and my Email is:-Enter Email- and I am requesting help with my SIdora Account.  -Enter more information that indicates the kind of assistance you would like-').'</div>\');</script>');
+			$form['login_message'] = array('#markup' => ''.variable_get('sidora_login_message', '').'');
       break;
   }
 }
@@ -6224,15 +6252,24 @@ function sidora_theme() {
       'preprocess functions' => array(
         'sidora_preprocess_user_login'
       )
-    )
+    ),
+     'sidora_account_request_form' => array(
+       'render element' => 'form',
+       'template' => 'sidora-account-request', // template file sidora-account-request.tpl.php
+       'path' => drupal_get_path('module', 'sidora') . '/templates',
+      'preprocess functions' => array(
+        'sidora_preprocess_user_login'
+      )
+     )
+
     // 'user_register_form' => array(
-    //   'render element' => 'form',
-    //   'template' => 'user-register-form', // template file user-register-form.tpl.php
-    //   'path' => drupal_get_path('module', 'sidora') . '/templates',
-    //   'preprocess functions' => array(
-    //     'sidora_preprocess_user_register_form'
-    //   )
-    // ),
+   //    'render element' => 'form',
+   //    'template' => 'user-register-form', // template file user-register-form.tpl.php
+   //    'path' => drupal_get_path('module', 'sidora') . '/templates',
+   //    'preprocess functions' => array(
+   //      'sidora_preprocess_user_register_form'
+   //    )
+   //  ),
     // 'user_pass' => array(
     //   'render element' => 'form',
     //   'template' => 'user-pass', // template file user-pass.tpl.php
@@ -6252,8 +6289,8 @@ function sidora_login_form_alter(&$form, &$form_state, $form_id) {
   if ( TRUE === in_array( $form_id, array( 'user_login', 'user_login_block', 'user_pass') ) ) {
     $form['name']['#attributes']['placeholder'] = t( 'Username' );
     $form['pass']['#attributes']['placeholder'] = t( 'Password' );
-    $form['name']['#title_display'] = "invisible";
-    $form['pass']['#title_display'] = "invisible";
+   // $form['name']['#title_display'] = "invisible";
+  //  $form['pass']['#title_display'] = "invisible";
   }
 }
 
@@ -6264,4 +6301,29 @@ function sidora_login_form_alter(&$form, &$form_state, $form_id) {
 function sidora_form_user_login_alter(&$form, &$form_state) {
     $form['name']['#description'] = t('');
     $form['pass']['#description'] = t('');
+}
+function sidora_account_request_form(){
+	//	$form['name'] = $reg_form['account']['name'];
+	//	$form['mail'] = $reg_form['account']['mail'];
+  $form['name'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Username'),
+    '#maxlength' => USERNAME_MAX_LENGTH,
+    '#description' => t('Spaces are allowed; punctuation is not allowed except for periods, hyphens, apostrophes, and underscores.'),
+    '#required' => TRUE,
+    '#attributes' => array('class' => array('username')),
+    '#weight' => -10,
+  );
+  $form['mail'] = array(
+    '#type' => 'textfield',
+    '#title' => t('E-mail address'),
+    '#maxlength' => EMAIL_MAX_LENGTH,
+    '#description' => t('A valid e-mail address. All e-mails from the system will be sent to this address. The e-mail address is not made public and will only be used if you wish to receive a new password or wish to receive certain news or notifications by e-mail.'),
+    '#required' => TRUE
+  );
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Request a new account'),
+  );
+return $form;
 }
