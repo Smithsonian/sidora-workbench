@@ -33,18 +33,18 @@ sidora.concept.LoadContentHelp.Resources.TableLoad = function(conceptOfInterest)
                 },
      'sPaginationType': "input",
      'lengthMenu':[5,10,50,100],
-		 'pageLength' : (readCookie('Drupal.pageLength') == '')?'5':readCookie('Drupal.pageLength'),
+     'pageLength' : (readCookie('Drupal.pageLength') == '')?'5':readCookie('Drupal.pageLength'),
      'search': {
        'search': (readCookie('Drupal.dtFilter') == '')?'':readCookie('Drupal.dtFilter')
       },
-		 'processing': true,
+     'processing': true,
      'serverSide': true,
      'ordering' : false,
      'ajax': jQuery.fn.dataTable.pipeline({
        url: '../info/'+conceptOfInterest+'/resources/all/browser/dataTableServerSideProcessing',
        pages: 2
      }),
-	});
+  });
   (function($){
     var table = $('#res_table').DataTable();
    $('#res_table tbody').on( 'click', 'tr', function (e) {
@@ -88,7 +88,6 @@ sidora.concept.LoadContentHelp.Resources.TableLoad = function(conceptOfInterest)
 		table.on( 'length', function ( e, settings, len ) {
     //console.log( 'New page length: '+len );
 		writeCookie('Drupal.pageLength',len,'30')
-		
 } );
   }(jQuery));
 
@@ -185,9 +184,9 @@ sidora.concept.LoadContentHelp.Resources.TableActionsSetup = function(){
     */
     jQuery('#res_table_filter').after('<select id=\"sidora-resource-type-dropdown\" class="form-select" name=\"search\"><option value=\"\">All</option><option value=\"images\">Image</option><option value=\"pdf\">Digitized Text</option><option value=\"csv\">Tabular Dataset</option></select><input type="text" name="titleFilter" id="titleFilter" style="border: solid 1px lightblue;">');
     if (readCookie('Drupal.dtFilter') != ''){
-		    jQuery("#sidora-resource-type-dropdown").val(readCookie('Drupal.dtFilter'));
-		}		
-		jQuery("#res_table_length select").addClass("form-select");
+        jQuery("#sidora-resource-type-dropdown").val(readCookie('Drupal.dtFilter'));
+    }   
+    jQuery("#res_table_length select").addClass("form-select");
     sidora.resources.reloadDatatableBasedOnCurrentFilters = function(){
       var changeTo = jQuery('#sidora-resource-type-dropdown').val();
       jQuery('#res_table_filter input').val(changeTo);
@@ -237,9 +236,9 @@ sidora.concept.LoadContentHelp.Exhibition_view = function(conceptOfInterest){
     dataType: "json",
     url: '../info/'+conceptOfInterest+'/exhibition',
     success: function(exhibitions){
-			jQuery("#exhibitConcept").attr('onclick', '');
-			jQuery("#exhibitConcept").children('a').attr('onclick',exhibitions.action);
-			jQuery("#exhibitConcept").children('a').toggleClass('ui-state-disabled',exhibitions.ui_state_disable);
+      jQuery("#exhibitConcept").attr('onclick', '');
+      jQuery("#exhibitConcept").children('a').attr('onclick',exhibitions.action);
+      jQuery("#exhibitConcept").children('a').toggleClass('ui-state-disabled',exhibitions.ui_state_disable);
     }
   });
 }
@@ -597,20 +596,20 @@ sidora.InitiateJSTree = function(){
                 );
               }else{
                 //is a move
-  							var showText = "Move the following resources to "+jQuery("#"+mouseOverObject.id).children("a").attr("fullname")+" ("+jQuery("#"+mouseOverObject.id).children("a").attr("pid")+"):";
-          			showText += "<ul>";
-          			for (var i = 0; i < sidora.util.dragResources.length; i++){
-            			showText += "<li>"+jQuery(jq(sidora.util.dragResources[i])).find(".resource-list-label").text();
-            			showText += " ("+sidora.util.dragResources[i]+")</li>";
-          			}
-          			showText += "</ul>";
-          			sidora.util.Confirm("Move resource",showText,
-            		function(){
-              		sidora.resources.performCopyOrMove("move",mouseOverObject.id);
-            		}
-          			);
-							}	
-	            return false; //Dont immediately perform the copy
+                var showText = "Move the following resources to "+jQuery("#"+mouseOverObject.id).children("a").attr("fullname")+" ("+jQuery("#"+mouseOverObject.id).children("a").attr("pid")+"):";
+                showText += "<ul>";
+                for (var i = 0; i < sidora.util.dragResources.length; i++){
+                  showText += "<li>"+jQuery(jq(sidora.util.dragResources[i])).find(".resource-list-label").text();
+                  showText += " ("+sidora.util.dragResources[i]+")</li>";
+                }
+                showText += "</ul>";
+                sidora.util.Confirm("Move resource",showText,
+                function(){
+                  sidora.resources.performCopyOrMove("move",mouseOverObject.id);
+                }
+                );
+              } 
+              return false; //Dont immediately perform the copy
             }
           }else{
             if (sidora.util.userConfirmedCopy){
@@ -979,20 +978,20 @@ This function can possibly be used in future to generate a message alerting the 
 and also possibly providing the user with some custom actions like move & replace, ignore move etc.
 */
 sidora.resources.checkForDuplicateResourcesRA = function(copyOrMove, toLocationId){
-	// get the pid of the target 
-	var targetPid = jQuery("#"+toLocationId).children("a").attr("pid");
-	// ajax call to generate a list of the resources currently on the target
+  // get the pid of the target 
+  var targetPid = jQuery("#"+toLocationId).children("a").attr("pid");
+  // ajax call to generate a list of the resources currently on the target
  jQuery.ajax({
-			url: "../ajax_parts/generate_resource_list/"+targetPid,
-			success: function(resourceList){
+      url: "../ajax_parts/generate_resource_list/"+targetPid,
+      success: function(resourceList){
           var currentChildrenPids = JSON.parse(resourceList);;
           for (var i = 0; i < sidora.util.dragResources.length; i++){
             if (jQuery.inArray(sidora.util.dragResources[i],currentChildrenPids) > -1)
            { 
-					 //alert('we found a duplicate');
-					 }
+           //alert('we found a duplicate');
+           }
           }
-			}
+      }
  });
 }
 /*
@@ -1494,7 +1493,7 @@ sidora.resources.individualPanel.Create = function() {
     var pids_array = sidora.resources.getHighlighted();
     if (pids_array.length != 1) return;
     pids = pids_array.join("&");
-	  Shadowbox.open({
+    Shadowbox.open({
       content:    "../edit_metadata/"+pids+"",
       player:     "iframe",
       //title:      "Edit Metadata-Multi",
@@ -1539,11 +1538,11 @@ sidora.resources.individualPanel.LoadContent = function(suppressResourceViewerRe
   if (typeof(suppressResourceViewerReload) == 'undefined'){ suppressResourceViewerReload = false; }
   roipid = sidora.resources.individualPanel.resourceOfInterest.pid;
   console.log("resource of interest is "+roipid);
-	  //<iframe frameborder="0" height="100%" width="100%" src="http://***REMOVED***.dev1.my***REMOVED***.net/***REMOVED***/sidora/GitMain/viewer/si:258581/IMAGE/ids_iframe"></iframe>
+    //<iframe frameborder="0" height="100%" width="100%" src="http://***REMOVED***.dev1.my***REMOVED***.net/***REMOVED***/sidora/GitMain/viewer/si:258581/IMAGE/ids_iframe"></iframe>
   if (!suppressResourceViewerReload){
     var resourceViewerHtml = '<iframe frameborder="0" height="100%" width="100%" src="'+Drupal.settings.basePath+'sidora/resource_viewer/'+sidora.resources.individualPanel.resourceOfInterest.pid+'"></iframe> ';
     console.log("in individual panel : "+resourceViewerHtml);
-		jQuery('#resourceIframeHolder').children().remove();
+    jQuery('#resourceIframeHolder').children().remove();
     jQuery('#resourceIframeHolder').append(resourceViewerHtml);
   }
   jQuery('#resource-meta .error-message').remove();
@@ -1598,7 +1597,7 @@ sidora.util.deletePid = function(pidOfInterest, onSuccess, onFailure){
   }
   var url = '../ajax_parts/unassociate_delete_orphan/'+unassociateFrom+'/'+pidOfInterest;
   var userFriendlyToastName = "Remove "+pidOfInterest+" from "+unassociateFrom;
-	sidora.queue.RequestPost(userFriendlyToastName,url,"",onSuccess,onFailure,[pidOfInterest,unassociateFrom]);
+  sidora.queue.RequestPost(userFriendlyToastName,url,"",onSuccess,onFailure,[pidOfInterest,unassociateFrom]);
   sidora.queue.Next();
 }
 /*
