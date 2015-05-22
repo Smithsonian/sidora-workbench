@@ -41,7 +41,7 @@ sidora.concept.LoadContentHelp.Resources.TableLoad = function(conceptOfInterest)
      'serverSide': true,
      'ordering' : false,
      'ajax': jQuery.fn.dataTable.pipeline({
-       url: '../info/'+conceptOfInterest+'/resources/all/browser/dataTableServerSideProcessing',
+			 url: '../info/'+conceptOfInterest+'/resources/all/browser/dataTableServerSideProcessing',
        pages: 2
      }),
   });

@@ -1314,10 +1314,6 @@ function sidora_xsl_information($pid, $return_file_content = FALSE){
  */
 function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $extra = ''){
   global $user;
-  if ($one == 'request'){
-	  echo "request";
-		exit();
-	}	
 	if ($one == 'user_register'){
 	  return drupal_render(sidora_account_request_form());
 		exit();
