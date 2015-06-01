@@ -1,0 +1,4 @@
+name = Lowercase User
+description = Make all your user names into lowercase only.
+core = 7.x
+configure = admin/lowercase_user/configure
