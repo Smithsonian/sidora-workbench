@@ -560,11 +560,9 @@ function sidora_islandora_object_ingested(AbstractObject $object){
   //dsm("Sidora Object Ingested");
   $parent_pid = drupal_static('parent_collection_pid');
   $ontology_id = drupal_static('ontology_id');
-  /*
   drupal_set_message("Object:".$object->id);
   drupal_set_message("Parent:".$parent_pid);
   drupal_set_message("New Pid:" . $object->id . ":End New Pid");
-  */
   $id_to_filename = cache_get("sidora:form_id_to_filename");
   if (empty($id_to_filename)){ $id_to_filename = array(); }else{ $id_to_filename = $id_to_filename->data; }
   $file_location = '';
@@ -1565,18 +1563,44 @@ function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $ex
   }
   if ($one == 'queries'){
     print 'ok';
-  $tuque = islandora_get_tuque_connection();
-  if ($tuque) {
-    $query = sidora_generate_child_resource_sparql_query('si-user:124', Array(),'' , '', 'created');
-    //var_dump($query);
-    $ri = $tuque->repository->ri;
+    $resource_types = array(
+      'all' => array('si:imageCModel', 'si:generalImageCModel','si:fieldbookCModel','si:datasetCModel'),
+      'images' => array('si:imageCModel', 'si:generalImageCModel'),
+      'pdf' => array('si:fieldbookCModel'),
+      'csv' => array('si:datasetCModel'),
+      'text' => FALSE,
+      'video' => FALSE
+    );
+    //$jsdt_draw = filter_input(INPUT_GET,'draw', FILTER_SANITIZE_NUMBER_INT);
+    //$jsdt_start = filter_input(INPUT_GET,'start', FILTER_SANITIZE_NUMBER_INT);
+    //$jsdt_length = filter_input(INPUT_GET,'length', FILTER_SANITIZE_NUMBER_INT);
+    $limit = '200';
+    $jsdt_start = '1100';
+		$jsdt_draw = '1';
+    $tuque = islandora_get_tuque_connection();
+    if ($tuque) {
+      $resources_count = sidora_concept_resource_listing_count($two,$resource_types); 
+      echo $resources_count;
+			//$filtered_resources_count = sidora_concept_resource_listing_count($pid,$resource_types, $jsdt_search_val, $jsdt_title_search_val); 
+			/* $offset = $resources_count - ($limit*$jsdt_draw);
+      if ($offset < 0){
+			  $offset = $jsdt_start;
+			}
+			echo "offset is ".$offset;*/
+			$offset = $jsdt_start;
+			$query = sidora_generate_child_resource_sparql_query($two, Array(), '', '', 'created', $limit, $offset);
+      //var_dump($query);
+     $ri = $tuque->repository->ri;
     $results = $ri->sparqlQuery($query);
-    foreach ($results as $key => $row){
+   // echo "before sort";
+		var_dump($results);
+	 /* foreach ($results as $key => $row){
        $dates[$key] = strtotime($row['created']['value']);
        
     }  
     array_multisort($dates, SORT_DESC, $results);
-    var_dump($results);
+    echo "after sort";
+		var_dump($results);*/
     //print sidora_generate_child_resource_sparql_query('si:387917', Array());
   } 
   }
@@ -2640,12 +2664,17 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
         $offset = $jsdt_start;
         $resources_count = sidora_concept_resource_listing_count($pid,$resource_types); 
         $filtered_resources_count = sidora_concept_resource_listing_count($pid,$resource_types, $jsdt_search_val, $jsdt_title_search_val); 
-        $resources = sidora_concept_resource_listing($pid,$resource_types,$limit,$offset, $jsdt_search_val, $jsdt_title_search_val); 
-
+			  //$offset = $filtered_resources_count - ($limit*$jsdt_draw);
+        //if ($offset < 0){
+			  //  $offset = 0;
+			  //}
+				$resources = sidora_concept_resource_listing($pid,$resource_types,$limit,$offset, $jsdt_search_val, $jsdt_title_search_val); 
         $jsdt_response = array();
         $jsdt_response['draw'] = $jsdt_draw;
         $jsdt_response['recordsTotal'] = $resources_count;
         $jsdt_response['recordsFiltered'] = $filtered_resources_count;
+				$jsdt_response['offset'] = $offset;
+				$jsdt_response['length'] = $limit;
         $jsdt_data = array();
         foreach($resources as $element){
           if (array_key_exists('object',$element)){
@@ -2841,12 +2870,13 @@ function sidora_concept_resource_listing($pid, $resource_types, $limit, $offset,
     $query = sidora_generate_child_resource_sparql_query($concept_pid, $resource_types[$specific_resource_type], $title_search, '', 'created', $limit, $offset);
     $ri = $tuque->repository->ri;
     $results = $ri->sparqlQuery($query);
-    foreach ($results as $key => $row){
+    /*
+		foreach ($results as $key => $row){
        $dates[$key] = strtotime($row['created']['value']);
-       
     }  
     array_multisort($dates, SORT_DESC, $results);
-    foreach($results as $resindex=>$result){
+		*/
+		foreach($results as $resindex=>$result){
       $tobj = $tuque->repository->getObject($result['object']['value']);
       //$results[$resindex]['object'] = $tobj;
       $original_metadata = 'FALSE';
@@ -3759,7 +3789,7 @@ function sidora_block_content_navigation(){
   drupal_add_css(drupal_get_path('module','sidora').'/jslibs/jstree/dist/themes/default/style.min.css');
   drupal_add_js(drupal_get_path('module','sidora').'/jslibs/jstree/dist/jstree.js');
   //dataTables lib
-  drupal_add_js(drupal_get_path('module','sidora').'/jslibs/dataTables/js/jquery.dataTables.min.js');
+	drupal_add_js(drupal_get_path('module','sidora').'/jslibs/dataTables/js/jquery.dataTables.min.js');
   drupal_add_js(drupal_get_path('module','sidora').'/jslibs/dataTables/js/pipeline.js');
   drupal_add_css(drupal_get_path('module','sidora').'/jslibs/dataTables/css/jquery.dataTables.css');
 
