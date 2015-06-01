@@ -89,7 +89,7 @@ sidora.concept.LoadContentHelp.Resources.TableLoad = function(conceptOfInterest)
 		table.on( 'length', function ( e, settings, len ) {
     //console.log( 'New page length: '+len );
 		writeCookie('Drupal.pageLength',parseInt(len),'30')
-		window.sidora.resources.dataTable.DataTable().draw();
+		//window.sidora.resources.dataTable.DataTable().draw();
 		
 } );
   }(jQuery));
