@@ -2418,6 +2418,11 @@ function sidora_get_xsl_file_for_object($pid){
 function sidora_open_access($info_type, $pid){
   switch($info_type) {
     case 'xsl':
+      $file = sidora_get_xsl_file_for_object($pid);
+      $directory_for_xsl = DRUPAL_ROOT.'/'.drupal_get_path('module','sidora').'/XSL';
+      $full_file = ($directory_for_xsl . '/' . $file);
+      if ($file) $output_info = readfile($full_file);
+      break;
     case 'xsl_config':
       sidora_xsl_information($pid, $info_type == 'xsl');
       break;
