@@ -2231,6 +2231,7 @@ function sidora_user_login(&$edit, $account){
   }catch(Exception $exc){
     //dsm("User ID reused"); //BBB don't cause the error to happen in the first place
   }
+  sidora_update_username_capitalization();
 }
 /**
  * Set the specified user's root (islandora_user_pid) to the specified pid
