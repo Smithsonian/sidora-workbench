@@ -38,7 +38,7 @@ function lowercase_user_menu() {
       'title' => 'Lowercase User Information',
       'description' => 'General Information Interface',
       'page callback' => 'lowercase_user_main',
-      'access callback' => 'user_is_logged_in',
+      'access arguments' => array('administer site configuration'),
       'type' => MENU_CALLBACK,
     ),
   );
