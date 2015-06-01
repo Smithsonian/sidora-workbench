@@ -60,6 +60,12 @@ function sidora_menu() {
       'file' => 'sidora.admin.inc',
       'type' => MENU_NORMAL_ITEM,
     ),
+    'admin/sidora/user_correction' => array(
+      'title' => 'User correction',
+      'page callback' => 'sidora_update_username_capitalization',
+      'access arguments' => array('administer site configuration'),
+      'type' => MENU_NORMAL_ITEM,
+    ),
     'sidora/upload' => array(
       'description' => 'Uploader for files',
       'page callback' => 'sidora_upload',
@@ -1318,11 +1324,57 @@ function sidora_get_html_flexpaper($pid,$dsid = 'OBJ.swf'){
 ';
   return $to_return;
 }
+/*
+ * LDAP does funny things to the username vs how Fedora wants to deal with it
+ * Reset the user account names to the one Fedora thinks it should be.
+ * returns a HTML string representing the results
+ */
+function sidora_update_username_capitalization(){
+  ob_start();
+  $users = entity_load('user');
+  $user_names = array();
+  print '<table><tr><th>Account</th><th>Root Pid</th><th>Object Owner</th><th>Result</th></tr>';
+  $class = '';
+  foreach ($users as $user_id => $account) {
+    $class = ($class=='even')?'odd':'even';
+    print '<tr class="'.$class.'">';
+    print '<td>'.$account->name.'</td>';
+    if ($account->data && array_key_exists("islandora_user_pid",$account->data)){
+      $object = sidora_obj($account->data['islandora_user_pid']);
+      if (!empty($object)){
+        if (strtolower($object->owner) == strtolower($account->name)){
+          if ($account->name != $object->owner){
+            $edit['name'] = $object->owner;
+            $done = user_save($account, $edit);
+            print '<td>'.$account->data['islandora_user_pid'].'</td><td>'.$object->owner.'</td><td>';
+            var_dump($done);
+            print '</td>';
+          }else{
+            print '<td>'.$account->data['islandora_user_pid'].'</td><td>'.$object->owner.'</td><td>Already owner, none</td>';
+            //All good
+          }
+        }else{
+          print '<td>'.$account->data['islandora_user_pid'].'</td><td>'.$object->owner.'</td><td>Not owner, none</td>';
+        }
+      }else{
+        print '<td>'.$account->data['islandora_user_pid'].'</td><td>Does not exist</td><td>--</td>';
+      }
+    }else{
+      print '<td>Not Set</td><td>None</td><td>--</td>';
+    }
+    print '</tr>';
+  }
+  $result = ob_get_clean();
+  return $result;
+}
 /**
  * Used only for testing purposes.  Should not be called by the main application
  */
 function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $extra = ''){
   global $user;
+  if ($one == 'user_correction'){
+    return sidora_update_username_capitalization();
+  }
   if ($one == 'codebooks'){
     print 'ding';
     $pid = $two;
@@ -2138,6 +2190,21 @@ function sidora_get_thumbnail_image_for_mime_type($mime_type){
   }
   return $mimeTypeFileName;
 }
+/*
+ * hook_user_insert
+ * Change all users to lowercase on any insert
+ */
+function sidora_user_insert(&$edit, $account, $category){
+  sidora_update_username_capitalization();
+}
+/*
+ * hook_user_update
+ * Change all users to lowercase on any insert
+ */
+function sidora_user_update(&$edit, $account, $category){
+  sidora_update_username_capitalization();
+}
+
 /**
  * Implements hook_user_insert when a user is created
  * Create a Projects folder for the user and put information about it into the Drupal db
@@ -2181,7 +2248,7 @@ function sidora_is_admin($drupal_user = ''){
   return (is_array($drupal_user->roles) && in_array('administrator', $drupal_user->roles));
 }
 /*
- * returns a drupal user from an abiguous source, or current drupal user
+ * returns a drupal user from an ambiguous source, or current drupal user
  */
 function sidora_get_drupal_user($user_pid_or_drupal_user = ''){
   global $user;
@@ -2713,19 +2780,19 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
 	    break;
 		// added by RAmlani on 3/31/15 to stop using sidora/testing for uploading new xsl files in sidora admin on production site.
 		case 'upload2': 
-		   $configure = array(
-      'file_types' => array('xsl'),
-      'post_location_js' => 'Drupal.settings.basePath+"sidora/info/xsl_save/xsl_upload"',
-      'success_function_js' => 'if (window.opener != null){
-         window.opener.filesUpdated(jQuery.parseJSON(arguments[0]));
-         window.close();
-       }else{
-         console.log("not child");
-       }',
-     );
-     $to_return = sidora_generic_upload($configure);
-     return 'Upload XSL files:'.$to_return;
-	   break;
+		  $configure = array(
+        'file_types' => array('xsl'),
+        'post_location_js' => 'Drupal.settings.basePath+"sidora/info/xsl_save/xsl_upload"',
+        'success_function_js' => 'if (window.opener != null){
+           window.opener.filesUpdated(jQuery.parseJSON(arguments[0]));
+           window.close();
+         }else{
+           console.log("not child");
+         }',
+      );
+      $to_return = sidora_generic_upload($configure);
+      return 'Upload XSL files:'.$to_return;
+	    break;
 	}
   print $to_output;
 }
