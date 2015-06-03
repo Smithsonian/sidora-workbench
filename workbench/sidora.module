@@ -1110,6 +1110,7 @@ function sidora_edit_metadata($object_id = '', $dsid = '', $form_name = ''){
   if (!$is_concept){
     $vmt = sidora_get_viewable_mime_types();
     if (!empty($object['OBJ']) &&  strpos($object['OBJ']->mimetype, 'image') !== FALSE){
+      $tn = '';
       if (!empty($object['TN']) && in_array($object['TN']->mimetype, $vmt)){
         $tn = '<img src="'.$GLOBALS['base_url'].'/sidora/info/'.$object_id.'/meta/TN/browser" />';
       }
@@ -6074,6 +6075,8 @@ function seven_status_messages(){
         drupal_set_message('Sorry, unrecognized username or password.', $message_type); //Remove the link and the user name (security issue)
       }else if (strpos($message, 'is not recognized as a user name or an e-mail address.') !== FALSE){
         drupal_set_message('Sorry, your entry was not recognized as a user name or an e-mail address.', $message_type);
+      }else if (strpos($message, 'Undefined index: callback in <em class="placeholder">securepages_match_form()</em> (line <em class="placeholder">369</em> of') !== FALSE){
+                //Eat this message until a better version of securepages comes out.
       }else{
         drupal_set_message($message, $message_type);
       }
