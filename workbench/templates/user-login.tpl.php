@@ -48,7 +48,7 @@ input.form-text {
     print variable_get('sidora_login_message', '');
     print drupal_render($form['actions']);
 ?>
-<p>Not a member? <a href="mailto:***REMOVED***?Subject=Request SIdora Account&amp;body=My name is:-Enter Name- 
+<p>Not a member? <a href="mailto:<?php print variable_get('site_mail', ''); ?>?Subject=Request SIdora Account&amp;body=My name is:-Enter Name- 
   and my Email is:-Enter Email- and I would like to request a new SIdora Account"> Submit an Account Request</a><p>
-<p>Need help? <a href="mailto:***REMOVED***?Subject=SIdora Account Help&amp;body=My name is:-Enter Name- and my Email is:-Enter Email- and I am requesting help with my SIdora Account.  -Enter more information that indicates the kind of assistance you would like-">Contact Us</a> <span style="color: #999;display:none;">(link to contact form)</span></p>
+<p>Need help? <a href="mailto:<?php print variable_get('site_mail', ''); ?>?Subject=SIdora Account Help&amp;body=My name is:-Enter Name- and my Email is:-Enter Email- and I am requesting help with my SIdora Account.  -Enter more information that indicates the kind of assistance you would like-">Contact Us</a> <span style="color: #999;display:none;">(link to contact form)</span></p>
 <!-- <p><a href="user/password">Request a New Password</a></p> -->
