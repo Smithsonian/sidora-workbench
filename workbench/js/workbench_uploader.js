@@ -224,6 +224,8 @@ window.prepIslandoraFormForSubmit = function(formName, onSuccessfulFormSubmit, o
 		}
 	}
   if (jQuery("#create-resource-form").length){
+		console.log(window.location);
+		console.log(jQuery("#"+formName).serialize());
 		ajaxSettings = ({
 		  type: "POST",
 		  url: window.location,
