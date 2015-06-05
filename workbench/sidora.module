@@ -2705,7 +2705,8 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
         'images' => array('si:imageCModel', 'si:generalImageCModel'),
         'pdf' => array('si:fieldbookCModel'),
         'csv' => array('si:datasetCModel'),
-        'audio' => array('si:siBasicObject'),
+        //'audio' => array('si:siBasicObject'),
+				'audio' => array('islandora:sp-audioCModel'),
         'text' => FALSE,
         'video' => FALSE
       );
@@ -2832,8 +2833,9 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
           $to_output .=   '<li><a href="" model="si:generalImageCModel" formname="General Image Description" ontology-id="GeneralImage_GeneralImage">General&nbsp;Image&nbsp;Description&nbsp;(MODS)</a></li>';
           $to_output .=   '<li><a href="" model="si:generalImageCModel" formname="Camera Trap Image" ontology-id="GeneralImage_CameraTrapImage">Camera&nbsp;Trap&nbsp;Image&nbsp;(MODS)</a></li>';
           $to_output .= '</ul></li>';
-          $to_output .= '<li><a href="" model="si:siBasicObject" formname="Dataset" ontology-id="Datasets">Audio&nbsp;Files</a></li>';
-          $to_output .= '</ul>';
+          //$to_output .= '<li><a href="" model="si:siBasicObject" formname="Dataset" ontology-id="Datasets">Audio&nbsp;Files</a></li>';
+          $to_output .= '<li><a href="" model="islandora:sp-audioCModel" formname="Audio MODS form" ontology-id="Audio">Audio&nbsp;Files</a></li>';
+					$to_output .= '</ul>';
         }
       break;
    // added by RA on 3/12/15 - the ajax call to see if there is an exhibition for the current concept and enable/disable the "Exhibit" menu link accordingly
