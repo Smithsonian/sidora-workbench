@@ -38,12 +38,13 @@ input.form-text {
 }
 </style>
 <div id="logo_container">
-  <img src="/~ghalusa/sidora/sidora0.4/<?php echo drupal_get_path('module', 'sidora'); ?>/images/logo.png" alt="Smithsonian logo">
+  <img src="<?php echo base_path() . drupal_get_path('module', 'sidora'); ?>/images/logo.png" alt="Smithsonian logo">
   <h1>SIdora Workbench</h1><!-- SIdora team officially has the SI capitalized for anything reaching user, even though they often dont on internal information-->
 </div>
 <?php
  /* split the username and password from the submit button 
    so we can put in links above */
+    $form['name']['#value'] = '';
     print drupal_render($form['name']);
     print drupal_render($form['pass']);
     print drupal_render($form['form_build_id']);
