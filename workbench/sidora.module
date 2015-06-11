@@ -842,7 +842,7 @@ PDF metadata:
   return $to_return;
 }
 /*
- * returns an array('form_name'=> <form_name>, 'dsid'=> <dsid>) or FALSE if it can't be figured out
+ * returns an array('form_name'=> <form_name>, 'dsid'=> <dsid>, 'ontology_id'=> <ontology_id>) or FALSE if it can't be figured out
  */
 function sidora_get_form_and_dsid($object_pid){
   $to_return = array();
@@ -853,7 +853,7 @@ function sidora_get_form_and_dsid($object_pid){
   module_load_include('inc','xml_forms','builder/includes/associations');
   $object = sidora_obj($object_pid);
   //Now that we have the object, check to see if it has the SIDORA datastream (which will tell us the model and form to use)
-  if ($object['SIDORA'] && strpos($object['SIDORA']->content, '<form>') > 0 && strpos($object['SIDORA']->content, '<model>') > 0){
+  if ($object['SIDORA'] && strpos($object['SIDORA']->content, '<form>') > 0 && strpos($object['SIDORA']->content, '<model>') > 0 && strpos($object['SIDORA']->content, '<ontology_location_id>') > 0){
     $to_model = '
 <xsl:stylesheet version="1.0"
 xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
@@ -882,6 +882,19 @@ xmlns:cpf="urn:isbn:1-931666-33-4"
 </xsl:template>
 </xsl:stylesheet>';
 
+    $to_ontology_id = '
+<xsl:stylesheet version="1.0"
+xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+xmlns:mods="http://www.loc.gov/mods/v3"
+xmlns:fits="http://hul.harvard.edu/ois/xml/ns/fits/fits_output"
+xmlns:cpf="urn:isbn:1-931666-33-4"
+>
+<xsl:template match="/">
+  <xsl:for-each select="//ontology_location_id">
+      <xsl:value-of select="current()"/>
+    </xsl:for-each>
+</xsl:template>
+</xsl:stylesheet>';
     $doc = new DOMDocument();
     $xsl = new XSLTProcessor();
     $doc->loadXML($to_form_name);
@@ -896,6 +909,12 @@ xmlns:cpf="urn:isbn:1-931666-33-4"
     $doc->loadXML($docToLoad);
     $model = trim($xsl->transformToDoc($doc)->firstChild->wholeText);
 
+    $doc->loadXML($to_ontology_id);
+    $xsl->importStyleSheet($doc);
+    $docToLoad = ('<'.'?xml version="1.0" encoding="UTF-8"?'.'>'.$object['SIDORA']->content);
+    $doc->loadXML($docToLoad);
+    $ontology_id = trim($xsl->transformToDoc($doc)->firstChild->wholeText);
+
     $checker = xml_form_builder_get_associations(array(), array(), array(), FALSE);   
     //Sidora assumes that we will only have one form that we care about as metadata, and that we will only have one association of model to form
     $found_dsid = '';
@@ -906,6 +925,7 @@ xmlns:cpf="urn:isbn:1-931666-33-4"
     }
     $to_return['dsid'] = $found_dsid;
     $to_return['form_name'] = $form_name;
+		$to_return['ontology_id'] = $ontology_id;
     return $to_return;
   }else{
     $associations = xml_form_builder_get_associations(array(), $object->models, array());
@@ -913,12 +933,14 @@ xmlns:cpf="urn:isbn:1-931666-33-4"
       $curr_association = $associations[0];
       $to_return['form_name'] = $curr_association['form_name'];
       $to_return['dsid'] = $curr_association['dsid'];
+			$to_return['ontology_id'] = '';
       return $to_return;
     }else{
       $info = sidora_guess_dsid_and_form_name($object);
       if (!empty($info['form_name'])){
         //watchdog('sidora_workbench',$object_pid.' - Form was guessed, not included in information:'.$dsid.' "'.$form_name.'"');
-        return $info;
+        $info['ontology_id'] = '';
+				return $info;
       }else{
         return FALSE;
       }
@@ -1175,9 +1197,14 @@ function sidora_get_parent_table($pid){
     );
     $sidora_data = sidora_get_form_and_dsid($parent['pid']);
     $form_name = $sidora_data['form_name'];
-    $row = array(
+		$concept_type = $form_name;
+    if ($sidora_data['ontology_id'] != ''){
+	    $concept_type = sidora_get_concept_type($sidora_data['ontology_id']);
+		}	
+    if (!$concept_type) $concept_type = $form_name; 
+		$row = array(
       array('data' => $parent['label']),
-      array('data' => $form_name),
+      array('data' => $concept_type),
     );
     if (sizeof($parents) > 1) $row[] = array('data' => drupal_render($text_link));
     $rows[] = $row;
@@ -1312,26 +1339,6 @@ function sidora_xsl_information($pid, $return_file_content = FALSE){
  */
 function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $extra = ''){
   global $user;
-  if ($one == 'get_parent'){
-		 $parents = sidora_exhibition_get_parent_info($two);
-		 for ($parent_ctr = 0;$parent_ctr < count($parents);$parent_ctr++){
-		   $exhibition_data = exhibition_config_get_config_data($parents[$parent_ctr]['pid']);
-       if (!(empty($exhibition_data)) && !(is_null($exhibition_data['pid'])) && ($exhibition_data['is_available'])){
-			   echo "Found an exhibition for ".$parents[$parent_ctr]['pid'];
-				 exit();
-			}	
-		}	 
-		for ($parent_ctr = 0;$parent_ctr < count($parents);$parent_ctr++){
-		  $grandparents = sidora_exhibition_get_parent_info($parents[$parent_ctr]['pid']);
-		  for ($grandparent_ctr = 0;$grandparent_ctr < count($grandparents);$grandparent_ctr++){
-		  $exhibition_data = exhibition_config_get_config_data($grandparents[$grandparent_ctr]['pid']);
-      if (!(empty($exhibition_data)) && !(is_null($exhibition_data['pid'])) && ($exhibition_data['is_available'])){
-			   echo "Found an exhibition for ".$grandparents[$grandparent_ctr]['pid'];
-				 exit();
-			}	
-		}	 
-  }
-	}	 
 	if ($one == 'user_register'){
 	  return drupal_render(sidora_account_request_form());
 		exit();
@@ -1339,6 +1346,9 @@ function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $ex
 	if ($one == 'user_register_form'){
 	  var_dump(user_register_form());
 		exit();
+	}	
+  if ($one == 'getXSLS'){
+	  var_dump(variable_get('xsl_form_config', ''));
 	}	
 	if ($one == 'xsls'){
     if ($two != 'two'){
@@ -2445,6 +2455,7 @@ function sidora_get_xsl_file_config_for_object($pid){
   $preferred_dsid = $sidora_data['dsid'];
   $form_name = $sidora_data['form_name'];
   $models = $object->models;
+	//var_dump($models);
   $perfect_match = FALSE;
   //So search through the sfc until you find one that matches
   //Cut out early if a perfect match is found (matches form/model/preferred_dsid)
@@ -2457,9 +2468,9 @@ function sidora_get_xsl_file_config_for_object($pid){
     $model_match = in_array($curr_check->model,$models);
     $form_match = $curr_check->form == $form_name;
     //$dsid_match = $curr_check->dsid == $preferred_dsid;
-    //print 'mm:'.$model_match.' for:'.$curr_check->model;
+    //print 'mm:'.$model_match.' for:'.$curr_check->model."\n";
     //var_dump($models);
-    //print 'fm:'.$form_match.' for:'.$form_name.' vs:'.$curr_check->form;
+    //print 'fm:'.$form_match.' for:'.$form_name.' vs:'.$curr_check->form."\n";
 
     if ($model_match && $form_match){
       $perfect_match = TRUE;
@@ -2535,10 +2546,10 @@ function sidora_generate_parent_concept_query($pid) {
 }
 
 function sidora_open_access($info_type, $pid){
-  if (!sidora_exhibition_exists_in_tree($pid)){
+ /* if (!sidora_exhibition_exists_in_tree($pid)){
 	  drupal_not_found();
 		exit();
-	}	
+	}	*/
 	switch($info_type) {
     case 'xsl':
       $file = sidora_get_xsl_file_for_object($pid);
