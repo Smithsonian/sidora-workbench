@@ -1049,7 +1049,8 @@ sidora.ontology._createSubmenu = function(ontologyChildren){
       var model = "";
       var formName = "";
       var classDisabled = "";//" disabled";
-      if (typeof(obj.model) != 'undefined') model = ' model="'+obj.model+'"';
+      var ontologyId = "";
+			if (typeof(obj.model) != 'undefined') model = ' model="'+obj.model+'"';
       if (typeof(obj.form) != 'undefined') formName = ' formname="'+obj.form+'"';
       if (typeof(obj['ontology-id']) != 'undefined') ontologyId = ' ontology-id="'+obj['ontology-id']+'"';
       if (typeof(obj.disabled) != 'undefined' && obj.disabled) classDisabled = " ui-state-disabled";
