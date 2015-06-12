@@ -1424,7 +1424,11 @@ function sidora_xsl_information($pid, $return_file_content = FALSE){
  */
 function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $extra = ''){
   global $user;
-  if ($one == 'xsls'){
+  if ($one == 'modules'){
+	  $modules = implode(', ', module_list());
+    print $modules;
+	}	
+	if ($one == 'xsls'){
     if ($two != 'two'){
       //$object = sidora_obj($two);
       $xsl_file = sidora_get_xsl_file_for_object($two); 
@@ -1894,11 +1898,16 @@ function sidora_form_alter(&$form, &$form_state, $form_id){
   if (!array_key_exists('#submit', $form)) $form['#submit'] = array();
   array_unshift($form['#submit'], 'sidora_form_submit_alter');
   $association = NULL;
+  error_log("In sidora_form_alter, form id :".$form_id,"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
   if ($form_id == 'xml_form_builder_ingest_form' || $form_id == 'islandora_ingest_form'){// || $form_id == 'xml_form_builder_datastream_form_metadata_form'){
-    if (array_key_exists('form_build_id', $_POST)){
-      $submitted_form_id = $_POST['form_build_id'];
+		//$form_id_to_creation_info = cache_get("sidora:form_id_to_filename");
+		//error_log("In sidora_form_alter, form id to creation info :".print_r($form_id_to_creation_info->data,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
+		if (array_key_exists('form_build_id', $_POST)){
+      error_log("In sidora_form_alter, form build id :".$_POST['form_build_id'],"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
+			$submitted_form_id = $_POST['form_build_id'];
       $association = sidora_find_association($form_state, $submitted_form_id);
-      if (!empty($association)){
+      error_log("In sidora_form_alter, association :".print_r($association,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
+			if (!empty($association)){
         $association_step_storage = &islandora_ingest_form_get_step_storage($form_state, 'xml_form_builder_metadata_step');
         // Make $association_step_storage have only the association you want to use.
         $association_step_storage['association'] = $association; 
@@ -2023,7 +2032,8 @@ function sidora_create_resource_get_upload_form_html($model, $upload_button_text
     'si:datasetCModel' => array('csv', 'xml', 'xlsx', 'xls', 'dat', 'med', 'arg', 'slt'),
     'si:fieldbookCModel' => array('pdf'),
     'si:siBasicObject' => array('mp3','mp4','aiff','aac','ogg','wav','wma'),
-    '*' => array('*'),
+    'islandora:sp-audioCModel' => array('mp3','mp4','aiff','aac','ogg','wav','wma'),
+		'*' => array('*'),
   );
   if (array_key_exists($model, $file_extensions)){
     $extensions_for_model = $file_extensions[$model];
@@ -2163,6 +2173,11 @@ function sidora_create_resource_get_metadata_form_html($parent_pid, $model, $for
             $association = $curr_association;
           }
         }
+				$form['association'] = array(
+          '#title' => t('Association'),
+          '#type' => 'textarea',
+          '#default_value' => $association
+        );
         $form_copy_array = $form;
         for ($title_total = 0; $title_total < count($association['title_field']); $title_total++){
           $form_copy_key = $association['title_field'][$title_total];
@@ -6249,5 +6264,46 @@ function sidora_login_form_alter(&$form, &$form_state, $form_id) {
 function sidora_form_user_login_alter(&$form, &$form_state) {
     $form['name']['#description'] = t('');
     $form['pass']['#description'] = t('');
+}
+function sidora_islandora_audio_islandora_required_objects(IslandoraTuque $connection) {
+  $module_path = drupal_get_path('module', 'islandora_audio');
+  // Audio Content Model.
+  $audio_content_model = $connection->repository->constructObject('islandora:sp-audioCModel');
+  $audio_content_model->owner = 'fedoraAdmin';
+  $audio_content_model->label = 'Islandora Audio Content Model';
+  $audio_content_model->models = 'fedora-system:ContentModel-3.0';
+  // DS-COMPOSITE-MODEL Datastream.
+  $datastream = $audio_content_model->constructDatastream('DS-COMPOSITE-MODEL', 'X');
+  $datastream->label = 'DS-COMPOSITE-MODEL';
+  $datastream->mimetype = 'application/xml';
+  $datastream->setContentFromFile("$module_path/xml/islandora_audio_ds_composite_model.xml", FALSE);
+  $audio_content_model->ingestDatastream($datastream);
+  // Audio Collection.
+  $audio_collection = $connection->repository->constructObject('islandora:audio_collection');
+  $audio_collection->owner = 'fedoraAdmin';
+  $audio_collection->label = 'Audio Collection';
+  $audio_collection->models = 'islandora:collectionCModel';
+  $audio_collection->relationships->add(FEDORA_RELS_EXT_URI, 'isMemberOfCollection', 'islandora:root');
+  // Collection Policy Datastream.
+  $datastream = $audio_collection->constructDatastream('COLLECTION_POLICY', 'X');
+  $datastream->label = 'Collection policy';
+  $datastream->mimetype = 'application/xml';
+  $datastream->setContentFromFile("$module_path/xml/islandora_audio_collection_policy.xml", FALSE);
+  $audio_collection->ingestDatastream($datastream);
+  // TN Datastream.
+  $datastream = $audio_collection->constructDatastream('TN', 'M');
+  $datastream->label = 'Thumbnail';
+  $datastream->mimetype = 'image/png';
+  $datastream->setContentFromFile("$module_path/images/folder.png", FALSE);
+  $audio_collection->ingestDatastream($datastream);
+  return array(
+    'islandora_audio' => array(
+      'title' => 'Islandora audio',
+      'objects' => array(
+        $audio_content_model,
+        $audio_collection,
+      ),
+    ),
+  );
 }
 
