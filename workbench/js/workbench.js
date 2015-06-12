@@ -27,21 +27,22 @@ sidora.concept.LoadContentHelp.Resources ={};
  * Calls for the table setup information
  */
 sidora.concept.LoadContentHelp.Resources.TableLoad = function(conceptOfInterest){
-  sidora.resources.dataTable = jQuery('#res_table').dataTable({
+ // var dtPageLength = parseInt(readCookie('Drupal.pageLength'));
+	sidora.resources.dataTable = jQuery('#res_table').dataTable({
      "oLanguage": {
             "sLengthMenu": "Show _MENU_"
                 },
      'sPaginationType': "input",
      'lengthMenu':[5,10,50,100],
-     'pageLength' : (readCookie('Drupal.pageLength') == '')?'5':readCookie('Drupal.pageLength'),
+     'pageLength': (readCookie('Drupal.pageLength') == '')?parseInt('5'):parseInt(readCookie('Drupal.pageLength')),
      'search': {
        'search': (readCookie('Drupal.dtFilter') == '')?'':readCookie('Drupal.dtFilter')
       },
      'processing': true,
      'serverSide': true,
-     'ordering' : false,
+     'ordering': false,
      'ajax': jQuery.fn.dataTable.pipeline({
-       url: '../info/'+conceptOfInterest+'/resources/all/browser/dataTableServerSideProcessing',
+			 url: '../info/'+conceptOfInterest+'/resources/all/browser/dataTableServerSideProcessing',
        pages: 2
      }),
   });
@@ -87,7 +88,9 @@ sidora.concept.LoadContentHelp.Resources.TableLoad = function(conceptOfInterest)
     });
 		table.on( 'length', function ( e, settings, len ) {
     //console.log( 'New page length: '+len );
-		writeCookie('Drupal.pageLength',len,'30')
+		writeCookie('Drupal.pageLength',parseInt(len),'30')
+		//window.sidora.resources.dataTable.DataTable().draw();
+		
 } );
   }(jQuery));
 
@@ -1046,7 +1049,8 @@ sidora.ontology._createSubmenu = function(ontologyChildren){
       var model = "";
       var formName = "";
       var classDisabled = "";//" disabled";
-      if (typeof(obj.model) != 'undefined') model = ' model="'+obj.model+'"';
+      var ontologyId = "";
+			if (typeof(obj.model) != 'undefined') model = ' model="'+obj.model+'"';
       if (typeof(obj.form) != 'undefined') formName = ' formname="'+obj.form+'"';
       if (typeof(obj['ontology-id']) != 'undefined') ontologyId = ' ontology-id="'+obj['ontology-id']+'"';
       if (typeof(obj.disabled) != 'undefined' && obj.disabled) classDisabled = " ui-state-disabled";
