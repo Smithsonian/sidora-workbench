@@ -1262,3 +1262,25 @@ function sidora_get_file_extension_from_mime($file_mime_type){
       $pieces = explode('/', $file_mime_type);
       return '.' . array_pop($pieces);
 }
+/* This function takes the ontology id from the sidora datastream of a pid and 
+ * retrieves the corresponding concept type from the sidora_ontology_json string
+ */
+function sidora_get_concept_type($ontology_id){
+  $sidora_ontology_json = variable_get('sidora_ontology_json',sidora_ontology_json_default());
+	$sidora_ontology_array = json_decode($sidora_ontology_json,true);
+	return sidora_search_ontology_for_concept_type($sidora_ontology_array,$ontology_id);
+}	
+function sidora_search_ontology_for_concept_type($ontologytree,$ontology_id){
+  foreach ($ontologytree as $key=>$value) {
+    $obj = $ontologytree[$key];
+		if (isset($obj['ontology-id']) && ($obj['ontology-id'] == $ontology_id)){
+      return $key;
+		}elseif(is_array($obj['children']) && (count($obj['children']) >0)){
+		  $concept_type = sidora_search_ontology_for_concept_type($obj['children'],$ontology_id);
+		  if ($concept_type){
+			  return $concept_type;
+			}	
+		}
+	}			
+  return FALSE;
+}

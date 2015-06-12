@@ -560,11 +560,9 @@ function sidora_islandora_object_ingested(AbstractObject $object){
   //dsm("Sidora Object Ingested");
   $parent_pid = drupal_static('parent_collection_pid');
   $ontology_id = drupal_static('ontology_id');
-  /*
   drupal_set_message("Object:".$object->id);
   drupal_set_message("Parent:".$parent_pid);
   drupal_set_message("New Pid:" . $object->id . ":End New Pid");
-  */
   $id_to_filename = cache_get("sidora:form_id_to_filename");
   if (empty($id_to_filename)){ $id_to_filename = array(); }else{ $id_to_filename = $id_to_filename->data; }
   $file_location = '';
@@ -844,7 +842,7 @@ PDF metadata:
   return $to_return;
 }
 /*
- * returns an array('form_name'=> <form_name>, 'dsid'=> <dsid>) or FALSE if it can't be figured out
+ * returns an array('form_name'=> <form_name>, 'dsid'=> <dsid>, 'ontology_id'=> <ontology_id>) or FALSE if it can't be figured out
  */
 function sidora_get_form_and_dsid($object_pid){
   $to_return = array();
@@ -855,7 +853,7 @@ function sidora_get_form_and_dsid($object_pid){
   module_load_include('inc','xml_forms','builder/includes/associations');
   $object = sidora_obj($object_pid);
   //Now that we have the object, check to see if it has the SIDORA datastream (which will tell us the model and form to use)
-  if ($object['SIDORA'] && strpos($object['SIDORA']->content, '<form>') > 0 && strpos($object['SIDORA']->content, '<model>') > 0){
+  if ($object['SIDORA'] && strpos($object['SIDORA']->content, '<form>') > 0 && strpos($object['SIDORA']->content, '<model>') > 0 && strpos($object['SIDORA']->content, '<ontology_location_id>') > 0){
     $to_model = '
 <xsl:stylesheet version="1.0"
 xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
@@ -884,6 +882,19 @@ xmlns:cpf="urn:isbn:1-931666-33-4"
 </xsl:template>
 </xsl:stylesheet>';
 
+    $to_ontology_id = '
+<xsl:stylesheet version="1.0"
+xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+xmlns:mods="http://www.loc.gov/mods/v3"
+xmlns:fits="http://hul.harvard.edu/ois/xml/ns/fits/fits_output"
+xmlns:cpf="urn:isbn:1-931666-33-4"
+>
+<xsl:template match="/">
+  <xsl:for-each select="//ontology_location_id">
+      <xsl:value-of select="current()"/>
+    </xsl:for-each>
+</xsl:template>
+</xsl:stylesheet>';
     $doc = new DOMDocument();
     $xsl = new XSLTProcessor();
     $doc->loadXML($to_form_name);
@@ -898,6 +909,12 @@ xmlns:cpf="urn:isbn:1-931666-33-4"
     $doc->loadXML($docToLoad);
     $model = trim($xsl->transformToDoc($doc)->firstChild->wholeText);
 
+    $doc->loadXML($to_ontology_id);
+    $xsl->importStyleSheet($doc);
+    $docToLoad = ('<'.'?xml version="1.0" encoding="UTF-8"?'.'>'.$object['SIDORA']->content);
+    $doc->loadXML($docToLoad);
+    $ontology_id = trim($xsl->transformToDoc($doc)->firstChild->wholeText);
+
     $checker = xml_form_builder_get_associations(array(), array(), array(), FALSE);   
     //Sidora assumes that we will only have one form that we care about as metadata, and that we will only have one association of model to form
     $found_dsid = '';
@@ -908,6 +925,7 @@ xmlns:cpf="urn:isbn:1-931666-33-4"
     }
     $to_return['dsid'] = $found_dsid;
     $to_return['form_name'] = $form_name;
+		$to_return['ontology_id'] = $ontology_id;
     return $to_return;
   }else{
     $associations = xml_form_builder_get_associations(array(), $object->models, array());
@@ -915,12 +933,14 @@ xmlns:cpf="urn:isbn:1-931666-33-4"
       $curr_association = $associations[0];
       $to_return['form_name'] = $curr_association['form_name'];
       $to_return['dsid'] = $curr_association['dsid'];
+			$to_return['ontology_id'] = '';
       return $to_return;
     }else{
       $info = sidora_guess_dsid_and_form_name($object);
       if (!empty($info['form_name'])){
         //watchdog('sidora_workbench',$object_pid.' - Form was guessed, not included in information:'.$dsid.' "'.$form_name.'"');
-        return $info;
+        $info['ontology_id'] = '';
+				return $info;
       }else{
         return FALSE;
       }
@@ -1177,9 +1197,14 @@ function sidora_get_parent_table($pid){
     );
     $sidora_data = sidora_get_form_and_dsid($parent['pid']);
     $form_name = $sidora_data['form_name'];
-    $row = array(
+		$concept_type = $form_name;
+    if ($sidora_data['ontology_id'] != ''){
+	    $concept_type = sidora_get_concept_type($sidora_data['ontology_id']);
+		}	
+    if (!$concept_type) $concept_type = $form_name; 
+		$row = array(
       array('data' => $parent['label']),
-      array('data' => $form_name),
+      array('data' => $concept_type),
     );
     if (sizeof($parents) > 1) $row[] = array('data' => drupal_render($text_link));
     $rows[] = $row;
@@ -1314,10 +1339,6 @@ function sidora_xsl_information($pid, $return_file_content = FALSE){
  */
 function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $extra = ''){
   global $user;
-  if ($one == 'request'){
-	  echo "request";
-		exit();
-	}	
 	if ($one == 'user_register'){
 	  return drupal_render(sidora_account_request_form());
 		exit();
@@ -1325,6 +1346,9 @@ function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $ex
 	if ($one == 'user_register_form'){
 	  var_dump(user_register_form());
 		exit();
+	}	
+  if ($one == 'getXSLS'){
+	  var_dump(variable_get('xsl_form_config', ''));
 	}	
 	if ($one == 'xsls'){
     if ($two != 'two'){
@@ -1569,18 +1593,44 @@ function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $ex
   }
   if ($one == 'queries'){
     print 'ok';
-  $tuque = islandora_get_tuque_connection();
-  if ($tuque) {
-    $query = sidora_generate_child_resource_sparql_query('si-user:124', Array(),'' , '', 'created');
-    //var_dump($query);
-    $ri = $tuque->repository->ri;
+    $resource_types = array(
+      'all' => array('si:imageCModel', 'si:generalImageCModel','si:fieldbookCModel','si:datasetCModel'),
+      'images' => array('si:imageCModel', 'si:generalImageCModel'),
+      'pdf' => array('si:fieldbookCModel'),
+      'csv' => array('si:datasetCModel'),
+      'text' => FALSE,
+      'video' => FALSE
+    );
+    //$jsdt_draw = filter_input(INPUT_GET,'draw', FILTER_SANITIZE_NUMBER_INT);
+    //$jsdt_start = filter_input(INPUT_GET,'start', FILTER_SANITIZE_NUMBER_INT);
+    //$jsdt_length = filter_input(INPUT_GET,'length', FILTER_SANITIZE_NUMBER_INT);
+    $limit = '200';
+    $jsdt_start = '1100';
+		$jsdt_draw = '1';
+    $tuque = islandora_get_tuque_connection();
+    if ($tuque) {
+      $resources_count = sidora_concept_resource_listing_count($two,$resource_types); 
+      echo $resources_count;
+			//$filtered_resources_count = sidora_concept_resource_listing_count($pid,$resource_types, $jsdt_search_val, $jsdt_title_search_val); 
+			/* $offset = $resources_count - ($limit*$jsdt_draw);
+      if ($offset < 0){
+			  $offset = $jsdt_start;
+			}
+			echo "offset is ".$offset;*/
+			$offset = $jsdt_start;
+			$query = sidora_generate_child_resource_sparql_query($two, Array(), '', '', 'created', $limit, $offset);
+      //var_dump($query);
+     $ri = $tuque->repository->ri;
     $results = $ri->sparqlQuery($query);
-    foreach ($results as $key => $row){
+   // echo "before sort";
+		var_dump($results);
+	 /* foreach ($results as $key => $row){
        $dates[$key] = strtotime($row['created']['value']);
        
     }  
     array_multisort($dates, SORT_DESC, $results);
-    var_dump($results);
+    echo "after sort";
+		var_dump($results);*/
     //print sidora_generate_child_resource_sparql_query('si:387917', Array());
   } 
   }
@@ -2405,6 +2455,7 @@ function sidora_get_xsl_file_config_for_object($pid){
   $preferred_dsid = $sidora_data['dsid'];
   $form_name = $sidora_data['form_name'];
   $models = $object->models;
+	//var_dump($models);
   $perfect_match = FALSE;
   //So search through the sfc until you find one that matches
   //Cut out early if a perfect match is found (matches form/model/preferred_dsid)
@@ -2417,9 +2468,9 @@ function sidora_get_xsl_file_config_for_object($pid){
     $model_match = in_array($curr_check->model,$models);
     $form_match = $curr_check->form == $form_name;
     //$dsid_match = $curr_check->dsid == $preferred_dsid;
-    //print 'mm:'.$model_match.' for:'.$curr_check->model;
+    //print 'mm:'.$model_match.' for:'.$curr_check->model."\n";
     //var_dump($models);
-    //print 'fm:'.$form_match.' for:'.$form_name.' vs:'.$curr_check->form;
+    //print 'fm:'.$form_match.' for:'.$form_name.' vs:'.$curr_check->form."\n";
 
     if ($model_match && $form_match){
       $perfect_match = TRUE;
@@ -2442,8 +2493,64 @@ function sidora_get_xsl_file_for_object($pid){
   if (empty($curr_check)) return NULL;
   return $curr_check->file;
 }
+function sidora_exhibition_exists_in_tree($pid){
+  if ($pid != 'si:root'){
+    $exhibition_data = exhibition_config_get_config_data($pid);
+		if (!(empty($exhibition_data)) && !(is_null($exhibition_data['pid'])) && ($exhibition_data['is_available'])){
+		  return TRUE;
+    }else{
+		  $parents = sidora_get_parent_info($pid);
+			if (is_array($parents)){
+			  for ($parent_ctr = 0;$parent_ctr < count($parents);$parent_ctr++){
+					$parent_has_exhibition = sidora_exhibition_exists_in_tree($parents[$parent_ctr]['pid']);
+					if ($parent_has_exhibition){
+					  return $parent_has_exhibition;
+					}	
+				}	
+			}
+		}	  
+	}
+	return FALSE;
+}		    
+// copy of the function si_exhibition_get_parent_info in si_exhibition.util.inc
+function sidora_get_parent_info($pid, $skipNonTreeParents = false) {
+  $tuque = islandora_get_tuque_connection();
+  if ($tuque) {
+    $query = sidora_generate_parent_concept_query($pid);
+    $ri = $tuque->repository->ri;
+    $results = $ri->itqlQuery($query);
+    $parents = array_map(function($o) {
+      return array('pid' => $o['o']['value']); 
+    }, $results);
+    return $parents;
+	}else{
+	  return -1;
+	}		
+}
+
+/**
+ * Query for fetching the Parent Concepts pids and labels.
+ *
+ * @param string $pid
+ *   The object to query for.
+ *
+ * @return string
+ *   An itql query string.
+ */
+function sidora_generate_parent_concept_query($pid) {
+  return 'select $o $t from <#ri> where
+    $o <fedora-model:state> <fedora-model:Active> and
+    $o <fedora-model:label> $t and
+    $o <fedora-rels-ext:hasConcept> <info:fedora/' . $pid . '>
+    order by $t';
+}
+
 function sidora_open_access($info_type, $pid){
-  switch($info_type) {
+ /* if (!sidora_exhibition_exists_in_tree($pid)){
+	  drupal_not_found();
+		exit();
+	}	*/
+	switch($info_type) {
     case 'xsl':
       $file = sidora_get_xsl_file_for_object($pid);
       $directory_for_xsl = DRUPAL_ROOT.'/'.drupal_get_path('module','sidora').'/XSL';
@@ -2649,12 +2756,17 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
         $offset = $jsdt_start;
         $resources_count = sidora_concept_resource_listing_count($pid,$resource_types); 
         $filtered_resources_count = sidora_concept_resource_listing_count($pid,$resource_types, $jsdt_search_val, $jsdt_title_search_val); 
-        $resources = sidora_concept_resource_listing($pid,$resource_types,$limit,$offset, $jsdt_search_val, $jsdt_title_search_val); 
-
+			  //$offset = $filtered_resources_count - ($limit*$jsdt_draw);
+        //if ($offset < 0){
+			  //  $offset = 0;
+			  //}
+				$resources = sidora_concept_resource_listing($pid,$resource_types,$limit,$offset, $jsdt_search_val, $jsdt_title_search_val); 
         $jsdt_response = array();
         $jsdt_response['draw'] = $jsdt_draw;
         $jsdt_response['recordsTotal'] = $resources_count;
         $jsdt_response['recordsFiltered'] = $filtered_resources_count;
+				$jsdt_response['offset'] = $offset;
+				$jsdt_response['length'] = $limit;
         $jsdt_data = array();
         foreach($resources as $element){
           if (array_key_exists('object',$element)){
@@ -2850,12 +2962,13 @@ function sidora_concept_resource_listing($pid, $resource_types, $limit, $offset,
     $query = sidora_generate_child_resource_sparql_query($concept_pid, $resource_types[$specific_resource_type], $title_search, '', 'created', $limit, $offset);
     $ri = $tuque->repository->ri;
     $results = $ri->sparqlQuery($query);
-    foreach ($results as $key => $row){
+    /*
+		foreach ($results as $key => $row){
        $dates[$key] = strtotime($row['created']['value']);
-       
     }  
     array_multisort($dates, SORT_DESC, $results);
-    foreach($results as $resindex=>$result){
+		*/
+		foreach($results as $resindex=>$result){
       $tobj = $tuque->repository->getObject($result['object']['value']);
       //$results[$resindex]['object'] = $tobj;
       $original_metadata = 'FALSE';
@@ -3768,7 +3881,7 @@ function sidora_block_content_navigation(){
   drupal_add_css(drupal_get_path('module','sidora').'/jslibs/jstree/dist/themes/default/style.min.css');
   drupal_add_js(drupal_get_path('module','sidora').'/jslibs/jstree/dist/jstree.js');
   //dataTables lib
-  drupal_add_js(drupal_get_path('module','sidora').'/jslibs/dataTables/js/jquery.dataTables.min.js');
+	drupal_add_js(drupal_get_path('module','sidora').'/jslibs/dataTables/js/jquery.dataTables.min.js');
   drupal_add_js(drupal_get_path('module','sidora').'/jslibs/dataTables/js/pipeline.js');
   drupal_add_css(drupal_get_path('module','sidora').'/jslibs/dataTables/css/jquery.dataTables.css');
 
