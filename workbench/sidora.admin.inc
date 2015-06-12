@@ -51,7 +51,6 @@ function sidora_admin_settings() {
 
   module_load_include('inc', 'xml_form_builder', 'XMLFormRepository');
   $names = XMLFormRepository::GetNames();
-
   // No forms exist can only create.
   /*
   if (count($names) == 0) {
