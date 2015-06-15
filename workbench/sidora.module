@@ -1312,26 +1312,6 @@ function sidora_xsl_information($pid, $return_file_content = FALSE){
  */
 function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $extra = ''){
   global $user;
-  if ($one == 'get_parent'){
-		 $parents = sidora_exhibition_get_parent_info($two);
-		 for ($parent_ctr = 0;$parent_ctr < count($parents);$parent_ctr++){
-		   $exhibition_data = exhibition_config_get_config_data($parents[$parent_ctr]['pid']);
-       if (!(empty($exhibition_data)) && !(is_null($exhibition_data['pid'])) && ($exhibition_data['is_available'])){
-			   echo "Found an exhibition for ".$parents[$parent_ctr]['pid'];
-				 exit();
-			}	
-		}	 
-		for ($parent_ctr = 0;$parent_ctr < count($parents);$parent_ctr++){
-		  $grandparents = sidora_exhibition_get_parent_info($parents[$parent_ctr]['pid']);
-		  for ($grandparent_ctr = 0;$grandparent_ctr < count($grandparents);$grandparent_ctr++){
-		  $exhibition_data = exhibition_config_get_config_data($grandparents[$grandparent_ctr]['pid']);
-      if (!(empty($exhibition_data)) && !(is_null($exhibition_data['pid'])) && ($exhibition_data['is_available'])){
-			   echo "Found an exhibition for ".$grandparents[$grandparent_ctr]['pid'];
-				 exit();
-			}	
-		}	 
-  }
-	}	 
 	if ($one == 'user_register'){
 	  return drupal_render(sidora_account_request_form());
 		exit();
@@ -1340,21 +1320,6 @@ function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $ex
 	  var_dump(user_register_form());
 		exit();
 	}	
-	if ($one == 'xsls'){
-    if ($two != 'two'){
-      //$object = sidora_obj($two);
-      $xsl_file = sidora_get_xsl_file_for_object($two); 
-      dsm($xsl_file);
-      dsm(sidora_xsl_string($xsl_file));
-    }
-    $existing_json_sidora_form_config = variable_get('xsl_form_config', '');
-    $sfc = json_decode($existing_json_sidora_form_config);
-    dsm($sfc);
-    foreach ($sfc->xsl_config as $config_line){
-      
-    }
-    return 'xsl_file_information';
-  }
   if ($one == 'codebooks'){
     print 'ding';
     $pid = $two;
@@ -2439,13 +2404,15 @@ function sidora_get_xsl_file_config_for_object($pid){
   $xsl_file = '';
   $existing_json_sidora_form_config = variable_get('xsl_form_config', '');
   $sfc = json_decode($existing_json_sidora_form_config);
-  //determine the current form and model
+	//var_dump($sfc->xsl_config);
+	//determine the current form and model
   $sidora_data = sidora_get_form_and_dsid($pid);
   $object = sidora_obj($pid);
   $preferred_dsid = $sidora_data['dsid'];
   $form_name = $sidora_data['form_name'];
   $models = $object->models;
-  $perfect_match = FALSE;
+  //var_dump($models);
+	$perfect_match = FALSE;
   //So search through the sfc until you find one that matches
   //Cut out early if a perfect match is found (matches form/model/preferred_dsid)
   $dsid_to_use = '';
@@ -2482,17 +2449,19 @@ function sidora_get_xsl_file_for_object($pid){
   if (empty($curr_check)) return NULL;
   return $curr_check->file;
 }
-function sidora_exhibition_exists_in_tree($pid){
-  if ($pid != 'si:root'){
-    $exhibition_data = exhibition_config_get_config_data($pid);
+function sidora_exhibition_exists_in_tree($pid_to_check, $original_pid, $override = FALSE){
+  if (($pid_to_check != 'si:root') && (($original_pid != $pid_to_check) || (($original_pid == $pid_to_check) && ($override)))){
+		$exhibition_data = exhibition_config_get_config_data($pid_to_check);
 		if (!(empty($exhibition_data)) && !(is_null($exhibition_data['pid'])) && ($exhibition_data['is_available'])){
-		  return TRUE;
+		  return $pid_to_check;
     }else{
-		  $parents = sidora_get_parent_info($pid);
+		  $parents = sidora_get_parent_info($pid_to_check);
 			if (is_array($parents)){
 			  for ($parent_ctr = 0;$parent_ctr < count($parents);$parent_ctr++){
-					$parent_has_exhibition = sidora_exhibition_exists_in_tree($parents[$parent_ctr]['pid']);
-					if ($parent_has_exhibition){
+					$parent_has_exhibition = sidora_exhibition_exists_in_tree($parents[$parent_ctr]['pid'], $original_pid, FALSE);
+					if ($parent_has_exhibition == FALSE){
+					  break;
+					}else{
 					  return $parent_has_exhibition;
 					}	
 				}	
@@ -2535,16 +2504,23 @@ function sidora_generate_parent_concept_query($pid) {
 }
 
 function sidora_open_access($info_type, $pid){
-  if (!sidora_exhibition_exists_in_tree($pid)){
-	  drupal_not_found();
+  $pid_with_exhibition =	sidora_exhibition_exists_in_tree($pid, $pid, TRUE);
+  if ($pid_with_exhibition == FALSE){
+		drupal_not_found();
 		exit();
-	}	
+	}else{
 	switch($info_type) {
     case 'xsl':
-    case 'xsl_config':
-      sidora_xsl_information($pid, $info_type == 'xsl');
+      $file = sidora_get_xsl_file_for_object($pid_with_exhibition);
+      $directory_for_xsl = DRUPAL_ROOT.'/'.drupal_get_path('module','sidora').'/XSL';
+      $full_file = ($directory_for_xsl . '/' . $file);
+      if ($file) $output_info = readfile($full_file);
       break;
-  }
+    case 'xsl_config':
+      sidora_xsl_information($pid_with_exhibition, $info_type == 'xsl');
+      break;  
+	}
+	}
   exit();
 }
 function sidora_info_json($pid, $type='resources', $specific_meta = '', $download = '', $formatted = '', $limit = NULL, $offset = NULL){
