@@ -2449,26 +2449,29 @@ function sidora_get_xsl_file_for_object($pid){
   if (empty($curr_check)) return NULL;
   return $curr_check->file;
 }
-function sidora_exhibition_exists_in_tree($pid_to_check, $original_pid, $override = FALSE){
-  if (($pid_to_check != 'si:root') && (($original_pid != $pid_to_check) || (($original_pid == $pid_to_check) && ($override)))){
+function sidora_exhibition_exists_in_tree($pid_to_check, $pids_checked_array){
+  global $pids_checked_array;
+  if (($pid_to_check != 'si:root') && ((!is_array($pids_checked_array)) || (!in_array($pid_to_check,$pids_checked_array)))){
 		$exhibition_data = exhibition_config_get_config_data($pid_to_check);
 		if (!(empty($exhibition_data)) && !(is_null($exhibition_data['pid'])) && ($exhibition_data['is_available'])){
 		  return $pid_to_check;
     }else{
-		  $parents = sidora_get_parent_info($pid_to_check);
+		  $pids_checked_array[] = $pid_to_check;
+			$parents = sidora_get_parent_info($pid_to_check);
 			if (is_array($parents)){
 			  for ($parent_ctr = 0;$parent_ctr < count($parents);$parent_ctr++){
-					$parent_has_exhibition = sidora_exhibition_exists_in_tree($parents[$parent_ctr]['pid'], $original_pid, FALSE);
+					$parent_has_exhibition = sidora_exhibition_exists_in_tree($parents[$parent_ctr]['pid'], $pids_checked_array);
 					if ($parent_has_exhibition == FALSE){
-					  break;
+					  continue;
 					}else{
 					  return $parent_has_exhibition;
 					}	
 				}	
 			}
 		}	  
+	}else{
+	  return FALSE;
 	}
-	return FALSE;
 }		    
 // copy of the function si_exhibition_get_parent_info in si_exhibition.util.inc
 function sidora_get_parent_info($pid, $skipNonTreeParents = false) {
@@ -2504,7 +2507,8 @@ function sidora_generate_parent_concept_query($pid) {
 }
 
 function sidora_open_access($info_type, $pid){
-  $pid_with_exhibition =	sidora_exhibition_exists_in_tree($pid, $pid, TRUE);
+	$pids_checked = Array();
+	$pid_with_exhibition =	sidora_exhibition_exists_in_tree($pid, $pids_checked);
   if ($pid_with_exhibition == FALSE){
 		drupal_not_found();
 		exit();
