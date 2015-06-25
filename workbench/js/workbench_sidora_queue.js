@@ -123,6 +123,9 @@ SidoraQueue.prototype.Done = function(completedItem, ajaxReturn){
     if (!completedItem.isSilent) this.NotificationWindow.Show(completedItem.userFriendlyName);
     var processedResourceArray = completedItem.userFriendlyName.split(':');
 		for (var i = 0; i < completedItem.pidsBeingProcessed.length; i++){
+      if (sidora.resources.individualPanel.resourceOfInterest.pid == completedItem.pidsBeingProcessed[i]){
+        sidora.resources.individualPanel.LoadRelationships();
+      }
       if (sidora.concept.GetPid() == completedItem.pidsBeingProcessed[i]){
 			 sidora.concept.LoadContent();
         if (processedResourceArray.length > 1){
