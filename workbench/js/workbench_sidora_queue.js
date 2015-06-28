@@ -110,14 +110,10 @@ SidoraQueue.prototype.Done = function(completedItem, ajaxReturn){
 			 sidora.concept.LoadContent();
         var processedResourceCountArray = processedResourceArray[1].split(' of ');
 				if (processedResourceCountArray[0] == processedResourceCountArray[1]){
-           var newPid = getPid(jsonString);
-					 console.log("new pid : "+newPid);
-					 if (newPid != ''){
-					   sidora.resources.individualPanel.resourceOfInterest = {
-             	'pid': newPid
-						 };
-						 
-					 }	
+          // console.log(jQuery("#res_table tbody").children("tr:first").attr("id"));
+					 writeCookie('Drupal.selectResource','1','30')
+					// sidora.resources.individualPanel.resourceOfInterest.pid = jQuery("#res_table tbody").children("tr:first").attr("id");
+					// console.log(sidora.resources.individualPanel.resourceOfInterest.pid);
 				}
       }
     }
