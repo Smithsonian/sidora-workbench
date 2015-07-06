@@ -877,6 +877,30 @@ sidora.InitiatePage = function(){
   jQuery("#branding").append("<div class='branding-user-info' style='float:right'> <a href='"+Drupal.settings.basePath+"user'>Profile</a> <a href='"+Drupal.settings.basePath+"user/logout'>Logout</a></div>");
 };
 /*
+ * Attempt to update any thumbnails
+ */
+sidora.resources.updateThumbnails = function(){
+  jQuery("#res_table tr").map(function(){
+    var currPid = this.id;
+    var me = jQuery(this);
+    if (typeof(me.children("td").children("div").children("img").attr("src")) == 'string'){
+      var imgChild = me.children("td").children("div").children("img");
+      var currentSrc = imgChild.attr("src");
+      if (currentSrc.indexOf(currPid) == -1){  //If the current thumbnail is not unique to this item
+        var pidThumbnail = "../info/"+currPid+"/meta/TN/browser";
+        jQuery.ajax(pidThumbnail,{
+          complete:function(res){
+            var currType = res.getResponseHeader("content-type");
+            if (currType.indexOf("image") != -1){
+              imgChild.attr("src",pidThumbnail).attr("height","").attr("width","").addClass("resource-list-tn");
+            }
+          }
+        });
+      }
+    }
+  })
+}
+/*
  * Get the pids of the highlighed resources
  */
 sidora.resources.getHighlighted = function(){
@@ -1060,74 +1084,6 @@ sidora.ontology._createSubmenu = function(ontologyChildren){
   return toReturn;
 }
 /*
-sidora.concept.OntologySelector = function(){
-  var htmlToShow = '<div id="ontologies" style="clear:both;height:90%;height:calc(100% - 47px);">';
-  htmlToShow += '<select name="OntologyLevel1" size="7" style="width:50%;width:calc(50% - 20px);margin:5px;height: 100%;"></select>';
-  htmlToShow += '<select size="7" name="OntologyLevel2" style="width:50%;width:calc(50% - 20px);margin:5px;height: 100%;"></select>';
-  htmlToShow += '</div>';
-  var htmlBottomPanel = "<div style='position:absolute;bottom:5px;right:5px;'><span id='conceptPermissionSave' href='#' onclick='return false;'>Create Concept</span></div>";
-  var fullHtml = "<div id='conceptPermissions' style='height:100%;background:white;'>"+htmlToShow+htmlBottomPanel+"</div>";
-  var sbOnFinish = function(){
-    jQuery("#conceptPermissionSave").button({disabled:true}).click(function(){
-      Shadowbox.close();
-      setTimeout(function(){
-      Shadowbox.open({
-        content:    "../edit_metadata/"+window.sidora.concept.GetPid()+"/EAC-CPF/Research%20Project",
-        player:     "iframe",
-        title:      "Create Concept",
-        options: {
-          onFinish:  function(){}
-        }
-      });},1000);
-    });
-    for (var propUnfiltered in window.sidora.ontology) {
-      prop = propUnfiltered.replace(/ /g,"");
-      var possTitle = window.sidora.ontology[propUnfiltered].description;
-      var trueTitle = "";
-      if (possTitle != "") trueTitle = " title='"+possTitle+"'";
-      jQuery("select[name='OntologyLevel1']").append("<option id='"+prop+"Option'"+trueTitle+">"+propUnfiltered+"</option>");
-      jQuery("#"+prop+"Option").click(
-        function(currProp){
-          return function(){
-            var addedOne = false;
-            jQuery("select[name='OntologyLevel2']").children().remove();
-            for (var prop2Unfiltered in window.sidora.ontology[currProp].children) {
-              prop2 = prop2Unfiltered.replace(/ /g,"");
-              addedOne = true;
-              var possTitle = window.sidora.ontology[currProp].children[prop2Unfiltered].description;
-              var trueTitle = "";
-              if (possTitle != "") trueTitle = " title='"+possTitle+"'";
-              jQuery("select[name='OntologyLevel2']").append("<option id='"+prop2+"Option'"+trueTitle+">"+prop2Unfiltered+"</option>");
-              jQuery("#"+prop2+"Option").click(function(){jQuery("#conceptPermissionSave").button("enable");});
-            }
-            if (addedOne){
-              jQuery("#conceptPermissionSave").button("disable");
-            }else{
-              jQuery("#conceptPermissionSave").button("enable");
-            }
-          }
-        }(propUnfiltered)
-      );
-    }
-  }
-  var sbH = jQuery(window).height() - 600;
-  if (sbH < 10) sbH = 400;
-  sbH = 323;
-  var sbW = 600;
-  Shadowbox.open({
-        content:    fullHtml,
-        player:     "html",
-        title:      "Concept Ontology",
-        height: sbH,
-        width: sbW,//jQuery(window).width()- 600,
-        options: {
-          onFinish:  sbOnFinish
-        }
-    });
-
-}
-*/
-/*
  *  Got tired of CSS fiddling, resizing the main div programmatically based on assumed navigation size
  */
 sidora.ResizeOnWindowResize = function(){
@@ -1195,6 +1151,10 @@ sidora.CloseIFrame = function(newlyCreatedConceptId, typeOfClosure){
     //Nothing?  do users need a confirmation? the reloaded page should be good enough
   }
   sidora.util.RefreshTree();
+}
+sidora.util.constantCheck = function(){
+  setTimeout(sidora.util.constantCheck, 30000);
+  sidora.resources.updateThumbnails();
 }
 /*
  * Goes to get the tree from the server and replaces exsiting tree
@@ -1782,6 +1742,7 @@ jQuery(window).resize(function() {
  * If the browser doesn't have a console, give it something so we're not creating JS errors
  */
 if (typeof(window.console) == 'undefined'||typeof(window.console.log)=='undefined'){window.console = {log:function(){}};}
+sidora.util.constantCheck(); //All polling links in to this function
 
 
 /**
