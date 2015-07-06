@@ -4253,10 +4253,12 @@ function sidora_html_tree($query_result_tree, $input_path = ''){
     if ($input_path != '') $current_path .= ',';
     $current_path .= $pid;
    // $to_return .= '<li><a href="'.base_path().'sidora/workbench/#'.$pid.'?path='.$input_path.'" pid="'.$pid.'" fullname="'.$t_element['t']['value'].'" conceptchildren="'.$t_element['k0']['value'].'">';
-    $to_return .= '<li><a href="'.base_path().'sidora/workbench/#'.$pid.'?path='.$input_path.'" pid="'.$pid.'" fullname="'.$t_element['t']['value'].'" conceptchildren="'.$t_element['k0']['value'].'" resourcechildren="'.$t_element['k1']['value'].'">';
+    $resource_children_num = -1;
+    if (array_key_exists('k1',$t_element)) $resource_children_num = $t_element['k1']['value'];
+    $to_return .= '<li><a href="'.base_path().'sidora/workbench/#'.$pid.'?path='.$input_path.'" pid="'.$pid.'" fullname="'.$t_element['t']['value'].'" conceptchildren="'.$t_element['k0']['value'].'" resourcechildren="'.$resource_children_num.'">';
     $to_return .= $t_element['t']['value'];
     //if ($t_element['k0']['value'] > 0) $to_return .= ' ('.$t_element['k0']['value'].')';
-    if ($t_element['k1']['value'] > 0) $to_return .= ' ('.$t_element['k1']['value'].')';
+    if ($resource_children_num > 0) $to_return .= ' ('.$resource_children_num.')';
     $to_return .= '</a>';
     if (array_key_exists('children',$t_element)){
       $to_return .= '<ul>';
