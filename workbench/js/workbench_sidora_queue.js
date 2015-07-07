@@ -131,14 +131,7 @@ SidoraQueue.prototype.Done = function(completedItem, ajaxReturn){
         if (processedResourceArray.length > 1){
   				var processedResourceCountArray = processedResourceArray[1].split(' of ');
   				if ((processedResourceCountArray.length > 1) && (processedResourceCountArray[0] == processedResourceCountArray[1])){  // trying to get the last item of the current queue
-             var newPid = getNewPid(jsonString);
-  					 console.log("new pid : "+newPid);
-  					 if (newPid != ''){
-  					   sidora.resources.individualPanel.resourceOfInterest = {
-               	'pid': newPid
-  						 };
-							 sidora.util.RefreshTree();
-  					 }	
+					  writeCookie('Drupal.selectResource','1','30');
   				}
 				}	
       }
