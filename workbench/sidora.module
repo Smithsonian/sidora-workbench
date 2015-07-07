@@ -1639,6 +1639,36 @@ function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $ex
     dsm($current_uploads);
     return 'current_uploads';
   }
+  if ($one == 'queries'){
+    print 'ok';
+  $tuque = islandora_get_tuque_connection();
+  if ($tuque) {
+    /* $query = "select ?object ?title ?model ?created from <#ri> 
+		 where {
+          <info:fedora/si-user:124> <fedora-rels-ext:hasResource> ?object . 
+          ?object <fedora-model:state> <fedora-model:Active>;
+          ?object <fedora-model:label> ?title;
+          ?object <fedora-model:hasModel> ?model;
+          ?object <fedora-model:createdDate> ?created;
+          FILTER(
+          !sameTerm(?model, <info:fedora/fedora-system:FedoraObject-3.0>) &&
+          !sameTerm(?model, <info:fedora/si:resourceCModel>))
+        }
+        ORDER BY (?created)
+        OFFSET 0 LIMIT 1000000";*/
+    $query = sidora_generate_child_resource_sparql_query($two, Array(),'' , '', 'created');
+    var_dump($query);
+		$ri = $tuque->repository->ri;
+    $results = $ri->sparqlQuery($query);
+		/*foreach ($results as $key => $row){
+			 $dates[$key] = strtotime($row['created']['value']);
+			 
+		}	 
+    array_multisort($dates, SORT_DESC, $results);*/
+		var_dump($results);
+		//print sidora_generate_child_resource_sparql_query('si:387917', Array());
+	}	
+  }
   if ($one == 'permissions'){
     if (sidora_allow($two, $parent_pid, $extra)){
       print 'allowed';
@@ -2972,15 +3002,9 @@ function sidora_concept_resource_listing($pid, $resource_types, $limit, $offset,
   $tuque = islandora_get_tuque_connection();
   $concept_pid = $pid;
   if ($tuque) {
-    $query = sidora_generate_child_resource_sparql_query($concept_pid, $resource_types[$specific_resource_type], $title_search, '', 'created', $limit, $offset);
+    $query = sidora_generate_child_resource_sparql_query($concept_pid, $resource_types[$specific_resource_type], $title_search, 'DESC', 'created', $limit, $offset);
     $ri = $tuque->repository->ri;
     $results = $ri->sparqlQuery($query);
-    /*
-		foreach ($results as $key => $row){
-       $dates[$key] = strtotime($row['created']['value']);
-    }  
-    array_multisort($dates, SORT_DESC, $results);
-		*/
 		foreach($results as $resindex=>$result){
       $tobj = $tuque->repository->getObject($result['object']['value']);
       //$results[$resindex]['object'] = $tobj;
