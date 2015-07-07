@@ -428,7 +428,10 @@ function sidora_resource_viewer($pid){
                 }
                 exit();
                 break;
-              case 'IDS':
+              case 'JW Audio Player':
+							  return sidora_audio_view_object($pid);
+								break;
+							case 'IDS':
                 return sidora_view_ids_iframe($pid, $dsid);
                 break;
             }
@@ -766,7 +769,6 @@ PDF metadata:
   if ($is_concept){
     if (!empty($object['EAC-CPF'])){
       $to_return['dsid'] = 'EAC-CPF'; 
-//  error_log("In sidora_guess_form_and_dsid, eaccpf :".print_r($object['EAC-CPF'],true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
       if (sidora_startsWith($object->id, 'si-user:')){
         $to_return['form_name'] = 'Person'; 
       }else{
@@ -1347,8 +1349,54 @@ function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $ex
 	  var_dump(user_register_form());
 		exit();
 	}	
-  if ($one == 'getXSLS'){
-	  var_dump(variable_get('xsl_form_config', ''));
+ if ($one == 'play_audio'){
+   print sidora_audio_view_object($two);
+	} 
+ if ($one == 'view_audio'){
+    $jwpath = libraries_get_path("jwplayer");
+   // drupal_add_js($jwpath . "/jwplayer.js");
+		 $object = sidora_obj($two);
+     print '<script src="'.$GLOBALS['base_url'].'/'.
+		 print '<script src="'.$GLOBALS['base_url'].'/'.$jwpath.'/jwplayer.js"></script>';
+		/* print '<div id="myElement">Loading the player...</div>';
+    $params = array('pid' => 'si:388756',
+    'tn' => '/***REMOVED***/sidora/sidora0.4/islandora/object/si%3A388756/datastream/TN/view',
+    'url' => 'http://***REMOVED***.my***REMOVED***.net/***REMOVED***/sidora/sidora0.4/islandora/object/si%3A388756/datastream/PROXY_MP3',
+    'mime' => 'audio/mpeg');
+		$mime_detect = new MimeDetect();
+    $extension = $mime_detect->getExtension($params["mime"]);
+    // Using "default" is no longer valid in JW Player 6, we will default to
+    // the height and width given in the support docs.
+    // @TODO: JW Player 6 supports responsive widths and heights, potentially
+    // implement this? http://www.longtailvideo.com/support/jw-player/28839/embe
+    // dding-the-player?
+    $width = isset($params['width']) ? $params['width'] : '480';
+    $height = isset($params['height']) ? $params['height'] : '270';
+    $player_params = array(
+      "thumbnail" => $params["tn"],
+      "file" => $params["url"] . '/file_name_spoof.' . $extension,
+      "width" => $width,
+      "height" => $height,
+    );*/
+		drupal_add_js(array("islandora_jwplayer" => $player_params), 'setting');
+
+    $mypath = drupal_get_path("module", "islandora_jwplayer");
+		print '<script src="'.$GLOBALS['base_url'].'/'.$mypath . '/js/player.js"></script>';
+    /*
+		//drupal_add_js($mypath . "/js/player.js", array('preprocess' => FALSE));
+    print '<script type="text/javascript">
+    jwplayer("myElement").setup({
+        file: "http://***REMOVED***.my***REMOVED***.net/***REMOVED***/sidora/sidora0.4/islandora/object/si%3A388756/datastream/PROXY_MP3",
+        image: "http://***REMOVED***.my***REMOVED***.net/***REMOVED***/sidora/sidora0.4/islandora/object/si%3A388756/datastream/TN/view"
+    });
+</script>';*/
+	   $output = theme('islandora_audio', array('islandora_object' => $object));
+    print $output;
+	//	exit();
+  }
+  if ($one == 'modules'){
+	  $modules = implode(', ', module_list());
+    print $modules;
 	}	
 	if ($one == 'xsls'){
     if ($two != 'two'){
@@ -1593,46 +1641,33 @@ function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $ex
   }
   if ($one == 'queries'){
     print 'ok';
-    $resource_types = array(
-      'all' => array('si:imageCModel', 'si:generalImageCModel','si:fieldbookCModel','si:datasetCModel'),
-      'images' => array('si:imageCModel', 'si:generalImageCModel'),
-      'pdf' => array('si:fieldbookCModel'),
-      'csv' => array('si:datasetCModel'),
-      'text' => FALSE,
-      'video' => FALSE
-    );
-    //$jsdt_draw = filter_input(INPUT_GET,'draw', FILTER_SANITIZE_NUMBER_INT);
-    //$jsdt_start = filter_input(INPUT_GET,'start', FILTER_SANITIZE_NUMBER_INT);
-    //$jsdt_length = filter_input(INPUT_GET,'length', FILTER_SANITIZE_NUMBER_INT);
-    $limit = '200';
-    $jsdt_start = '1100';
-		$jsdt_draw = '1';
-    $tuque = islandora_get_tuque_connection();
-    if ($tuque) {
-      $resources_count = sidora_concept_resource_listing_count($two,$resource_types); 
-      echo $resources_count;
-			//$filtered_resources_count = sidora_concept_resource_listing_count($pid,$resource_types, $jsdt_search_val, $jsdt_title_search_val); 
-			/* $offset = $resources_count - ($limit*$jsdt_draw);
-      if ($offset < 0){
-			  $offset = $jsdt_start;
-			}
-			echo "offset is ".$offset;*/
-			$offset = $jsdt_start;
-			$query = sidora_generate_child_resource_sparql_query($two, Array(), '', '', 'created', $limit, $offset);
-      //var_dump($query);
-     $ri = $tuque->repository->ri;
+  $tuque = islandora_get_tuque_connection();
+  if ($tuque) {
+    /* $query = "select ?object ?title ?model ?created from <#ri> 
+		 where {
+          <info:fedora/si-user:124> <fedora-rels-ext:hasResource> ?object . 
+          ?object <fedora-model:state> <fedora-model:Active>;
+          ?object <fedora-model:label> ?title;
+          ?object <fedora-model:hasModel> ?model;
+          ?object <fedora-model:createdDate> ?created;
+          FILTER(
+          !sameTerm(?model, <info:fedora/fedora-system:FedoraObject-3.0>) &&
+          !sameTerm(?model, <info:fedora/si:resourceCModel>))
+        }
+        ORDER BY (?created)
+        OFFSET 0 LIMIT 1000000";*/
+    $query = sidora_generate_child_resource_sparql_query($two, Array(),'' , '', 'created');
+    var_dump($query);
+		$ri = $tuque->repository->ri;
     $results = $ri->sparqlQuery($query);
-   // echo "before sort";
+		/*foreach ($results as $key => $row){
+			 $dates[$key] = strtotime($row['created']['value']);
+			 
+		}	 
+    array_multisort($dates, SORT_DESC, $results);*/
 		var_dump($results);
-	 /* foreach ($results as $key => $row){
-       $dates[$key] = strtotime($row['created']['value']);
-       
-    }  
-    array_multisort($dates, SORT_DESC, $results);
-    echo "after sort";
-		var_dump($results);*/
-    //print sidora_generate_child_resource_sparql_query('si:387917', Array());
-  } 
+		//print sidora_generate_child_resource_sparql_query('si:387917', Array());
+	}	
   }
   if ($one == 'permissions'){
     if (sidora_allow($two, $parent_pid, $extra)){
@@ -1862,7 +1897,7 @@ function sidora_form_alter(&$form, &$form_state, $form_id){
     if (array_key_exists('form_build_id', $_POST)){
       $submitted_form_id = $_POST['form_build_id'];
       $association = sidora_find_association($form_state, $submitted_form_id);
-      if (!empty($association)){
+			if (!empty($association)){
         $association_step_storage = &islandora_ingest_form_get_step_storage($form_state, 'xml_form_builder_metadata_step');
         // Make $association_step_storage have only the association you want to use.
         $association_step_storage['association'] = $association; 
@@ -1993,7 +2028,8 @@ function sidora_create_resource_get_upload_form_html($model, $upload_button_text
     'si:generalImageCModel' => array('jpg', 'png', 'gif', 'tiff', 'tif', 'jp2'),
     'si:datasetCModel' => array('csv', 'xml', 'xlsx', 'xls', 'dat', 'med', 'arg', 'slt'),
     'si:fieldbookCModel' => array('pdf'),
-    '*' => array('*'),
+    'islandora:sp-audioCModel' => array('mp3','mp4','aiff','aac','ogg','wav','wma'),
+		'*' => array('*'),
   );
   if (array_key_exists($model, $file_extensions)){
     $extensions_for_model = $file_extensions[$model];
@@ -2107,8 +2143,6 @@ function sidora_create_resource_get_metadata_form_html($parent_pid, $model, $for
       if (!empty($current_uploads[$form_total]) && $at_least_one_pic){
         $to_return .= "<div class='picHolder' id='picHolder-".$form_total."'>";
         if (sidora_is_displayable_image_with_convert($current_uploads[$form_total]->filename)){
-          // $to_return .= "<img src='".$GLOBALS['base_url']."/sidora/test/sessionImage/".$form_total."'/>";
-          // Changed by RAmlani on 3/31/15 to stop using the testing function for displaying the uploaded resources on production site. Instead use Sidora/info.
           $to_return .= "<img src='".$GLOBALS['base_url']."/sidora/info/".$form_total."/previewUploadedResources'/>";
         }else{
           $to_return .= $current_uploads[$form_total]->filename.' is not displayable at this time.';
@@ -2119,15 +2153,15 @@ function sidora_create_resource_get_metadata_form_html($parent_pid, $model, $for
       $page->owner = $user->name;
       $page->label = ''; //Label of object if no label gets put into place
       $page->models = 'si:resourceCModel';//parent of the models being sent?
-      $form = drupal_get_form('islandora_ingest_form', array(
+			$form = drupal_get_form('islandora_ingest_form', array(
         'models' => array($model),
         'objects' => array($page),
         'parent' => $parent_pid,
       ));
       if (!empty($current_uploads[$form_total])){
         $filename = $current_uploads[$form_total]->filename;
-        $associations = xml_form_builder_get_associations(array($form_name), array(), array(), FALSE); // get the association for the current form to get the title field label
-        $association = null;
+				$associations = xml_form_builder_get_associations(array($form_name), array(), array(), FALSE); // get the association for the current form to get the title field label
+				$association = null;
         foreach($associations as $curr_association){
           if ($curr_association['form_name'] == $form_name){
             $association = $curr_association;
@@ -2159,7 +2193,6 @@ function sidora_create_resource_get_metadata_form_html($parent_pid, $model, $for
       $creation_info['ontology_id'] = $ontology_id;
       $id_to_creation_info[$form['#build_id']] = $creation_info;
       cache_set("sidora:form_id_to_creation_info",$id_to_creation_info);
-      //  var_dump($id_to_creation_info);
       $to_return .= drupal_render( $form);
       $to_return .= "</div>";
     }
@@ -2740,10 +2773,11 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
       break;
     case 'resources':
       $resource_types = array(
-        'all' => array('si:imageCModel', 'si:generalImageCModel','si:fieldbookCModel','si:datasetCModel'),
+        'all' => array('si:imageCModel', 'si:generalImageCModel','si:fieldbookCModel','si:datasetCModel','islandora:sp-audioCModel'),
         'images' => array('si:imageCModel', 'si:generalImageCModel'),
         'pdf' => array('si:fieldbookCModel'),
         'csv' => array('si:datasetCModel'),
+				'audio' => array('islandora:sp-audioCModel'),
         'text' => FALSE,
         'video' => FALSE
       );
@@ -2875,7 +2909,9 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
           $to_output .=   '<li><a href="" model="si:generalImageCModel" formname="General Image Description" ontology-id="GeneralImage_GeneralImage">General&nbsp;Image&nbsp;Description&nbsp;(MODS)</a></li>';
           $to_output .=   '<li><a href="" model="si:generalImageCModel" formname="Camera Trap Image" ontology-id="GeneralImage_CameraTrapImage">Camera&nbsp;Trap&nbsp;Image&nbsp;(MODS)</a></li>';
           $to_output .= '</ul></li>';
-          $to_output .= '</ul>';
+          //$to_output .= '<li><a href="" model="si:siBasicObject" formname="Dataset" ontology-id="Datasets">Audio&nbsp;Files</a></li>';
+          $to_output .= '<li><a href="" model="islandora:sp-audioCModel" formname="Sidora Audio Mods Form" ontology-id="Audio">Audio&nbsp;Files</a></li>';
+					$to_output .= '</ul>';
         }
       break;
    // added by RA on 3/12/15 - the ajax call to see if there is an exhibition for the current concept and enable/disable the "Exhibit" menu link accordingly
@@ -2966,15 +3002,9 @@ function sidora_concept_resource_listing($pid, $resource_types, $limit, $offset,
   $tuque = islandora_get_tuque_connection();
   $concept_pid = $pid;
   if ($tuque) {
-    $query = sidora_generate_child_resource_sparql_query($concept_pid, $resource_types[$specific_resource_type], $title_search, '', 'created', $limit, $offset);
+    $query = sidora_generate_child_resource_sparql_query($concept_pid, $resource_types[$specific_resource_type], $title_search, 'DESC', 'created', $limit, $offset);
     $ri = $tuque->repository->ri;
     $results = $ri->sparqlQuery($query);
-    /*
-		foreach ($results as $key => $row){
-       $dates[$key] = strtotime($row['created']['value']);
-    }  
-    array_multisort($dates, SORT_DESC, $results);
-		*/
 		foreach($results as $resindex=>$result){
       $tobj = $tuque->repository->getObject($result['object']['value']);
       //$results[$resindex]['object'] = $tobj;
@@ -3908,7 +3938,7 @@ function sidora_find_association(array &$form_state, $form_build_id = ''){
   $associations = xml_form_builder_get_associations(array(), $shared_storage['models'], array());
   // ... Find the association you want to use, iterate over the values and
   // choose the one you want.
-  $form_name = drupal_static('form_of_interest'); 
+	$form_name = drupal_static('form_of_interest'); 
   if (empty($form_name)){
     $cache =  cache_get("sidora:form_id_to_creation_info");
     $my_data = $cache->data;
@@ -6350,7 +6380,6 @@ function sidora_form_user_login_alter(&$form, &$form_state) {
   $form['name']['#description'] = t('');
   $form['pass']['#description'] = t('');
 }
-
 function sidora_form_user_login_block_alter(&$form, &$form_state) {
   $form['pass']['#attributes']['autocomplete'] = 'off';  //Autocomplete off for password
 }
@@ -6378,4 +6407,14 @@ function sidora_account_request_form(){
     '#value' => t('Request a new account'),
   );
 return $form;
+}
+function sidora_islandora_sp_audioCModel_islandora_ingest_steps_alter(array &$steps, array &$form_state) {
+	 unset($steps['islandora_audio_upload']);
+}
+function sidora_audio_view_object($pid) {
+  //  $jwpath = libraries_get_path("jwplayer");
+  // drupal_add_js($GLOBALS['base_url']."/".$jwpath."/jwplayer.js");
+	 $object = sidora_obj($pid);
+	$variables = array('islandora_object' => $object);
+	return theme('islandora_audio', $variables);
 }

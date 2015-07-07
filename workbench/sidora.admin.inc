@@ -51,7 +51,6 @@ function sidora_admin_settings() {
 
   module_load_include('inc', 'xml_form_builder', 'XMLFormRepository');
   $names = XMLFormRepository::GetNames();
-
   // No forms exist can only create.
   /*
   if (count($names) == 0) {
@@ -314,7 +313,8 @@ tr.removed.odd {
           'direct' => t('Direct stream to browser (actual image / binary / text)'),
 				  'web_view' => t('Direct stream to browser for web viewable items, download message for others'),
           'flexpaper_pdf' => t('Flexpaper / Convert to flexpaper / direct stream to browser'),
-          'IDS' => t('Smithsonian IDS Viewer'),
+          'JW Audio Player' => t('JW Player for audio'),
+					'IDS' => t('Smithsonian IDS Viewer'),
           'none' => t('None - no display available'),
           'never' => t('Never set'),
         ),
