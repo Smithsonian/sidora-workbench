@@ -79,7 +79,7 @@ function exhibition_config_get_exhibition_html_table_for_user($user_name){
   foreach($epids as $epid){
     $epid_html .= '<tr>';
     $epid_html .= '<td>'.$epid['pid'].'</td>';
-    $epid_html .= '<td>'.$epid['label'].'</td>';
+    $epid_html .= '<td><a target="_blank" href="">'.$epid['label'].'</a></td>';
     $epid_html .= '<td><a target="_blank" href ="'.base_path().'exhibition_config/config/'.$epid['pid'].'">Configure</a></td>';
     $epid_html .= '<td>';
     if ($epid['is_available']) $epid_html .= 'Shared';
