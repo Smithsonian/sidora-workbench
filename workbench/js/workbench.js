@@ -1162,6 +1162,23 @@ sidora.util.constantCheck = function(){
  *      - so that only one refresh tree request goes out no matter how many times its called during that time period
  */
 sidora.util.refreshTreeRequestInProgress = false;
+sidora.util.RefreshTreeIfNew = function(secondsOfWait){
+  if (typeof(secondsOfWait) == 'undefined') secondsOfWait = .01;
+  setTimeout(function(){
+    jQuery.ajax({
+      url: '../ajax_parts/tree',
+    }).done(function(tree_html){
+      if (tree_html == sidora.util.latestTreeGrab){
+        console.log("Tree same as prior tree, no update to UI");
+        return;
+      }
+      sidora.util.latestTreeGrab = tree_html;
+      sidora.RefreshTreeHtml(tree_html);
+    }).fail(function(failure_obj){
+      sidora.recentAjaxFailure(failure_obj);
+    });
+  },secondsOfWait*1000);
+}
 sidora.util.RefreshTree = function(singleTripWaitMilliseconds){
   if (typeof(singleTripWaitMilliseconds) == 'undefined') singleTripWaitMilliseconds = 10;
   //Wait to see if we get a few requests at a time before going thru with the reload
@@ -1171,6 +1188,10 @@ sidora.util.RefreshTree = function(singleTripWaitMilliseconds){
     jQuery.ajax({
       url: '../ajax_parts/tree',
     }).done(function(tree_html){
+      sidora.util.latestTreeGrab = tree_html;
+      //Note that you may want to refresh the tree even if the latest is the same as the previous
+      //For example, a concept move has failed.  The concept move shows in the UI, so the tree
+      //needs to be reverted back.  If you want to update the tree only on if it's changed see RefreshTreeIfNew
       sidora.RefreshTreeHtml(tree_html);
     }).fail(function(failure_obj){
       sidora.recentAjaxFailure(failure_obj);
