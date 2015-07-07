@@ -185,7 +185,7 @@ sidora.concept.LoadContentHelp.Resources.TableActionsSetup = function(){
         } );
     }(jQuery));
     */
-    jQuery('#res_table_filter').after('<select id=\"sidora-resource-type-dropdown\" class="form-select" name=\"search\"><option value=\"\">All</option><option value=\"images\">Image</option><option value=\"pdf\">Digitized Text</option><option value=\"csv\">Tabular Dataset</option></select><input type="text" name="titleFilter" id="titleFilter" style="border: solid 1px lightblue;">');
+    jQuery('#res_table_filter').after('<select id=\"sidora-resource-type-dropdown\" class="form-select" name=\"search\"><option value=\"\">All</option><option value=\"images\">Image</option><option value=\"pdf\">Digitized Text</option><option value=\"csv\">Tabular Dataset</option><option value=\"audio\">Audio</option></select><input type="text" name="titleFilter" id="titleFilter" style="border: solid 1px lightblue;">');
     if (readCookie('Drupal.dtFilter') != ''){
         jQuery("#sidora-resource-type-dropdown").val(readCookie('Drupal.dtFilter'));
     }   
