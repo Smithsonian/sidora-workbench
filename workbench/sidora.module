@@ -1550,7 +1550,7 @@ function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $ex
     print 'ok';
   $tuque = islandora_get_tuque_connection();
   if ($tuque) {
-     $query = "select ?object ?title ?model ?created from <#ri> 
+    /* $query = "select ?object ?title ?model ?created from <#ri> 
 		 where {
           <info:fedora/si-user:124> <fedora-rels-ext:hasResource> ?object . 
           ?object <fedora-model:state> <fedora-model:Active>;
@@ -1562,8 +1562,8 @@ function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $ex
           !sameTerm(?model, <info:fedora/si:resourceCModel>))
         }
         ORDER BY (?created)
-        OFFSET 0 LIMIT 1000000";
-    //$query = sidora_generate_child_resource_sparql_query('si-user:124', Array(),'' , 'DESC', 'created');
+        OFFSET 0 LIMIT 1000000";*/
+    $query = sidora_generate_child_resource_sparql_query($two, Array(),'' , '', 'created');
     var_dump($query);
 		$ri = $tuque->repository->ri;
     $results = $ri->sparqlQuery($query);
