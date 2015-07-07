@@ -421,7 +421,7 @@ function sidora_resource_viewer($pid){
                 exit();
                 break;
               case 'JW Audio Player':
-							  return sidora_islandora_sp_audioCModel_islandora_view_object($pid);
+							  return sidora_audio_view_object($pid);
 								break;
 							case 'IDS':
                 return sidora_view_ids_iframe($pid, $dsid);
@@ -761,7 +761,6 @@ PDF metadata:
   if ($is_concept){
     if (!empty($object['EAC-CPF'])){
       $to_return['dsid'] = 'EAC-CPF'; 
-//  error_log("In sidora_guess_form_and_dsid, eaccpf :".print_r($object['EAC-CPF'],true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
       if (sidora_startsWith($object->id, 'si-user:')){
         $to_return['form_name'] = 'Person'; 
       }else{
@@ -1427,19 +1426,22 @@ function sidora_xsl_information($pid, $return_file_content = FALSE){
  */
 function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $extra = ''){
   global $user;
-  if ($one == 'view_audio'){
+ if ($one == 'play_audio'){
+   print sidora_audio_view_object($two);
+	} 
+ if ($one == 'view_audio'){
     $jwpath = libraries_get_path("jwplayer");
    // drupal_add_js($jwpath . "/jwplayer.js");
 		 $object = sidora_obj($two);
-     print '<script src="'.$GLOBALS['base_url'].'/'.$jwpath.'/jwplayer.js"></script>';
+     print '<script src="'.$GLOBALS['base_url'].'/'.
+		 print '<script src="'.$GLOBALS['base_url'].'/'.$jwpath.'/jwplayer.js"></script>';
 		/* print '<div id="myElement">Loading the player...</div>';
-    $params = array('pid' => 'si:388596',
-    'tn' => '/~***REMOVED***/sidora/sidora0.4/islandora/object/si%3A388596/datastream/TN/view',
-    'url' => 'http://***REMOVED***/~***REMOVED***/sidora/sidora0.4/islandora/object/si%3A388596/datastream/PROXY_MP3',
+    $params = array('pid' => 'si:388756',
+    'tn' => '/~***REMOVED***/sidora/sidora0.4/islandora/object/si%3A388756/datastream/TN/view',
+    'url' => 'http://***REMOVED***/~***REMOVED***/sidora/sidora0.4/islandora/object/si%3A388756/datastream/PROXY_MP3',
     'mime' => 'audio/mpeg');
 		$mime_detect = new MimeDetect();
     $extension = $mime_detect->getExtension($params["mime"]);
-    //error_log("\nislandora_jwplayer_callback, extension : " .  print_r($extension,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
     // Using "default" is no longer valid in JW Player 6, we will default to
     // the height and width given in the support docs.
     // @TODO: JW Player 6 supports responsive widths and heights, potentially
@@ -1453,7 +1455,6 @@ function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $ex
       "width" => $width,
       "height" => $height,
     );*/
-    //error_log("\nislandora_jwplayer_callback, player params : " .  print_r($player_params,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
 		drupal_add_js(array("islandora_jwplayer" => $player_params), 'setting');
 
     $mypath = drupal_get_path("module", "islandora_jwplayer");
@@ -1462,8 +1463,8 @@ function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $ex
 		//drupal_add_js($mypath . "/js/player.js", array('preprocess' => FALSE));
     print '<script type="text/javascript">
     jwplayer("myElement").setup({
-        file: "http://***REMOVED***/~***REMOVED***/sidora/sidora0.4/islandora/object/si%3A388596/datastream/PROXY_MP3",
-        image: "http://***REMOVED***/~***REMOVED***/sidora/sidora0.4/islandora/object/si%3A388596/datastream/TN/view"
+        file: "http://***REMOVED***/~***REMOVED***/sidora/sidora0.4/islandora/object/si%3A388756/datastream/PROXY_MP3",
+        image: "http://***REMOVED***/~***REMOVED***/sidora/sidora0.4/islandora/object/si%3A388756/datastream/TN/view"
     });
 </script>';*/
 	   $output = theme('islandora_audio', array('islandora_object' => $object));
@@ -1944,17 +1945,11 @@ function sidora_form_alter(&$form, &$form_state, $form_id){
   if (!array_key_exists('#submit', $form)) $form['#submit'] = array();
   array_unshift($form['#submit'], 'sidora_form_submit_alter');
   $association = NULL;
-  //error_log("\nIn sidora_form_alter, form id :".$form_id,"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
-	//error_log("\nIn sidora_form_alter, form :".print_r($form,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
-	//error_log("\nIn sidora_form_alter, Post vars :".print_r($_POST,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
   if ($form_id == 'xml_form_builder_ingest_form' || $form_id == 'islandora_ingest_form'){// || $form_id == 'xml_form_builder_datastream_form_metadata_form'){
 		//$form_id_to_creation_info = cache_get("sidora:form_id_to_filename");
-		//error_log("In sidora_form_alter, form id to creation info :".print_r($form_id_to_creation_info->data,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
 		if (array_key_exists('form_build_id', $_POST)){
-      //error_log("In sidora_form_alter, form build id :".$_POST['form_build_id'],"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
 			$submitted_form_id = $_POST['form_build_id'];
       $association = sidora_find_association($form_state, $submitted_form_id);
-      //error_log("In sidora_form_alter, association :".print_r($association,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
 			if (!empty($association)){
         $association_step_storage = &islandora_ingest_form_get_step_storage($form_state, 'xml_form_builder_metadata_step');
         // Make $association_step_storage have only the association you want to use.
@@ -2204,8 +2199,6 @@ function sidora_create_resource_get_metadata_form_html($parent_pid, $model, $for
       $page->owner = $user->name;
       $page->label = ''; //Label of object if no label gets put into place
       $page->models = 'si:resourceCModel';//parent of the models being sent?
-      //error_log("\nIn sidora_create_resource_get_metadata_form_html, page :".print_r($page,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
-	    error_log("\nIn sidora_create_resource_get_metadata_form_html, before form executed at : " . print_r(date('m/d/Y h:i:s a', time()),true) . " form name : " . $form_name,"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
 			$form = drupal_get_form('islandora_ingest_form', array(
         'models' => array($model),
         'objects' => array($page),
@@ -2213,9 +2206,7 @@ function sidora_create_resource_get_metadata_form_html($parent_pid, $model, $for
       ));
       if (!empty($current_uploads[$form_total])){
         $filename = $current_uploads[$form_total]->filename;
-        //error_log("\nIn sidora_create_resource_get_metadata_form_html,calling xml form builder with form name : " . print_r($form_name,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
 				$associations = xml_form_builder_get_associations(array($form_name), array(), array(), FALSE); // get the association for the current form to get the title field label
-        //error_log("\nIn sidora_create_resource_get_metadata_form_html,associations executed at : " . print_r(date('m/d/Y h:i:s a', time()),true) . " associations : " . print_r($associations,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
 				$association = null;
         foreach($associations as $curr_association){
           if ($curr_association['form_name'] == $form_name){
@@ -2248,7 +2239,6 @@ function sidora_create_resource_get_metadata_form_html($parent_pid, $model, $for
       $creation_info['ontology_id'] = $ontology_id;
       $id_to_creation_info[$form['#build_id']] = $creation_info;
       cache_set("sidora:form_id_to_creation_info",$id_to_creation_info);
-      //error_log("\nIn sidora_create_resource_get_metadata_form_html, rendering form at :".print_r(date('m/d/Y h:i:s a', time()),true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
       $to_return .= drupal_render( $form);
       $to_return .= "</div>";
     }
@@ -2892,7 +2882,7 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
           $to_output .=   '<li><a href="" model="si:generalImageCModel" formname="Camera Trap Image" ontology-id="GeneralImage_CameraTrapImage">Camera&nbsp;Trap&nbsp;Image&nbsp;(MODS)</a></li>';
           $to_output .= '</ul></li>';
           //$to_output .= '<li><a href="" model="si:siBasicObject" formname="Dataset" ontology-id="Datasets">Audio&nbsp;Files</a></li>';
-          $to_output .= '<li><a href="" model="islandora:sp-audioCModel" formname="Sidora Audio Mods form" ontology-id="Audio">Audio&nbsp;Files</a></li>';
+          $to_output .= '<li><a href="" model="islandora:sp-audioCModel" formname="Sidora Audio Mods Form" ontology-id="Audio">Audio&nbsp;Files</a></li>';
 					$to_output .= '</ul>';
         }
       break;
@@ -3925,7 +3915,7 @@ function sidora_find_association(array &$form_state, $form_build_id = ''){
   $associations = xml_form_builder_get_associations(array(), $shared_storage['models'], array());
   // ... Find the association you want to use, iterate over the values and
   // choose the one you want.
-  $form_name = drupal_static('form_of_interest'); 
+	$form_name = drupal_static('form_of_interest'); 
   if (empty($form_name)){
     $cache =  cache_get("sidora:form_id_to_creation_info");
     $my_data = $cache->data;
@@ -6308,21 +6298,13 @@ function sidora_form_user_login_alter(&$form, &$form_state) {
     $form['name']['#description'] = t('');
     $form['pass']['#description'] = t('');
 }
-/*
-function sidora_module_implements_alter(&$implementations, $hook) {
-	 error_log("\nIn sidora_module_implements_alter, hook :".print_r($hook,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
-}	 
-*/
 function sidora_islandora_sp_audioCModel_islandora_ingest_steps_alter(array &$steps, array &$form_state) {
 	 unset($steps['islandora_audio_upload']);
-	 //error_log("\nIn sidora_islandora_sp_audioCModel_islandora_ingest_steps_alter, executed at : " . print_r(date('m/d/Y h:i:s a', time()),true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
- // }
 }
-/*function sidora_islandora_sp_audioCModel_islandora_view_object($pid) {
-   error_log("\nsidora_islandora_sp_audioCModel_islandora_view_object_alter, object :".print_r($pid,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
-    $jwpath = libraries_get_path("jwplayer");
-   drupal_add_js($GLOBALS['base_url']."/".$jwpath."/jwplayer.js");
+function sidora_audio_view_object($pid) {
+  //  $jwpath = libraries_get_path("jwplayer");
+  // drupal_add_js($GLOBALS['base_url']."/".$jwpath."/jwplayer.js");
 	 $object = sidora_obj($pid);
-	 $output = theme('islandora_audio', array('islandora_object' => $object));
-   return array('' => $output);
-}*/	
+	$variables = array('islandora_object' => $object);
+	return theme('islandora_audio', &$variables);
+}
