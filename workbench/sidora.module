@@ -429,7 +429,8 @@ function sidora_resource_viewer($pid){
                 exit();
                 break;
               case 'JW Audio Player':
-							  return sidora_audio_view_object($pid);
+							  error_log("\nsidora_resource_viewer, viewer :".print_r($viewer,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
+								sidora_audio_view_object($pid);
 								break;
 							case 'IDS':
                 return sidora_view_ids_iframe($pid, $dsid);
@@ -6414,5 +6415,8 @@ function sidora_audio_view_object($pid) {
   // drupal_add_js($GLOBALS['base_url']."/".$jwpath."/jwplayer.js");
 	 $object = sidora_obj($pid);
 	$variables = array('islandora_object' => $object);
-	return theme('islandora_audio', $variables);
+  error_log("\nsidora_audio_view_object, variables :".print_r($variables,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
+	$output = theme('islandora_audio', &$variables);
+  error_log("\nsidora_audio_view_object, output :".print_r($output,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
+  return $output;
 }
