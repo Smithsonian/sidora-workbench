@@ -121,11 +121,12 @@ sidora.concept.LoadContentHelp.Resources.TableActionsSetup = function(){
     jQuery('#sidora-resources-page-count').html(' of '+info.pages );
     if (sidora.resources.individualPanel.resourceOfInterest){
       jQuery(this).find(jq(sidora.resources.individualPanel.resourceOfInterest.pid)).trigger("click");
-    if (readCookie('Drupal.selectResource') == '1'){
-		   writeCookie('Drupal.selectResource','0','30');
-       jQuery('#res_table tbody').children('tr:first').trigger('click');
-		}		 
-	} );
+      if (readCookie('Drupal.selectResource') == '1'){
+		     writeCookie('Drupal.selectResource','0','30');
+         jQuery('#res_table tbody').children('tr:first').trigger('click');
+		  }		 
+	  }
+	});	
 }
   //Drag and drop enabling
   jQuery('#res_table tbody').on('mousedown','tr', function (e) {
