@@ -430,7 +430,8 @@ function sidora_resource_viewer($pid){
                 break;
               case 'JW Audio Player':
 							  error_log("\nsidora_resource_viewer, viewer :".print_r($viewer,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
-								sidora_audio_view_object($pid);
+								print sidora_audio_view_object($pid);
+								exit();
 								break;
 							case 'IDS':
                 return sidora_view_ids_iframe($pid, $dsid);
@@ -6411,12 +6412,12 @@ function sidora_islandora_sp_audioCModel_islandora_ingest_steps_alter(array &$st
 	 unset($steps['islandora_audio_upload']);
 }
 function sidora_audio_view_object($pid) {
-  //  $jwpath = libraries_get_path("jwplayer");
-  // drupal_add_js($GLOBALS['base_url']."/".$jwpath."/jwplayer.js");
+    $jwpath = libraries_get_path("jwplayer");
+		 $output = '<script src="'.$GLOBALS['base_url'].'/'.$jwpath.'/jwplayer.js"></script>';
 	 $object = sidora_obj($pid);
 	$variables = array('islandora_object' => $object);
-  error_log("\nsidora_audio_view_object, variables :".print_r($variables,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
-	$output = theme('islandora_audio', &$variables);
-  error_log("\nsidora_audio_view_object, output :".print_r($output,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
+  //error_log("\nsidora_audio_view_object, variables :".print_r($variables,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
+	$output .= theme('islandora_audio', $variables);
+  //error_log("\nsidora_audio_view_object, output :".print_r($output,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
   return $output;
 }
