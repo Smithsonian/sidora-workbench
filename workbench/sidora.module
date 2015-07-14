@@ -6421,6 +6421,6 @@ function sidora_audio_view_object($pid) {
 	$object = sidora_obj($pid);
 	$variables = array('islandora_object' => $object);
 	$output = theme('islandora_audio', $variables);
-  $output = drupal_get_js() . $output;
+  $output = drupal_get_css() . drupal_get_js() . $output;
   return $output;
 }
