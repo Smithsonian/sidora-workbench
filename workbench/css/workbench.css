@@ -1,6 +1,10 @@
 #page {
   margin-left: 0px;
 }
+.resource-list-tn {
+  max-height:90px;
+  max-width:150px;
+}
 /*
 .ui-icon, .ui-widget-content .ui-icon {
   right: 10px; 

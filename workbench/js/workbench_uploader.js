@@ -224,6 +224,8 @@ window.prepIslandoraFormForSubmit = function(formName, onSuccessfulFormSubmit, o
 		}
 	}
   if (jQuery("#create-resource-form").length){
+		console.log(window.location);
+		console.log(jQuery("#"+formName).serialize());
 		ajaxSettings = ({
 		  type: "POST",
 		  url: window.location,
@@ -242,9 +244,8 @@ window.prepIslandoraFormForSubmit = function(formName, onSuccessfulFormSubmit, o
 	}else{
 	  ajaxSettings = ({
 		  type: "POST",
-		  //url: window.location,
-		  //data: jQuery("#"+formName).serialize()+"&op=Submit&update=Update",
-      url: window.location.origin+Drupal.settings.basePath+'sidora/test/edit_metadata',
+		  url: window.location,
+		  data: jQuery("#"+formName).serialize()+"&op=Submit&update=Update",
 			success: function( data ) {
          window.aa = data;
          if (data.indexOf("<h2 class=\"element-invisible\">Error message</h2")>0){
