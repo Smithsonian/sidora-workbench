@@ -9,6 +9,7 @@ jQuery().ready(function(){
 	jQuery("body").css("padding-top","0px");
 	jQuery(".form-submit[value=Ingest]").hide();
 	jQuery(".form-submit[value=Submit]").hide();
+	jQuery(".form-submit[value=Update]").hide();
 	jQuery(".sidora-ingest-form-holder").hide();
 	jQuery(".sidora-ingest-form-holder").first().show();
 	window.currentlyShownIndex = 0;

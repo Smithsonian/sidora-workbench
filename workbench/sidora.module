@@ -390,7 +390,7 @@ function sidora_resource_viewer($pid){
         if (!empty($dsid)){
           $ds = $obj[$dsid];
           if (!empty($ds)){
-            switch ($viewer) {
+						switch ($viewer) {
               case 'direct':
                 sidora_info_json($pid, 'meta', $dsid, 'browser');
                 exit();
