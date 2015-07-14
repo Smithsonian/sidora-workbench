@@ -47,7 +47,12 @@ jQuery().ready(function(){
 					//If successful, kill itself.
 					newPid = data.substring(0,data.indexOf(")"+" has been ingested")).substring(data.substring(0,data.indexOf(")"+" has been ingested")).lastIndexOf("si:"))
 					console.log("new pid:"+newPid);
-					 sidora.util.RefreshTree();
+					sidora.util.RefreshTree();
+          //Guess at how long it will take for Fedora to update the relationships
+          //On dev server it's done before these even get called
+          sidora.util.RefreshTreeIfNew(10);
+          sidora.util.RefreshTreeIfNew(30);
+          sidora.util.RefreshTreeIfNew(60);
 				}
 		};
 		var postData = jQuery("#islandora-ingest-form").serialize()+"&ingest=Ingest";
