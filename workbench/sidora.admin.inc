@@ -285,10 +285,12 @@ tr.removed.odd {
 			'#type' => 'select',
 			'#title' => t('Viewer'),
 			'#options' => array(
+        //remember to change this and the one below it when adding a new type
 				'direct' => t('Direct stream to browser (actual image / binary / text)'),
 				'web_view' => t('Direct stream to browser for web viewable items, download message for others'),
         'flexpaper_pdf' => t('Flexpaper / Convert to flexpaper / direct stream to browser'),
 				'IDS' => t('Smithsonian IDS Viewer'),
+        'OpenSeaDragon' => t('OpenSeaDragon'),
 				'none' => t('None - no display available'),
 				'never' => t('Never set'),
 			),
@@ -315,6 +317,7 @@ tr.removed.odd {
           'flexpaper_pdf' => t('Flexpaper / Convert to flexpaper / direct stream to browser'),
           'JW Audio Player' => t('JW Player for audio'),
 					'IDS' => t('Smithsonian IDS Viewer'),
+          'OpenSeaDragon' => t('OpenSeaDragon'),
           'none' => t('None - no display available'),
           'never' => t('Never set'),
         ),
