@@ -434,6 +434,9 @@ function sidora_resource_viewer($pid){
 							case 'IDS':
                 return sidora_view_ids_iframe($pid, $dsid);
                 break;
+              case 'OpenSeaDragon':
+                return sidora_view_openseadragon($pid, $dsid);
+                break;
             }
           }
         }
@@ -444,6 +447,39 @@ function sidora_resource_viewer($pid){
   print '<br/>The possible models that this resource uses:';
   print '<br/>'.implode('<br/>',$models);
   print '<br/><div style="display:none">Possible viewers:<br/>'.implode('<br/>',$viewers).'</div>';
+  exit();
+}
+function sidora_view_openseadragon($pid, $dsid){
+  print "\r\n".'<html>                                                                                                      ';
+  print "\r\n".'  <head>                                                                                                    ';
+  print "\r\n".'    <script src="http://code.jquery.com/jquery-2.1.4.min.js"></script>                                      ';
+  print "\r\n".'    <script src="http://sidora0a.***REMOVED***/openseadragon-djatoka-demo/openseadragon/openseadragon.min.js"></script>';
+  print "\r\n".'   <!--  <script src="js/openseadragon.js"></script> -->                                                    ';
+  print "\r\n".'    <script src="http://sidora0a.***REMOVED***/openseadragon-djatoka-demo/js/djtilesource.js"></script>';
+  print "\r\n".'  </head>                                                                                                   ';
+  print "\r\n".'  <body>                                                                                                    ';
+  print "\r\n".'    <div id="container">                                                                                    ';
+  print "\r\n".'      <div id="page-image" style="width: 100%; height: 100%;">                                            ';
+  print "\r\n".'        <script>                                                                                            ';
+  print "\r\n".'          <!-- create the tile source -->                                                                   ';
+  print "\r\n".'          var service = "/adore-djatoka/resolver";                            ';
+  print "\r\n".'          var id = "http://***REMOVED***:8080/fedora/objects/'.$pid.'/datastreams/OBJ/content";  ';
+  print "\r\n".'          var settings = {tileSize: 256, tileOverlap: 0};                                                   ';
+  print "\r\n".'          var tileSource = new OpenSeadragon.DjatokaTileSource(service, id, settings);                      ';
+  print "\r\n".'          <!-- create the OpenSeadragon Viewer with the TileSource -->                                      ';
+  print "\r\n".'          OpenSeadragon({                                                                                   ';
+  print "\r\n".'            id: "page-image",                                                                               ';
+  print "\r\n".'            prefixUrl: "http://sidora0a.***REMOVED***/openseadragon-djatoka-demo/openseadragon/images/",';
+  print "\r\n".'            showNavigator: true,                                                                            ';
+  print "\r\n".'            debugMode: false,                                                                                ';
+  print "\r\n".'            tileSources: [tileSource],                                                                      ';
+  print "\r\n".'            showRotationControl: true                                                                       ';
+  print "\r\n".'          });                                                                                               ';
+  print "\r\n".'        </script>                                                                                           ';
+  print "\r\n".'      </div>                                                                                                ';
+  print "\r\n".'    </div>                                                                                                  ';
+  print "\r\n".'  </body>                                                                                                   ';
+  print "\r\n".'</html>                                                                                                     ';
   exit();
 }
 /**
