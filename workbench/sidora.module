@@ -167,6 +167,14 @@ function sidora_menu() {
 			'access callback' => TRUE,
 			'type' => MENU_CALLBACK,
    ),
+	 'sidora/workbench/request_account' => array(
+	    'title' => 'Request a new account',
+			'description' => 'Request a new account',
+			'page callback' => 'drupal_get_form',
+			'page arguments' => array('sidora_account_request_form'),
+			'access callback' => TRUE,
+			'type' => MENU_CALLBACK,
+   ),
  );
 }
 function sidora_management_ingest($pid, $dsid, $label = NULL, $mimeType = NULL){
@@ -429,7 +437,8 @@ function sidora_resource_viewer($pid){
                 exit();
                 break;
               case 'JW Audio Player':
-							  return sidora_audio_view_object($pid);
+								print sidora_audio_view_object($pid);
+								exit();
 								break;
 							case 'IDS':
                 return sidora_view_ids_iframe($pid, $dsid);
@@ -1345,55 +1354,6 @@ function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $ex
 	  return drupal_render(sidora_account_request_form());
 		exit();
 	} 
-	if ($one == 'user_register_form'){
-	  var_dump(user_register_form());
-		exit();
-	}	
- if ($one == 'play_audio'){
-   print sidora_audio_view_object($two);
-	} 
- if ($one == 'view_audio'){
-    $jwpath = libraries_get_path("jwplayer");
-   // drupal_add_js($jwpath . "/jwplayer.js");
-		 $object = sidora_obj($two);
-     print '<script src="'.$GLOBALS['base_url'].'/'.
-		 print '<script src="'.$GLOBALS['base_url'].'/'.$jwpath.'/jwplayer.js"></script>';
-		/* print '<div id="myElement">Loading the player...</div>';
-    $params = array('pid' => 'si:388756',
-    'tn' => '/~***REMOVED***/sidora/sidora0.4/islandora/object/si%3A388756/datastream/TN/view',
-    'url' => 'http://***REMOVED***/~***REMOVED***/sidora/sidora0.4/islandora/object/si%3A388756/datastream/PROXY_MP3',
-    'mime' => 'audio/mpeg');
-		$mime_detect = new MimeDetect();
-    $extension = $mime_detect->getExtension($params["mime"]);
-    // Using "default" is no longer valid in JW Player 6, we will default to
-    // the height and width given in the support docs.
-    // @TODO: JW Player 6 supports responsive widths and heights, potentially
-    // implement this? http://www.longtailvideo.com/support/jw-player/28839/embe
-    // dding-the-player?
-    $width = isset($params['width']) ? $params['width'] : '480';
-    $height = isset($params['height']) ? $params['height'] : '270';
-    $player_params = array(
-      "thumbnail" => $params["tn"],
-      "file" => $params["url"] . '/file_name_spoof.' . $extension,
-      "width" => $width,
-      "height" => $height,
-    );*/
-		drupal_add_js(array("islandora_jwplayer" => $player_params), 'setting');
-
-    $mypath = drupal_get_path("module", "islandora_jwplayer");
-		print '<script src="'.$GLOBALS['base_url'].'/'.$mypath . '/js/player.js"></script>';
-    /*
-		//drupal_add_js($mypath . "/js/player.js", array('preprocess' => FALSE));
-    print '<script type="text/javascript">
-    jwplayer("myElement").setup({
-        file: "http://***REMOVED***/~***REMOVED***/sidora/sidora0.4/islandora/object/si%3A388756/datastream/PROXY_MP3",
-        image: "http://***REMOVED***/~***REMOVED***/sidora/sidora0.4/islandora/object/si%3A388756/datastream/TN/view"
-    });
-</script>';*/
-	   $output = theme('islandora_audio', array('islandora_object' => $object));
-    print $output;
-	//	exit();
-  }
   if ($one == 'modules'){
 	  $modules = implode(', ', module_list());
     print $modules;
@@ -6307,28 +6267,26 @@ function seven_theme() {
     ),
     'sidora_account_request_form' => array(
       'render element' => 'form',
-      'template' => 'sidora-account-request', // template file sidora-account-request.tpl.php
-      'path' => drupal_get_path('module', 'sidora') . '/templates',
-      'preprocess functions' => array(
-      'sidora_preprocess_user_login'
-      )
+      'template' => 'user-register-form', // template file user-register-form.tpl.php
+      'path' => drupal_get_path('module', 'sidora') . '/templates'
     ),
-    // 'user_register_form' => array(
-   //    'render element' => 'form',
-   //    'template' => 'user-register-form', // template file user-register-form.tpl.php
-   //    'path' => drupal_get_path('module', 'sidora') . '/templates',
-   //    'preprocess functions' => array(
-   //      'sidora_preprocess_user_register_form'
-   //    )
-   //  ),
-    // 'user_pass' => array(
-    //   'render element' => 'form',
-    //   'template' => 'user-pass', // template file user-pass.tpl.php
-    //   'path' => drupal_get_path('module', 'sidora') . '/templates',
-    //   'preprocess functions' => array(
-    //     'sidora_preprocess_user_pass'
-    //   )
-    // )
+   /*
+	  'user_register_form' => array(
+       'render element' => 'form',
+       'template' => 'user-register-form', // template file user-register-form.tpl.php
+       'path' => drupal_get_path('module', 'sidora') . '/templates',
+       'preprocess functions' => array(
+         'sidora_preprocess_user_register_form'
+       )
+     ),
+     'user_pass' => array(
+       'render element' => 'form',
+       'template' => 'user-pass', // template file user-pass.tpl.php
+       'path' => drupal_get_path('module', 'sidora') . '/templates',
+       'preprocess functions' => array(
+         'sidora_preprocess_user_pass'
+       )
+     )*/
     'user_pass' => array(
        'render element' => 'form',
        'template' => 'user-pass', // template file user-pass.tpl.php
@@ -6408,13 +6366,25 @@ function sidora_account_request_form(){
   );
 return $form;
 }
+function sidora_account_request_form_validate($form, &$form_state) {
+    $email_address = $form_state['values']['mail'];
+    if (!valid_email_address($email_address)) {
+        form_set_error('mail', 'Enter a valid email address.');
+    }
+}
+function sidora_account_request_form_submit($form, &$form_state) {
+  module_load_include('inc', 'sidora', 'includes/utils');
+  if (sidora_mail('default_from', variable_get('system_mail', '***REMOVED***'), 'Request SIdora Account', 'Request for new account received from UserName : '.$form_state['values']['name'] . ' & Email : '.$form_state['values']['mail'])){
+	  drupal_set_message(t('Form submitted successfully'));
+	}	
+}
 function sidora_islandora_sp_audioCModel_islandora_ingest_steps_alter(array &$steps, array &$form_state) {
 	 unset($steps['islandora_audio_upload']);
 }
 function sidora_audio_view_object($pid) {
-  //  $jwpath = libraries_get_path("jwplayer");
-  // drupal_add_js($GLOBALS['base_url']."/".$jwpath."/jwplayer.js");
-	 $object = sidora_obj($pid);
+	$object = sidora_obj($pid);
 	$variables = array('islandora_object' => $object);
-	return theme('islandora_audio', $variables);
+	$output = theme('islandora_audio', $variables);
+  $output = drupal_get_css() . drupal_get_js() . $output;
+  return $output;
 }

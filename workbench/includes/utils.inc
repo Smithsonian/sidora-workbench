@@ -1284,3 +1284,30 @@ function sidora_search_ontology_for_concept_type($ontologytree,$ontology_id){
 	}			
   return FALSE;
 }
+function sidora_mail($from = 'default_from', $to, $subject, $message) {
+  $my_module = '';
+  $my_mail_token = '';
+  if ($from == 'default_from') {
+    $from = variable_get('system_mail', '***REMOVED***');
+  }
+	$message = array(
+    'id' => $my_module . $my_mail_token,
+    'to' => $to,
+    'subject' => $subject,
+    'body' => array($message),
+    'headers' => array(
+      'From' => $from, 
+      'Sender' => $from, 
+      'Return-Path' => $from,
+    ),
+  );
+  $system = drupal_mail_system($my_module, $my_mail_token);
+  $message = $system->format($message);
+	if ($system->mail($message)) {
+    return TRUE;
+  }
+  else {
+    return FALSE;
+  }
+}
+?>
