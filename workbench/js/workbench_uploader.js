@@ -94,8 +94,14 @@ window.submitAll=function(){
 	var toIterate = jQuery(".sidora-ingest-form-holder");
 	for (var i = 0; i < toIterate.length; i++){
 		var formId = jQuery(toIterate[i]).find("form").attr('id');
-		var toConsole = function(){console.log('finished');};
-		window.prepIslandoraFormForSubmit(formId, toConsole );
+		if (formId.search('islandora-ingest-form') != '-1'){
+		  var toConsole = function(){console.log('finished');};  // create resource success function
+		  window.prepIslandoraFormForSubmit(formId, toConsole );
+		}else{
+		  var toConsole = function(){sidora.concept.forceRefreshOnNextLoadContent = true;};
+			var onFailure = function(){jQuery("#edit-update").click();};
+		  window.prepIslandoraFormForSubmit(formId, toConsole, onFailure);
+		}	
 	}
 	window.startBatch();
 
@@ -118,9 +124,14 @@ window.startBatch = function(){
 			var ajaxSettings = window.batchRequests[i];
 			var postData = ajaxSettings.data;
 			var ccSuccess = oldSuccess;
-			var friendlyName = "Create "+currentInfo.formname+" Resource:"+(i+1)+" of "+window.batchRequests.length;
+			if (currentInfo.formname == 'edit_metadata'){
+			  var friendlyName = "Edit MetaData of Resource:"+(i+1)+" of "+window.batchRequests.length;
+			}else{
+			  var friendlyName = "Create "+currentInfo.formname+" Resource:"+(i+1)+" of "+window.batchRequests.length;
+			}	
 			var onSuccess = function(){console.log("FINISH! "+friendlyName);};
-			sidora.queue.RequestPost(friendlyName,window.location.href,postData, onSuccess, function(){}, currentInfo.parentPid);
+			//sidora.queue.RequestPost(friendlyName,window.location.href,postData, onSuccess, function(){}, currentInfo.parentPid);
+			sidora.queue.RequestPost(friendlyName,ajaxSettings.url,postData, onSuccess, function(){}, currentInfo.parentPid);
 		}
 		sidora.queue.Next();
 		window.closeMyself();
@@ -231,15 +242,22 @@ window.prepIslandoraFormForSubmit = function(formName, onSuccessfulFormSubmit, o
 		  dataType: "text"
 	  });//ends ajax settings
 	}else{
-	  ajaxSettings = ({
+		if (window.location.href.search('&') != '-1'){
+		  var ajaxUrl = sidora_util.ajaxUrl(jQuery("#"+formName).attr("count"));
+		}else{
+		  var ajaxUrl = window.location.href;
+		}		
+		ajaxSettings = ({
 		  type: "POST",
-		  url: window.location,
+		  url: ajaxUrl,
 		  data: jQuery("#"+formName).serialize()+"&op=Submit&update=Update",
       success: function( data ) {
          window.aa = data;
          if (data.indexOf("<h2 class=\"element-invisible\">Error message</h2")>0){
            //If not successful, reload the page so that the user can see why
-           jQuery("#edit-update").click();
+           // store this error/failure in a queue message area with the proper SID to process after end of the current queue
+					 
+					 jQuery("#edit-update").click();
            jQuery(".theoverlay").remove();
          }else{
            //If successful, kill itself.
