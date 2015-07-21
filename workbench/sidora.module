@@ -1341,6 +1341,31 @@ function sidora_xsl_information($pid, $return_file_content = FALSE){
  */
 function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $extra = ''){
   global $user;
+  if ($one == 'tabular_parse'){
+    print 'tabular_parse';
+    module_load_include('inc', 'islandora', 'includes/utilities');
+    module_load_include('inc', 'islandora', 'includes/ingest.form');
+    $tuque = islandora_get_tuque_connection();
+    $codebook = $tuque->repository->constructObject(islandora_get_namespace('si:root'));//$parent_pid));//'si:root'));//$object->id));
+    $codebook->owner = $user->name;
+    $codebook->label = ''; //Label of object if no label gets put into place
+    $codebook->models = 'si:codebookCModel';
+    print 'codebook initiated ';
+    $datastream_id = 'DDI';
+    $new_datastream = $codebook->constructDatastream($datastream_id);
+    $new_datastream->label = 'DDI';
+    $new_datastream->mimetype = 'something/something';
+    $new_datastream->setContentFromUrl('http://***REMOVED***.my***REMOVED***.net:8080/codebook/?url=http://***REMOVED***.my***REMOVED***.net/***REMOVED***/***REMOVED***');
+    $codebook->ingestDatastream($new_datastream);
+    print 'object ready ';
+    //Also need to add SIDORA datastream
+    $new_fedora_object = islandora_add_object($codebook);
+    print 'object added ';
+    var_dump($new_fedora_object);
+    print 'complete';
+    //print 'not complete, did not want to add new item';
+    exit();
+  }
 	if ($one == 'user_register'){
 	  return drupal_render(sidora_account_request_form());
 		exit();
@@ -2242,12 +2267,13 @@ function sidora_create_resource($parent_pid = 'si:root', $model = 'si:collection
   //Determine if we already bypassed the uploader step 
   $current_uploads = sidora_create_resource_get_current_uploads();
   $ask_for_codebook = sidora_create_resource_determine_codebook_complete($model);
-  if (empty($current_uploads)){
+  if (!empty($current_uploads)){
     if ($ask_for_codebook){
       $check_for_uploads = FALSE;
       $show_form = FALSE;
       $to_return .= sidora_create_resource_codebook_creation_step();
     }
+  }else{
     if ($check_for_uploads){
       //Uploads already done
       $form_html = sidora_create_resource_get_upload_form_html($model);
@@ -2940,7 +2966,6 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
       print json_encode($exhibitions);
       exit();
       break; 
-    // added by RAmlani on 3/31/15 to stop using sidora/testing for displaying uploaded resources on production site.
     case 'previewUploadedResources' :
       // the pid in this case will be the count of current item in the uploaded resources in temp directory
       $fileinfo = $_SESSION['file_uploads'][$user->uid][$pid];
@@ -2951,7 +2976,6 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
       sidora_direct_jpg_output($contents);
       exit();
       break;
-    // added by RAmlani on 3/31/15 to stop using sidora/testing for uploading new xsl files in sidora admin on production site.
     case 'upload2': 
        $configure = array(
       'file_types' => array('xsl'),
@@ -3353,11 +3377,6 @@ function sidora_ajax_parts($call_type, $param1 = '', $param2 = '', $param3 = '')
   }
   if ($call_type == 'generate_resource_list'){
      return sidora_generate_resource_list($param1);
-  } 
-  if ($call_type == 'testinguploads'){
-    $test_array = array();
-    $test_array["param"] = $param1;
-    return(json_encode($test_array));
   } 
   if ($call_type == 'remove_file_from_upload_queue'){
       if ((array_key_exists('file_uploads', $_SESSION)) && (!empty($_SESSION['file_uploads']))){

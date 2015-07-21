@@ -1627,7 +1627,7 @@ sidora.manage.OpenCurrentConfig = function(){
           enableKeys: false,
           onFinish:  function(){
             jQuery("#submitObjProperties").click(function(){
-              sidora.queue.RequestPost(userFriendlyToastName+":"+name+" ("+pid+")","/sidora/manage/"+pid+"/save","label="+jQuery("#objPropLabel").val()+"&owner="+jQuery("#objPropOwner").val(),function(){},function(){},pid);
+              sidora.queue.RequestPost(userFriendlyToastName+":"+name+" ("+pid+")",Drupal.settings.basePath+"sidora/manage/"+pid+"/save","label="+jQuery("#objPropLabel").val()+"&owner="+jQuery("#objPropOwner").val(),function(){},function(){},pid);
               sidora.queue.Next();
             });
             jQuery("#addDatastream").click(function(){
@@ -1667,7 +1667,7 @@ sidora.manage.removeDatastream = function(pid,dsid){
     modal: true,
     buttons: {
       "Yes, remove": function() {
-        sidora.queue.RequestPost("Removed Datastream "+dsid+" from "+pid,"/sidora/manage/"+pid+"/remove/"+dsid+"/confirm","",
+        sidora.queue.RequestPost("Removed Datastream "+dsid+" from "+pid,Drupal.settings.basePath+"sidora/manage/"+pid+"/remove/"+dsid+"/confirm","",
           function(){
             sidora.manage.resetFrame();
           },
