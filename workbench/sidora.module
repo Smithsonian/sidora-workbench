@@ -1003,7 +1003,7 @@ $form['cancel-btn'] = array(
 /*
  * Show the form used to edit the object's metadata
  */
-/*
+
 function sidora_edit_metadata($object_id = '', $dsid = '', $form_name = ''){
   drupal_add_css(drupal_get_path('module','sidora').'/css/workbench_metadata_screens.css',array('weight' => '1000000', 'group' => CSS_THEME));
   global $user;
@@ -1029,10 +1029,12 @@ function sidora_edit_metadata($object_id = '', $dsid = '', $form_name = ''){
       $association = $curr_association;
     }
   }
+  //error_log("\nIn sidora_edit_metadata, association:".print_r($association,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
+  //error_log("\nIn sidora_edit_metadata, object :".print_r($object,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
   if (empty($association)){
     print "The form is not configured correctly.  The form specified is not associated to this model";
   }
-  $tform = drupal_get_form('xml_form_builder_datastream_form_metadata_form',$object,$association);
+	$tform = drupal_get_form('xml_form_builder_datastream_form_metadata_form',$object,$association);
   drupal_add_css(drupal_get_path('module','sidora').'/css/workbench_metadata_screens.css',array('weight' => '1000000', 'group' => CSS_THEME));
   drupal_add_js(drupal_get_path('module','sidora').'/js/workbench_util.js',array('weight' => '1000000', 'group' => JS_THEME));
   drupal_add_library('system','ui.dialog');
@@ -1121,10 +1123,11 @@ function sidora_edit_metadata($object_id = '', $dsid = '', $form_name = ''){
   }
   return $to_return;
 }
-*/
+
 /*
  * Show the form used to edit the object's metadata
  */
+/* 
 function sidora_edit_metadata($object_id_string = '', $dsid = '', $form_name = ''){
   drupal_add_css(drupal_get_path('module','sidora').'/css/workbench_create_resource.css',array('weight' => '1000000', 'group' => CSS_THEME));
    global $user;
@@ -1164,6 +1167,7 @@ function sidora_edit_metadata($object_id_string = '', $dsid = '', $form_name = '
 	);	
 	$tform['#attributes']['name'][] = $object_id;
 	$tform['#attributes']['class'][] = $object_id;
+	$tform['#attributes']['count'][] = $resource_count;
 	drupal_add_css(drupal_get_path('module','sidora').'/css/workbench_metadata_screens.css',array('weight' => '1000000', 'group' => CSS_THEME));
   drupal_add_js(drupal_get_path('module','sidora').'/js/workbench_util.js',array('weight' => '1000000', 'group' => JS_THEME));
   drupal_add_library('system','ui.dialog');
@@ -1173,7 +1177,7 @@ function sidora_edit_metadata($object_id_string = '', $dsid = '', $form_name = '
   else
     drupal_add_js('window.isConcept = false;',array('type' => 'inline', 'weight' => '1000000', 'group' => JS_THEME));
     
-/*
+
   drupal_add_js('
   jQuery().ready(function(){
    jQuery("body").css("padding-top","0px");
@@ -1229,7 +1233,6 @@ function sidora_edit_metadata($object_id_string = '', $dsid = '', $form_name = '
    });
   });
   ',array('type' => 'inline', 'weight' => '1000000', 'group' => JS_THEME));
-	*/
   $pic_shown = FALSE;
   if (!$is_concept){
     $vmt = sidora_get_viewable_mime_types();
@@ -1259,7 +1262,7 @@ function sidora_edit_metadata($object_id_string = '', $dsid = '', $form_name = '
 	$to_return .= "</div>";
   drupal_add_js(drupal_get_path('module','sidora').'/js/workbench_uploader.js',array('weight' => '1000000', 'group' => JS_THEME));
   return $to_return;
-}
+}*/
 function sidora_get_viewable_mime_types(){
   return array(
     'image/jpeg',
@@ -1899,7 +1902,8 @@ function sidora_form_alter(&$form, &$form_state, $form_id){
   if (!array_key_exists('#submit', $form)) $form['#submit'] = array();
   array_unshift($form['#submit'], 'sidora_form_submit_alter');
   $association = NULL;
-  if ($form_id == 'xml_form_builder_ingest_form' || $form_id == 'islandora_ingest_form' || $form_id == 'xml_form_builder_datastream_form_metadata_form'){
+  //if ($form_id == 'xml_form_builder_ingest_form' || $form_id == 'islandora_ingest_form' || $form_id == 'xml_form_builder_datastream_form_metadata_form'){
+  if ($form_id == 'xml_form_builder_ingest_form' || $form_id == 'islandora_ingest_form'){
     if (array_key_exists('form_build_id', $_POST)){
       $submitted_form_id = $_POST['form_build_id'];
       $association = sidora_find_association($form_state, $submitted_form_id);
