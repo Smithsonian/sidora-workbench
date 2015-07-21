@@ -1373,11 +1373,11 @@ sidora.resources.individualPanel.Create = function() {
   jQuery('#edit-resource-metadata-menu').unbind('click');
   jQuery('#edit-resource-metadata-menu').click(function(){
   var pids = sidora.resources.getHighlighted();
-	//  var pids_array = sidora.resources.getHighlighted();
-    if (pids.length != 1) return;
- // pids = pids_array.join("&");
+	  var pids_array = sidora.resources.getHighlighted();
+  //  if (pids.length != 1) return;
+  pids = pids_array.join("&");
 	  Shadowbox.open({
-      content:    "../edit_metadata/"+sidora.resources.individualPanel.resourceOfInterest.pid+"",
+      content:    "../edit_metadata/"+pids+"",
       player:     "iframe",
       title:      "Edit Metadata",
       options: {

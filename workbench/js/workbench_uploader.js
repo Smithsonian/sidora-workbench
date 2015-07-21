@@ -212,7 +212,9 @@ window.setWhetherMetaEntered = function(){
  *        "edit-next" performs the Islandora submit default so the error can be shown to the user
  */
 window.prepIslandoraFormForSubmit = function(formName, onSuccessfulFormSubmit, onFailureOfFormSubmit){
-	window.setWhetherMetaEntered();
+	if (jQuery("#create-resource-form").length){
+	  window.setWhetherMetaEntered();
+	}
 	if (onSuccessfulFormSubmit == null || typeof(onSuccessfulFormSubmit) != "function"){
 		onSuccessfulFormSubmit = function(formName, ajaxCall, data){
 				//If successful, kill itself.
@@ -246,7 +248,7 @@ window.prepIslandoraFormForSubmit = function(formName, onSuccessfulFormSubmit, o
 		  var ajaxUrl = sidora_util.ajaxUrl(jQuery("#"+formName).attr("count"));
 		}else{
 		  var ajaxUrl = window.location.href;
-		}		
+		}
 		ajaxSettings = ({
 		  type: "POST",
 		  url: ajaxUrl,
