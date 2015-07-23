@@ -452,10 +452,9 @@ function sidora_resource_viewer($pid){
 function sidora_view_openseadragon($pid, $dsid){
   print "\r\n".'<html>                                                                                                      ';
   print "\r\n".'  <head>                                                                                                    ';
-  print "\r\n".'    <script src="http://code.jquery.com/jquery-2.1.4.min.js"></script>                                      ';
-  print "\r\n".'    <script src="http://***REMOVED***.my***REMOVED***.net/openseadragon-djatoka-demo/openseadragon/openseadragon.min.js"></script>';
-  print "\r\n".'   <!--  <script src="js/openseadragon.js"></script> -->                                                    ';
-  print "\r\n".'    <script src="http://***REMOVED***.my***REMOVED***.net/openseadragon-djatoka-demo/js/djtilesource.js"></script>';
+  print "\r\n".'    <script src="'.$GLOBALS['base_url'].'/'.drupal_get_path('module','sidora').'/jslibs/openseadragon-djatoka/jquery/jquery-2.1.4.min.js"></script>';
+  print "\r\n".'    <script src="'.$GLOBALS['base_url'].'/'.drupal_get_path('module','sidora').'/jslibs/openseadragon-djatoka/openseadragon/openseadragon.min.js"></script>';
+  print "\r\n".'    <script src="'.$GLOBALS['base_url'].'/'.drupal_get_path('module','sidora').'/jslibs/openseadragon-djatoka/js/djtilesource.js"></script>';
   print "\r\n".'  </head>                                                                                                   ';
   print "\r\n".'  <body>                                                                                                    ';
   print "\r\n".'    <div id="container">                                                                                    ';
@@ -469,7 +468,7 @@ function sidora_view_openseadragon($pid, $dsid){
   print "\r\n".'          <!-- create the OpenSeadragon Viewer with the TileSource -->                                      ';
   print "\r\n".'          OpenSeadragon({                                                                                   ';
   print "\r\n".'            id: "page-image",                                                                               ';
-  print "\r\n".'            prefixUrl: "http://***REMOVED***.my***REMOVED***.net/openseadragon-djatoka-demo/openseadragon/images/",';
+  print "\r\n".'            prefixUrl: "'.$GLOBALS['base_url'].'/'.drupal_get_path('module','sidora').'/jslibs/openseadragon-djatoka/openseadragon/images/",';
   print "\r\n".'            showNavigator: true,                                                                            ';
   print "\r\n".'            debugMode: false,                                                                                ';
   print "\r\n".'            tileSources: [tileSource],                                                                      ';
@@ -1377,6 +1376,10 @@ function sidora_xsl_information($pid, $return_file_content = FALSE){
  */
 function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $extra = ''){
   global $user;
+  if ($one == 'osd_proxy'){
+    print 'proxy';
+    exit();
+  }
 	if ($one == 'user_register'){
 	  return drupal_render(sidora_account_request_form());
 		exit();
