@@ -2099,7 +2099,7 @@ function sidora_create_resource_get_metadata_form_html($parent_pid, $model, $for
       if (!empty($current_uploads[$form_total]) && $at_least_one_pic){
         $to_return .= 'has-image';
       }
-      $to_return .= '">';
+      $to_return .= '"><div id="top-panel" class="top-panel" style="left:0; width:100%; height:30px;"></div>';
       if (!empty($current_uploads[$form_total]) && $at_least_one_pic){
         $to_return .= "<div class='picHolder' id='picHolder-".$form_total."'>";
         if (sidora_is_displayable_image_with_convert($current_uploads[$form_total]->filename)){
@@ -2154,7 +2154,7 @@ function sidora_create_resource_get_metadata_form_html($parent_pid, $model, $for
       $id_to_creation_info[$form['#build_id']] = $creation_info;
       cache_set("sidora:form_id_to_creation_info",$id_to_creation_info);
       $to_return .= drupal_render( $form);
-      $to_return .= "</div>";
+      $to_return .= "<div id='bottom-panel' class='bottom-panel' style='position:absolute; bottom:0; left:0; width:100%;'></div></div>";
     }
   }
   $to_return .= "</div>";
