@@ -12,12 +12,27 @@ jQuery().ready(function(){
 	jQuery(".sidora-ingest-form-holder").hide();
 	jQuery(".sidora-ingest-form-holder").first().show();
 	window.currentlyShownIndex = 0;
-	jQuery(".sidora-ingest-form-holder").append("<input value=\"Prev\" class='form-submit sidora-form-button sidora-form-prev'></input>");
-	jQuery(".sidora-ingest-form-holder").append("<input value=\"Next\" class='form-submit sidora-form-button sidora-form-next'></input>");
+	if (jQuery(".sidora-ingest-form-holder").length >1){
+	 // if (jQuery(".picHolder").length){
+	    jQuery(".top-panel").append("<input value=\"Prev\" class='form-submit sidora-form-button sidora-form-prev'></input>");
+	    jQuery(".bottom-panel").append("<input value=\"Prev\" class='form-submit sidora-form-button sidora-form-prev'></input>");
+	    jQuery(".top-panel").append("<input value=\"Next\" class='form-submit sidora-form-button sidora-form-next'></input>");
+	    jQuery(".bottom-panel").append("<input value=\"Next\" class='form-submit sidora-form-button sidora-form-next'></input>");
+	/*  }else{
+	    jQuery(".sidora-ingest-form-holder").prepend("<input value=\"Next\" class='form-submit sidora-form-button sidora-form-next'></input>");
+	    jQuery(".sidora-ingest-form-holder").prepend("<input value=\"Prev\" class='form-submit sidora-form-button sidora-form-prev'></input>");
+	    jQuery(".sidora-ingest-form-holder").append("<input value=\"Prev\" class='form-submit sidora-form-button sidora-form-prev'></input>");
+	    jQuery(".sidora-ingest-form-holder").append("<input value=\"Next\" class='form-submit sidora-form-button sidora-form-next'></input>");
+	  }*/
+	}		
 	jQuery(".sidora-form-prev").first().addClass("form-button-disabled");
 	jQuery(".sidora-form-next").last().addClass("form-button-disabled");
+	jQuery(".sidora-form-prev:eq(1)").addClass("form-button-disabled");
+	jQuery(".sidora-form-next:eq(-2)").addClass("form-button-disabled");
 	if (jQuery("#create-resource-form").length){
-	  jQuery("#create-resource-form").append("<input value=\"Finish\" class='form-submit sidora-form-finish'></input>");
+	 // jQuery("#create-resource-form").append("<input value=\"Finish\" class='form-submit sidora-form-finish'></input>");
+	  jQuery(".top-panel").append("<input value=\"Finish\" class='form-submit sidora-form-finish' style='float:right;'></input>");
+	  jQuery(".bottom-panel").append("<input value=\"Finish\" class='form-submit sidora-form-finish' style='float:right;'></input>");
 	}
 	//jQuery("#create-resource-form").append("<input value=\"Cancel\" class='form-submit sidora-form-cancel'></input>");
 	if (jQuery("#edit-metadata").length){
