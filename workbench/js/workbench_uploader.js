@@ -38,7 +38,7 @@ jQuery().ready(function(){
 	if (jQuery("#edit-metadata").length){
 		jQuery("#edit-metadata").append("<input value=\"Finish\" class='form-submit sidora-form-finish'></input>");
 	}	
-	jQuery(".picHolder").css("height",window.innerHeight - 250 + "px");
+	//jQuery(".picHolder").css("height",window.innerHeight - 250 + "px");
 	jQuery(".sidora-form-prev").not(".form-button-disabled").click(function(e){ 
 	  window.showPrev(); 	
 		jQuery(".form-submit[value=Update]").hide();
