@@ -440,6 +440,10 @@ function sidora_resource_viewer($pid){
 								print sidora_audio_view_object($pid);
 								exit();
 								break;
+							case 'JW Video Player':
+							  sidora_video_view_object($pid);
+								exit();
+								break;	
 							case 'IDS':
                 return sidora_view_ids_iframe($pid, $dsid);
                 break;
@@ -1989,6 +1993,7 @@ function sidora_create_resource_get_upload_form_html($model, $upload_button_text
     'si:datasetCModel' => array('csv', 'xml', 'xlsx', 'xls', 'dat', 'med', 'arg', 'slt'),
     'si:fieldbookCModel' => array('pdf'),
     'islandora:sp-audioCModel' => array('mp3','mp4','aiff','aac','ogg','wav','wma'),
+		'islandora:sp_videoCModel' => array('wmv','mp4','ogv','3gp'),
 		'*' => array('*'),
   );
   if (array_key_exists($model, $file_extensions)){
@@ -2733,11 +2738,12 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
       break;
     case 'resources':
       $resource_types = array(
-        'all' => array('si:imageCModel', 'si:generalImageCModel','si:fieldbookCModel','si:datasetCModel','islandora:sp-audioCModel'),
+        'all' => array('si:imageCModel', 'si:generalImageCModel','si:fieldbookCModel','si:datasetCModel','islandora:sp-audioCModel','islandora:sp_videoCModel'),
         'images' => array('si:imageCModel', 'si:generalImageCModel'),
         'pdf' => array('si:fieldbookCModel'),
         'csv' => array('si:datasetCModel'),
 				'audio' => array('islandora:sp-audioCModel'),
+				'video' => array('islandora:sp_videoCModel'),
         'text' => FALSE,
         'video' => FALSE
       );
@@ -2871,6 +2877,7 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
           $to_output .= '</ul></li>';
           //$to_output .= '<li><a href="" model="si:siBasicObject" formname="Dataset" ontology-id="Datasets">Audio&nbsp;Files</a></li>';
           $to_output .= '<li><a href="" model="islandora:sp-audioCModel" formname="Sidora Audio Mods Form" ontology-id="Audio">Audio&nbsp;Files</a></li>';
+					$to_output .= '<li><a href="" model="islandora:sp_videoCModel" formname="Sidora Video Mods Form" ontology-id="Video">Video&nbsp;Files</a></li>';
 					$to_output .= '</ul>';
         }
       break;
@@ -6381,10 +6388,20 @@ function sidora_account_request_form_submit($form, &$form_state) {
 function sidora_islandora_sp_audioCModel_islandora_ingest_steps_alter(array &$steps, array &$form_state) {
 	 unset($steps['islandora_audio_upload']);
 }
+function sidora_islandora_sp_videoCModel_islandora_ingest_steps_alter(array &$steps, array &$form_state) {
+	 unset($steps['islandora_video_upload']);
+}
 function sidora_audio_view_object($pid) {
 	$object = sidora_obj($pid);
 	$variables = array('islandora_object' => $object);
 	$output = theme('islandora_audio', $variables);
   $output = drupal_get_css() . drupal_get_js() . $output;
   return $output;
+}
+function sidora_video_view_object($pid) {
+	$object = sidora_obj($pid);
+	$variables = array('islandora_object' => $object);
+	islandora_video_islandora_sp_videoCModel_islandora_view_object($object,'','');
+ // $output = drupal_get_css() . drupal_get_js() . $output;
+ // return $output;
 }
