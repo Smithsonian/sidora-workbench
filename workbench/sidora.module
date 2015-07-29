@@ -470,7 +470,7 @@ function sidora_view_openseadragon($pid, $dsid){
   print "\r\n".'          <!-- create the tile source -->                                                                   ';
   print "\r\n".'          var service = "'.$GLOBALS['base_url'].'/'.'sidora/osd/'.$pid.'";';
 //  print "\r\n".'          var service = "/adore-djatoka/resolver";';
-  print "\r\n".'          var id = "{internal}'.$pid.'{post}"; //http://***REMOVED***.my***REMOVED***.net:8080/fedora/objects/'.$pid.'/datastreams/OBJ/content";  ';
+  print "\r\n".'          var id = "{replacer}";';  //replacer is a value that is hard-coded to be replaced with the proper id in the osd_proxy function
   print "\r\n".'          var settings = {tileSize: 256, tileOverlap: 0};                                                   ';
   print "\r\n".'          var tileSource = new OpenSeadragon.DjatokaTileSource(service, id, settings);                      ';
   print "\r\n".'          <!-- create the OpenSeadragon Viewer with the TileSource -->                                      ';
@@ -1387,8 +1387,12 @@ function sidora_osd_proxy($pid){
   global $user;
   if (!sidora_allow($user,$pid,'view')) drupal_not_found();
   $qs = $_SERVER['QUERY_STRING'];
-  $qs = str_replace(urlencode("{internal}"),urlencode(variable_get('osd_proxy_pid_prefix', '')),$qs);
-  $qs = str_replace(urlencode("{post}"),urlencode(variable_get('osd_proxy_pid_postfix', '')),$qs);
+  $qs = str_replace(
+          urlencode("{replacer}"),
+          urlencode(variable_get('osd_proxy_pid_prefix', '')).
+          urlencode($pid).
+          urlencode(variable_get('osd_proxy_pid_postfix', '')),
+        $qs);
   $url = variable_get('osd_proxy_resolver_url', '').'?'.$qs;
   print file_get_contents($url);
   exit();
