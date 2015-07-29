@@ -386,6 +386,33 @@ tr.removed.odd {
       '#description' => t('The Fedora Commons pid will be directly appended to the above, end with / if needed.'),
     );
 */
+  $form['OpenSeaDragonInfo'] = array(
+    'fieldset' => array(
+      '#type' => 'fieldset',
+      '#title' => 'OpenSeaDragon Info',
+      '#description' => t(''),
+      '#collapsible' => TRUE,
+      '#collapsed' => TRUE,
+      'osd_proxy_pid_prefix' => array(
+        '#type' => 'textfield',
+        '#title' => t('Prefix the URL before the pid for the base image'),
+        '#default_value' => variable_get('osd_proxy_pid_prefix', ''),
+        '#description' => t('The URL for the base image is made up of this prefix, then the pid, then the post-fix.'),
+      ),
+      'osd_proxy_pid_postfix' => array(
+        '#type' => 'textfield',
+        '#title' => t('Post-fix for the URL after the pid for the base image'),
+        '#default_value' => variable_get('osd_proxy_pid_postfix', ''),
+        '#description' => t('The URL for the base image is made up of the prefix, then the pid, then this post-fix.'),
+      ),
+      'osd_proxy_resolver_url' => array(
+        '#type' => 'textfield',
+        '#title' => t('The base URL for the resolver'),
+        '#default_value' => variable_get('osd_proxy_resolver_url', ''),
+        '#description' => t('The URL for the base image is made up of the prefix, then the pid, then this post-fix.'),
+      ),
+    ),
+  );
   $form['#attributes'] = array('OnSubmit' => 'formPreSubmit();');
   return system_settings_form($form);
 }
