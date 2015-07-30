@@ -285,10 +285,12 @@ tr.removed.odd {
 			'#type' => 'select',
 			'#title' => t('Viewer'),
 			'#options' => array(
+        //remember to change this and the one below it when adding a new type
 				'direct' => t('Direct stream to browser (actual image / binary / text)'),
 				'web_view' => t('Direct stream to browser for web viewable items, download message for others'),
         'flexpaper_pdf' => t('Flexpaper / Convert to flexpaper / direct stream to browser'),
 				'IDS' => t('Smithsonian IDS Viewer'),
+        'OpenSeaDragon' => t('OpenSeaDragon'),
 				'none' => t('None - no display available'),
 				'never' => t('Never set'),
 			),
@@ -315,6 +317,7 @@ tr.removed.odd {
           'flexpaper_pdf' => t('Flexpaper / Convert to flexpaper / direct stream to browser'),
           'JW Audio Player' => t('JW Player for audio'),
 					'IDS' => t('Smithsonian IDS Viewer'),
+          'OpenSeaDragon' => t('OpenSeaDragon'),
           'none' => t('None - no display available'),
           'never' => t('Never set'),
         ),
@@ -383,6 +386,33 @@ tr.removed.odd {
       '#description' => t('The Fedora Commons pid will be directly appended to the above, end with / if needed.'),
     );
 */
+  $form['OpenSeaDragonInfo'] = array(
+    'fieldset' => array(
+      '#type' => 'fieldset',
+      '#title' => 'OpenSeaDragon Info',
+      '#description' => t(''),
+      '#collapsible' => TRUE,
+      '#collapsed' => TRUE,
+      'osd_proxy_pid_prefix' => array(
+        '#type' => 'textfield',
+        '#title' => t('Prefix the URL before the pid for the base image'),
+        '#default_value' => variable_get('osd_proxy_pid_prefix', ''),
+        '#description' => t('The URL for the base image is made up of this prefix, then the pid, then the post-fix.'),
+      ),
+      'osd_proxy_pid_postfix' => array(
+        '#type' => 'textfield',
+        '#title' => t('Post-fix for the URL after the pid for the base image'),
+        '#default_value' => variable_get('osd_proxy_pid_postfix', ''),
+        '#description' => t('The URL for the base image is made up of the prefix, then the pid, then this post-fix.'),
+      ),
+      'osd_proxy_resolver_url' => array(
+        '#type' => 'textfield',
+        '#title' => t('The base URL for the resolver'),
+        '#default_value' => variable_get('osd_proxy_resolver_url', ''),
+        '#description' => t('The URL for the base image is made up of the prefix, then the pid, then this post-fix.'),
+      ),
+    ),
+  );
   $form['#attributes'] = array('OnSubmit' => 'formPreSubmit();');
   return system_settings_form($form);
 }

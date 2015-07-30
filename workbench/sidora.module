@@ -122,6 +122,13 @@ function sidora_menu() {
       'access callback' => 'user_is_logged_in',
       'type' => MENU_CALLBACK,
     ),
+    'sidora/osd' => array(
+      'title' => 'OpenSeaDragon',
+      'description' => '',
+      'page callback' => 'sidora_osd_proxy',
+      'access callback' => 'user_is_logged_in',
+      'type' => MENU_CALLBACK,
+    ),
     'sidora/test' => array(
       'title' => 'TESTING',
       'description' => 'Not intended to be used in production',
@@ -443,6 +450,9 @@ function sidora_resource_viewer($pid){
 							case 'IDS':
                 return sidora_view_ids_iframe($pid, $dsid);
                 break;
+              case 'OpenSeaDragon':
+                return sidora_view_openseadragon($pid, $dsid);
+                break;
             }
           }
         }
@@ -453,6 +463,39 @@ function sidora_resource_viewer($pid){
   print '<br/>The possible models that this resource uses:';
   print '<br/>'.implode('<br/>',$models);
   print '<br/><div style="display:none">Possible viewers:<br/>'.implode('<br/>',$viewers).'</div>';
+  exit();
+}
+function sidora_view_openseadragon($pid, $dsid){
+  print "\r\n".'<html>                                                                                                      ';
+  print "\r\n".'  <head>                                                                                                    ';
+  print "\r\n".'    <script src="'.$GLOBALS['base_url'].'/'.drupal_get_path('module','sidora').'/jslibs/openseadragon-djatoka/jquery/jquery-2.1.4.min.js"></script>';
+  print "\r\n".'    <script src="'.$GLOBALS['base_url'].'/'.drupal_get_path('module','sidora').'/jslibs/openseadragon-djatoka/openseadragon/openseadragon.min.js"></script>';
+  print "\r\n".'    <script src="'.$GLOBALS['base_url'].'/'.drupal_get_path('module','sidora').'/jslibs/openseadragon-djatoka/js/djtilesource.js"></script>';
+  print "\r\n".'  </head>                                                                                                   ';
+  print "\r\n".'  <body>                                                                                                    ';
+  print "\r\n".'    <div id="container">                                                                                    ';
+  print "\r\n".'      <div id="page-image" style="width: 100%; height: 100%;">                                            ';
+  print "\r\n".'        <script>                                                                                            ';
+  print "\r\n".'          <!-- create the tile source -->                                                                   ';
+  print "\r\n".'          var service = "'.$GLOBALS['base_url'].'/'.'sidora/osd/'.$pid.'";';
+//  print "\r\n".'          var service = "/adore-djatoka/resolver";';
+  print "\r\n".'          var id = "{replacer}";';  //replacer is a value that is hard-coded to be replaced with the proper id in the osd_proxy function
+  print "\r\n".'          var settings = {tileSize: 256, tileOverlap: 0};                                                   ';
+  print "\r\n".'          var tileSource = new OpenSeadragon.DjatokaTileSource(service, id, settings);                      ';
+  print "\r\n".'          <!-- create the OpenSeadragon Viewer with the TileSource -->                                      ';
+  print "\r\n".'          OpenSeadragon({                                                                                   ';
+  print "\r\n".'            id: "page-image",                                                                               ';
+  print "\r\n".'            prefixUrl: "'.$GLOBALS['base_url'].'/'.drupal_get_path('module','sidora').'/jslibs/openseadragon-djatoka/openseadragon/images/",';
+  print "\r\n".'            showNavigator: true,                                                                            ';
+  print "\r\n".'            debugMode: false,                                                                                ';
+  print "\r\n".'            tileSources: [tileSource],                                                                      ';
+  print "\r\n".'            showRotationControl: true                                                                       ';
+  print "\r\n".'          });                                                                                               ';
+  print "\r\n".'        </script>                                                                                           ';
+  print "\r\n".'      </div>                                                                                                ';
+  print "\r\n".'    </div>                                                                                                  ';
+  print "\r\n".'  </body>                                                                                                   ';
+  print "\r\n".'</html>                                                                                                     ';
   exit();
 }
 /**
@@ -1345,11 +1388,32 @@ function sidora_xsl_information($pid, $return_file_content = FALSE){
     print(sidora_xsl_string($xsl_config->file));
   }
 }
+/*
+ * Performs the calls to the fedora server to get information for the resolver for OpenSeaDragon calls,
+ * basic proxy with information set in Sidora admin with Sidora security
+ */
+function sidora_osd_proxy($pid){
+  global $user;
+  if (!sidora_allow($user,$pid,'view')) drupal_not_found();
+  $qs = $_SERVER['QUERY_STRING'];
+  $qs = str_replace(
+          urlencode("{replacer}"),
+          urlencode(variable_get('osd_proxy_pid_prefix', '')).
+          urlencode($pid).
+          urlencode(variable_get('osd_proxy_pid_postfix', '')),
+        $qs);
+  $url = variable_get('osd_proxy_resolver_url', '').'?'.$qs;
+  print file_get_contents($url);
+  exit();
+}
 /**
  * Used only for testing purposes.  Should not be called by the main application
  */
 function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $extra = ''){
   global $user;
+  if ($one == 'osd_proxy'){
+    sidora_osd_proxy($two);
+  }
 	if ($one == 'user_register'){
 	  return drupal_render(sidora_account_request_form());
 		exit();
