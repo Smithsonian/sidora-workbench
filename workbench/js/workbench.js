@@ -1457,7 +1457,7 @@ sidora.resources.individualPanel.LoadContent = function(suppressResourceViewerRe
   roipid = sidora.resources.individualPanel.resourceOfInterest.pid;
   console.log("resource of interest is "+roipid);
   if (!suppressResourceViewerReload){
-    var resourceViewerHtml = '<iframe id="iFrame" frameborder="0" height="100%" width="100%" src="'+Drupal.settings.basePath+'sidora/resource_viewer/'+sidora.resources.individualPanel.resourceOfInterest.pid+'"></iframe> ';
+    var resourceViewerHtml = '<iframe id="iFrame" frameborder="0" height="100%" width="100%" allowfullscreen="true" webkitallowfullscreen="true" mozallowfullscreen="true" oallowfullscreen="true" msallowfullscreen="true" src="'+Drupal.settings.basePath+'sidora/resource_viewer/'+sidora.resources.individualPanel.resourceOfInterest.pid+'"></iframe> ';
 		//console.log("in individual panel : "+resourceViewerHtml);
     jQuery('#resourceIframeHolder').children().remove();
     jQuery('#resourceIframeHolder').append(resourceViewerHtml);
