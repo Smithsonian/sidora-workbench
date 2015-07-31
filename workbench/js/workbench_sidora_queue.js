@@ -105,7 +105,7 @@ SidoraQueue.prototype.Done = function(completedItem, ajaxReturn){
   }else{
     if (!completedItem.isSilent) this.NotificationWindow.Show(completedItem.userFriendlyName);
     for (var i = 0; i < completedItem.pidsBeingProcessed.length; i++){
-      if (sidora.concept.GetPid() == completedItem.pidsBeingProcessed[i]){
+      if ((sidora.concept.GetPid() == completedItem.pidsBeingProcessed[i]) || (completedItem.pidsBeingProcessed[i] == "edit_metadata")){
         sidora.concept.LoadContent();
       }
     }

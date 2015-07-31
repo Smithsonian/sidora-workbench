@@ -2,10 +2,14 @@ window.batchRequests = [];
 jQuery().ready(function(){
 	window.currentInfo = {};
 	var myLoc = decodeURIComponent(window.location.pathname);
-	window.currentInfo.parentPid = myLoc.split("/").splice(-4)[0];
-	window.currentInfo.model = myLoc.split("/").splice(-4)[1];
+	if (myLoc.split("/").splice(5)[0] == "edit_metadata"){
+	  window.currentInfo.parentPid = "edit_metadata";  // need to send this to sidora queue done() to force a refresh after edit metadata is finished
+	}else{	// original code for create resource
+	  window.currentInfo.parentPid = myLoc.split("/").splice(-4)[0];
+	  window.currentInfo.model = myLoc.split("/").splice(-4)[1];
+	  window.currentInfo.ontologyId = myLoc.split("/").splice(-4)[3];
+	}
 	window.currentInfo.formname = myLoc.split("/").splice(-4)[2];
-	window.currentInfo.ontologyId = myLoc.split("/").splice(-4)[3];
 	jQuery("body").css("padding-top","0px");
 	jQuery(".form-submit[value=Ingest]").hide();
 	jQuery(".form-submit[value=Submit]").hide();
@@ -98,7 +102,7 @@ window.submitAll=function(){
 		  var toConsole = function(){console.log('finished');};  // create resource success function
 		  window.prepIslandoraFormForSubmit(formId, toConsole );
 		}else{
-		  var toConsole = function(){sidora.concept.forceRefreshOnNextLoadContent = true;};
+		  var toConsole = function(){sidora.concept.forceRefreshOnNextLoadContent = true;sidora.concept.LoadContent();};
 			var onFailure = function(){jQuery("#edit-update").click();};
 		  window.prepIslandoraFormForSubmit(formId, toConsole, onFailure);
 		}	
@@ -124,14 +128,14 @@ window.startBatch = function(){
 			var ajaxSettings = window.batchRequests[i];
 			var postData = ajaxSettings.data;
 			var ccSuccess = oldSuccess;
-			if (currentInfo.formname == 'edit_metadata'){
-			  var friendlyName = "Edit MetaData of Resource:"+(i+1)+" of "+window.batchRequests.length;
-			}else{
-			  var friendlyName = "Create "+currentInfo.formname+" Resource:"+(i+1)+" of "+window.batchRequests.length;
-			}	
 			var onSuccess = function(){console.log("FINISH! "+friendlyName);};
-			//sidora.queue.RequestPost(friendlyName,window.location.href,postData, onSuccess, function(){}, currentInfo.parentPid);
-			sidora.queue.RequestPost(friendlyName,ajaxSettings.url,postData, onSuccess, function(){}, currentInfo.parentPid);
+			if (currentInfo.formname == 'edit_metadata'){
+			  var friendlyName = " Edit MetaData of Resource:"+(i+1)+" of "+window.batchRequests.length;
+			  sidora.queue.RequestPost(friendlyName,ajaxSettings.url,postData, onSuccess, function(){}, currentInfo.parentPid);
+			}else{
+			  var friendlyName = " Create "+currentInfo.formname+" Resource:"+(i+1)+" of "+window.batchRequests.length;
+			  sidora.queue.RequestPost(friendlyName,window.location.href,postData, onSuccess, function(){}, currentInfo.parentPid);
+			}	
 		}
 		sidora.queue.Next();
 		window.closeMyself();
@@ -212,9 +216,9 @@ window.setWhetherMetaEntered = function(){
  *        "edit-next" performs the Islandora submit default so the error can be shown to the user
  */
 window.prepIslandoraFormForSubmit = function(formName, onSuccessfulFormSubmit, onFailureOfFormSubmit){
-	if (jQuery("#create-resource-form").length){
+	//if (jQuery("#create-resource-form").length){
 	  window.setWhetherMetaEntered();
-	}
+	//}
 	if (onSuccessfulFormSubmit == null || typeof(onSuccessfulFormSubmit) != "function"){
 		onSuccessfulFormSubmit = function(formName, ajaxCall, data){
 				//If successful, kill itself.
@@ -254,7 +258,6 @@ window.prepIslandoraFormForSubmit = function(formName, onSuccessfulFormSubmit, o
 		  url: ajaxUrl,
 		  data: jQuery("#"+formName).serialize()+"&op=Submit&update=Update",
       success: function( data ) {
-         window.aa = data;
          if (data.indexOf("<h2 class=\"element-invisible\">Error message</h2")>0){
            //If not successful, reload the page so that the user can see why
            // store this error/failure in a queue message area with the proper SID to process after end of the current queue
@@ -263,13 +266,13 @@ window.prepIslandoraFormForSubmit = function(formName, onSuccessfulFormSubmit, o
            jQuery(".theoverlay").remove();
          }else{
            //If successful, kill itself.
-           newPid = data.substring(0,data.indexOf(")"+" has been ingested")).substring(data.substring(0,data.indexOf(")"+" has been ingested")).lastIndexOf("si:"))
-           if (sidora && sidora.CloseIFrame){
+          /* if (sidora && sidora.CloseIFrame){
              sidora.concept.forceRefreshOnNextLoadContent = true;
              sidora.CloseIFrame(newPid, "edit metadata");
+						 sidora.concept.LoadContent();
            }else{
              console.log("This is not in the expected IFrame");
-           }
+           }*/
          }
       },
 			statusCode: {

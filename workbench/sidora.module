@@ -639,7 +639,7 @@ function sidora_islandora_object_modified(AbstractObject $object){
  * Implements hook_islandora_datastream_modified
  */
 function sidora_islandora_datastream_modified(AbstractObject $object, AbstractDatastream $datastream) {
-  module_load_include('inc', 'sidora', 'includes/utils');
+	module_load_include('inc', 'sidora', 'includes/utils');
   //Assume that any update that occurs to a datastream that is of type xml but is not one of the "main" types is the proper type for
   //metadata to be complete.  The more formal way to do this would be:
   //1) Take information from the SIDORA datastream to determine form and model
@@ -653,6 +653,7 @@ function sidora_islandora_datastream_modified(AbstractObject $object, AbstractDa
   //However, it would be a user directly manipulating data in a way that is
   //not fully supported by the Workbench.
   if ($datastream->mimetype == 'text/xml' && $datastream->id != 'SIDORA' && $datastream->id != 'DC' && $datastream->id != 'RELS-EXT'){
+    $all_meta_entered = filter_input(INPUT_POST, 'all_meta_entered', FILTER_SANITIZE_URL);
     if (!empty($object['SIDORA'])){
       $doc = new DOMDocument();
       $docToLoad = ('<'.'?'.'xml version="1.0" encoding="UTF-8"'.'?'.'>'.$object['SIDORA']->content);  
@@ -662,11 +663,13 @@ function sidora_islandora_datastream_modified(AbstractObject $object, AbstractDa
       $mrf = $doc->getElementsByTagName('meta_requirements_fulfilled');
       if (!empty($mrf) && $mrf->length > 0){
         foreach($mrf as $smrf){
-          $smrf->nodeValue = 'TRUE';
-        }
+         // $smrf->nodeValue = 'TRUE';
+         $smrf->nodeValue = $all_meta_entered;
+				}
       }else{
         $node = $doc->createElement('meta_requirements_fulfilled');
-        $node->nodeValue = 'TRUE';
+        $node->nodeValue = $all_meta_entered;
+				//$node->nodeValue = 'TRUE';
         $sidora_node = $doc->getElementsByTagName('sidora');
         $sidora_node->item(0)->appendChild($node);
       }
@@ -674,8 +677,9 @@ function sidora_islandora_datastream_modified(AbstractObject $object, AbstractDa
       $object['SIDORA']->content = $doc->saveXML($sidora_node->item(0));
     }else{
       //Didn't have the SIDORA datastream, add at least that the metadata has been updated
-      sidora_update_datastream($object, '<sidora><meta_requirements_fulfilled>TRUE</meta_requirements_fulfilled></sidora>', 'SIDORA');
-    }
+      //sidora_update_datastream($object, '<sidora><meta_requirements_fulfilled>TRUE</meta_requirements_fulfilled></sidora>', 'SIDORA');
+      sidora_update_datastream($object, '<sidora><meta_requirements_fulfilled>'.$all_meta_entered.'</meta_requirements_fulfilled></sidora>', 'SIDORA');
+		}
   }
   sidora_clear_tree_cache($object->id);
   //update its parents too.  What probably happened affected its concept children number (is in the parens) which is held at the parent level
@@ -1138,7 +1142,7 @@ function sidora_edit_metadata($object_id_string = '', $dsid = '', $form_name = '
   $object_id = $object_id_array[$resource_count];
   if (!sidora_obtain_lock($object_id)){
     $to_return = '';
-    $to_return .= t('The object ' . $object_id . ' is currently locked by another user');
+    $to_return .= t('The object ' . $object_id . ' is currently locked by another user').'</div>';
     return $to_return;
   }
   $to_return .= '<div id="form-num-'.$resource_count.'" class="sidora-ingest-form-holder">';
@@ -1191,8 +1195,8 @@ function sidora_edit_metadata($object_id_string = '', $dsid = '', $form_name = '
       $to_return .= '</div>';
       $to_return .= '</div>';
       $pic_shown = TRUE;
+		  $to_return .= '</div>';
     }
-		$to_return .= '</div>';
   }
   if ($pic_shown){
     $to_return .= '<div style="width:49%;display:inline-block;margin-left:9px; float:right;">'.drupal_render($tform).'</div>';
@@ -1844,8 +1848,8 @@ function sidora_form_alter(&$form, &$form_state, $form_id){
   if (!array_key_exists('#submit', $form)) $form['#submit'] = array();
   array_unshift($form['#submit'], 'sidora_form_submit_alter');
   $association = NULL;
-  //if ($form_id == 'xml_form_builder_ingest_form' || $form_id == 'islandora_ingest_form' || $form_id == 'xml_form_builder_datastream_form_metadata_form'){
-  if ($form_id == 'xml_form_builder_ingest_form' || $form_id == 'islandora_ingest_form'){
+  if ($form_id == 'xml_form_builder_ingest_form' || $form_id == 'islandora_ingest_form' || $form_id == 'xml_form_builder_datastream_form_metadata_form'){
+  //if ($form_id == 'xml_form_builder_ingest_form' || $form_id == 'islandora_ingest_form'){
     if (array_key_exists('form_build_id', $_POST)){
       $submitted_form_id = $_POST['form_build_id'];
       $association = sidora_find_association($form_state, $submitted_form_id);
