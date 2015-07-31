@@ -17,20 +17,41 @@ jQuery().ready(function(){
 	jQuery(".sidora-ingest-form-holder").hide();
 	jQuery(".sidora-ingest-form-holder").first().show();
 	window.currentlyShownIndex = 0;
-	jQuery(".sidora-ingest-form-holder").append("<input value=\"Prev\" class='form-submit sidora-form-button sidora-form-prev'></input>");
-	jQuery(".sidora-ingest-form-holder").append("<input value=\"Next\" class='form-submit sidora-form-button sidora-form-next'></input>");
+	if (jQuery(".sidora-ingest-form-holder").length >1){
+	 // if (jQuery(".picHolder").length){
+	    jQuery(".top-panel").append("<input value=\"Prev\" class='form-submit sidora-form-button sidora-form-prev'></input>");
+	    jQuery(".bottom-panel").append("<input value=\"Prev\" class='form-submit sidora-form-button sidora-form-prev'></input>");
+	    jQuery(".top-panel").append("<input value=\"Next\" class='form-submit sidora-form-button sidora-form-next'></input>");
+	    jQuery(".bottom-panel").append("<input value=\"Next\" class='form-submit sidora-form-button sidora-form-next'></input>");
+	/*  }else{
+	    jQuery(".sidora-ingest-form-holder").prepend("<input value=\"Next\" class='form-submit sidora-form-button sidora-form-next'></input>");
+	    jQuery(".sidora-ingest-form-holder").prepend("<input value=\"Prev\" class='form-submit sidora-form-button sidora-form-prev'></input>");
+	    jQuery(".sidora-ingest-form-holder").append("<input value=\"Prev\" class='form-submit sidora-form-button sidora-form-prev'></input>");
+	    jQuery(".sidora-ingest-form-holder").append("<input value=\"Next\" class='form-submit sidora-form-button sidora-form-next'></input>");
+	  }*/
+	}		
 	jQuery(".sidora-form-prev").first().addClass("form-button-disabled");
 	jQuery(".sidora-form-next").last().addClass("form-button-disabled");
+	jQuery(".sidora-form-prev:eq(1)").addClass("form-button-disabled");
+	jQuery(".sidora-form-next:eq(-2)").addClass("form-button-disabled");
 	if (jQuery("#create-resource-form").length){
-	  jQuery("#create-resource-form").append("<input value=\"Finish\" class='form-submit sidora-form-finish'></input>");
+	 // jQuery("#create-resource-form").append("<input value=\"Finish\" class='form-submit sidora-form-finish'></input>");
+	  jQuery(".top-panel").append("<input value=\"Finish\" class='form-submit sidora-form-finish' style='float:right;'></input>");
+	  jQuery(".bottom-panel").append("<input value=\"Finish\" class='form-submit sidora-form-finish' style='float:right;'></input>");
 	}
 	//jQuery("#create-resource-form").append("<input value=\"Cancel\" class='form-submit sidora-form-cancel'></input>");
 	if (jQuery("#edit-metadata").length){
 		jQuery("#edit-metadata").append("<input value=\"Finish\" class='form-submit sidora-form-finish'></input>");
 	}	
-	jQuery(".picHolder").css("height",window.innerHeight - 250 + "px");
-	jQuery(".sidora-form-prev").not(".form-button-disabled").click(function(e){ window.showPrev(); });
-	jQuery(".sidora-form-next").not(".form-button-disabled").click(function(e){ window.showNext(); });
+	//jQuery(".picHolder").css("height",window.innerHeight - 250 + "px");
+	jQuery(".sidora-form-prev").not(".form-button-disabled").click(function(e){ 
+	  window.showPrev(); 	
+		jQuery(".form-submit[value=Update]").hide();
+  });
+	jQuery(".sidora-form-next").not(".form-button-disabled").click(function(e){ 
+	  window.showNext();
+		jQuery(".form-submit[value=Update]").hide();
+  });
 	jQuery("#create-new-codebook").click(function(e){ window.createCodebook(); });
 	if (window.currentInfo.formname == 'Codebook'){
 		jQuery(".sidora-form-button").hide();
@@ -108,7 +129,6 @@ window.submitAll=function(){
 		}	
 	}
 	window.startBatch();
-
 }
 
 /**
@@ -218,7 +238,6 @@ window.setWhetherMetaEntered = function(){
 window.prepIslandoraFormForSubmit = function(formName, onSuccessfulFormSubmit, onFailureOfFormSubmit){
 	//if (jQuery("#create-resource-form").length){
 	  window.setWhetherMetaEntered();
-	//}
 	if (onSuccessfulFormSubmit == null || typeof(onSuccessfulFormSubmit) != "function"){
 		onSuccessfulFormSubmit = function(formName, ajaxCall, data){
 				//If successful, kill itself.
@@ -233,11 +252,14 @@ window.prepIslandoraFormForSubmit = function(formName, onSuccessfulFormSubmit, o
 		}
 	}
   if (jQuery("#create-resource-form").length){
+		console.log(window.location);
+		console.log(jQuery("#"+formName).serialize());
 		ajaxSettings = ({
 		  type: "POST",
 		  url: window.location,
 		  //url: Drupal.settings.basePath+"/pure",
-		  data: jQuery("#"+formName).serialize()+"&ingest=Ingest",
+		  //url: window.location.origin+Drupal.settings.basePath+'sidora/test/edit_metadata',
+			data: jQuery("#"+formName).serialize()+"&ingest=Ingest",
 		  success: function( data ) {
 			  if (data.indexOf(")"+" has been ingested") > 0){ //it would trigger success off of reading this inline JS, so break it up
 				  onSuccessfulFormSubmit(formName, this, data);
@@ -275,26 +297,6 @@ window.prepIslandoraFormForSubmit = function(formName, onSuccessfulFormSubmit, o
            }*/
          }
       },
-			statusCode: {
-        500: function() {
-          jQuery("#edit-update").click();
-      		jQuery(".theoverlay").remove();
-      		jQuery("body").append("<div id=\'editmetafailed\' style=\'display:none;\' title=\'Edit MetaData Failed\'><p>Internal Server Error code 500 returned.</p><p>Please contact the Site Administrator</p></div>");
-      		jQuery("#editmetafailed").dialog({
-      				height: 300,
-      				width: 350,
-      				modal: true,
-      				resizable: false,
-      				dialogClass: "no-close",
-		  				buttons: {
-        			  "OK": function() {
-								  self.parent.Shadowbox.close();
-								  jQuery( this ).dialog( "close" );
-     						}
-		 					}
-					});
-			  }
-			},
 		  dataType: "text"
 	  });//ends ajax settings
 	}

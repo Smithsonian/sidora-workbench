@@ -68,18 +68,13 @@ function sidora_update_relationship($uri, $predicate, $recipient, $related, $rem
 }
 function sidora_update_relationship_choose_exit($uri, $predicate, $recipient, $related, $remove = FALSE, $should_exit = FALSE) {
   $toReturn = array();
-  //watchdog("BBBSIU", "surce ($uri, $predicate, $recipient, $related, $remove, $should_exit) --");
   // get the repository from the tuque wrapper
   $repo = tuque_wrapper_get_repository_instance();
 
   try {
     $description = $repo->api->a->describeRepository(); // Check for repository access
-    //watchdog("BBBSIU","desc: $description --");
     $parent = $repo->getObject($recipient); // Check for object access
-    //watchdog("BBBSIU","parent: $parent class: ".get_class($parent)."--");
-    //watchdog("BBBSIU","parent rels:".get_class($parent->relationships)."--");
     if (!$remove) {
-      //watchdog("BBBSIU","pra: $uri, $predicate, $related --");
       $parent->relationships->add($uri, $predicate, $related);
     }
     else {
@@ -784,15 +779,37 @@ function sidora_create_user_object(stdClass $account) {
   if (!is_object($user_projects)) {
     return FALSE;
   }
+  module_load_include('inc', 'xml_form_builder', 'includes/associations');
   $user_object = $user_projects->repository->constructObject('si-user');
   $user_object->owner = $account->name;
   $user_object->label = "{$account->name} Projects";
-  $user_object->models = array('si:conceptCModel', 'si:peopleCModel');
+  $user_object->models = array('si:conceptCModel', variable_get('sidora_automatic_person_model', 'si:HierarchyObject'));
   $eaccpf = sidora_create_default_person_eaccpf($user_object, $account);
   sidora_update_datastream($user_object, $eaccpf, 'EAC-CPF');
   $collection_policy = drupal_get_path('module', 'sidora') . '/data/policies/default_COLLECTION_POLICY.xml';
   sidora_update_datastream($user_object, $collection_policy, 'COLLECTION_POLICY');
   sidora_update_datastream($user_object, sidora_create_default_xacml($account), 'POLICY');
+  $associations = xml_form_builder_get_associations(array(), $user_object->models, array());
+  if (count($associations) == 1){
+    sidora_update_datastream($user_object, '<sidora>
+<model>'.$associations[0]['content_model'].'</model>
+<form>'.$associations[0]['form_name'].'</form>
+<ontology_location_id>AUTOMATIC_USER_CREATION_FROM_ASSOCIATION</ontology_location_id>
+<meta_requirements_fulfilled>FALSE</meta_requirements_fulfilled>
+<initial_dsid>'.$associations[0]['dsid'].'</initial_dsid>
+</sidora>', 'SIDORA');
+  }else{
+    $dsid = variable_get('sidora_automatic_person_dsid', 'DESCMETA');
+    sidora_update_datastream($user_object, '<sidora>
+<model>'.variable_get('sidora_automatic_person_model', 'si:HierarchyObject').'</model>
+<form>'. variable_get('sidora_automatic_person_form', 'Person 2015').'</form>
+<ontology_location_id>AUTOMATIC_USER_CREATION_FROM_SIDORA_DEFAULT</ontology_location_id>
+<meta_requirements_fulfilled>FALSE</meta_requirements_fulfilled>
+<initial_dsid>'.$dsid.'</initial_dsid>
+</sidora>', 'SIDORA');
+    if (empty($user_object[$dsid])) sidora_update_datastream($user_object, '<xml></xml>', $dsid);
+  }
+
   sidora_add_child($user_projects, $user_object);
   return islandora_add_object($user_object);
 }
@@ -918,6 +935,9 @@ function sidora_get_file_extension_from_mime($file_mime_type){
         'application/x-binary' => '.bin',
         'application/x-macbinary' => '.bin',
         'image/x-windows-bmp' => '.bmp',
+				'image/bmp' => '.bmp',
+				'application/xml-dtd' => '.dtd',
+				'text/html' => '.html',
         'application/x-bzip' => '.bz',
         'application/vnd.ms-pki.seccat' => '.cat',
         'application/clariscad' => '.ccad',
@@ -1031,6 +1051,8 @@ function sidora_get_file_extension_from_mime($file_mime_type){
         'www/mime' => '.mime ',
         'audio/x-vnd.audioexplosion.mjuicemediafile' => '.mjf',
         'video/x-motion-jpeg' => '.mjpg ',
+				'image/jpeg' => '.jpg',
+				'image/jp2' => '.jp2',
         'application/x-meme' => '.mm',
         'audio/mod' => '.mod',
         'audio/x-mod' => '.mod',
@@ -1038,6 +1060,9 @@ function sidora_get_file_extension_from_mime($file_mime_type){
         'video/x-mpeq2a' => '.mp2',
         'audio/mpeg3' => '.mp3',
         'audio/x-mpeg-3' => '.mp3',
+				'audio/x-midi' => '.midi',
+				'audio/mpeg' => '.mp3',
+				'application/vnd.openxmlformats-officedocument.presentationml.template' => '.potx',
         'application/vnd.ms-project' => '.mpp',
         'application/marc' => '.mrc',
         'application/x-troff-ms' => '.ms',
@@ -1046,6 +1071,10 @@ function sidora_get_file_extension_from_mime($file_mime_type){
         'application/x-mix-transfer' => '.nix',
         'application/x-conference' => '.nsc',
         'application/x-navidoc' => '.nvd',
+				'application/msword' => '.doc',
+				'application/vnd.openxmlformats-officedocument.wordprocessingml.document' => '.docx',
+				'video/mpeg' => '.mpeg',
+				'application/vnd.openxmlformats-officedocument.presentationml.slideshow' => '.ppsx',
         'application/oda' => '.oda',
         'application/x-omc' => '.omc',
         'application/x-omcdatamaker' => '.omcd',
@@ -1065,6 +1094,17 @@ function sidora_get_file_extension_from_mime($file_mime_type){
         'image/x-pict' => '.pct',
         'image/x-pcx' => '.pcx',
         'application/pdf' => '.pdf',
+				'application/acrobat' => '.pdf',
+				'application/x-pdf' => '.pdf',
+				'applications/vnd.pdf' => '.pdf',
+				'text/pdf' => '.pdf',
+				'text/x-pdf' => '.pdf',
+				'application/csv' => '.csv',
+				'text/csv' => '.csv',
+				'text/comma-separated-values' => '.csv',
+				'application/vnd.ms-excel' => '.xls',
+				'application/vnd.ms-excel.sheet.binary.macroEnabled.12' => '.xlsb',
+				'image/png' => '.png',
         'audio/make.my.funk' => '.pfunk',
         'image/x-portable-graymap' => '.pgm',
         'image/x-portable-greymap' => '.pgm',
@@ -1079,13 +1119,24 @@ function sidora_get_file_extension_from_mime($file_mime_type){
         'image/x-portable-pixmap' => '.ppm',
         'application/powerpoint' => '.ppt',
         'application/x-mspowerpoint' => '.ppt',
+				'application/mspowerpnt' => '.ppt',
+				'application/ms-powerpoint' => '.ppt',
+				'application/mspowerpoint' => '.ppt',
+				'application/vnd-mspowerpoint' => '.ppt',
+				'application/vnd.ms-powerpoint' => '.ppt',
+				'application/vnd.openxmlformats-officedocument.presentationml.presentation' => '.pptx',
         'application/x-freelance' => '.pre',
-        'paleovu/x-pv' => '.pvu',
-        'text/x-script.phyton' => '.py ',
-        'applicaiton/x-bytecode.python' => '.pyc ',
         'audio/vnd.qcelp' => '.qcp ',
         'video/x-qtc' => '.qtc',
         'audio/x-realaudio' => '.ra',
+				'video/quicktime' => '.qt',
+				'audio/x-pn-realaudio' => '.ra',
+				'audio/vnd.rn-realaudio' => '.ra',
+				'audio/x-pn-realaudio' => '.ram',
+				'audio/vnd.rn-realaudio' => '.ram',
+				'application/vnd.openxmlformats-officedocument.presentationml.slide' => '.sldx',
+				'image/svg+xml' => '.svg',
+				'application/vnd.ms-excel.addin.macroEnabled.12' => '.xlam',
         'application/x-cmu-raster' => '.ras',
         'image/x-cmu-raster' => '.ras',
         'text/x-script.rexx' => '.rexx ',
@@ -1099,6 +1150,12 @@ function sidora_get_file_extension_from_mime($file_mime_type){
         'image/vnd.rn-realpix' => '.rp ',
         'text/vnd.rn-realtext' => '.rt',
         'application/x-rtf' => '.rtf',
+				'application/rdf' => '.rdf',
+				'application/rdf+xml' => '.rdf',
+				'application/rtf' => '.rtf',
+				'text/plain' => '.txt',
+				'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' => '.xlsx',
+				'application/vnd.openxmlformats-officedocument.spreadsheetml.template' => '.xltx',
         'video/vnd.rn-realvideo' => '.rv',
         'audio/s3m' => '.s3m ',
         'application/x-lotusscreencam' => '.scm',
@@ -1114,9 +1171,6 @@ function sidora_get_file_extension_from_mime($file_mime_type){
         'application/x-sh' => '.sh',
         'text/x-script.sh' => '.sh',
         'audio/x-psid' => '.sid',
-        'application/x-sit' => '.sit',
-        'application/x-stuffit' => '.sit',
-        'application/x-seelogo' => '.sl ',
         'audio/x-adpcm' => '.snd',
         'application/solids' => '.sol',
         'application/x-pkcs7-certificates' => '.spc ',
@@ -1142,6 +1196,7 @@ function sidora_get_file_extension_from_mime($file_mime_type){
         'application/dsptype' => '.tsp',
         'audio/tsplayer' => '.tsp',
         'text/tab-separated-values' => '.tsv',
+				'image/tiff' => '.tiff',
         'text/x-uil' => '.uil',
         'application/i-deas' => '.unv',
         'application/x-ustar' => '.ustar',
@@ -1198,6 +1253,7 @@ function sidora_get_file_extension_from_mime($file_mime_type){
         'application/zip' => '.zip',
         'multipart/x-zip' => '.zip',
         'text/x-script.zsh' => '.zsh',
+				
       );
       if (isset($file_extensions_for_mime_types_map[$file_mime_type]))
       {
@@ -1206,3 +1262,52 @@ function sidora_get_file_extension_from_mime($file_mime_type){
       $pieces = explode('/', $file_mime_type);
       return '.' . array_pop($pieces);
 }
+/* This function takes the ontology id from the sidora datastream of a pid and 
+ * retrieves the corresponding concept type from the sidora_ontology_json string
+ */
+function sidora_get_concept_type($ontology_id){
+  $sidora_ontology_json = variable_get('sidora_ontology_json',sidora_ontology_json_default());
+	$sidora_ontology_array = json_decode($sidora_ontology_json,true);
+	return sidora_search_ontology_for_concept_type($sidora_ontology_array,$ontology_id);
+}	
+function sidora_search_ontology_for_concept_type($ontologytree,$ontology_id){
+  foreach ($ontologytree as $key=>$value) {
+    $obj = $ontologytree[$key];
+		if (isset($obj['ontology-id']) && ($obj['ontology-id'] == $ontology_id)){
+      return $key;
+		}elseif(is_array($obj['children']) && (count($obj['children']) >0)){
+		  $concept_type = sidora_search_ontology_for_concept_type($obj['children'],$ontology_id);
+		  if ($concept_type){
+			  return $concept_type;
+			}	
+		}
+	}			
+  return FALSE;
+}
+function sidora_mail($from = 'default_from', $to, $subject, $message) {
+  $my_module = '';
+  $my_mail_token = '';
+  if ($from == 'default_from') {
+    $from = variable_get('system_mail', '***REMOVED***');
+  }
+	$message = array(
+    'id' => $my_module . $my_mail_token,
+    'to' => $to,
+    'subject' => $subject,
+    'body' => array($message),
+    'headers' => array(
+      'From' => $from, 
+      'Sender' => $from, 
+      'Return-Path' => $from,
+    ),
+  );
+  $system = drupal_mail_system($my_module, $my_mail_token);
+  $message = $system->format($message);
+	if ($system->mail($message)) {
+    return TRUE;
+  }
+  else {
+    return FALSE;
+  }
+}
+?>
