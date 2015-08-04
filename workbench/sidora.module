@@ -1089,8 +1089,6 @@ function sidora_edit_metadata($object_id = '', $dsid = '', $form_name = ''){
       $association = $curr_association;
     }
   }
-  //error_log("\nIn sidora_edit_metadata, association:".print_r($association,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
-  //error_log("\nIn sidora_edit_metadata, object :".print_r($object,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
   if (empty($association)){
     print "The form is not configured correctly.  The form specified is not associated to this model";
   }
@@ -1202,7 +1200,8 @@ function sidora_edit_metadata($object_id_string = '', $dsid = '', $form_name = '
     return $to_return;
   }
   $to_return .= '<div id="form-num-'.$resource_count.'" class="sidora-ingest-form-holder">';
-  $sidora_data = sidora_get_form_and_dsid($object_id);
+  $to_return .= '<div id="top-panel" class="top-panel" style="left:0; width:100%; height:30px;"></div>';
+	$sidora_data = sidora_get_form_and_dsid($object_id);
   $dsid = $sidora_data['dsid'];
   $form_name = $sidora_data['form_name'];
   $tuque = islandora_get_tuque_connection();
@@ -1240,7 +1239,8 @@ function sidora_edit_metadata($object_id_string = '', $dsid = '', $form_name = '
     $vmt = sidora_get_viewable_mime_types();
     if (!empty($object['OBJ']) &&  strpos($object['OBJ']->mimetype, 'image') !== FALSE){
       $to_return .= '<div class="picHolder" style="overflow:auto">';
-      if (!empty($object['TN']) && in_array($object['TN']->mimetype, $vmt)){
+      $tn = '';
+			if (!empty($object['TN']) && in_array($object['TN']->mimetype, $vmt)){
         $tn = '<img src="'.$GLOBALS['base_url'].'/sidora/info/'.$object_id.'/meta/TN/browser" />';
       }
       $obj_pic = '<img src="'.$GLOBALS['base_url'].'/sidora/resource_viewer/'.$object_id.'" />';
@@ -1255,11 +1255,12 @@ function sidora_edit_metadata($object_id_string = '', $dsid = '', $form_name = '
     }
   }
   if ($pic_shown){
-    $to_return .= '<div style="width:49%;display:inline-block;margin-left:9px; float:right;">'.drupal_render($tform).'</div>';
+    $to_return .= '<div style="width:49%;display:inline-block;margin-left:9px; float:right;">'.drupal_render($tform);
   }else{
-    $to_return .= '<div>'.drupal_render($tform).'</div>';
+    $to_return .= '<div>'.drupal_render($tform);
   }
-  $to_return .= "</div>";
+  $to_return .= "<div id='bottom-panel' class='bottom-panel' style='position:absolute; bottom:0; left:0; width:100%;'></div></div>";
+	$to_return .= "</div>";
 }
   $to_return .= "</div>";
   drupal_add_js(drupal_get_path('module','sidora').'/js/workbench_uploader.js',array('weight' => '1000000', 'group' => JS_THEME));
