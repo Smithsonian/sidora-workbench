@@ -77,7 +77,7 @@ sidora.concept.LoadContentHelp.Resources.TableLoad = function(conceptOfInterest)
     }
     //Edit metadata and delete are only available per resource (no batch yet) so disable them if not exactly one left
     if (pids.length != 1){
-      jQuery("#edit-resource-metadata-menu").addClass("ui-state-disabled");
+   //   jQuery("#edit-resource-metadata-menu").addClass("ui-state-disabled");
       jQuery("#manage-resource").addClass("ui-state-disabled");
     }else{
       jQuery("#edit-resource-metadata-menu").removeClass("ui-state-disabled");
@@ -1455,7 +1455,6 @@ sidora.resources.individualPanel.LoadRelationships = function(){
 sidora.resources.individualPanel.LoadContent = function(suppressResourceViewerReload){
   if (typeof(suppressResourceViewerReload) == 'undefined'){ suppressResourceViewerReload = false; }
   roipid = sidora.resources.individualPanel.resourceOfInterest.pid;
-  console.log("resource of interest is "+roipid);
   if (!suppressResourceViewerReload){
     var resourceViewerHtml = '<iframe id="iFrame" frameborder="0" height="100%" width="100%" src="'+Drupal.settings.basePath+'sidora/resource_viewer/'+sidora.resources.individualPanel.resourceOfInterest.pid+'"></iframe> ';
 		//console.log("in individual panel : "+resourceViewerHtml);

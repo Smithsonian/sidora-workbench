@@ -126,7 +126,7 @@ SidoraQueue.prototype.Done = function(completedItem, ajaxReturn){
       if (sidora.resources.individualPanel.resourceOfInterest != null && sidora.resources.individualPanel.resourceOfInterest.pid == completedItem.pidsBeingProcessed[i]){
         sidora.resources.individualPanel.LoadRelationships();
       }
-      if ((sidora.concept.GetPid() == completedItem.pidsBeingProcessed[i]) || (completedItem.pidsBeingProcessed[i] == "edit_metadata")){
+      if (sidora.concept.GetPid() == completedItem.pidsBeingProcessed[i]){
 			 sidora.concept.LoadContent();
         if (processedResourceArray.length > 1){
   				var processedResourceCountArray = processedResourceArray[1].split(' of ');
@@ -134,7 +134,9 @@ SidoraQueue.prototype.Done = function(completedItem, ajaxReturn){
 					  writeCookie('Drupal.selectResource','1','30');
   				}
 				}	
-      }
+      }else if (completedItem.pidsBeingProcessed[i] == 'edit_metadata'){
+			  sidora.concept.LoadContent();
+			}	
     }
   }
   console.log("done function of queue:"+completedItem.userFriendlyName);
