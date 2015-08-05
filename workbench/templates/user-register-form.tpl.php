@@ -41,3 +41,14 @@ input.form-text {
 $form['name']['#value'] = '';
 print drupal_render_children($form); 
 ?>
+<p>SIdora is currently limited only to selected projects but access will be
+gradually expanded. If you are working on one of the projects please
+fill out this form to request an account. Smithsonian account holders
+must provide their SI usernames. Other users should provide a preferred
+username and valid email address. You will be contacted by email with an
+account invitation as soon as we have processed your request. If you do
+not receive it shortly please check your spam filter. Feel free to
+contact us again if you have not received a timely response. Passwords
+should never be sent in any request and we will never ask for them. For
+SI account holders your SIdora account is linked to your SI account.
+Other users will be provided account instructions with your invitation.<p>

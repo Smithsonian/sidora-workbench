@@ -122,6 +122,13 @@ function sidora_menu() {
       'access callback' => 'user_is_logged_in',
       'type' => MENU_CALLBACK,
     ),
+    'sidora/osd' => array(
+      'title' => 'OpenSeaDragon',
+      'description' => '',
+      'page callback' => 'sidora_osd_proxy',
+      'access callback' => 'user_is_logged_in',
+      'type' => MENU_CALLBACK,
+    ),
     'sidora/test' => array(
       'title' => 'TESTING',
       'description' => 'Not intended to be used in production',
@@ -160,6 +167,14 @@ function sidora_menu() {
       'type' => MENU_CALLBACK,
 		),	
 	 'sidora/request_account' => array(
+	    'title' => 'Request a new account',
+			'description' => 'Request a new account',
+			'page callback' => 'drupal_get_form',
+			'page arguments' => array('sidora_account_request_form'),
+			'access callback' => TRUE,
+			'type' => MENU_CALLBACK,
+   ),
+	 'sidora/workbench/request_account' => array(
 	    'title' => 'Request a new account',
 			'description' => 'Request a new account',
 			'page callback' => 'drupal_get_form',
@@ -429,10 +444,14 @@ function sidora_resource_viewer($pid){
                 exit();
                 break;
               case 'JW Audio Player':
-							  return sidora_audio_view_object($pid);
+								print sidora_audio_view_object($pid);
+								exit();
 								break;
 							case 'IDS':
                 return sidora_view_ids_iframe($pid, $dsid);
+                break;
+              case 'OpenSeaDragon':
+                return sidora_view_openseadragon($pid, $dsid);
                 break;
             }
           }
@@ -444,6 +463,39 @@ function sidora_resource_viewer($pid){
   print '<br/>The possible models that this resource uses:';
   print '<br/>'.implode('<br/>',$models);
   print '<br/><div style="display:none">Possible viewers:<br/>'.implode('<br/>',$viewers).'</div>';
+  exit();
+}
+function sidora_view_openseadragon($pid, $dsid){
+  print "\r\n".'<html>                                                                                                      ';
+  print "\r\n".'  <head>                                                                                                    ';
+  print "\r\n".'    <script src="'.$GLOBALS['base_url'].'/'.drupal_get_path('module','sidora').'/jslibs/openseadragon-djatoka/jquery/jquery-2.1.4.min.js"></script>';
+  print "\r\n".'    <script src="'.$GLOBALS['base_url'].'/'.drupal_get_path('module','sidora').'/jslibs/openseadragon-djatoka/openseadragon/openseadragon.min.js"></script>';
+  print "\r\n".'    <script src="'.$GLOBALS['base_url'].'/'.drupal_get_path('module','sidora').'/jslibs/openseadragon-djatoka/js/djtilesource.js"></script>';
+  print "\r\n".'  </head>                                                                                                   ';
+  print "\r\n".'  <body>                                                                                                    ';
+  print "\r\n".'    <div id="container">                                                                                    ';
+  print "\r\n".'      <div id="page-image" style="width: 100%; height: 100%;">                                            ';
+  print "\r\n".'        <script>                                                                                            ';
+  print "\r\n".'          <!-- create the tile source -->                                                                   ';
+  print "\r\n".'          var service = "'.$GLOBALS['base_url'].'/'.'sidora/osd/'.$pid.'";';
+//  print "\r\n".'          var service = "/adore-djatoka/resolver";';
+  print "\r\n".'          var id = "{replacer}";';  //replacer is a value that is hard-coded to be replaced with the proper id in the osd_proxy function
+  print "\r\n".'          var settings = {tileSize: 256, tileOverlap: 0};                                                   ';
+  print "\r\n".'          var tileSource = new OpenSeadragon.DjatokaTileSource(service, id, settings);                      ';
+  print "\r\n".'          <!-- create the OpenSeadragon Viewer with the TileSource -->                                      ';
+  print "\r\n".'          OpenSeadragon({                                                                                   ';
+  print "\r\n".'            id: "page-image",                                                                               ';
+  print "\r\n".'            prefixUrl: "'.$GLOBALS['base_url'].'/'.drupal_get_path('module','sidora').'/jslibs/openseadragon-djatoka/openseadragon/images/",';
+  print "\r\n".'            showNavigator: true,                                                                            ';
+  print "\r\n".'            debugMode: false,                                                                                ';
+  print "\r\n".'            tileSources: [tileSource],                                                                      ';
+  print "\r\n".'            showRotationControl: true                                                                       ';
+  print "\r\n".'          });                                                                                               ';
+  print "\r\n".'        </script>                                                                                           ';
+  print "\r\n".'      </div>                                                                                                ';
+  print "\r\n".'    </div>                                                                                                  ';
+  print "\r\n".'  </body>                                                                                                   ';
+  print "\r\n".'</html>                                                                                                     ';
   exit();
 }
 /**
@@ -1336,6 +1388,24 @@ function sidora_xsl_information($pid, $return_file_content = FALSE){
     print(sidora_xsl_string($xsl_config->file));
   }
 }
+/*
+ * Performs the calls to the fedora server to get information for the resolver for OpenSeaDragon calls,
+ * basic proxy with information set in Sidora admin with Sidora security
+ */
+function sidora_osd_proxy($pid){
+  global $user;
+  if (!sidora_allow($user,$pid,'view')) drupal_not_found();
+  $qs = $_SERVER['QUERY_STRING'];
+  $qs = str_replace(
+          urlencode("{replacer}"),
+          urlencode(variable_get('osd_proxy_pid_prefix', '')).
+          urlencode($pid).
+          urlencode(variable_get('osd_proxy_pid_postfix', '')),
+        $qs);
+  $url = variable_get('osd_proxy_resolver_url', '').'?'.$qs;
+  print file_get_contents($url);
+  exit();
+}
 /**
  * Used only for testing purposes.  Should not be called by the main application
  */
@@ -1366,59 +1436,13 @@ function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $ex
     //print 'not complete, did not want to add new item';
     exit();
   }
+  if ($one == 'osd_proxy'){
+    sidora_osd_proxy($two);
+  }
 	if ($one == 'user_register'){
 	  return drupal_render(sidora_account_request_form());
 		exit();
 	} 
-	if ($one == 'user_register_form'){
-	  var_dump(user_register_form());
-		exit();
-	}	
- if ($one == 'play_audio'){
-   print sidora_audio_view_object($two);
-	} 
- if ($one == 'view_audio'){
-    $jwpath = libraries_get_path("jwplayer");
-   // drupal_add_js($jwpath . "/jwplayer.js");
-		 $object = sidora_obj($two);
-     print '<script src="'.$GLOBALS['base_url'].'/'.
-		 print '<script src="'.$GLOBALS['base_url'].'/'.$jwpath.'/jwplayer.js"></script>';
-		/* print '<div id="myElement">Loading the player...</div>';
-    $params = array('pid' => 'si:388756',
-    'tn' => '/***REMOVED***/sidora/sidora0.4/islandora/object/si%3A388756/datastream/TN/view',
-    'url' => 'http://***REMOVED***.my***REMOVED***.net/***REMOVED***/sidora/sidora0.4/islandora/object/si%3A388756/datastream/PROXY_MP3',
-    'mime' => 'audio/mpeg');
-		$mime_detect = new MimeDetect();
-    $extension = $mime_detect->getExtension($params["mime"]);
-    // Using "default" is no longer valid in JW Player 6, we will default to
-    // the height and width given in the support docs.
-    // @TODO: JW Player 6 supports responsive widths and heights, potentially
-    // implement this? http://www.longtailvideo.com/support/jw-player/28839/embe
-    // dding-the-player?
-    $width = isset($params['width']) ? $params['width'] : '480';
-    $height = isset($params['height']) ? $params['height'] : '270';
-    $player_params = array(
-      "thumbnail" => $params["tn"],
-      "file" => $params["url"] . '/file_name_spoof.' . $extension,
-      "width" => $width,
-      "height" => $height,
-    );*/
-		drupal_add_js(array("islandora_jwplayer" => $player_params), 'setting');
-
-    $mypath = drupal_get_path("module", "islandora_jwplayer");
-		print '<script src="'.$GLOBALS['base_url'].'/'.$mypath . '/js/player.js"></script>';
-    /*
-		//drupal_add_js($mypath . "/js/player.js", array('preprocess' => FALSE));
-    print '<script type="text/javascript">
-    jwplayer("myElement").setup({
-        file: "http://***REMOVED***.my***REMOVED***.net/***REMOVED***/sidora/sidora0.4/islandora/object/si%3A388756/datastream/PROXY_MP3",
-        image: "http://***REMOVED***.my***REMOVED***.net/***REMOVED***/sidora/sidora0.4/islandora/object/si%3A388756/datastream/TN/view"
-    });
-</script>';*/
-	   $output = theme('islandora_audio', array('islandora_object' => $object));
-    print $output;
-	//	exit();
-  }
   if ($one == 'modules'){
 	  $modules = implode(', ', module_list());
     print $modules;
@@ -2164,7 +2188,7 @@ function sidora_create_resource_get_metadata_form_html($parent_pid, $model, $for
       if (!empty($current_uploads[$form_total]) && $at_least_one_pic){
         $to_return .= 'has-image';
       }
-      $to_return .= '">';
+      $to_return .= '"><div id="top-panel" class="top-panel" style="left:0; width:100%; height:30px;"></div>';
       if (!empty($current_uploads[$form_total]) && $at_least_one_pic){
         $to_return .= "<div class='picHolder' id='picHolder-".$form_total."'>";
         if (sidora_is_displayable_image_with_convert($current_uploads[$form_total]->filename)){
@@ -2219,7 +2243,7 @@ function sidora_create_resource_get_metadata_form_html($parent_pid, $model, $for
       $id_to_creation_info[$form['#build_id']] = $creation_info;
       cache_set("sidora:form_id_to_creation_info",$id_to_creation_info);
       $to_return .= drupal_render( $form);
-      $to_return .= "</div>";
+      $to_return .= "<div id='bottom-panel' class='bottom-panel' style='position:absolute; bottom:0; left:0; width:100%;'></div></div>";
     }
   }
   $to_return .= "</div>";
@@ -6326,28 +6350,26 @@ function seven_theme() {
     ),
     'sidora_account_request_form' => array(
       'render element' => 'form',
-      'template' => 'sidora-account-request', // template file sidora-account-request.tpl.php
-      'path' => drupal_get_path('module', 'sidora') . '/templates',
-      'preprocess functions' => array(
-      'sidora_preprocess_user_login'
-      )
+      'template' => 'user-register-form', // template file user-register-form.tpl.php
+      'path' => drupal_get_path('module', 'sidora') . '/templates'
     ),
-    // 'user_register_form' => array(
-   //    'render element' => 'form',
-   //    'template' => 'user-register-form', // template file user-register-form.tpl.php
-   //    'path' => drupal_get_path('module', 'sidora') . '/templates',
-   //    'preprocess functions' => array(
-   //      'sidora_preprocess_user_register_form'
-   //    )
-   //  ),
-    // 'user_pass' => array(
-    //   'render element' => 'form',
-    //   'template' => 'user-pass', // template file user-pass.tpl.php
-    //   'path' => drupal_get_path('module', 'sidora') . '/templates',
-    //   'preprocess functions' => array(
-    //     'sidora_preprocess_user_pass'
-    //   )
-    // )
+   /*
+	  'user_register_form' => array(
+       'render element' => 'form',
+       'template' => 'user-register-form', // template file user-register-form.tpl.php
+       'path' => drupal_get_path('module', 'sidora') . '/templates',
+       'preprocess functions' => array(
+         'sidora_preprocess_user_register_form'
+       )
+     ),
+     'user_pass' => array(
+       'render element' => 'form',
+       'template' => 'user-pass', // template file user-pass.tpl.php
+       'path' => drupal_get_path('module', 'sidora') . '/templates',
+       'preprocess functions' => array(
+         'sidora_preprocess_user_pass'
+       )
+     )*/
     'user_pass' => array(
        'render element' => 'form',
        'template' => 'user-pass', // template file user-pass.tpl.php
@@ -6427,13 +6449,25 @@ function sidora_account_request_form(){
   );
 return $form;
 }
+function sidora_account_request_form_validate($form, &$form_state) {
+    $email_address = $form_state['values']['mail'];
+    if (!valid_email_address($email_address)) {
+        form_set_error('mail', 'Enter a valid email address.');
+    }
+}
+function sidora_account_request_form_submit($form, &$form_state) {
+  module_load_include('inc', 'sidora', 'includes/utils');
+  if (sidora_mail('default_from', variable_get('system_mail', '***REMOVED***'), 'Request SIdora Account', 'Request for new account received from UserName : '.$form_state['values']['name'] . ' & Email : '.$form_state['values']['mail'])){
+	  drupal_set_message(t('Form submitted successfully'));
+	}	
+}
 function sidora_islandora_sp_audioCModel_islandora_ingest_steps_alter(array &$steps, array &$form_state) {
 	 unset($steps['islandora_audio_upload']);
 }
 function sidora_audio_view_object($pid) {
-  //  $jwpath = libraries_get_path("jwplayer");
-  // drupal_add_js($GLOBALS['base_url']."/".$jwpath."/jwplayer.js");
-	 $object = sidora_obj($pid);
+	$object = sidora_obj($pid);
 	$variables = array('islandora_object' => $object);
-	return theme('islandora_audio', $variables);
+	$output = theme('islandora_audio', $variables);
+  $output = drupal_get_css() . drupal_get_js() . $output;
+  return $output;
 }
