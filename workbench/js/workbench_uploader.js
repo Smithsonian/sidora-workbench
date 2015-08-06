@@ -307,7 +307,7 @@ window.prepIslandoraFormForSubmit = function(formName, onSuccessfulFormSubmit, o
 window.createCodebook = function(){
 	jQuery("html").css("height","100%");
 	jQuery("body").css("height","100%");
-	var iframeUrl = Drupal.settings.basePath+"sidora/create_resource/"+window.currentInfo.parentPid+"/si%3AcodebookCModel/Codebook";
+	var iframeUrl = Drupal.settings.basePath+"sidora/create_resource/"+window.currentInfo.parentPid+"/si%3AcodebookCModel/Codebook/";
 	jQuery("body").append("<div id='ifh' style='width:100%;height:100%;position:absolute;top:0;left:0;opacity:0.5;background:black;'><iframe width='100%' height='99%' id='myiframe' src='"+iframeUrl+"'iframe></div>");
 	setTimeout(function(){
 		jQuery("#ifh").css("opacity","");
