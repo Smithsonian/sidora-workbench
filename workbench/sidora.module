@@ -2880,7 +2880,9 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
         if (!array_key_exists($jsdt_search_val, $resource_types)){
           $jsdt_search_val = 'all';
         }
-        $jsdt_draw = filter_input(INPUT_GET,'draw', FILTER_SANITIZE_NUMBER_INT);
+        $jsdt_order_on = empty($vals[2])?'created':$vals[2];
+				$jsdt_order_by = empty($vals[3])?'DESC':$vals[3];
+				$jsdt_draw = filter_input(INPUT_GET,'draw', FILTER_SANITIZE_NUMBER_INT);
         $jsdt_start = filter_input(INPUT_GET,'start', FILTER_SANITIZE_NUMBER_INT);
         $jsdt_length = filter_input(INPUT_GET,'length', FILTER_SANITIZE_NUMBER_INT);
         $limit = $jsdt_length;
@@ -2891,13 +2893,15 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
         //if ($offset < 0){
 			  //  $offset = 0;
 			  //}
-				$resources = sidora_concept_resource_listing($pid,$resource_types,$limit,$offset, $jsdt_search_val, $jsdt_title_search_val); 
+				$resources = sidora_concept_resource_listing($pid,$resource_types,$limit,$offset, $jsdt_search_val, $jsdt_title_search_val, $jsdt_order_on, $jsdt_order_by); 
         $jsdt_response = array();
         $jsdt_response['draw'] = $jsdt_draw;
         $jsdt_response['recordsTotal'] = $resources_count;
         $jsdt_response['recordsFiltered'] = $filtered_resources_count;
 				$jsdt_response['offset'] = $offset;
 				$jsdt_response['length'] = $limit;
+				$jsdt_response['orderOn'] = $jsdt_order_on;
+				$jsdt_response['orderBy'] = $jsdt_order_by;
         $jsdt_data = array();
         foreach($resources as $element){
           if (array_key_exists('object',$element)){
@@ -3087,12 +3091,12 @@ function sidora_concept_resource_listing_count($pid, $resource_types_list, $reso
   }
   return -1;
 }
-function sidora_concept_resource_listing($pid, $resource_types, $limit, $offset, $specific_resource_type = 'all', $title_search = ''){
+function sidora_concept_resource_listing($pid, $resource_types, $limit, $offset, $specific_resource_type = 'all', $title_search = '', $sort_on = 'created', $sort_order = 'DESC'){
   $to_return = array();
   $tuque = islandora_get_tuque_connection();
   $concept_pid = $pid;
   if ($tuque) {
-    $query = sidora_generate_child_resource_sparql_query($concept_pid, $resource_types[$specific_resource_type], $title_search, 'DESC', 'created', $limit, $offset);
+    $query = sidora_generate_child_resource_sparql_query($concept_pid, $resource_types[$specific_resource_type], $title_search, $sort_order, $sort_on, $limit, $offset);
     $ri = $tuque->repository->ri;
     $results = $ri->sparqlQuery($query);
 		foreach($results as $resindex=>$result){
@@ -5233,7 +5237,7 @@ xmlns:cpf="urn:isbn:1-931666-33-4"
  * @return string
  *   A sparql query string
  */
-function sidora_generate_child_resource_sparql_query($pid, array $resource_types, $search = '', $sort = '', $sort_by = 'created', $limit = NULL, $offset = NULL) {
+function sidora_generate_child_resource_sparql_query($pid, array $resource_types, $search = '', $sort = 'DESC', $sort_by = 'created', $limit = NULL, $offset = NULL) {
   $limit_types = '';
   if (!empty($resource_types)) {
     $limit_type_expression = function($o) {
