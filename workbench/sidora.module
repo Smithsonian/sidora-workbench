@@ -453,6 +453,9 @@ function sidora_resource_viewer($pid){
               case 'OpenSeaDragon':
                 return sidora_view_openseadragon($pid, $dsid);
                 break;
+							case 'SimpleXLSX':
+							  return sidora_view_simplexlsx($pid, $dsid);
+								break;	
             }
           }
         }
@@ -1543,6 +1546,9 @@ function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $ex
   if ($one == 'osd_proxy'){
     sidora_osd_proxy($two);
   }
+	if ($one == 'xsl_viewer'){
+	  sidora_view_simplexlsx($two);
+	}	
 	if ($one == 'user_register'){
 	  return drupal_render(sidora_account_request_form());
 		exit();
@@ -6583,3 +6589,8 @@ function sidora_audio_view_object($pid) {
   $output = drupal_get_css() . drupal_get_js() . $output;
   return $output;
 }
+function sidora_view_simplexlsx($pid) {
+  module_load_include('php', 'sidora', 'includes/simplexlsx');
+	$object = sidora_obj($pid);
+	error_log("\nIn sidora_view_simplexlsx, object:".print_r($object,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
+}	
