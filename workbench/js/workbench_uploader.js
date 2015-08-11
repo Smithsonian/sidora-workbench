@@ -2,7 +2,7 @@ window.batchRequests = [];
 jQuery().ready(function(){
 	window.currentInfo = {};
 	var myLoc = decodeURIComponent(window.location.pathname);
-	if (myLoc.split("/").splice(5)[0] == "edit_metadata"){
+	if (myLoc.split("/").splice(myLoc.split("/").length-2)[0] == "edit_metadata"){
 	  window.currentInfo.parentPid = "edit_metadata";  // need to send this to sidora queue done() to force a refresh after edit metadata is finished
 	}else{	// original code for create resource
 	  window.currentInfo.parentPid = myLoc.split("/").splice(-4)[0];
