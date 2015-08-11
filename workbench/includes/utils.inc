@@ -784,8 +784,12 @@ function sidora_create_user_object(stdClass $account) {
   $user_object->owner = $account->name;
   $user_object->label = "{$account->name} Projects";
   $user_object->models = array('si:conceptCModel', variable_get('sidora_automatic_person_model', 'si:HierarchyObject'));
+  /*
   $eaccpf = sidora_create_default_person_eaccpf($user_object, $account);
   sidora_update_datastream($user_object, $eaccpf, 'EAC-CPF');
+  */
+  $descmeta = sidora_create_default_person_descmeta($user_object, $account);
+  sidora_update_datastream($user_object, $descmeta, 'DESCMETA');
   $collection_policy = drupal_get_path('module', 'sidora') . '/data/policies/default_COLLECTION_POLICY.xml';
   sidora_update_datastream($user_object, $collection_policy, 'COLLECTION_POLICY');
   sidora_update_datastream($user_object, sidora_create_default_xacml($account), 'POLICY');
@@ -839,6 +843,109 @@ function sidora_create_default_xacml(stdClass $account = NULL) {
   $xacml->viewingRule->addRole(array('administrator'));
   $xml = $xacml->getXmlString(TRUE);
   return $xml;
+}
+
+/**
+ * Creates the default DESCMETA datastream for the given user.
+ *
+ * @param AbstractObject $object
+ *   The Drupal users Fedora object.
+ * @param stdClass $account
+ *   A Drupal user object.
+ *
+ * @return string
+ *   The generated DESCMETA document.
+ */
+function sidora_create_default_person_descmeta(AbstractObject $object, $account) {
+  $date = date("c");
+  return <<<EOT
+<SIdoraConcept>
+  <conceptType>Person</conceptType>
+  <primaryTitle>
+    <titleText>{$account->name}</titleText>
+  </primaryTitle>
+  <altTitle scheme="Person Name">
+    <persname>
+      <firstname/>
+      <middlename/>
+      <lastname/>
+      <suffix/>
+      <contactInfo type="">
+        <address1/>
+        <address2/>
+        <city/>
+        <state/>
+        <postalCode/>
+        <country/>
+        <phone type=""/>
+        <email type=""/>
+      </contactInfo>
+    </persname>
+  </altTitle>
+  <altTitle type="">
+    <titleText/>
+  </altTitle>
+  <summaryDescription/>
+  <keyword type="">
+    <value/>
+  </keyword>
+  <identifier type="">
+    <value/>
+    <note/>
+  </identifier>
+  <source type="">
+    <value/>
+    <note/>
+  </source>
+  <relationship type="">
+    <value/>
+    <note/>
+  </relationship>
+  <note type=""/>
+  <timePeriod type="">
+    <intervalname/>
+    <date type="">
+      <year/>
+      <month/>
+      <day/>
+      <time/>
+    </date>
+    <note/>
+  </timePeriod>
+  <place type="">
+    <geogname type=""/>
+    <point>
+      <lat/>
+      <long/>
+    </point>
+    <timePeriod type="">
+      <intervalname/>
+      <date type="">
+        <year/>
+        <month/>
+        <day/>
+        <time/>
+      </date>
+      <note/>
+    </timePeriod>
+    <note/>
+  </place>
+  <actor role="">
+    <persnameText/>
+  </actor>
+  <actor role="">
+    <corpname/>
+  </actor>
+  <language>
+    <value/>
+    <note/>
+  </language>
+  <physDesc type="">
+    <value/>
+    <note/>
+  </physDesc>
+</SIdoraConcept>
+EOT;
 }
 
 /**
