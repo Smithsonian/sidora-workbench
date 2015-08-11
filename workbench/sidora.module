@@ -6607,7 +6607,7 @@ function sidora_view_simplexlsx($pid) {
   } 
   $content_size = strlen($datastream_content);
   $filename = $pid.'_OBJ'.$file_extension;//get_suggest_filename($label, $mime_type);
-$xlsx = new SimpleXLSX($filename);
+$xlsx = new SimpleXLSX($datastream_content);
 echo '<h1>$xlsx->rows()</h1>';
 echo '<pre>';
 print_r( $xlsx->rows() );
