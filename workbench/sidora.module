@@ -6573,7 +6573,8 @@ function sidora_account_request_form_validate($form, &$form_state) {
 }
 function sidora_account_request_form_submit($form, &$form_state) {
   module_load_include('inc', 'sidora', 'includes/utils');
-  if (sidora_mail('default_from', variable_get('system_mail', '***REMOVED***'), 'Request SIdora Account', 'Request for new account received from UserName : '.$form_state['values']['name'] . ' & Email : '.$form_state['values']['mail'])){
+	$default_to = variable_get('system_mail', '***REMOVED***');
+  if (sidora_mail('default_from', variable_get('account_request_email', $default_to), 'Request SIdora Account', 'Request for new account received from UserName : '.$form_state['values']['name'] . ' & Email : '.$form_state['values']['mail'])){
 	  drupal_set_message(t('Form submitted successfully'));
 	}	
 }
