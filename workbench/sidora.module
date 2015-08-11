@@ -1546,7 +1546,7 @@ function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $ex
   if ($one == 'osd_proxy'){
     sidora_osd_proxy($two);
   }
-	if ($one == 'xsl_viewer'){
+	if ($one == 'xls_viewer'){
 	  sidora_view_simplexlsx($two);
 	}	
 	if ($one == 'user_register'){
@@ -6590,7 +6590,31 @@ function sidora_audio_view_object($pid) {
   return $output;
 }
 function sidora_view_simplexlsx($pid) {
-  module_load_include('php', 'sidora', 'includes/simplexlsx');
+  module_load_include('php', 'sidora', 'includes/simplexlsx.class');
+  module_load_include('inc', 'sidora', 'includes/utils');
 	$object = sidora_obj($pid);
-	error_log("\nIn sidora_view_simplexlsx, object:".print_r($object,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
+  $datastream = '';
+  foreach($object as $dsid_loop=>$datastream_loop){
+    if ($dsid_loop == 'OBJ'){
+      $datastream_content = $datastream_loop->content;
+      $datastream = $datastream_loop;
+    }
+  }
+  $mime_type = (empty($datastream))?'text/xml':$datastream->mimeType;
+  $file_extension = '';
+  if ($mime_type != ''){
+    $file_extension = sidora_get_file_extension_from_mime($mime_type);
+  } 
+  $content_size = strlen($datastream_content);
+  $filename = $pid.'_OBJ'.$file_extension;//get_suggest_filename($label, $mime_type);
+$xlsx = new SimpleXLSX($filename);
+echo '<h1>$xlsx->rows()</h1>';
+echo '<pre>';
+print_r( $xlsx->rows() );
+echo '</pre>';
+
+echo '<h1>$xlsx->rowsEx()</h1>';
+echo '<pre>';
+print_r( $xlsx->rowsEx() );
+echo '</pre>';
 }	
