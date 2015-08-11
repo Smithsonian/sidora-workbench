@@ -383,6 +383,21 @@ tr.removed.odd {
       '#description' => t('The Fedora Commons pid will be directly appended to the above, end with / if needed.'),
     );
 */
+  $form['account_request'] = array(
+    'fieldset' => array(
+      '#type' => 'fieldset',
+      '#title' => 'New Account Request',
+      '#description' => t(''),
+      '#collapsible' => TRUE,
+      '#collapsed' => TRUE,
+      'account_request_email' => array(
+        '#type' => 'textfield',
+        '#title' => t('Send New Account Request to'),
+        '#default_value' => variable_get('system_mail', ''),
+        '#description' => t('New account requests are sent to this email address.'),
+      ),
+    ),
+  );
   $form['#attributes'] = array('OnSubmit' => 'formPreSubmit();');
   return system_settings_form($form);
 }
