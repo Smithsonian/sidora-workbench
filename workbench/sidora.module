@@ -1547,6 +1547,10 @@ function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $ex
 	  return drupal_render(sidora_account_request_form());
 		exit();
 	} 
+  if ($one == 'test_email'){
+	  sidora_test_mail();
+		exit();
+	}	
   if ($one == 'modules'){
 	  $modules = implode(', ', module_list());
     print $modules;
@@ -6582,4 +6586,10 @@ function sidora_audio_view_object($pid) {
 	$output = theme('islandora_audio', $variables);
   $output = drupal_get_css() . drupal_get_js() . $output;
   return $output;
+}
+function sidora_test_mail() {
+  module_load_include('inc', 'sidora', 'includes/utils');
+  if (sidora_mail('***REMOVED***', '***REMOVED***', 'Test-Request SIdora Account', 'test')){
+	  drupal_set_message(t('Form submitted successfully'));
+	}	
 }
