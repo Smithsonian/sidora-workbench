@@ -410,7 +410,10 @@ tr.removed.odd {
         '#title' => t('The base URL for the resolver'),
         '#default_value' => variable_get('osd_proxy_resolver_url', ''),
         '#description' => t('The resolver is the location of the image resizer itself. (ex: http://***REMOVED***/adore-djatoka/resolver )'),
-  $form['account_request'] = array(
+  ),
+	),
+	);
+	$form['account_request'] = array(
     'fieldset' => array(
       '#type' => 'fieldset',
       '#title' => 'New Account Request',
