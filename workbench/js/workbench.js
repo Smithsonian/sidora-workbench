@@ -83,10 +83,10 @@ sidora.concept.LoadContentHelp.Resources.TableLoad = function(conceptOfInterest)
       jQuery("#edit-resource-metadata-menu").removeClass("ui-state-disabled");
       jQuery("#manage-resource").removeClass("ui-state-disabled");
     }
+  }); //End onclick
     table.on( 'length', function ( e, settings, len ) {
       writeCookie('Drupal.pageLength',parseInt(len),'30')
     } );
-  }); //End onclick
 }
 /*
  * Prepares the resource table to respond to user inputs: dragging, changing filters, entering search parameters
@@ -162,17 +162,28 @@ sidora.concept.LoadContentHelp.Resources.TableActionsSetup = function(){
       '<div id="jstree-dnd" class="jstree-default"><i class="jstree-icon jstree-er"></i>' + jQuery(this).text() + '<span class="fakejstree-copy" style="display:none">+</span></div>'
     );
   });
-  jQuery('#res_table_filter').after('<select id=\"sidora-resource-type-dropdown\" class="form-select" name=\"search\"><option value=\"\">All</option><option value=\"images\">Image</option><option value=\"pdf\">Digitized Text</option><option value=\"csv\">Tabular Dataset</option><option value=\"audio\">Audio</option></select><input type="text" name="titleFilter" id="titleFilter" style="border: solid 1px lightblue;">');
-  if (readCookie('Drupal.dtFilter') != ''){
+	jQuery('#res_table_filter').after('<select id=\"sidora-resource-type-dropdown\" class="form-select" name=\"search\"><option value=\"\">All</option><option value=\"images\">Image</option><option value=\"pdf\">Digitized Text</option><option value=\"csv\">Tabular Dataset</option><option value=\"audio\">Audio</option></select><input type="text" name="titleFilter" id="titleFilter" style="border: solid 1px lightblue;">');
+	if (readCookie('Drupal.dtFilter') != ''){
     jQuery("#sidora-resource-type-dropdown").val(readCookie('Drupal.dtFilter'));
   }   
-  jQuery("#res_table_length select").addClass("form-select");
+  jQuery('#titleFilter').after('  Sort on : '+'<select id=\"sidora-resource-sort-dropdown\" class="form-select" name=\"sort\"><option value=\"title\">Title</option><option value=\"model\">Model</option><option value=\"created\" selected=\"selected\">Created</option></select>');
+  jQuery('#sidora-resource-sort-dropdown').after('  <select id=\"sidora-resource-sortorder-dropdown\" class="form-select" name=\"sortorder\"><option value=\"ASC\">Ascending</option><option value=\"DESC\" selected=\"selected\">Descending</option></select>');
+  if (readCookie('Drupal.sortOn') != ''){
+	  jQuery('#sidora-resource-sort-dropdown').val(readCookie('Drupal.sortOn'));
+	}
+	if (readCookie('Drupal.sortOrder') != ''){
+	  jQuery("#sidora-resource-sortorder-dropdown").val(readCookie('Drupal.sortOrder'));
+	}		  
+	jQuery("#res_table_length select").addClass("form-select");
   sidora.resources.reloadDatatableBasedOnCurrentFilters = function(){
     var changeTo = jQuery('#sidora-resource-type-dropdown').val();
     jQuery('#res_table_filter input').val(changeTo);
     var recentSearchVal = jQuery("#titleFilter").val();
     changeTo += "\n"+recentSearchVal;
-    window.sidora.resources.dataTable.DataTable().search(changeTo).draw();
+    var sortOn = (readCookie('Drupal.sortOn') != '')?readCookie('Drupal.sortOn'):jQuery('#sidora-resource-sort-dropdown').val();
+		var sortOrder = (readCookie('Drupal.sortOrder') != '')?readCookie('Drupal.sortOrder'):jQuery('#sidora-resource-sortorder-dropdown').val();
+		changeTo += "\n"+sortOn+"\n"+sortOrder;
+		window.sidora.resources.dataTable.DataTable().search(changeTo).draw();
     window.sidora.util.resourceSearchLastSearchVal = recentSearchVal;
   }
   jQuery("#titleFilter").keyup(function(){
@@ -190,6 +201,14 @@ sidora.concept.LoadContentHelp.Resources.TableActionsSetup = function(){
     writeCookie('Drupal.dtFilter',jQuery('#sidora-resource-type-dropdown').val(),'30')
     sidora.resources.reloadDatatableBasedOnCurrentFilters();
   });
+	jQuery('#sidora-resource-sort-dropdown').change(function(){
+   writeCookie('Drupal.sortOn',jQuery('#sidora-resource-sort-dropdown').val(),'30')
+	 sidora.resources.reloadDatatableBasedOnCurrentFilters();
+	 });
+	jQuery('#sidora-resource-sortorder-dropdown').change(function(){
+   writeCookie('Drupal.sortOrder',jQuery('#sidora-resource-sortorder-dropdown').val(),'30')
+	 sidora.resources.reloadDatatableBasedOnCurrentFilters();
+	 });
 }
 /*
  * Sets the visiblility of menu items on the concept menu.  Remember, this is UI only and is not to be used for security
