@@ -4052,7 +4052,7 @@ function sidora_html_string_tree($root_pid = '', $root = NULL){
   //In some circumstances, a user could get here without their root set up.  Create it now.
   if (empty($root_pid)){
     sidora_user_initialize($user);
-    $root_pid = sidora_get_user_root_object();
+    return '';
   }
   if (empty($root)){
     $root= sidora_obj($root_pid);
