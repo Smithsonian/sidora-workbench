@@ -166,7 +166,7 @@ sidora.concept.LoadContentHelp.Resources.TableActionsSetup = function(){
 	if (readCookie('Drupal.dtFilter') != ''){
     jQuery("#sidora-resource-type-dropdown").val(readCookie('Drupal.dtFilter'));
   }   
-  jQuery('#titleFilter').after('  Sort on : '+'<select id=\"sidora-resource-sort-dropdown\" class="form-select" name=\"sort\"><option value=\"title\">Title</option><option value=\"model\">Model</option><option value=\"created\" selected=\"selected\">Created</option></select>');
+  jQuery('#titleFilter').after(' <div id="sidora-resource-sort">  Sort: '+'<select id=\"sidora-resource-sort-dropdown\" class="form-select" name=\"sort\"><option value=\"title\">Title</option><option value=\"model\">Model</option><option value=\"created\" selected=\"selected\">Created</option></select></div>');
   jQuery('#sidora-resource-sort-dropdown').after('  <select id=\"sidora-resource-sortorder-dropdown\" class="form-select" name=\"sortorder\"><option value=\"ASC\">Ascending</option><option value=\"DESC\" selected=\"selected\">Descending</option></select>');
   if (readCookie('Drupal.sortOn') != ''){
 	  jQuery('#sidora-resource-sort-dropdown').val(readCookie('Drupal.sortOn'));
@@ -811,7 +811,21 @@ sidora.ResizeToBrowser = function(){
 
   
 }
+sidora.InitiateConfirmAccess = function(){
+  jQuery.ajax(
+  {
+    "dataType":"json",
+    "url":Drupal.settings.basePath+"sidora/info/si:root/permission",
+    "success":function(){},
+    "error":function(){
+       console.log("Problem getting basic data, redirecting to the user profile");
+       window.location = Drupal.settings.basePath+"user";
+    }
+  }
+);
+}
 sidora.InitiatePage = function(){
+  sidora.InitiateConfirmAccess();
   sidora.InitiateJSTree();
   sidora.RelocateTreeOnPage();
   sidora.ReformatPage();
@@ -1120,6 +1134,7 @@ sidora.util.RefreshTreeIfNew = function(secondsOfWait){
     jQuery.ajax({
       url: '../ajax_parts/tree',
     }).done(function(tree_html){
+      if (tree_html == '') window.location = Drupal.settings.basePath+'user';  //No tree indicates a user problem
       if (tree_html == sidora.util.latestTreeGrab){
         console.log("Tree same as prior tree, no update to UI");
         return;
@@ -1140,6 +1155,7 @@ sidora.util.RefreshTree = function(singleTripWaitMilliseconds){
     jQuery.ajax({
       url: '../ajax_parts/tree',
     }).done(function(tree_html){
+      if (tree_html == '') window.location = Drupal.settings.basePath+'user';  //No tree indicates a user problem
       sidora.util.latestTreeGrab = tree_html;
       //Note that you may want to refresh the tree even if the latest is the same as the previous
       //For example, a concept move has failed.  The concept move shows in the UI, so the tree
