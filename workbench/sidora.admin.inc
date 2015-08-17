@@ -414,18 +414,24 @@ tr.removed.odd {
 	),
 	);
 	$form['account_request'] = array(
-    'fieldset' => array(
+     'fieldset' => array(
       '#type' => 'fieldset',
       '#title' => 'New Account Request',
       '#description' => t(''),
       '#collapsible' => TRUE,
       '#collapsed' => TRUE,
-      'account_request_email' => array(
+      'account_request_email_to' => array(
         '#type' => 'textfield',
-        '#title' => t('Send New Account Request to'),
-        '#default_value' => variable_get('account_request_email', ''),
+        '#title' => t('Send New Account Request Email to'),
+        '#default_value' => variable_get('account_request_email_to', ''),
         '#description' => t('New account requests are sent to this email address.'),
       ),
+			'account_request_email_from' => array(
+			  '#type' => 'textfield',
+				'#title' => t('Send New Account Request Emails from'),
+				'#default_value' => variable_get('account_request_email_from', ''),
+				'#description' => t('New account requests will be sent from this email address.'),
+			),	
     ),
   );
   $form['#attributes'] = array('OnSubmit' => 'formPreSubmit();');

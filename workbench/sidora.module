@@ -1547,10 +1547,6 @@ function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $ex
 	  return drupal_render(sidora_account_request_form());
 		exit();
 	} 
-  if ($one == 'test_email'){
-	  sidora_test_mail();
-		exit();
-	}	
   if ($one == 'modules'){
 	  $modules = implode(', ', module_list());
     print $modules;
@@ -6578,7 +6574,8 @@ function sidora_account_request_form_validate($form, &$form_state) {
 function sidora_account_request_form_submit($form, &$form_state) {
   module_load_include('inc', 'sidora', 'includes/utils');
 	$default_to = variable_get('system_mail', '***REMOVED***');
-  if (sidora_mail('default_from', variable_get('account_request_email', $default_to), 'Request SIdora Account', 'Request for new account received from UserName : '.$form_state['values']['name'] . ' & Email : '.$form_state['values']['mail'])){
+  $default_from = variable_get('account_request_email_from', 'default_from');
+	if (sidora_mail($default_from, variable_get('account_request_email_to', $default_to), 'Request SIdora Account', 'Request for new account received from UserName : '.$form_state['values']['name'] . ' & Email : '.$form_state['values']['mail'])){
 	  drupal_set_message(t('Form submitted successfully'));
 	}	
 }
@@ -6591,10 +6588,4 @@ function sidora_audio_view_object($pid) {
 	$output = theme('islandora_audio', $variables);
   $output = drupal_get_css() . drupal_get_js() . $output;
   return $output;
-}
-function sidora_test_mail() {
-  module_load_include('inc', 'sidora', 'includes/utils');
-  if (sidora_mail('***REMOVED***', '***REMOVED***', 'Test-Request SIdora Account', 'test')){
-	  drupal_set_message(t('Form submitted successfully'));
-	}	
 }
