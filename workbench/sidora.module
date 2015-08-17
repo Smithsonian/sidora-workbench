@@ -1547,7 +1547,8 @@ function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $ex
     sidora_osd_proxy($two);
   }
 	if ($one == 'xls_viewer'){
-	  sidora_view_simplexlsx($two);
+	  $two = drupal_get_path('module','sidora').'/includes/'.$two;
+		sidora_view_simplexlsx2($two);
 	}	
 	if ($one == 'user_register'){
 	  return drupal_render(sidora_account_request_form());
@@ -6612,6 +6613,15 @@ echo '<h1>$xlsx->rows()</h1>';
 echo '<pre>';
 print_r( $xlsx->rows() );
 echo '</pre>';
+
+echo '<h1>$xlsx->rowsEx()</h1>';
+echo '<pre>';
+print_r( $xlsx->rowsEx() );
+echo '</pre>';
+}	
+function sidora_view_simplexlsx2($filename) {
+  module_load_include('php', 'sidora', 'includes/simplexlsx.class');
+ $xlsx = new SimpleXLSX($filename);
 
 echo '<h1>$xlsx->rowsEx()</h1>';
 echo '<pre>';
