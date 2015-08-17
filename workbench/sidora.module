@@ -1549,10 +1549,6 @@ function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $ex
 	  return drupal_render(sidora_account_request_form());
 		exit();
 	} 
-  if ($one == 'test_email'){
-	  sidora_test_mail();
-		exit();
-	}	
   if ($one == 'modules'){
 	  $modules = implode(', ', module_list());
     print $modules;
@@ -2450,6 +2446,7 @@ function sidora_user_initialize($account){
     if (!$account->data || !array_key_exists("islandora_user_pid",$account->data)){
       module_load_include('inc', 'sidora', 'includes/utils');
       $object = sidora_create_user_object($account);
+      sleep(15); //Arbitrary sleep to allow fedora to create the objects.  Even though the ID comes back it's apparently not available immediately
       $data['data']['islandora_user_pid'] = $object->id;
       user_save($account,$data);
       //dsm("Created Sidora object for user:".$object->id);
@@ -4052,8 +4049,9 @@ function sidora_html_string_tree($root_pid = '', $root = NULL){
   //In some circumstances, a user could get here without their root set up.  Create it now.
   if (empty($root_pid)){
     sidora_user_initialize($user);
-    return '';
+    $root_pid = sidora_get_user_root_object();
   }
+  
   if (empty($root)){
     $root= sidora_obj($root_pid);
   }
@@ -4080,7 +4078,7 @@ function sidora_block_content_navigation(){
   $to_return = '<div style="float:left;width:200px;">';
   $to_return .= '<div id="concept-create-menu">';
   $to_return .= '</div>';
-  $to_return .= '<div id="forjstree">';
+  $to_return .= '<div id="forjstree" root_pid="'.$root_pid.'">';
   $to_return .= sidora_html_string_tree($root_pid);
   $to_return .= '</div></div>';
   //jQuery UI L&F
@@ -6589,7 +6587,8 @@ function sidora_account_request_form_validate($form, &$form_state) {
 function sidora_account_request_form_submit($form, &$form_state) {
   module_load_include('inc', 'sidora', 'includes/utils');
 	$default_to = variable_get('system_mail', '***REMOVED***');
-  if (sidora_mail('default_from', variable_get('account_request_email', $default_to), 'Request SIdora Account', 'Request for new account received from UserName : '.$form_state['values']['name'] . ' & Email : '.$form_state['values']['mail'])){
+  $default_from = variable_get('account_request_email_from', 'default_from');
+	if (sidora_mail($default_from, variable_get('account_request_email_to', $default_to), 'Request SIdora Account', 'Request for new account received from UserName : '.$form_state['values']['name'] . ' & Email : '.$form_state['values']['mail'])){
 	  drupal_set_message(t('Form submitted successfully'));
 	}	
 }
@@ -6602,10 +6601,4 @@ function sidora_audio_view_object($pid) {
 	$output = theme('islandora_audio', $variables);
   $output = drupal_get_css() . drupal_get_js() . $output;
   return $output;
-}
-function sidora_test_mail() {
-  module_load_include('inc', 'sidora', 'includes/utils');
-  if (sidora_mail('***REMOVED***', '***REMOVED***', 'Test-Request SIdora Account', 'test')){
-	  drupal_set_message(t('Form submitted successfully'));
-	}	
 }

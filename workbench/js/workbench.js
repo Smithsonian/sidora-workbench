@@ -816,7 +816,12 @@ sidora.InitiateConfirmAccess = function(){
   {
     "dataType":"json",
     "url":Drupal.settings.basePath+"sidora/info/si:root/permission",
-    "success":function(){},
+    "success":function(data){
+      if (typeof(data.create) == 'undefined'){
+        console.log("Bad permissions data, likely a user setup issue, redirecting to user profile");
+        window.location = Drupal.settings.basePath+"user";
+      }
+    },
     "error":function(){
        console.log("Problem getting basic data, redirecting to the user profile");
        window.location = Drupal.settings.basePath+"user";
