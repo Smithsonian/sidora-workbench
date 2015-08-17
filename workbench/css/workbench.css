@@ -320,3 +320,6 @@ Table paging
 .jMenu li ul li a {
   padding: 2px 2px 2px 6px;
 }
+#sidora-resource-sort{
+  display: inline-block;
+}

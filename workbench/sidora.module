@@ -615,9 +615,11 @@ function sidora_islandora_object_ingested(AbstractObject $object){
   //dsm("Sidora Object Ingested");
   $parent_pid = drupal_static('parent_collection_pid');
   $ontology_id = drupal_static('ontology_id');
-  drupal_set_message("Object:".$object->id);
-  drupal_set_message("Parent:".$parent_pid);
-  drupal_set_message("New Pid:" . $object->id . ":End New Pid");
+  if (strpos($object->id, "si-user:") === FALSE){
+    drupal_set_message("Object:".$object->id);
+    drupal_set_message("Parent:".$parent_pid);
+    drupal_set_message("New Pid:" . $object->id . ":End New Pid");
+  }
   $id_to_filename = cache_get("sidora:form_id_to_filename");
   if (empty($id_to_filename)){ $id_to_filename = array(); }else{ $id_to_filename = $id_to_filename->data; }
   $file_location = '';
@@ -2437,6 +2439,9 @@ function sidora_get_thumbnail_image_for_mime_type($mime_type){
  * Create a Projects folder for the user and put information about it into the Drupal db
  */
 function sidora_user_login(&$edit, $account){
+  sidora_user_initialize($account);
+}
+function sidora_user_initialize($account){
   try{
     if (!$account->data || !array_key_exists("islandora_user_pid",$account->data)){
       module_load_include('inc', 'sidora', 'includes/utils');
@@ -4037,8 +4042,14 @@ function sidora_html_tree_for_ajax($root_pid = ''){
   exit();
 }
 function sidora_html_string_tree($root_pid = '', $root = NULL){
+  global $user;
   module_load_include('inc', 'sidora', 'includes/utils');
   if (empty($root_pid)) $root_pid = sidora_get_user_root_object();
+  //In some circumstances, a user could get here without their root set up.  Create it now.
+  if (empty($root_pid)){
+    sidora_user_initialize($user);
+    return '';
+  }
   if (empty($root)){
     $root= sidora_obj($root_pid);
   }
