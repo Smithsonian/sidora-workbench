@@ -1289,9 +1289,10 @@ function sidora_edit_metadata($object_id_string = '', $dsid = '', $form_name = '
         $tn = '<img src="'.$GLOBALS['base_url'].'/sidora/info/'.$object_id.'/meta/TN/browser" />';
       }
       $viewer_link = $GLOBALS['base_url'].'/sidora/resource_viewer/'.$object_id;
-      $obj_pic = '<a href="'.$viewer_link.'" onclick="window.open(\''.$viewer_link.'\');return false;">Open in New Window</a><iframe style="height:100%;width:100%;" src="'.$GLOBALS['base_url'].'/sidora/resource_viewer/'.$object_id.'"></iframe>';
-      $obj_pic .= '<iframe style="height:100%;width:100%;" src="'.$viewer_link.'"></iframe>';
-      $to_return .= '<div style="width:100%;display:inline-block;overflow:auto;vertical-align:top;">';
+      $obj_pic = "\r\n" . '<a href="'.$viewer_link.'" onclick="window.open(\''.$viewer_link.'\');return false;">';
+      $obj_pic .= 'Open in New Window</a>';
+      $obj_pic .= "\r\n" . '<iframe style="height:100%;width:100%;" src="'.$viewer_link.'" allowfullscreen="true" webkitallowfullscreen="true" mozallowfullscreen="true" oallowfullscreen="true" msallowfullscreen="true"></iframe>';
+      $to_return .= "\r\n" .'<div style="width:100%;display:inline-block;overflow:auto;vertical-align:top;">';
       $to_return .= $tn;
       $to_return .= '<div style="width:100%;height:600px;overflow:auto;">';
       $to_return .= $obj_pic;

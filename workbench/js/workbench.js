@@ -1469,7 +1469,14 @@ sidora.resources.individualPanel.Create = function() {
       player:     "iframe",
       title:      "Edit Metadata",
       options: {
-        onFinish:  function(){}
+        onFinish:  function(){
+          //Allow the frame to go fullscreen if needed
+          jQuery("#sb-player").attr("allowfullscreen","true");
+          jQuery("#sb-player").attr("webkitallowfullscreen","true");
+          jQuery("#sb-player").attr("mozallowfullscreen","true");
+          jQuery("#sb-player").attr("msallowfullscreen","true");
+          jQuery("#sb-player").attr("oallowfullscreen","true");
+        }
       }
     });
   });
