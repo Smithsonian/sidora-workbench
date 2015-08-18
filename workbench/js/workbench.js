@@ -848,6 +848,18 @@ sidora.InitiatePage = function(){
   jQuery("#branding").append("<div class='branding-user-info' style='float:right'> <a href='"+Drupal.settings.basePath+"user'>Profile</a> <a href='"+Drupal.settings.basePath+"user/logout'>Logout</a></div>");
 };
 /*
+ * Return thumbnail if resource has a unique thumbnail that is showing, otherwise return false
+ */
+sidora.resources.checkForThumbnailShownInResourceList = function(currPid){
+  var me = jQuery(jq(currPid));
+  if (typeof(me.children("td").children("div").children("img").attr("src")) == 'string'){
+    var imgChild = me.children("td").children("div").children("img");
+    var currentSrc = imgChild.attr("src");
+    if (currentSrc.indexOf(currPid) != -1) return currentSrc;
+  }
+  return false;
+}
+/*
  * Attempt to update any thumbnails
  */
 sidora.resources.updateThumbnails = function(){
@@ -883,12 +895,12 @@ sidora.resources.getHighlighted = function(){
   return toReturn;
 }
 /*
- * Direct browser opening of the resource.  ASSUMES OBJ AS DSID
+ * Open in a new viewer window
  */
 sidora.resources.openInNewWindow = function(){
   var pids = sidora.resources.getHighlighted();
   for(var i = 0; i < pids.length; i++){
-    window.open(Drupal.settings.basePath+"sidora/info/"+pids[i]+"/meta/OBJ/browser");
+   window.open(sidora.resources.createViewerUrl(pids[i]));
   }
 }
 /*
@@ -1490,13 +1502,20 @@ sidora.resources.individualPanel.LoadRelationships = function(){
   }
 }
 /*
+ * Generates a url for the object viewer
+ */
+sidora.resources.createViewerUrl = function(pid){
+  return Drupal.settings.basePath+'sidora/resource_viewer/'+pid;
+}
+/*
  * Loads the viewer once an item has been clicked on
  */
 sidora.resources.individualPanel.LoadContent = function(suppressResourceViewerReload){
   if (typeof(suppressResourceViewerReload) == 'undefined'){ suppressResourceViewerReload = false; }
   roipid = sidora.resources.individualPanel.resourceOfInterest.pid;
   if (!suppressResourceViewerReload){
-    var resourceViewerHtml = '<iframe id="iFrame" frameborder="0" height="100%" width="100%" allowfullscreen="true" webkitallowfullscreen="true" mozallowfullscreen="true" oallowfullscreen="true" msallowfullscreen="true" src="'+Drupal.settings.basePath+'sidora/resource_viewer/'+sidora.resources.individualPanel.resourceOfInterest.pid+'"></iframe> ';
+    var viewerUrl = sidora.resources.createViewerUrl(sidora.resources.individualPanel.resourceOfInterest.pid);
+    var resourceViewerHtml = '<iframe id="iFrame" frameborder="0" height="100%" width="100%" allowfullscreen="true" webkitallowfullscreen="true" mozallowfullscreen="true" oallowfullscreen="true" msallowfullscreen="true" src="'+viewerUrl+'"></iframe> ';
 		//console.log("in individual panel : "+resourceViewerHtml);
     jQuery('#resourceIframeHolder').children().remove();
     jQuery('#resourceIframeHolder').append(resourceViewerHtml);
