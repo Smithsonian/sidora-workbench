@@ -134,7 +134,9 @@ SidoraQueue.prototype.Done = function(completedItem, ajaxReturn){
 					  writeCookie('Drupal.selectResource','1','30');
   				}
 				}	
-      }
+      }else if (completedItem.pidsBeingProcessed[i] == 'edit_metadata'){
+			  sidora.concept.LoadContent();
+			}	
     }
   }
   console.log("done function of queue:"+completedItem.userFriendlyName);

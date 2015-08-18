@@ -122,6 +122,13 @@ function sidora_menu() {
       'access callback' => 'user_is_logged_in',
       'type' => MENU_CALLBACK,
     ),
+    'sidora/osd' => array(
+      'title' => 'OpenSeaDragon',
+      'description' => '',
+      'page callback' => 'sidora_osd_proxy',
+      'access callback' => 'user_is_logged_in',
+      'type' => MENU_CALLBACK,
+    ),
     'sidora/test' => array(
       'title' => 'TESTING',
       'description' => 'Not intended to be used in production',
@@ -412,7 +419,7 @@ function sidora_resource_viewer($pid){
         if (!empty($dsid)){
           $ds = $obj[$dsid];
           if (!empty($ds)){
-            switch ($viewer) {
+						switch ($viewer) {
               case 'direct':
                 sidora_info_json($pid, 'meta', $dsid, 'browser');
                 exit();
@@ -447,6 +454,9 @@ function sidora_resource_viewer($pid){
 							case 'IDS':
                 return sidora_view_ids_iframe($pid, $dsid);
                 break;
+              case 'OpenSeaDragon':
+                return sidora_view_openseadragon($pid, $dsid);
+                break;
             }
           }
         }
@@ -457,6 +467,39 @@ function sidora_resource_viewer($pid){
   print '<br/>The possible models that this resource uses:';
   print '<br/>'.implode('<br/>',$models);
   print '<br/><div style="display:none">Possible viewers:<br/>'.implode('<br/>',$viewers).'</div>';
+  exit();
+}
+function sidora_view_openseadragon($pid, $dsid){
+  print "\r\n".'<html>                                                                                                      ';
+  print "\r\n".'  <head>                                                                                                    ';
+  print "\r\n".'    <script src="'.$GLOBALS['base_url'].'/'.drupal_get_path('module','sidora').'/jslibs/openseadragon-djatoka/jquery/jquery-2.1.4.min.js"></script>';
+  print "\r\n".'    <script src="'.$GLOBALS['base_url'].'/'.drupal_get_path('module','sidora').'/jslibs/openseadragon-djatoka/openseadragon/openseadragon.min.js"></script>';
+  print "\r\n".'    <script src="'.$GLOBALS['base_url'].'/'.drupal_get_path('module','sidora').'/jslibs/openseadragon-djatoka/js/djtilesource.js"></script>';
+  print "\r\n".'  </head>                                                                                                   ';
+  print "\r\n".'  <body>                                                                                                    ';
+  print "\r\n".'    <div id="container">                                                                                    ';
+  print "\r\n".'      <div id="page-image" style="width: 100%; height: 100%;">                                            ';
+  print "\r\n".'        <script>                                                                                            ';
+  print "\r\n".'          <!-- create the tile source -->                                                                   ';
+  print "\r\n".'          var service = "'.$GLOBALS['base_url'].'/'.'sidora/osd/'.$pid.'";';
+//  print "\r\n".'          var service = "/adore-djatoka/resolver";';
+  print "\r\n".'          var id = "{replacer}";';  //replacer is a value that is hard-coded to be replaced with the proper id in the osd_proxy function
+  print "\r\n".'          var settings = {tileSize: 256, tileOverlap: 0};                                                   ';
+  print "\r\n".'          var tileSource = new OpenSeadragon.DjatokaTileSource(service, id, settings);                      ';
+  print "\r\n".'          <!-- create the OpenSeadragon Viewer with the TileSource -->                                      ';
+  print "\r\n".'          OpenSeadragon({                                                                                   ';
+  print "\r\n".'            id: "page-image",                                                                               ';
+  print "\r\n".'            prefixUrl: "'.$GLOBALS['base_url'].'/'.drupal_get_path('module','sidora').'/jslibs/openseadragon-djatoka/openseadragon/images/",';
+  print "\r\n".'            showNavigator: true,                                                                            ';
+  print "\r\n".'            debugMode: false,                                                                                ';
+  print "\r\n".'            tileSources: [tileSource],                                                                      ';
+  print "\r\n".'            showRotationControl: true                                                                       ';
+  print "\r\n".'          });                                                                                               ';
+  print "\r\n".'        </script>                                                                                           ';
+  print "\r\n".'      </div>                                                                                                ';
+  print "\r\n".'    </div>                                                                                                  ';
+  print "\r\n".'  </body>                                                                                                   ';
+  print "\r\n".'</html>                                                                                                     ';
   exit();
 }
 /**
@@ -576,9 +619,11 @@ function sidora_islandora_object_ingested(AbstractObject $object){
   //dsm("Sidora Object Ingested");
   $parent_pid = drupal_static('parent_collection_pid');
   $ontology_id = drupal_static('ontology_id');
-  drupal_set_message("Object:".$object->id);
-  drupal_set_message("Parent:".$parent_pid);
-  drupal_set_message("New Pid:" . $object->id . ":End New Pid");
+  if (strpos($object->id, "si-user:") === FALSE){
+    drupal_set_message("Object:".$object->id);
+    drupal_set_message("Parent:".$parent_pid);
+    drupal_set_message("New Pid:" . $object->id . ":End New Pid");
+  }
   $id_to_filename = cache_get("sidora:form_id_to_filename");
   if (empty($id_to_filename)){ $id_to_filename = array(); }else{ $id_to_filename = $id_to_filename->data; }
   $file_location = '';
@@ -669,7 +714,7 @@ function sidora_islandora_object_modified(AbstractObject $object){
  * Implements hook_islandora_datastream_modified
  */
 function sidora_islandora_datastream_modified(AbstractObject $object, AbstractDatastream $datastream) {
-  module_load_include('inc', 'sidora', 'includes/utils');
+	module_load_include('inc', 'sidora', 'includes/utils');
   //Assume that any update that occurs to a datastream that is of type xml but is not one of the "main" types is the proper type for
   //metadata to be complete.  The more formal way to do this would be:
   //1) Take information from the SIDORA datastream to determine form and model
@@ -683,6 +728,7 @@ function sidora_islandora_datastream_modified(AbstractObject $object, AbstractDa
   //However, it would be a user directly manipulating data in a way that is
   //not fully supported by the Workbench.
   if ($datastream->mimetype == 'text/xml' && $datastream->id != 'SIDORA' && $datastream->id != 'DC' && $datastream->id != 'RELS-EXT'){
+    $all_meta_entered = filter_input(INPUT_POST, 'all_meta_entered', FILTER_SANITIZE_URL);
     if (!empty($object['SIDORA'])){
       $doc = new DOMDocument();
       $docToLoad = ('<'.'?'.'xml version="1.0" encoding="UTF-8"'.'?'.'>'.$object['SIDORA']->content);  
@@ -692,11 +738,13 @@ function sidora_islandora_datastream_modified(AbstractObject $object, AbstractDa
       $mrf = $doc->getElementsByTagName('meta_requirements_fulfilled');
       if (!empty($mrf) && $mrf->length > 0){
         foreach($mrf as $smrf){
-          $smrf->nodeValue = 'TRUE';
-        }
+         // $smrf->nodeValue = 'TRUE';
+         $smrf->nodeValue = $all_meta_entered;
+				}
       }else{
         $node = $doc->createElement('meta_requirements_fulfilled');
-        $node->nodeValue = 'TRUE';
+        $node->nodeValue = $all_meta_entered;
+				//$node->nodeValue = 'TRUE';
         $sidora_node = $doc->getElementsByTagName('sidora');
         $sidora_node->item(0)->appendChild($node);
       }
@@ -704,8 +752,9 @@ function sidora_islandora_datastream_modified(AbstractObject $object, AbstractDa
       $object['SIDORA']->content = $doc->saveXML($sidora_node->item(0));
     }else{
       //Didn't have the SIDORA datastream, add at least that the metadata has been updated
-      sidora_update_datastream($object, '<sidora><meta_requirements_fulfilled>TRUE</meta_requirements_fulfilled></sidora>', 'SIDORA');
-    }
+      //sidora_update_datastream($object, '<sidora><meta_requirements_fulfilled>TRUE</meta_requirements_fulfilled></sidora>', 'SIDORA');
+      sidora_update_datastream($object, '<sidora><meta_requirements_fulfilled>'.$all_meta_entered.'</meta_requirements_fulfilled></sidora>', 'SIDORA');
+		}
   }
   sidora_clear_tree_cache($object->id);
   //update its parents too.  What probably happened affected its concept children number (is in the parens) which is held at the parent level
@@ -1056,10 +1105,132 @@ function sidora_delete_xsl_form($form,&$form_state){
   $form['cancel-btn'] = array(
     '#type' => 'button',
     '#value' => t('Cancel'),
-    '#attributes' => array("id" => "cancel-btn")
-  );
-  return $form;
+		'#attributes' => array("id" => "cancel-btn")
+  );	
+	return $form;
+	}		
+/*
+ * Show the form used to edit the object's metadata
+ */
+/*
+function sidora_edit_metadata($object_id = '', $dsid = '', $form_name = ''){
+  drupal_add_css(drupal_get_path('module','sidora').'/css/workbench_metadata_screens.css',array('weight' => '1000000', 'group' => CSS_THEME));
+  global $user;
+  //if the pid is locked, can't do it
+  if (!sidora_obtain_lock($object_id)){
+    $to_return = '';
+    $to_return .= t('The object is currently locked by another user');
+    return $to_return;
+  }
+
+  $to_return = '';
+  $sidora_data = sidora_get_form_and_dsid($object_id);
+  $dsid = $sidora_data['dsid'];
+  $form_name = $sidora_data['form_name'];
+  
+  $tuque = islandora_get_tuque_connection();
+  $object = $tuque->repository->getObject($object_id);
+  $form_state = array();
+  $associations = xml_form_builder_datastream_form_get_associations($form_state,$object->models, $dsid);  //first param goes unused
+  $association = null;
+  foreach($associations as $curr_association){
+    if ($curr_association['form_name'] == $form_name){
+      $association = $curr_association;
+    }
+  }
+  if (empty($association)){
+    print "The form is not configured correctly.  The form specified is not associated to this model";
+  }
+	$tform = drupal_get_form('xml_form_builder_datastream_form_metadata_form',$object,$association);
+  drupal_add_css(drupal_get_path('module','sidora').'/css/workbench_metadata_screens.css',array('weight' => '1000000', 'group' => CSS_THEME));
+  drupal_add_js(drupal_get_path('module','sidora').'/js/workbench_util.js',array('weight' => '1000000', 'group' => JS_THEME));
+  drupal_add_library('system','ui.dialog');
+  $is_concept = sidora_is_concept($object);
+  if ($is_concept) 
+    drupal_add_js('window.isConcept = true;',array('type' => 'inline', 'weight' => '1000000', 'group' => JS_THEME));
+  else
+    drupal_add_js('window.isConcept = false;',array('type' => 'inline', 'weight' => '1000000', 'group' => JS_THEME));
+    
+  drupal_add_js('
+  jQuery().ready(function(){
+   jQuery("body").css("padding-top","0px");
+   jQuery(".content").append("<input id=\"workbench-submit\" class=\"form-submit\" value=\"Update\" style=\"float:right;\"></input>");
+   var sidora = window.parent.sidora;
+   jQuery("#workbench-submit").click(function(){
+   jQuery("body").append("<div class=\'theoverlay\' style=\'width:100%;height:100%;overflow:hidden;opacity:0.5;position:fixed;top:0;left:0;background-color:black;z-index:4000\'></div>");
+   console.log(jQuery("#xml-form-builder-datastream-form-metadata-form").serialize()+"&op=Submit");
+	   jQuery.ajax({
+       type: "POST",
+       url: "",
+       data: jQuery("#xml-form-builder-datastream-form-metadata-form").serialize()+"&op=Submit&update=Update",
+       success: function( data ) {
+         window.aa = data;
+         if (data.indexOf("<h2 class=\"element-invisible\">Error message</h2")>0){
+           //If not successful, reload the page so that the user can see why
+           jQuery("#edit-update").click();
+           jQuery(".theoverlay").remove();
+         }else{
+           //If successful, kill itself.
+           newPid = data.substring(0,data.indexOf(")"+" has been ingested")).substring(data.substring(0,data.indexOf(")"+" has been ingested")).lastIndexOf("si:"))
+           if (sidora && sidora.CloseIFrame){
+             sidora.concept.forceRefreshOnNextLoadContent = true;
+             sidora.CloseIFrame(newPid, "edit metadata");
+           }else{
+             console.log("This is not in the expected IFrame");
+           }
+         }
+       },
+			// status code 500 section added by RAmlani on 3/30/15 to capture a 500 error from the Ajax call and throw an appropriate error message.
+			statusCode: {
+      500: function() {
+      jQuery("#edit-update").click();
+      jQuery(".theoverlay").remove();
+      jQuery("body").append("<div id=\'editmetafailed\' style=\'display:none;\' title=\'Edit MetaData Failed\'><p>Internal Server Error code 500 returned.</p><p>Please contact the Site Administrator</p></div>");
+      jQuery("#editmetafailed").dialog({
+      height: 300,
+      width: 350,
+      modal: true,
+      resizable: false,
+      dialogClass: "no-close",
+		  buttons: {
+        "OK": function() {
+						self.parent.Shadowbox.close();
+						jQuery( this ).dialog( "close" );
+     }
+		 }
+		});
+			}
+			},
+       dataType: "text"
+     });
+   });
+  });
+  ',array('type' => 'inline', 'weight' => '1000000', 'group' => JS_THEME));
+  $pic_shown = FALSE;
+  if (!$is_concept){
+    $vmt = sidora_get_viewable_mime_types();
+    if (!empty($object['OBJ']) &&  strpos($object['OBJ']->mimetype, 'image') !== FALSE){
+      if (!empty($object['TN']) && in_array($object['TN']->mimetype, $vmt)){
+        $tn = '<img src="'.$GLOBALS['base_url'].'/sidora/info/'.$object_id.'/meta/TN/browser" />';
+      }
+      $obj_pic = '<img src="'.$GLOBALS['base_url'].'/sidora/resource_viewer/'.$object_id.'" />';
+      $to_return .= '<div style="width:45%;display:inline-block;overflow:auto;vertical-align:top;">';
+      $to_return .= $tn;
+      $to_return .= '<div style="width:100%;height:600px;overflow:auto;">';
+      $to_return .= $obj_pic;
+      $to_return .= '</div>';
+      $to_return .= '</div>';
+      $pic_shown = TRUE;
+    }
+  }
+  if ($pic_shown){
+    $to_return .= '<div style="width:49%;display:inline-block;margin-left:9px;">'.drupal_render($tform).'</div>';
+  }else{
+    $to_return .= '<div>'.drupal_render($tform).'</div>';
+  }
+  return $to_return;
 }
+*/
 /*
  * Show the form used to edit the object's metadata
  */
@@ -1074,11 +1245,12 @@ function sidora_edit_metadata($object_id_string = '', $dsid = '', $form_name = '
   $object_id = $object_id_array[$resource_count];
   if (!sidora_obtain_lock($object_id)){
     $to_return = '';
-    $to_return .= t('The object ' . $object_id . ' is currently locked by another user');
+    $to_return .= t('The object ' . $object_id . ' is currently locked by another user').'</div>';
     return $to_return;
   }
   $to_return .= '<div id="form-num-'.$resource_count.'" class="sidora-ingest-form-holder">';
-  $sidora_data = sidora_get_form_and_dsid($object_id);
+  $to_return .= '<div id="top-panel" class="top-panel" style="left:0; width:100%; height:30px;"></div>';
+	$sidora_data = sidora_get_form_and_dsid($object_id);
   $dsid = $sidora_data['dsid'];
   $form_name = $sidora_data['form_name'];
   $tuque = islandora_get_tuque_connection();
@@ -1097,12 +1269,13 @@ function sidora_edit_metadata($object_id_string = '', $dsid = '', $form_name = '
   $tform = drupal_get_form('xml_form_builder_datastream_form_metadata_form',$object,$association);
   $tform['pid'] = array(
   '#type' => 'hidden',
-  '#name' => 'Pid',
-  '#value' => $object_id
-  );
-  $tform['#attributes']['name'][] = $object_id;
-  $tform['#attributes']['class'][] = $object_id;
-  drupal_add_css(drupal_get_path('module','sidora').'/css/workbench_metadata_screens.css',array('weight' => '1000000', 'group' => CSS_THEME));
+	'#name' => 'Pid',
+	'#value' => $object_id
+	);	
+	$tform['#attributes']['name'][] = $object_id;
+	$tform['#attributes']['class'][] = $object_id;
+	$tform['#attributes']['count'][] = $resource_count;
+	drupal_add_css(drupal_get_path('module','sidora').'/css/workbench_metadata_screens.css',array('weight' => '1000000', 'group' => CSS_THEME));
   drupal_add_js(drupal_get_path('module','sidora').'/js/workbench_util.js',array('weight' => '1000000', 'group' => JS_THEME));
   drupal_add_library('system','ui.dialog');
   $is_concept = sidora_is_concept($object);
@@ -1110,13 +1283,13 @@ function sidora_edit_metadata($object_id_string = '', $dsid = '', $form_name = '
     drupal_add_js('window.isConcept = true;',array('type' => 'inline', 'weight' => '1000000', 'group' => JS_THEME));
   else
     drupal_add_js('window.isConcept = false;',array('type' => 'inline', 'weight' => '1000000', 'group' => JS_THEME));
-    
   $pic_shown = FALSE;
   if (!$is_concept){
     $vmt = sidora_get_viewable_mime_types();
     if (!empty($object['OBJ']) &&  strpos($object['OBJ']->mimetype, 'image') !== FALSE){
       $to_return .= '<div class="picHolder" style="overflow:auto">';
-      if (!empty($object['TN']) && in_array($object['TN']->mimetype, $vmt)){
+      $tn = '';
+			if (!empty($object['TN']) && in_array($object['TN']->mimetype, $vmt)){
         $tn = '<img src="'.$GLOBALS['base_url'].'/sidora/info/'.$object_id.'/meta/TN/browser" />';
       }
       $obj_pic = '<img src="'.$GLOBALS['base_url'].'/sidora/resource_viewer/'.$object_id.'" />';
@@ -1127,15 +1300,16 @@ function sidora_edit_metadata($object_id_string = '', $dsid = '', $form_name = '
       $to_return .= '</div>';
       $to_return .= '</div>';
       $pic_shown = TRUE;
-      $to_return .= '</div>';
+		  $to_return .= '</div>';
     }
   }
   if ($pic_shown){
-    $to_return .= '<div style="width:49%;display:inline-block;margin-left:9px; float:right;">'.drupal_render($tform).'</div>';
+    $to_return .= '<div style="width:49%;display:inline-block;margin-left:9px; float:right;">'.drupal_render($tform);
   }else{
-    $to_return .= '<div>'.drupal_render($tform).'</div>';
+    $to_return .= '<div>'.drupal_render($tform);
   }
-  $to_return .= "</div>";
+  $to_return .= "<div id='bottom-panel' class='bottom-panel' style='position:absolute; bottom:0; left:0; width:100%;'></div></div>";
+	$to_return .= "</div>";
 }
   $to_return .= "</div>";
   drupal_add_js(drupal_get_path('module','sidora').'/js/workbench_uploader.js',array('weight' => '1000000', 'group' => JS_THEME));
@@ -1349,11 +1523,32 @@ function sidora_xsl_information($pid, $return_file_content = FALSE){
     print(sidora_xsl_string($xsl_config->file));
   }
 }
+/*
+ * Performs the calls to the fedora server to get information for the resolver for OpenSeaDragon calls,
+ * basic proxy with information set in Sidora admin with Sidora security
+ */
+function sidora_osd_proxy($pid){
+  global $user;
+  if (!sidora_allow($user,$pid,'view')) drupal_not_found();
+  $qs = $_SERVER['QUERY_STRING'];
+  $qs = str_replace(
+          urlencode("{replacer}"),
+          urlencode(variable_get('osd_proxy_pid_prefix', '')).
+          urlencode($pid).
+          urlencode(variable_get('osd_proxy_pid_postfix', '')),
+        $qs);
+  $url = variable_get('osd_proxy_resolver_url', '').'?'.$qs;
+  print file_get_contents($url);
+  exit();
+}
 /**
  * Used only for testing purposes.  Should not be called by the main application
  */
 function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $extra = ''){
   global $user;
+  if ($one == 'osd_proxy'){
+    sidora_osd_proxy($two);
+  }
 	if ($one == 'user_register'){
 	  return drupal_render(sidora_account_request_form());
 		exit();
@@ -1857,7 +2052,8 @@ function sidora_form_alter(&$form, &$form_state, $form_id){
   if (!array_key_exists('#submit', $form)) $form['#submit'] = array();
   array_unshift($form['#submit'], 'sidora_form_submit_alter');
   $association = NULL;
-  if ($form_id == 'xml_form_builder_ingest_form' || $form_id == 'islandora_ingest_form'){
+  if ($form_id == 'xml_form_builder_ingest_form' || $form_id == 'islandora_ingest_form' || $form_id == 'xml_form_builder_datastream_form_metadata_form'){
+  //if ($form_id == 'xml_form_builder_ingest_form' || $form_id == 'islandora_ingest_form'){
     if (array_key_exists('form_build_id', $_POST)){
       $submitted_form_id = $_POST['form_build_id'];
       $association = sidora_find_association($form_state, $submitted_form_id);
@@ -2076,7 +2272,7 @@ function sidora_create_resource_get_metadata_form_html($parent_pid, $model, $for
   $to_return = '';
   $to_return .= "<div id='create-resource-form'>";
   if (count($current_uploads) == 0 || empty($current_uploads)){  //if no files
-    $to_return .= '<div id="form-num-0" class="sidora-ingest-form-holder">';
+    $to_return .= '<div id="form-num-0" class="sidora-ingest-form-holder"><div id="top-panel" class="top-panel" style="left:0; width:100%; height:30px;"></div>';
     $page = $tuque->repository->constructObject(islandora_get_namespace('si:root'));
     $form = drupal_get_form('islandora_ingest_form', array(
       'models' => array($model),
@@ -2094,6 +2290,7 @@ function sidora_create_resource_get_metadata_form_html($parent_pid, $model, $for
     $id_to_creation_info[$form['#build_id']] = $creation_info;
     cache_set("sidora:form_id_to_creation_info",$id_to_creation_info);
     $to_return .= drupal_render( $form);
+    $to_return .= "<div id='bottom-panel' class='bottom-panel' style='position:absolute; bottom:0; left:0; width:100%;'></div></div>";
   }else{
     $at_least_one_pic = false;
     foreach ($current_uploads as $cu){
@@ -2247,10 +2444,14 @@ function sidora_get_thumbnail_image_for_mime_type($mime_type){
  * Create a Projects folder for the user and put information about it into the Drupal db
  */
 function sidora_user_login(&$edit, $account){
+  sidora_user_initialize($account);
+}
+function sidora_user_initialize($account){
   try{
     if (!$account->data || !array_key_exists("islandora_user_pid",$account->data)){
       module_load_include('inc', 'sidora', 'includes/utils');
       $object = sidora_create_user_object($account);
+      sleep(15); //Arbitrary sleep to allow fedora to create the objects.  Even though the ID comes back it's apparently not available immediately
       $data['data']['islandora_user_pid'] = $object->id;
       user_save($account,$data);
       //dsm("Created Sidora object for user:".$object->id);
@@ -2756,7 +2957,9 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
         if (!array_key_exists($jsdt_search_val, $resource_types)){
           $jsdt_search_val = 'all';
         }
-        $jsdt_draw = filter_input(INPUT_GET,'draw', FILTER_SANITIZE_NUMBER_INT);
+        $jsdt_order_on = empty($vals[2])?'created':$vals[2];
+				$jsdt_order_by = empty($vals[3])?'DESC':$vals[3];
+				$jsdt_draw = filter_input(INPUT_GET,'draw', FILTER_SANITIZE_NUMBER_INT);
         $jsdt_start = filter_input(INPUT_GET,'start', FILTER_SANITIZE_NUMBER_INT);
         $jsdt_length = filter_input(INPUT_GET,'length', FILTER_SANITIZE_NUMBER_INT);
         $limit = $jsdt_length;
@@ -2767,13 +2970,15 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
         //if ($offset < 0){
 			  //  $offset = 0;
 			  //}
-				$resources = sidora_concept_resource_listing($pid,$resource_types,$limit,$offset, $jsdt_search_val, $jsdt_title_search_val); 
+				$resources = sidora_concept_resource_listing($pid,$resource_types,$limit,$offset, $jsdt_search_val, $jsdt_title_search_val, $jsdt_order_on, $jsdt_order_by); 
         $jsdt_response = array();
         $jsdt_response['draw'] = $jsdt_draw;
         $jsdt_response['recordsTotal'] = $resources_count;
         $jsdt_response['recordsFiltered'] = $filtered_resources_count;
 				$jsdt_response['offset'] = $offset;
 				$jsdt_response['length'] = $limit;
+				$jsdt_response['orderOn'] = $jsdt_order_on;
+				$jsdt_response['orderBy'] = $jsdt_order_by;
         $jsdt_data = array();
         foreach($resources as $element){
           if (array_key_exists('object',$element)){
@@ -2964,12 +3169,12 @@ function sidora_concept_resource_listing_count($pid, $resource_types_list, $reso
   }
   return -1;
 }
-function sidora_concept_resource_listing($pid, $resource_types, $limit, $offset, $specific_resource_type = 'all', $title_search = ''){
+function sidora_concept_resource_listing($pid, $resource_types, $limit, $offset, $specific_resource_type = 'all', $title_search = '', $sort_on = 'created', $sort_order = 'DESC'){
   $to_return = array();
   $tuque = islandora_get_tuque_connection();
   $concept_pid = $pid;
   if ($tuque) {
-    $query = sidora_generate_child_resource_sparql_query($concept_pid, $resource_types[$specific_resource_type], $title_search, 'DESC', 'created', $limit, $offset);
+    $query = sidora_generate_child_resource_sparql_query($concept_pid, $resource_types[$specific_resource_type], $title_search, $sort_order, $sort_on, $limit, $offset);
     $ri = $tuque->repository->ri;
     $results = $ri->sparqlQuery($query);
 		foreach($results as $resindex=>$result){
@@ -3845,8 +4050,15 @@ function sidora_html_tree_for_ajax($root_pid = ''){
   exit();
 }
 function sidora_html_string_tree($root_pid = '', $root = NULL){
+  global $user;
   module_load_include('inc', 'sidora', 'includes/utils');
   if (empty($root_pid)) $root_pid = sidora_get_user_root_object();
+  //In some circumstances, a user could get here without their root set up.  Create it now.
+  if (empty($root_pid)){
+    sidora_user_initialize($user);
+    $root_pid = sidora_get_user_root_object();
+  }
+  
   if (empty($root)){
     $root= sidora_obj($root_pid);
   }
@@ -3873,7 +4085,7 @@ function sidora_block_content_navigation(){
   $to_return = '<div style="float:left;width:200px;">';
   $to_return .= '<div id="concept-create-menu">';
   $to_return .= '</div>';
-  $to_return .= '<div id="forjstree">';
+  $to_return .= '<div id="forjstree" root_pid="'.$root_pid.'">';
   $to_return .= sidora_html_string_tree($root_pid);
   $to_return .= '</div></div>';
   //jQuery UI L&F
@@ -5110,7 +5322,7 @@ xmlns:cpf="urn:isbn:1-931666-33-4"
  * @return string
  *   A sparql query string
  */
-function sidora_generate_child_resource_sparql_query($pid, array $resource_types, $search = '', $sort = '', $sort_by = 'created', $limit = NULL, $offset = NULL) {
+function sidora_generate_child_resource_sparql_query($pid, array $resource_types, $search = '', $sort = 'DESC', $sort_by = 'created', $limit = NULL, $offset = NULL) {
   $limit_types = '';
   if (!empty($resource_types)) {
     $limit_type_expression = function($o) {
@@ -6381,7 +6593,9 @@ function sidora_account_request_form_validate($form, &$form_state) {
 }
 function sidora_account_request_form_submit($form, &$form_state) {
   module_load_include('inc', 'sidora', 'includes/utils');
-  if (sidora_mail('default_from', variable_get('system_mail', '***REMOVED***'), 'Request SIdora Account', 'Request for new account received from UserName : '.$form_state['values']['name'] . ' & Email : '.$form_state['values']['mail'])){
+	$default_to = variable_get('system_mail', '***REMOVED***');
+  $default_from = variable_get('account_request_email_from', 'default_from');
+	if (sidora_mail($default_from, variable_get('account_request_email_to', $default_to), 'Request SIdora Account', 'Request for new account received from UserName : '.$form_state['values']['name'] . ' & Email : '.$form_state['values']['mail'])){
 	  drupal_set_message(t('Form submitted successfully'));
 	}	
 }
