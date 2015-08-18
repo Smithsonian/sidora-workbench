@@ -3082,7 +3082,7 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
           $to_output .= '</ul></li>';
           //$to_output .= '<li><a href="" model="si:siBasicObject" formname="Dataset" ontology-id="Datasets">Audio&nbsp;Files</a></li>';
           $to_output .= '<li><a href="" model="islandora:sp-audioCModel" formname="Sidora Audio Mods Form" ontology-id="Audio">Audio&nbsp;Files</a></li>';
-					$to_output .= '<li><a href="" model="islandora:sp_videoCModel" formname="Sidora Video Mods form" ontology-id="Video">Video&nbsp;Files</a></li>';
+					$to_output .= '<li><a href="" model="islandora:sp_videoCModel" formname="Video MODS form" ontology-id="Video">Video&nbsp;Files</a></li>';
 					$to_output .= '</ul>';
         }
       break;
