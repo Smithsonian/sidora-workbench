@@ -4110,6 +4110,12 @@ function sidora_block_content_navigation(){
 function sidora_find_association(array &$form_state, $form_build_id = ''){
   module_load_include('inc', 'xml_form_builder', 'includes/associations');
   $shared_storage = islandora_ingest_form_get_shared_storage($form_state);
+
+  //If we got here without the proper creation data, don't bother trying to find an association
+  if (empty($shared_storage)) return NULL;
+  if (!array_key_exists('models',$shared_storage)) return NULL;
+  if (empty($shared_storage['models'])) return NULL;
+
   $associations = xml_form_builder_get_associations(array(), $shared_storage['models'], array());
   // ... Find the association you want to use, iterate over the values and
   // choose the one you want.
