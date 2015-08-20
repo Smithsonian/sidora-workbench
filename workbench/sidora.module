@@ -2391,6 +2391,12 @@ function sidora_codebook_upload_form($form, &$form_state){
     '#title' => t('Example Data File'),
     '#description' => t('The codebook will be generated on this uploaded example data.'),
   );
+  $form['some_text'] = array(
+    '#markup' => '<style>
+       .form-item-files-file, .form-item-existing-codebook {width:270px;float:left;clear:both;} 
+       #edit-upload-codebook-submit, #edit-pick-codebook-submit {float:left;vertical-align:top;margin-top:30px;}
+     </style>',
+  );
   $form['upload_codebook_submit'] = array(  //ensure this aligns with information in the validator on the #id check
     '#type' => 'submit',
     '#value' => t('upppload'),
@@ -2398,9 +2404,7 @@ function sidora_codebook_upload_form($form, &$form_state){
   module_load_include('inc', 'sidora', 'includes/utils');
   $codebook_options = array();
   $user_pid = sidora_get_user_object();
-  dsm($user_pid);
   $user_obj = sidora_obj($user_pid);
-  $user_projects = sidora_obj(sidora_get_user_object());
   //Load up the Fedora Commons object for the user
   if (!empty($user_obj)){
     //Check to see what managesCodebook relations it has
@@ -4246,6 +4250,12 @@ function sidora_block_content_navigation(){
 function sidora_find_association(array &$form_state, $form_build_id = ''){
   module_load_include('inc', 'xml_form_builder', 'includes/associations');
   $shared_storage = islandora_ingest_form_get_shared_storage($form_state);
+
+  //If we got here without the proper creation data, don't bother trying to find an association
+  if (empty($shared_storage)) return NULL;
+  if (!array_key_exists('models',$shared_storage)) return NULL;
+  if (empty($shared_storage['models'])) return NULL;
+
   $associations = xml_form_builder_get_associations(array(), $shared_storage['models'], array());
   // ... Find the association you want to use, iterate over the values and
   // choose the one you want.
