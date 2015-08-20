@@ -77,16 +77,16 @@ sidora.concept.LoadContentHelp.Resources.TableLoad = function(conceptOfInterest)
     }
     //Edit metadata and delete are only available per resource (no batch yet) so disable them if not exactly one left
     if (pids.length != 1){
-      jQuery("#edit-resource-metadata-menu").addClass("ui-state-disabled");
+   //   jQuery("#edit-resource-metadata-menu").addClass("ui-state-disabled");
       jQuery("#manage-resource").addClass("ui-state-disabled");
     }else{
       jQuery("#edit-resource-metadata-menu").removeClass("ui-state-disabled");
       jQuery("#manage-resource").removeClass("ui-state-disabled");
     }
+  }); //End onclick
     table.on( 'length', function ( e, settings, len ) {
       writeCookie('Drupal.pageLength',parseInt(len),'30')
     } );
-  }); //End onclick
 }
 /*
  * Prepares the resource table to respond to user inputs: dragging, changing filters, entering search parameters
@@ -162,17 +162,28 @@ sidora.concept.LoadContentHelp.Resources.TableActionsSetup = function(){
       '<div id="jstree-dnd" class="jstree-default"><i class="jstree-icon jstree-er"></i>' + jQuery(this).text() + '<span class="fakejstree-copy" style="display:none">+</span></div>'
     );
   });
-  jQuery('#res_table_filter').after('<select id=\"sidora-resource-type-dropdown\" class="form-select" name=\"search\"><option value=\"\">All</option><option value=\"images\">Image</option><option value=\"pdf\">Digitized Text</option><option value=\"csv\">Tabular Dataset</option><option value=\"audio\">Audio</option></select><input type="text" name="titleFilter" id="titleFilter" style="border: solid 1px lightblue;">');
-  if (readCookie('Drupal.dtFilter') != ''){
+	jQuery('#res_table_filter').after('<select id=\"sidora-resource-type-dropdown\" class="form-select" name=\"search\"><option value=\"\">All</option><option value=\"images\">Image</option><option value=\"pdf\">Digitized Text</option><option value=\"csv\">Tabular Dataset</option><option value=\"audio\">Audio</option></select><input type="text" name="titleFilter" id="titleFilter" style="border: solid 1px lightblue;">');
+	if (readCookie('Drupal.dtFilter') != ''){
     jQuery("#sidora-resource-type-dropdown").val(readCookie('Drupal.dtFilter'));
   }   
-  jQuery("#res_table_length select").addClass("form-select");
+  jQuery('#titleFilter').after(' <div id="sidora-resource-sort">  Sort: '+'<select id=\"sidora-resource-sort-dropdown\" class="form-select" name=\"sort\"><option value=\"title\">Title</option><option value=\"model\">Model</option><option value=\"created\" selected=\"selected\">Created</option></select></div>');
+  jQuery('#sidora-resource-sort-dropdown').after('  <select id=\"sidora-resource-sortorder-dropdown\" class="form-select" name=\"sortorder\"><option value=\"ASC\">Ascending</option><option value=\"DESC\" selected=\"selected\">Descending</option></select>');
+  if (readCookie('Drupal.sortOn') != ''){
+	  jQuery('#sidora-resource-sort-dropdown').val(readCookie('Drupal.sortOn'));
+	}
+	if (readCookie('Drupal.sortOrder') != ''){
+	  jQuery("#sidora-resource-sortorder-dropdown").val(readCookie('Drupal.sortOrder'));
+	}		  
+	jQuery("#res_table_length select").addClass("form-select");
   sidora.resources.reloadDatatableBasedOnCurrentFilters = function(){
     var changeTo = jQuery('#sidora-resource-type-dropdown').val();
     jQuery('#res_table_filter input').val(changeTo);
     var recentSearchVal = jQuery("#titleFilter").val();
     changeTo += "\n"+recentSearchVal;
-    window.sidora.resources.dataTable.DataTable().search(changeTo).draw();
+    var sortOn = (readCookie('Drupal.sortOn') != '')?readCookie('Drupal.sortOn'):jQuery('#sidora-resource-sort-dropdown').val();
+		var sortOrder = (readCookie('Drupal.sortOrder') != '')?readCookie('Drupal.sortOrder'):jQuery('#sidora-resource-sortorder-dropdown').val();
+		changeTo += "\n"+sortOn+"\n"+sortOrder;
+		window.sidora.resources.dataTable.DataTable().search(changeTo).draw();
     window.sidora.util.resourceSearchLastSearchVal = recentSearchVal;
   }
   jQuery("#titleFilter").keyup(function(){
@@ -190,6 +201,14 @@ sidora.concept.LoadContentHelp.Resources.TableActionsSetup = function(){
     writeCookie('Drupal.dtFilter',jQuery('#sidora-resource-type-dropdown').val(),'30')
     sidora.resources.reloadDatatableBasedOnCurrentFilters();
   });
+	jQuery('#sidora-resource-sort-dropdown').change(function(){
+   writeCookie('Drupal.sortOn',jQuery('#sidora-resource-sort-dropdown').val(),'30')
+	 sidora.resources.reloadDatatableBasedOnCurrentFilters();
+	 });
+	jQuery('#sidora-resource-sortorder-dropdown').change(function(){
+   writeCookie('Drupal.sortOrder',jQuery('#sidora-resource-sortorder-dropdown').val(),'30')
+	 sidora.resources.reloadDatatableBasedOnCurrentFilters();
+	 });
 }
 /*
  * Sets the visiblility of menu items on the concept menu.  Remember, this is UI only and is not to be used for security
@@ -792,7 +811,26 @@ sidora.ResizeToBrowser = function(){
 
   
 }
+sidora.InitiateConfirmAccess = function(){
+  jQuery.ajax(
+  {
+    "dataType":"json",
+    "url":Drupal.settings.basePath+"sidora/info/si:root/permission",
+    "success":function(data){
+      if (typeof(data.create) == 'undefined'){
+        console.log("Bad permissions data, likely a user setup issue, redirecting to user profile");
+        window.location = Drupal.settings.basePath+"user";
+      }
+    },
+    "error":function(){
+       console.log("Problem getting basic data, redirecting to the user profile");
+       window.location = Drupal.settings.basePath+"user";
+    }
+  }
+);
+}
 sidora.InitiatePage = function(){
+  sidora.InitiateConfirmAccess();
   sidora.InitiateJSTree();
   sidora.RelocateTreeOnPage();
   sidora.ReformatPage();
@@ -809,6 +847,18 @@ sidora.InitiatePage = function(){
   );
   jQuery("#branding").append("<div class='branding-user-info' style='float:right'> <a href='"+Drupal.settings.basePath+"user'>Profile</a> <a href='"+Drupal.settings.basePath+"user/logout'>Logout</a></div>");
 };
+/*
+ * Return thumbnail if resource has a unique thumbnail that is showing, otherwise return false
+ */
+sidora.resources.checkForThumbnailShownInResourceList = function(currPid){
+  var me = jQuery(jq(currPid));
+  if (typeof(me.children("td").children("div").children("img").attr("src")) == 'string'){
+    var imgChild = me.children("td").children("div").children("img");
+    var currentSrc = imgChild.attr("src");
+    if (currentSrc.indexOf(currPid) != -1) return currentSrc;
+  }
+  return false;
+}
 /*
  * Attempt to update any thumbnails
  */
@@ -845,12 +895,12 @@ sidora.resources.getHighlighted = function(){
   return toReturn;
 }
 /*
- * Direct browser opening of the resource.  ASSUMES OBJ AS DSID
+ * Open in a new viewer window
  */
 sidora.resources.openInNewWindow = function(){
   var pids = sidora.resources.getHighlighted();
   for(var i = 0; i < pids.length; i++){
-    window.open(Drupal.settings.basePath+"sidora/info/"+pids[i]+"/meta/OBJ/browser");
+   window.open(sidora.resources.createViewerUrl(pids[i]));
   }
 }
 /*
@@ -1101,6 +1151,7 @@ sidora.util.RefreshTreeIfNew = function(secondsOfWait){
     jQuery.ajax({
       url: '../ajax_parts/tree',
     }).done(function(tree_html){
+      if (tree_html == '') window.location = Drupal.settings.basePath+'user';  //No tree indicates a user problem
       if (tree_html == sidora.util.latestTreeGrab){
         console.log("Tree same as prior tree, no update to UI");
         return;
@@ -1121,6 +1172,7 @@ sidora.util.RefreshTree = function(singleTripWaitMilliseconds){
     jQuery.ajax({
       url: '../ajax_parts/tree',
     }).done(function(tree_html){
+      if (tree_html == '') window.location = Drupal.settings.basePath+'user';  //No tree indicates a user problem
       sidora.util.latestTreeGrab = tree_html;
       //Note that you may want to refresh the tree even if the latest is the same as the previous
       //For example, a concept move has failed.  The concept move shows in the UI, so the tree
@@ -1408,16 +1460,23 @@ sidora.resources.individualPanel.Create = function() {
   });
   jQuery('#edit-resource-metadata-menu').unbind('click');
   jQuery('#edit-resource-metadata-menu').click(function(){
-    var pids_array = sidora.resources.getHighlighted();
-    if (pids_array.length != 1) return;
-    pids = pids_array.join("&");
-    Shadowbox.open({
+  var pids = sidora.resources.getHighlighted();
+	var pids_array = sidora.resources.getHighlighted();
+  //  if (pids.length != 1) return;
+  pids = pids_array.join("&");
+	  Shadowbox.open({
       content:    "../edit_metadata/"+pids+"",
       player:     "iframe",
-      //title:      "Edit Metadata-Multi",
       title:      "Edit Metadata",
       options: {
-        onFinish:  function(){}
+        onFinish:  function(){
+          //Allow the frame to go fullscreen if needed
+          jQuery("#sb-player").attr("allowfullscreen","true");
+          jQuery("#sb-player").attr("webkitallowfullscreen","true");
+          jQuery("#sb-player").attr("mozallowfullscreen","true");
+          jQuery("#sb-player").attr("msallowfullscreen","true");
+          jQuery("#sb-player").attr("oallowfullscreen","true");
+        }
       }
     });
   });
@@ -1450,14 +1509,20 @@ sidora.resources.individualPanel.LoadRelationships = function(){
   }
 }
 /*
+ * Generates a url for the object viewer
+ */
+sidora.resources.createViewerUrl = function(pid){
+  return Drupal.settings.basePath+'sidora/resource_viewer/'+pid;
+}
+/*
  * Loads the viewer once an item has been clicked on
  */
 sidora.resources.individualPanel.LoadContent = function(suppressResourceViewerReload){
   if (typeof(suppressResourceViewerReload) == 'undefined'){ suppressResourceViewerReload = false; }
   roipid = sidora.resources.individualPanel.resourceOfInterest.pid;
-  console.log("resource of interest is "+roipid);
   if (!suppressResourceViewerReload){
-    var resourceViewerHtml = '<iframe id="iFrame" frameborder="0" height="100%" width="100%" allowfullscreen="true" webkitallowfullscreen="true" mozallowfullscreen="true" oallowfullscreen="true" msallowfullscreen="true" src="'+Drupal.settings.basePath+'sidora/resource_viewer/'+sidora.resources.individualPanel.resourceOfInterest.pid+'"></iframe> ';
+    var viewerUrl = sidora.resources.createViewerUrl(sidora.resources.individualPanel.resourceOfInterest.pid);
+    var resourceViewerHtml = '<iframe id="iFrame" frameborder="0" height="100%" width="100%" allowfullscreen="true" webkitallowfullscreen="true" mozallowfullscreen="true" oallowfullscreen="true" msallowfullscreen="true" src="'+viewerUrl+'"></iframe> ';
 		//console.log("in individual panel : "+resourceViewerHtml);
     jQuery('#resourceIframeHolder').children().remove();
     jQuery('#resourceIframeHolder').append(resourceViewerHtml);
