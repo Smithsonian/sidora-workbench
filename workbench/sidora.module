@@ -612,7 +612,6 @@ function sidora_islandora_object_ingested(AbstractObject $object){
   module_load_include('inc', 'islandora', 'includes/ingest.form');
   module_load_include('inc', 'sidora', 'includes/utils');
 
-  //dsm("Sidora Object Ingested");
   $parent_pid = drupal_static('parent_collection_pid');
   $ontology_id = drupal_static('ontology_id');
   if (strpos($object->id, "si-user:") === FALSE){
@@ -637,7 +636,6 @@ function sidora_islandora_object_ingested(AbstractObject $object){
   }
   $id_to_creation_info = cache_get("sidora:form_id_to_creation_info");
   if (empty($id_to_creation_info)){ $id_to_creation_info = array(); dsm("didnt exist yet"); }else{ $id_to_creation_info = $id_to_creation_info->data; }
-  //dsm($id_to_creation_info);
   if (array_key_exists('form_build_id', $_POST)){
     $submitted_form_id = $_POST['form_build_id'];
     $all_meta_entered = filter_input(INPUT_POST, 'all_meta_entered', FILTER_SANITIZE_URL);
@@ -1135,7 +1133,10 @@ function sidora_edit_metadata($object_id = '', $dsid = '', $form_name = ''){
     }
   }
   if (empty($association)){
-    print "The form is not configured correctly.  The form specified is not associated to this model";
+    print "The form is not configured correctly.  The form specified is not associated to this model. Error:A1<br/>";
+    print "form:$form_name<br/>";
+    print "models:";
+    var_dump($object->models);
   }
 	$tform = drupal_get_form('xml_form_builder_datastream_form_metadata_form',$object,$association);
   drupal_add_css(drupal_get_path('module','sidora').'/css/workbench_metadata_screens.css',array('weight' => '1000000', 'group' => CSS_THEME));
@@ -1260,7 +1261,10 @@ function sidora_edit_metadata($object_id_string = '', $dsid = '', $form_name = '
     }
   }
   if (empty($association)){
-    print "The form is not configured correctly.  The form specified is not associated to this model";
+    print "The form is not configured correctly.  The form specified is not associated to this model. Error:A2<br/>";
+    print "form:$form_name<br/>";
+    print "models:";
+    var_dump($object->models);
   }
   $tform = drupal_get_form('xml_form_builder_datastream_form_metadata_form',$object,$association);
   $tform['pid'] = array(
@@ -2119,7 +2123,6 @@ function remove_validation_for_this_and_children(&$item, $current_location = '')
     if ($item['#required']){
       if (empty($item['#title'])) $item['#title'] = '';
       $item['#title'] .= ' <span class="form-required" title="This field is required.">*</span>';
-      //dsm($current_location); //TODO finish this up
     }
   }
   $item['#required'] = FALSE;
@@ -2230,15 +2233,30 @@ function sidora_create_resource_get_upload_form_html($model, $upload_button_text
 }
 
 /*
- * Performs the information pertaining to the codebook auto-fill and storage, as well as determine if the codebook 
- * has been set for this resource creation
- * returns TRUE or FALSE - true if codebook should be shown
+ * Returns if a codebook is required for items of this type
  */
-function sidora_create_resource_determine_codebook_complete($model){
+function sidora_is_create_resource_codebook_choice_required($model){
+  return ($model == 'si:datasetCModel');
+}
+/* 
+ * Returns whether user still needs to make a choice about a codebook
+ *
+ * If the model does not require a codebook return false (codebook does not need to be chosen)
+ * If the codebook was entered into the most recent post:
+ *   save the codebook pid in the user's data for preload next time
+ *   return false (codebook choice is complete)
+ * else
+ *   return true (codebook choice still needs to be made)
+ * 
+ * 
+ */
+function sidora_is_create_resource_codebook_choice_completed($model){
   global $user;
   $ask_for_codebook = FALSE;
   if ($model == 'si:datasetCModel'){
-    if (empty($_POST['user_supplied_codebook_pid'])){
+    if (!empty($_SESSION['codebook_choice'][$user->uid])){
+      $ask_for_codebook = FALSE;
+    }else if (empty($_POST['user_supplied_codebook_pid'])){
       $ask_for_codebook = TRUE;
     }else{
       //if it's not a codebook, say so
@@ -2248,7 +2266,8 @@ function sidora_create_resource_determine_codebook_complete($model){
         drupal_set_message(t('Invalid codebook, please choose a different codebook'), 'warning');
         $ask_for_codebook = TRUE;
       }else{ 
-        $edit['data']['recent_codebook_id'] = $codebook_pid;
+        $_SESSION['codebook_choice'][$user->uid] = $codebook_pid; //Choice for this session
+        $edit['data']['recent_codebook_id'] = $codebook_pid; //Choice for any time they log in
         user_save($user,$edit);
       }
     }
@@ -2393,18 +2412,20 @@ function sidora_codebook_upload_form($form, &$form_state){
   );
   $form['some_text'] = array(
     '#markup' => '<style>
-       .form-item-files-file, .form-item-existing-codebook {width:270px;float:left;clear:both;} 
+       .form-item-files-file, .form-item-user-supplied-codebook-pid {width:270px;float:left;clear:both;} 
        #edit-upload-codebook-submit, #edit-pick-codebook-submit {float:left;vertical-align:top;margin-top:30px;}
+       #edit-user_supplied_codebook_pid, #edit-file { width:255px; padding:2px; }
      </style>',
   );
   $form['upload_codebook_submit'] = array(  //ensure this aligns with information in the validator on the #id check
     '#type' => 'submit',
-    '#value' => t('upppload'),
+    '#value' => t('Upload and Generate New'),
   );
   module_load_include('inc', 'sidora', 'includes/utils');
   $codebook_options = array();
   $user_pid = sidora_get_user_object();
   $user_obj = sidora_obj($user_pid);
+  $codebook_options[$user_pid] = $user_pid;
   //Load up the Fedora Commons object for the user
   if (!empty($user_obj)){
     //Check to see what managesCodebook relations it has
@@ -2415,9 +2436,9 @@ function sidora_codebook_upload_form($form, &$form_state){
       $codebook_options[$codebook_pid] = $codebook->label;
     }
   }
-  $form['existing_codebook'] = array(
+  $form['user_supplied_codebook_pid'] = array(
     '#type' => 'select',
-    '#title' => t(''),
+    '#title' => t('or:<br/>Choose From Your Existing Codebooks'),
     '#size' => 10,
     '#attributes' => array(
       'class' => array('existing-codebooks-select'),
@@ -2426,8 +2447,13 @@ function sidora_codebook_upload_form($form, &$form_state){
   );
   $form['pick_codebook_submit'] = array(  //ensure this aligns with information in the validator on the #id check
     '#type' => 'submit',
-    '#value' => t('pick_codebook'),
+    '#value' => t('Use Selected Codebook'),
     '#submit' => array('sidora_codebook_upload_form_pick_codebook_submit'),
+  );
+  //This is the pid of the actual item to be used:
+  $form['ok_user_supplied_codebook_pid'] = array(
+    '#type' => 'hidden',
+    '#value' => '123',
   );
 
   return $form;
@@ -2462,9 +2488,7 @@ function sidora_codebook_upload_form_validate($form, &$form_state) {
 }
 
 /**
- * Submit handler for form_example_tutorial_10().
- *
- * @ingroup form_example
+ * Submit handler for upload_codebook_submit, the default submit button for the codebook_upload_form
  */
 function sidora_codebook_upload_form_submit($form, &$form_state) {
   $file = $form_state['storage']['file'];
@@ -2483,7 +2507,34 @@ function sidora_codebook_upload_form_submit($form, &$form_state) {
   dsm($file);
   dsm(file_create_url($file->uri));
 }
-
+function sidora_codebook_hidden_step_form($form, &$form_state){
+  $form['hidden_step'] = array(
+      '#markup' => '<input id="create-new-codebook" value="Using selected codebook" style="width:222px;" class="form-submit"><br/>
+  </div>
+  <input id="codebook-pid" value="'.$_POST['user_supplied_codebook_pid'].'"/>
+  iscript>jQuery.ready(function(){("#create-new-codebook").click();});</script>
+  ',
+    );
+    $form['user_supplied_codebook_pid'] = array(
+      '#type' => 'hidden',
+      '#value' => '',
+      '#attributes' => array(
+        'id' => 'user_supplied_codebook_pid',
+      ),
+    );
+    $form['continue'] = array(
+      '#type' => 'submit',
+    '#value' => t('continue'),
+  );
+  return $form;
+}
+/*
+ *
+ */
+function sidora_is_create_resource_codebook_edit_completed() {
+  if (empty($_POST['user_supplied_codebook_pid'])) return TRUE;
+  return FALSE; //BBB TODO
+}
 
 /*m
  *First page is an upload page
@@ -2510,6 +2561,10 @@ function sidora_create_resource($parent_pid = 'si:root', $model = 'si:collection
     if (array_key_exists('file_uploads', $_SESSION)){
       $_SESSION['file_uploads'][$user->uid] = array();
     }
+    if (array_key_exists('codebook_choice', $_SESSION)){
+      $_SESSION['codebook_choice'][$user->uid] = NULL;
+    }
+    
     drupal_goto($path);
   }
   module_load_include('inc', 'islandora', 'includes/utilities');
@@ -2525,42 +2580,37 @@ function sidora_create_resource($parent_pid = 'si:root', $model = 'si:collection
   $ask_for_codebook = FALSE;
   //Determine if we already bypassed the uploader step 
   $current_uploads = sidora_create_resource_get_current_uploads();
-  $ask_for_codebook = sidora_create_resource_determine_codebook_complete($model);
-  if ($ask_for_codebook){
-    //First step for codebook is the upload or choose step (SID-243)
-    $check_for_uploads = FALSE;
-    $show_form = FALSE;
-    $to_return .= '<div>Tabular data files require a codebook which describes the contents of the data.  You can choose to automatically generate a codebook based on one of your files, or choose an existing codebook that describes your data.  Use one of the two options below, clicking one of the buttons to make your choice.</div>';
-    /*
-    $configure = array(
-      'file_types' => array('xsl'),
-      'post_location_js' => 'Drupal.settings.basePath+"sidora/info/xsl_save/xsl_upload"',
-      'success_function_js' => 'if (window.opener != null){
-         window.opener.filesUpdated(jQuery.parseJSON(arguments[0]));
-         window.close();
-       }else{
-         console.log("not child");
-       }',
-    );
-    $to_return .= sidora_generic_upload($configure);
-    */
-    $form = drupal_get_form('sidora_codebook_upload_form');  
-    $to_return .= drupal_render($form);
-  }else{
-    if (!empty($current_uploads)){
-      if ($ask_for_codebook){
-        $check_for_uploads = FALSE;
-        $show_form = FALSE;
-        $to_return .= sidora_create_resource_codebook_creation_step();
-      }
+
+  $codebook_is_required = sidora_is_create_resource_codebook_choice_required($model);
+  if ($codebook_is_required){
+    $ask_for_codebook = sidora_is_create_resource_codebook_choice_completed($model);
+    $codebook_edit_step_completed = sidora_is_create_resource_codebook_edit_completed();
+    if ($ask_for_codebook){
+      //First step for codebook is the upload or choose step (SID-243)
+      $to_return .= '<div>Tabular data files require a codebook which describes the contents of the data.  You can choose to automatically generate a codebook based on one of your files, or choose an existing codebook that describes your data.  Use one of the two options below, clicking one of the buttons to make your choice.</div>';
+      $form = drupal_get_form('sidora_codebook_upload_form');  
+      $to_return .= drupal_render($form);
+      $show_form = FALSE;
+    }else if (!$codebook_edit_step_completed){
+      $form = drupal_get_form('sidora_codebook_hidden_step_form');  
+      $to_return .= drupal_render($form);
+      $show_form = FALSE;
     }else{
-      if ($check_for_uploads){
-        //Uploads already done
+      //Specialty because we may need to prepopulate the example file here
+      if ($check_for_uploads && empty($current_uploads)){
         $form_html = sidora_create_resource_get_upload_form_html($model);
         if (!empty($form_html)){
           $to_return .= $form_html;
           $show_form = FALSE;
         }
+      }
+    }
+  }else{
+    if ($check_for_uploads && empty($current_uploads)){
+      $form_html = sidora_create_resource_get_upload_form_html($model);
+      if (!empty($form_html)){
+        $to_return .= $form_html;
+        $show_form = FALSE;
       }
     }
   }
@@ -2682,7 +2732,6 @@ function sidora_user_view($account, $view_mode, $langcode){
   module_load_include('inc', 'sidora', 'includes/utils');
   $account_data = ($account->data);
 
-  //dsm($account);
   $codebook_pid = '';
   $codebook_html = '';
   $user_pid = sidora_get_user_object($account);
@@ -4635,7 +4684,6 @@ function sidora_clear_entire_tree_cache(){
  */
 function sidora_clear_tree_cache($pid = ''){
   if (!empty($pid)){
-    //dsm("clearing: $pid");
     cache_clear_all('sidora:children_results:'.$pid, 'cache', TRUE);
   }
 }
