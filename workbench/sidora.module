@@ -2550,10 +2550,16 @@ function sidora_codebook_hidden_step_form($form, &$form_state){
   if (!empty($_SESSION['codebook_choice'][$user->uid]))  $codebook_pid = $_SESSION['codebook_choice'][$user->uid];
   if (!empty($_POST['user_supplied_codebook_pid'])) $codebook_pid = $_POST['user_supplied_codebook_pid'];
   $form['hidden_step'] = array(
-      '#markup' => '<input id="create-new-codebook" value="Using selected codebook" style="width:222px;" class="form-submit"><br/>
+      '#markup' => '<input style="display:none" id="create-new-codebook" value="Using selected codebook" style="width:222px;" class="form-submit"><br/>
   </div>
-  <input id="codebook-pid" value="'.$codebook_pid.'"/>
-  <script>jQuery.ready(function(){jQuery("#create-new-codebook").click();});</script>
+  <input id="codebook-pid" value="'.$codebook_pid.'" style="display:none"/>
+  <script>
+    jQuery(document).ready(function(){jQuery("#create-new-codebook").click();});
+    jQuery(window.parent.window.document).find("#sb-title-inner").text("Edit Codebook");
+  </script>
+  <style>
+    #edit-continue {display:none;}
+  </style>
   ',
     );
     $form['user_supplied_codebook_pid'] = array(
@@ -2564,9 +2570,9 @@ function sidora_codebook_hidden_step_form($form, &$form_state){
       ),
     );
     $form['continue'] = array(
-      '#type' => 'submit',
-    '#value' => t('continue'),
-  );
+     '#type' => 'submit',
+     '#value' => t('continue'),
+    );
   return $form;
 }
 /*
@@ -2593,7 +2599,6 @@ function sidora_create_resource($parent_pid = 'si:root', $model = 'si:collection
     return $to_return;
   }
   
-   
   //Clear out the session if they just did a click on new (cancelled out an old one or on a new page)
   //TBD / TODO: make each request have it's own information instead of storing in session
   if ($extra_info == 'fresh'){
@@ -2640,6 +2645,13 @@ function sidora_create_resource($parent_pid = 'si:root', $model = 'si:collection
       $show_form = FALSE;
     }else{
       //Specialty because we may need to prepopulate the example file here
+      $to_return .= '
+<script>
+jQuery(document).ready(){
+  jQuery(window.parent.window.document).find("#sb-title-inner").text("Create Resource");
+});
+</script>
+';
       if ($check_for_uploads && empty($current_uploads)){
         $form_html = sidora_create_resource_get_upload_form_html($model);
         if (!empty($form_html)){
