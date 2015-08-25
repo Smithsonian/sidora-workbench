@@ -56,6 +56,8 @@ input.form-text {
   and my Email is:-Enter Email- and I would like to request a new SIdora Account"> Submit an Account Request</a><p>
 	-->
 	<p>Not a member? <a href="<?php echo base_path(); ?>sidora/request_account"> Submit an Account Request</a><p>
-<p>Need help? <?php $default_to = variable_get('system_mail', '***REMOVED***');
-echo '<a href="mailto:'.variable_get('account_request_email', $default_to).'?Subject=SIdora Account Help&body=My name is:-Enter Name- and my Email is:-Enter Email- and I am requesting help with my SIdora Account.  -Enter more information that indicates the kind of assistance you would like-)">Contact Us</a>';?></p>
+<p>Need help? <a href="<?php echo base_path(); ?>sidora/contact_us">Contact Us</a>
+<!--<?php $default_to = variable_get('system_mail', '***REMOVED***');
+echo '<a href="mailto:'.variable_get('account_request_email', $default_to).'?Subject=SIdora Account Help&body=My name is:-Enter Name- and my Email is:-Enter Email- and I am requesting help with my SIdora Account.  -Enter more information that indicates the kind of assistance you would like-)">Contact Us</a>';?>
+--></p>
 <!-- <p><a href="user/password">Request a New Password</a></p> -->
