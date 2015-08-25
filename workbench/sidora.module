@@ -175,13 +175,29 @@ function sidora_menu() {
 			'type' => MENU_CALLBACK,
    ),
 	 'sidora/workbench/request_account' => array(
-	    'title' => 'Request a new account',
-			'description' => 'Request a new account',
+	    'title' => 'Request a account',
+			'description' => 'Request a sidora account',
 			'page callback' => 'drupal_get_form',
 			'page arguments' => array('sidora_account_request_form'),
 			'access callback' => TRUE,
 			'type' => MENU_CALLBACK,
    ),
+	 'sidora/workbench/contact_us' => array(
+	    'title' => 'Contact Us',
+			'description' => 'Contact Us',
+			'page callback' => 'drupal_get_form',
+			'page arguments' => array('sidora_contact_us_form'),
+			'access callback' => TRUE,
+			'type' => MENU_CALLBACK,
+   ),
+	 'sidora/contact_us' => array(
+	    'title' => 'Contact Us',
+			'description' => 'Contact Us',
+			'page callback' => 'drupal_get_form',
+			'page arguments' => array('sidora_contact_us_form'),
+			'access callback' => TRUE,
+			'type' => MENU_CALLBACK,
+   )
  );
 }
 function sidora_management_ingest($pid, $dsid, $label = NULL, $mimeType = NULL){
@@ -1549,6 +1565,11 @@ function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $ex
 	  return drupal_render(sidora_account_request_form());
 		exit();
 	} 
+	if ($one == 'user_help'){
+	 // var_dump(sidora_help_form());
+		print drupal_render_children(sidora_help_form());
+		//exit();
+	}	
   if ($one == 'modules'){
 	  $modules = implode(', ', module_list());
     print $modules;
@@ -6480,6 +6501,11 @@ function seven_theme() {
       'template' => 'user-register-form', // template file user-register-form.tpl.php
       'path' => drupal_get_path('module', 'sidora') . '/templates'
     ),
+    'sidora_contact_us_form' => array(
+      'render element' => 'form',
+      'template' => 'user-help-form', // template file user-help-form.tpl.php
+      'path' => drupal_get_path('module', 'sidora') . '/templates'
+    ),
    /*
 	  'user_register_form' => array(
        'render element' => 'form',
@@ -6552,8 +6578,6 @@ function sidora_form_user_login_block_alter(&$form, &$form_state) {
   $form['pass']['#attributes']['autocomplete'] = 'off';  //Autocomplete off for password
 }
 function sidora_account_request_form(){
-	//	$form['name'] = $reg_form['account']['name'];
-	//	$form['mail'] = $reg_form['account']['mail'];
   $form['name'] = array(
     '#type' => 'textfield',
     '#title' => t('Username'),
@@ -6574,7 +6598,7 @@ function sidora_account_request_form(){
     '#type' => 'submit',
     '#value' => t('Request a new account'),
   );
-return $form;
+  return $form;
 }
 function sidora_account_request_form_validate($form, &$form_state) {
     $email_address = $form_state['values']['mail'];
@@ -6599,4 +6623,45 @@ function sidora_audio_view_object($pid) {
 	$output = theme('islandora_audio', $variables);
   $output = drupal_get_css() . drupal_get_js() . $output;
   return $output;
+}
+function sidora_contact_us_form(){
+  global $user;
+	
+  $form['mail'] = array(
+    '#type' => 'textfield',
+    '#title' => t('E-mail address'),
+    '#maxlength' => EMAIL_MAX_LENGTH,
+    '#description' => t('A valid e-mail address. All e-mails from the system will be sent to this address. The e-mail address is not made public and will only be used if you wish to receive a new password or wish to receive certain news or notifications by e-mail.'),
+    '#default_value' => (user_is_logged_in())?$user->mail:'',
+		'#required' => TRUE
+  );
+  $form['helptext'] = array(
+	  '#type' => 'textarea',
+		'#title' => t('Describe what you need help with'),
+		'#description' => t('Please describe the problem you are having with your account'),
+		'#required' => TRUE
+	);	
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Contact Us'),
+  );
+  return $form;
+}
+function sidora_contact_us_form_validate($form, &$form_state) {
+    $email_address = $form_state['values']['mail'];
+    if (!valid_email_address($email_address)) {
+      form_set_error('mail', 'Enter a valid email address.');
+    }
+		$help_text = $form_state['values']['helptext'];
+		if ($help_text == ''){
+		  form_set_error('helptext', 'Describe what you need help with');
+		}	
+}
+function sidora_contact_us_form_submit($form, &$form_state) {
+  module_load_include('inc', 'sidora', 'includes/utils');
+	$default_to = variable_get('system_mail', '***REMOVED***');
+  $default_from = $form_state['values']['mail'];
+	if (sidora_mail($default_from, variable_get('account_request_email_to', $default_to), 'Account Help', $form_state['values']['helptext'])){
+	  drupal_set_message(t('Form submitted successfully'));
+	}	
 }
