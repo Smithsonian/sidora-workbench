@@ -94,7 +94,6 @@ window.updateCodebookComplete = function(formName, ajaxCall, data){
 		newPid = window.successfulCreationPid(data);
     if (newPid == "") newPid = window.editedMetadataPid(data);
 		jQuery("#user_supplied_codebook_pid").val(newPid);
-		jQuery("#continue").click();
 		jQuery("#edit-continue").click();
 	}
 }
