@@ -1546,9 +1546,40 @@ function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $ex
   if ($one == 'osd_proxy'){
     sidora_osd_proxy($two);
   }
-	if ($one == 'xls_viewer'){
-	  $two = drupal_get_path('module','sidora').'/includes/'.$two;
-		sidora_view_simplexlsx2($two);
+	if ($one == 'create_file'){
+    module_load_include('inc', 'sidora', 'includes/utils');
+	  $object = sidora_meta($two);
+    $datastream_content = '';
+    $datastream = '';
+    foreach($object as $dsid_loop=>$datastream_loop){
+      if ($dsid_loop == 'OBJ'){
+        $datastream_content = $datastream_loop->content;
+        $datastream = $datastream_loop;
+      }
+    }
+    //datastream_content is now set.  perform the output
+   $mime_type = (empty($datastream))?'text/xml':$datastream->mimeType;
+   $file_extension = '';
+   if ($mime_type != ''){
+      $file_extension = sidora_get_file_extension_from_mime($mime_type);
+   } 
+   $content_size = strlen($datastream_content);
+   $filename = $two.'_OBJ'.$file_extension;//get_suggest_filename($label, $mime_type);
+   //var_dump($filename);
+	 //var_dump(drupal_realpath(drupal_get_path('module','sidora').'/includes/'));
+	 /*$file_uri = drupal_tempnam(drupal_realpath(drupal_get_path('module','sidora').'/XSL/'), $filename);
+   var_dump($file_uri);
+	 $file = new stdClass();
+   $file->uri = $file_uri;
+   $file->filename = $filename;
+   $file->filemime = $mime_type;
+   $file->status = 0; // Temporary file.*/
+  // var_dump(file_directory_temp());
+	 //var_dump(file_create_url(file_build_uri(drupal_realpath(drupal_get_path('module','sidora').'/XSL/') . $filename)));
+	// var_dump(file_unmanaged_save_data("Test", file_directory_temp() . "/OBJ.xls", FILE_EXISTS_REPLACE)); 
+		//sidora_view_simplexlsx2(file_directory_temp() . "/OBJ.xls");
+	var_dump($GLOBALS['base_url'].'/'. drupal_get_path('module','sidora').'/includes/');
+		sidora_view_simplexlsx2(drupal_get_path('module','sidora').'/includes'.'/sid-302.xlsx');
 	}	
 	if ($one == 'user_register'){
 	  return drupal_render(sidora_account_request_form());
@@ -6621,10 +6652,14 @@ echo '</pre>';
 }	
 function sidora_view_simplexlsx2($filename) {
   module_load_include('php', 'sidora', 'includes/simplexlsx.class');
+  echo $filename;
+  if (file_exists($filename)) {
  $xlsx = new SimpleXLSX($filename);
-
 echo '<h1>$xlsx->rowsEx()</h1>';
 echo '<pre>';
 print_r( $xlsx->rowsEx() );
 echo '</pre>';
+}else{
+echo "File Not found!!";
+}
 }	
