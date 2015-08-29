@@ -1545,6 +1545,13 @@ function sidora_osd_proxy($pid){
  */
 function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $extra = ''){
   global $user;
+  global $conf;
+  if ($one == 'export_settings'){
+    
+  }
+  if ($one == 'conf'){
+    var_dump($conf);
+  }
   if ($one == 'osd_proxy'){
     sidora_osd_proxy($two);
   }
@@ -1625,6 +1632,14 @@ function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $ex
   }
   if ($one == 'parenttable'){
     return sidora_get_parent_table($two);
+  }
+  if ($one == 'formassociations2'){
+    module_load_include('inc', 'xml_form_builder', 'XMLFormRepository');
+    module_load_include('inc', 'xml_form_builder', 'includes/associations');
+    $names = XMLFormRepository::GetNames();
+    $associations = xml_form_builder_get_associations($names, array(), array(), FALSE);
+    print (json_encode($associations));
+    exit();
   }
   if ($one == 'formassociations'){
     if ($two == 'two'){
@@ -3108,7 +3123,6 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
       print json_encode($exhibitions);
       exit();
       break; 
-    // added by RAmlani on 3/31/15 to stop using sidora/testing for displaying uploaded resources on production site.
     case 'previewUploadedResources' :
       // the pid in this case will be the count of current item in the uploaded resources in temp directory
       $fileinfo = $_SESSION['file_uploads'][$user->uid][$pid];
@@ -3119,7 +3133,6 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
       sidora_direct_jpg_output($contents);
       exit();
       break;
-    // added by RAmlani on 3/31/15 to stop using sidora/testing for uploading new xsl files in sidora admin on production site.
     case 'upload2': 
        $configure = array(
       'file_types' => array('xsl'),
@@ -3521,11 +3534,6 @@ function sidora_ajax_parts($call_type, $param1 = '', $param2 = '', $param3 = '')
   }
   if ($call_type == 'generate_resource_list'){
      return sidora_generate_resource_list($param1);
-  } 
-  if ($call_type == 'testinguploads'){
-    $test_array = array();
-    $test_array["param"] = $param1;
-    return(json_encode($test_array));
   } 
   if ($call_type == 'remove_file_from_upload_queue'){
       if ((array_key_exists('file_uploads', $_SESSION)) && (!empty($_SESSION['file_uploads']))){
