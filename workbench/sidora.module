@@ -2184,7 +2184,7 @@ function sidora_create_resource_get_upload_form_html($model, $upload_button_text
     'si:generalImageCModel' => array('jpg', 'png', 'gif', 'tiff', 'tif', 'jp2'),
     'si:datasetCModel' => array('csv', 'xml', 'xlsx', 'xls', 'dat', 'med', 'arg', 'slt'),
     'si:fieldbookCModel' => array('pdf'),
-    'islandora:sp-audioCModel' => array('mp3','mp4','aiff','aac','ogg','wav','wma'),
+    'islandora:sp-audioCModel' => array('mp3','aiff','wav'),
 		'*' => array('*'),
   );
   if (array_key_exists($model, $file_extensions)){
