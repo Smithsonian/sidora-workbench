@@ -1541,6 +1541,20 @@ function sidora_osd_proxy($pid){
   exit();
 }
 /**
+ * Filter watchdog log entry. Works similar to hook_node_access().
+ *
+ * Requires the watchdog_filtering module to be installed/enabled
+ * @param array $log_entry
+ *   The watchdog log entry
+ */
+function sidora_watchdog_filtering(array $log_entry) {
+  if (strpos($log_entry['message'], "LAME encoding failed for object") === 0){
+    return WATCHDOG_FILTERING_EXCLUDE;
+  }
+  // Don't affect filtering on other messages.
+  return WATCHDOG_FILTERING_IGNORE;
+}
+/**
  * Used only for testing purposes.  Should not be called by the main application
  */
 function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $extra = ''){
