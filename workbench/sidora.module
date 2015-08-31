@@ -1559,7 +1559,7 @@ function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $ex
     }
     //datastream_content is now set.  perform the output
    $mime_type = (empty($datastream))?'text/xml':$datastream->mimeType;
-   $file_extension = '';
+	 $file_extension = '';
    if ($mime_type != ''){
       $file_extension = sidora_get_file_extension_from_mime($mime_type);
    } 
@@ -1567,19 +1567,32 @@ function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $ex
    $filename = $two.'_OBJ'.$file_extension;//get_suggest_filename($label, $mime_type);
    //var_dump($filename);
 	 //var_dump(drupal_realpath(drupal_get_path('module','sidora').'/includes/'));
-	 /*$file_uri = drupal_tempnam(drupal_realpath(drupal_get_path('module','sidora').'/XSL/'), $filename);
-   var_dump($file_uri);
+	 $file_uri = drupal_tempnam(file_directory_temp(), $filename);
+   //var_dump($file_uri);
 	 $file = new stdClass();
    $file->uri = $file_uri;
    $file->filename = $filename;
    $file->filemime = $mime_type;
-   $file->status = 0; // Temporary file.*/
-  // var_dump(file_directory_temp());
-	 //var_dump(file_create_url(file_build_uri(drupal_realpath(drupal_get_path('module','sidora').'/XSL/') . $filename)));
-	// var_dump(file_unmanaged_save_data("Test", file_directory_temp() . "/OBJ.xls", FILE_EXISTS_REPLACE)); 
-		//sidora_view_simplexlsx2(file_directory_temp() . "/OBJ.xls");
-	var_dump($GLOBALS['base_url'].'/'. drupal_get_path('module','sidora').'/includes/');
-		sidora_view_simplexlsx2(drupal_get_path('module','sidora').'/includes'.'/sid-302.xlsx');
+   $file->status = 0; // Temporary file.
+	 file_unmanaged_save_data($datastream_content, file_directory_temp() . '/'.$filename, FILE_EXISTS_REPLACE); 
+		$temp = file_directory_temp();
+		$excel_array = sidora_view_phpexcelreader2($temp.'/'.$filename);
+		/*$sheets_array = array_keys($excel_array);
+		for ($sheet_ctr = 0; $sheet_ctr > sizeof($sheets_array); $sheet_ctr++){
+		  $sheet_key = $sheets_array[$sheet_ctr];
+		  $sheet = $excel_array[$sheet];
+		  echo '<table border="1px solid;" width="75%"><th>'.$sheet_key.'</th>';
+		  for ($row_count = 0; $row_count < sizeof($sheet); $row_count++){
+		    echo '<tr>';
+			  $each_row = $sheet[$row_count];
+			  for ($column_count = 0; $column_count < sizeof($each_row); $column_count++){
+			    echo '<td>'.$each_row[$column_count].'</td>';
+			  }
+			  echo '</tr>';
+		  }
+		  echo '</table>';
+	}		*/
+				
 	}	
 	if ($one == 'user_register'){
 	  return drupal_render(sidora_account_request_form());
@@ -6663,3 +6676,27 @@ echo '</pre>';
 echo "File Not found!!";
 }
 }	
+function sidora_view_phpexcelreader($filename){
+module_load_include('inc', 'phpexcel');
+  if (file_exists($filename)) {
+   return phpexcel_import($filename, FALSE);
+ }
+} 
+function sidora_view_phpexcelreader2($filename){
+require_once(libraries_get_path('PHPExcel') . '/Classes/PHPExcel/IOFactory.php');
+$objPHPExcel = PHPExcel_IOFactory::load($filename);
+$worksheet = $objPHPExcel->getActiveSheet();
+echo '<table border=1px width="75%">';
+foreach ($worksheet->getRowIterator() as $row) {
+	echo '<tr border-width="0px 1px 0px 1px"><td border-width:0px>' . $row->getRowIndex() . '</td>';
+    $cellIterator = $row->getCellIterator();
+		$cellIterator->setIterateOnlyExistingCells(false); // Loop all cells, even if it is not set
+    foreach ($cellIterator as $cell) {
+        if (!is_null($cell)) {
+            echo '<td>' . $cell->getValue() . '</td>';
+        }
+    }
+		echo '</tr>';
+}
+echo '</table>';
+}
