@@ -1540,6 +1540,77 @@ function sidora_osd_proxy($pid){
   print file_get_contents($url);
   exit();
 }
+/*
+ * Sets the SIdora instance with the imported information
+ * Assumes the same style as sidora_settings_object() would produce
+ * If the parameter value is a string, assumes it is a json string to decode
+ * 
+ */
+function sidora_settings_import($object){
+  if (is_string($object)){ $object = json_decode($object); }
+  //$full_export['forms'] = $forms;
+  //$full_export['associations'] = $associations;
+  //$full_export['admin_settings'] = $settings_holder;
+  $forms = $object['forms'];
+  $associations = $object['associations'];
+  $admin_settings = $object['admin_settings'];
+  
+
+}
+/*
+ * Returns an object for moving settings between SIdora instances
+ */
+function sidora_settings_object(){
+  $starts_with = array();
+  $starts_with[] = 'resource_viewer_dsid_';
+  $starts_with[] = 'resource_viewer_viewer_';
+  $exact_match = array();
+  $exact_match[] = 'si_exhibition_website_location';
+  $exact_match[] = 'sidora_ontology_json';
+  $exact_match[] = 'xsl_form_config';
+  $exact_match[] = 'sidora_login_message';
+  $exact_match[] = 'sidora_automatic_person_model';
+  $exact_match[] = 'sidora_automatic_person_form';
+  $exact_match[] = 'sidora_automatic_person_dsid';
+  $exact_match[] = 'osd_proxy_pid_prefix';
+  $exact_match[] = 'osd_proxy_pid_postfix';
+  $exact_match[] = 'osd_proxy_resolver_url';
+  $exact_match[] = 'account_request_email_to';
+  $exact_match[] = 'account_request_email_from';
+  $settings_holder = array();
+  foreach($conf as $drupal_setting_index=>$drupal_setting){
+    if (in_array($drupal_setting_index,$exact_match)){
+      $settings_holder[$drupal_setting_index] = $drupal_setting;
+    }
+    foreach($starts_with as $sw_check){
+      //print "<br/>swc:$sw_check dsi:$drupal_setting_index sp:".strpos($sw_check,$drupal_setting_index);
+      if (strpos($drupal_setting_index, $sw_check) === 0){
+        $settings_holder[$drupal_setting_index] = $drupal_setting;
+      }
+    }
+  }
+  //print json_encode($settings_holder);
+  module_load_include('inc', 'xml_form_builder', 'XMLFormRepository');
+  module_load_include('inc', 'xml_form_builder', 'includes/associations');
+  $names = XMLFormRepository::GetNames();
+  $associations = xml_form_builder_get_associations($names, array(), array(), FALSE);
+  //$associations = (json_encode($associations));
+  $forms = array();
+  foreach ($names as $form_info) {
+    $form_name = $form_info['name'];
+    if ($form_info['indb']) {
+      $definition = XMLFormRepository::Get($form_name);
+      $definition->formatOutput = TRUE;
+      $form_string = $definition->saveXML();
+      $forms[$form_name] = $form_string;
+    }
+  }
+  $full_export = array();
+  $full_export['forms'] = $forms;
+  $full_export['associations'] = $associations;
+  $full_export['admin_settings'] = $settings_holder;
+  return $full_export;
+}
 /**
  * Used only for testing purposes.  Should not be called by the main application
  */
@@ -1547,7 +1618,9 @@ function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $ex
   global $user;
   global $conf;
   if ($one == 'export_settings'){
-    
+    $full_export = sidora_settings_object();
+    print json_encode($full_export);
+    exit();
   }
   if ($one == 'conf'){
     var_dump($conf);
