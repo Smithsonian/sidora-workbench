@@ -1288,8 +1288,11 @@ function sidora_edit_metadata($object_id_string = '', $dsid = '', $form_name = '
 			if (!empty($object['TN']) && in_array($object['TN']->mimetype, $vmt)){
         $tn = '<img src="'.$GLOBALS['base_url'].'/sidora/info/'.$object_id.'/meta/TN/browser" />';
       }
-      $obj_pic = '<img src="'.$GLOBALS['base_url'].'/sidora/resource_viewer/'.$object_id.'" />';
-      $to_return .= '<div style="width:100%;display:inline-block;overflow:auto;vertical-align:top;">';
+      $viewer_link = $GLOBALS['base_url'].'/sidora/resource_viewer/'.$object_id;
+      $obj_pic = "\r\n" . '<a href="'.$viewer_link.'" onclick="window.open(\''.$viewer_link.'\');return false;">';
+      $obj_pic .= 'Open in New Window</a>';
+      $obj_pic .= "\r\n" . '<iframe style="height:100%;width:100%;" src="'.$viewer_link.'" allowfullscreen="true" webkitallowfullscreen="true" mozallowfullscreen="true" oallowfullscreen="true" msallowfullscreen="true"></iframe>';
+      $to_return .= "\r\n" .'<div style="width:100%;display:inline-block;overflow:auto;vertical-align:top;">';
       $to_return .= $tn;
       $to_return .= '<div style="width:100%;height:600px;overflow:auto;">';
       $to_return .= $obj_pic;
@@ -2446,6 +2449,7 @@ function sidora_user_initialize($account){
     if (!$account->data || !array_key_exists("islandora_user_pid",$account->data)){
       module_load_include('inc', 'sidora', 'includes/utils');
       $object = sidora_create_user_object($account);
+      sleep(15); //Arbitrary sleep to allow fedora to create the objects.  Even though the ID comes back it's apparently not available immediately
       $data['data']['islandora_user_pid'] = $object->id;
       user_save($account,$data);
       //dsm("Created Sidora object for user:".$object->id);
@@ -4048,8 +4052,9 @@ function sidora_html_string_tree($root_pid = '', $root = NULL){
   //In some circumstances, a user could get here without their root set up.  Create it now.
   if (empty($root_pid)){
     sidora_user_initialize($user);
-    return '';
+    $root_pid = sidora_get_user_root_object();
   }
+  
   if (empty($root)){
     $root= sidora_obj($root_pid);
   }
@@ -4076,7 +4081,7 @@ function sidora_block_content_navigation(){
   $to_return = '<div style="float:left;width:200px;">';
   $to_return .= '<div id="concept-create-menu">';
   $to_return .= '</div>';
-  $to_return .= '<div id="forjstree">';
+  $to_return .= '<div id="forjstree" root_pid="'.$root_pid.'">';
   $to_return .= sidora_html_string_tree($root_pid);
   $to_return .= '</div></div>';
   //jQuery UI L&F
@@ -4105,6 +4110,12 @@ function sidora_block_content_navigation(){
 function sidora_find_association(array &$form_state, $form_build_id = ''){
   module_load_include('inc', 'xml_form_builder', 'includes/associations');
   $shared_storage = islandora_ingest_form_get_shared_storage($form_state);
+
+  //If we got here without the proper creation data, don't bother trying to find an association
+  if (empty($shared_storage)) return NULL;
+  if (!array_key_exists('models',$shared_storage)) return NULL;
+  if (empty($shared_storage['models'])) return NULL;
+
   $associations = xml_form_builder_get_associations(array(), $shared_storage['models'], array());
   // ... Find the association you want to use, iterate over the values and
   // choose the one you want.
