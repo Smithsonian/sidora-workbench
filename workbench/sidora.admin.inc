@@ -51,7 +51,6 @@ function sidora_admin_settings() {
 
   module_load_include('inc', 'xml_form_builder', 'XMLFormRepository');
   $names = XMLFormRepository::GetNames();
-
   // No forms exist can only create.
   /*
   if (count($names) == 0) {
@@ -286,10 +285,12 @@ tr.removed.odd {
 			'#type' => 'select',
 			'#title' => t('Viewer'),
 			'#options' => array(
+        //remember to change this and the one below it when adding a new type
 				'direct' => t('Direct stream to browser (actual image / binary / text)'),
 				'web_view' => t('Direct stream to browser for web viewable items, download message for others'),
         'flexpaper_pdf' => t('Flexpaper / Convert to flexpaper / direct stream to browser'),
 				'IDS' => t('Smithsonian IDS Viewer'),
+        'OpenSeaDragon' => t('OpenSeaDragon'),
 				'none' => t('None - no display available'),
 				'never' => t('Never set'),
 			),
@@ -314,7 +315,9 @@ tr.removed.odd {
           'direct' => t('Direct stream to browser (actual image / binary / text)'),
 				  'web_view' => t('Direct stream to browser for web viewable items, download message for others'),
           'flexpaper_pdf' => t('Flexpaper / Convert to flexpaper / direct stream to browser'),
-          'IDS' => t('Smithsonian IDS Viewer'),
+          'JW Audio Player' => t('JW Player for audio'),
+					'IDS' => t('Smithsonian IDS Viewer'),
+          'OpenSeaDragon' => t('OpenSeaDragon'),
           'none' => t('None - no display available'),
           'never' => t('Never set'),
         ),
@@ -383,6 +386,54 @@ tr.removed.odd {
       '#description' => t('The Fedora Commons pid will be directly appended to the above, end with / if needed.'),
     );
 */
+  $form['OpenSeaDragonInfo'] = array(
+    'fieldset' => array(
+      '#type' => 'fieldset',
+      '#title' => 'OpenSeaDragon Info',
+      '#description' => t(''),
+      '#collapsible' => TRUE,
+      '#collapsed' => TRUE,
+      'osd_proxy_pid_prefix' => array(
+        '#type' => 'textfield',
+        '#title' => t('Prefix the URL before the pid for the base image'),
+        '#default_value' => variable_get('osd_proxy_pid_prefix', ''),
+        '#description' => t('The URL for the base image is made up of this prefix, then the pid, then the post-fix. (ex: http://***REMOVED***.my***REMOVED***.net:8080/fedora/objects/ )'),
+      ),
+      'osd_proxy_pid_postfix' => array(
+        '#type' => 'textfield',
+        '#title' => t('Post-fix for the URL after the pid for the base image'),
+        '#default_value' => variable_get('osd_proxy_pid_postfix', ''),
+        '#description' => t('The URL for the base image is made up of the prefix, then the pid, then this post-fix. (ex: /datastreams/OBJ/content )'),
+      ),
+      'osd_proxy_resolver_url' => array(
+        '#type' => 'textfield',
+        '#title' => t('The base URL for the resolver'),
+        '#default_value' => variable_get('osd_proxy_resolver_url', ''),
+        '#description' => t('The resolver is the location of the image resizer itself. (ex: http://***REMOVED***.my***REMOVED***.net/adore-djatoka/resolver )'),
+  ),
+	),
+	);
+	$form['account_request'] = array(
+     'fieldset' => array(
+      '#type' => 'fieldset',
+      '#title' => 'New Account Request',
+      '#description' => t(''),
+      '#collapsible' => TRUE,
+      '#collapsed' => TRUE,
+      'account_request_email_to' => array(
+        '#type' => 'textfield',
+        '#title' => t('Send New Account Request Email to'),
+        '#default_value' => variable_get('account_request_email_to', ''),
+        '#description' => t('New account requests are sent to this email address.'),
+      ),
+			'account_request_email_from' => array(
+			  '#type' => 'textfield',
+				'#title' => t('Send New Account Request Emails from'),
+				'#default_value' => variable_get('account_request_email_from', ''),
+				'#description' => t('New account requests will be sent from this email address.'),
+			),	
+    ),
+  );
   $form['#attributes'] = array('OnSubmit' => 'formPreSubmit();');
   return system_settings_form($form);
 }

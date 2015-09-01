@@ -3,4 +3,6 @@ description = Smithsonian Institution interface to Fedora Commons Repository for
 core = 7.x
 package = Smithsonian
 dependencies[] = islandora
+dependencies[] = islandora_jwplayer
+dependencies[] = islandora_audio
 configure = admin/sidora/configure

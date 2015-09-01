@@ -2,25 +2,56 @@ window.batchRequests = [];
 jQuery().ready(function(){
 	window.currentInfo = {};
 	var myLoc = decodeURIComponent(window.location.pathname);
-	window.currentInfo.parentPid = myLoc.split("/").splice(-4)[0];
-	window.currentInfo.model = myLoc.split("/").splice(-4)[1];
+	if (myLoc.split("/").splice(myLoc.split("/").length-2)[0] == "edit_metadata"){
+	  window.currentInfo.parentPid = "edit_metadata";  // need to send this to sidora queue done() to force a refresh after edit metadata is finished
+	}else{	// original code for create resource
+	  window.currentInfo.parentPid = myLoc.split("/").splice(-4)[0];
+	  window.currentInfo.model = myLoc.split("/").splice(-4)[1];
+	  window.currentInfo.ontologyId = myLoc.split("/").splice(-4)[3];
+	}
 	window.currentInfo.formname = myLoc.split("/").splice(-4)[2];
-	window.currentInfo.ontologyId = myLoc.split("/").splice(-4)[3];
 	jQuery("body").css("padding-top","0px");
 	jQuery(".form-submit[value=Ingest]").hide();
 	jQuery(".form-submit[value=Submit]").hide();
+	jQuery(".form-submit[value=Update]").hide();
 	jQuery(".sidora-ingest-form-holder").hide();
 	jQuery(".sidora-ingest-form-holder").first().show();
 	window.currentlyShownIndex = 0;
-	jQuery(".sidora-ingest-form-holder").append("<input value=\"Prev\" class='form-submit sidora-form-button sidora-form-prev'></input>");
-	jQuery(".sidora-ingest-form-holder").append("<input value=\"Next\" class='form-submit sidora-form-button sidora-form-next'></input>");
+	if (jQuery(".sidora-ingest-form-holder").length >1){
+	  //if (jQuery(".picHolder").length){
+	    jQuery(".top-panel").append("<input value=\"Prev\" class='form-submit sidora-form-button sidora-form-prev'></input>");
+	    jQuery(".bottom-panel").append("<input value=\"Prev\" class='form-submit sidora-form-button sidora-form-prev'></input>");
+	    jQuery(".top-panel").append("<input value=\"Next\" class='form-submit sidora-form-button sidora-form-next'></input>");
+	    jQuery(".bottom-panel").append("<input value=\"Next\" class='form-submit sidora-form-button sidora-form-next'></input>");
+	  //}else{
+	   // jQuery(".sidora-ingest-form-holder").prepend("<input value=\"Next\" class='form-submit sidora-form-button sidora-form-next'></input>");
+	    //jQuery(".sidora-ingest-form-holder").prepend("<input value=\"Prev\" class='form-submit sidora-form-button sidora-form-prev'></input>");
+	  //  jQuery(".sidora-ingest-form-holder").append("<input value=\"Prev\" class='form-submit sidora-form-button sidora-form-prev'></input>");
+	  //  jQuery(".sidora-ingest-form-holder").append("<input value=\"Next\" class='form-submit sidora-form-button sidora-form-next'></input>");
+	  //}
+	}		
 	jQuery(".sidora-form-prev").first().addClass("form-button-disabled");
 	jQuery(".sidora-form-next").last().addClass("form-button-disabled");
-	jQuery("#create-resource-form").append("<input value=\"Finish\" class='form-submit sidora-form-finish'></input>");
+	jQuery(".sidora-form-prev:eq(1)").addClass("form-button-disabled");
+	jQuery(".sidora-form-next:eq(-2)").addClass("form-button-disabled");
+	//if (jQuery("#create-resource-form").length){
+	 // jQuery("#create-resource-form").append("<input value=\"Finish\" class='form-submit sidora-form-finish'></input>");
+	  jQuery(".top-panel").append("<input value=\"Finish\" class='form-submit sidora-form-finish' style='float:right;'></input>");
+	  jQuery(".bottom-panel").append("<input value=\"Finish\" class='form-submit sidora-form-finish' style='float:right;'></input>");
+	//}
 	//jQuery("#create-resource-form").append("<input value=\"Cancel\" class='form-submit sidora-form-cancel'></input>");
-	jQuery(".picHolder").css("height",window.innerHeight - 250 + "px");
-	jQuery(".sidora-form-prev").not(".form-button-disabled").click(function(e){ window.showPrev(); });
-	jQuery(".sidora-form-next").not(".form-button-disabled").click(function(e){ window.showNext(); });
+	/*if (jQuery("#edit-metadata").length){
+		jQuery("#edit-metadata").append("<input value=\"Finish\" class='form-submit sidora-form-finish'></input>");
+	}	*/
+	//jQuery(".picHolder").css("height",window.innerHeight - 250 + "px");
+	jQuery(".sidora-form-prev").not(".form-button-disabled").click(function(e){ 
+	  window.showPrev(); 	
+		jQuery(".form-submit[value=Update]").hide();
+  });
+	jQuery(".sidora-form-next").not(".form-button-disabled").click(function(e){ 
+	  window.showNext();
+		jQuery(".form-submit[value=Update]").hide();
+  });
 	jQuery("#create-new-codebook").click(function(e){ window.createCodebook(); });
 	if (window.currentInfo.formname == 'Codebook'){
 		jQuery(".sidora-form-button").hide();
@@ -88,11 +119,16 @@ window.submitAll=function(){
 	var toIterate = jQuery(".sidora-ingest-form-holder");
 	for (var i = 0; i < toIterate.length; i++){
 		var formId = jQuery(toIterate[i]).find("form").attr('id');
-		var toConsole = function(){console.log('finished');};
-		window.prepIslandoraFormForSubmit(formId, toConsole );
+		if (formId.search('islandora-ingest-form') != '-1'){
+		  var toConsole = function(){console.log('finished');};  // create resource success function
+		  window.prepIslandoraFormForSubmit(formId, toConsole );
+		}else{
+		  var toConsole = function(){sidora.concept.forceRefreshOnNextLoadContent = true;sidora.concept.LoadContent();};
+			var onFailure = function(){jQuery("#edit-update").click();};
+		  window.prepIslandoraFormForSubmit(formId, toConsole, onFailure);
+		}	
 	}
 	window.startBatch();
-
 }
 
 /**
@@ -112,9 +148,14 @@ window.startBatch = function(){
 			var ajaxSettings = window.batchRequests[i];
 			var postData = ajaxSettings.data;
 			var ccSuccess = oldSuccess;
-			var friendlyName = "Create "+currentInfo.formname+" Resource:"+(i+1)+" of "+window.batchRequests.length;
 			var onSuccess = function(){console.log("FINISH! "+friendlyName);};
-			sidora.queue.RequestPost(friendlyName,window.location.href,postData, onSuccess, function(){}, currentInfo.parentPid);
+			if (currentInfo.formname == 'edit_metadata'){
+			  var friendlyName = " Edit MetaData of Resource:"+(i+1)+" of "+window.batchRequests.length;
+			  sidora.queue.RequestPost(friendlyName,ajaxSettings.url,postData, onSuccess, function(){}, currentInfo.parentPid);
+			}else{
+			  var friendlyName = " Create "+currentInfo.formname+" Resource:"+(i+1)+" of "+window.batchRequests.length;
+			  sidora.queue.RequestPost(friendlyName,window.location.href,postData, onSuccess, function(){}, currentInfo.parentPid);
+			}	
 		}
 		sidora.queue.Next();
 		window.closeMyself();
@@ -195,7 +236,8 @@ window.setWhetherMetaEntered = function(){
  *        "edit-next" performs the Islandora submit default so the error can be shown to the user
  */
 window.prepIslandoraFormForSubmit = function(formName, onSuccessfulFormSubmit, onFailureOfFormSubmit){
-	window.setWhetherMetaEntered();
+	//if (jQuery("#create-resource-form").length){
+	  window.setWhetherMetaEntered();
 	if (onSuccessfulFormSubmit == null || typeof(onSuccessfulFormSubmit) != "function"){
 		onSuccessfulFormSubmit = function(formName, ajaxCall, data){
 				//If successful, kill itself.
@@ -209,21 +251,53 @@ window.prepIslandoraFormForSubmit = function(formName, onSuccessfulFormSubmit, o
 				jQuery("#edit-next").click();
 		}
 	}
-
-	ajaxSettings = ({
-		type: "POST",
-		url: window.location,
-		//url: Drupal.settings.basePath+"/pure",
-		data: jQuery("#"+formName).serialize()+"&ingest=Ingest",
-		success: function( data ) {
-			if (data.indexOf(")"+" has been ingested") > 0){ //it would trigger success off of reading this inline JS, so break it up
-				onSuccessfulFormSubmit(formName, this, data);
-			}else{
-				onFailureOfFormSubmit(formName, this, data);
-			}
-		},
-		dataType: "text"
-	});//ends ajax settings
+  if (jQuery("#create-resource-form").length){
+		ajaxSettings = ({
+		  type: "POST",
+		  url: window.location,
+		  //url: Drupal.settings.basePath+"/pure",
+		  //url: window.location.origin+Drupal.settings.basePath+'sidora/test/edit_metadata',
+			data: jQuery("#"+formName).serialize()+"&ingest=Ingest",
+		  success: function( data ) {
+			  if (data.indexOf(")"+" has been ingested") > 0){ //it would trigger success off of reading this inline JS, so break it up
+				  onSuccessfulFormSubmit(formName, this, data);
+			  }else{
+				  onFailureOfFormSubmit(formName, this, data);
+			  }
+		  },
+		  dataType: "text"
+	  });//ends ajax settings
+	}else{
+		if (window.location.href.search('&') != '-1'){
+		  var ajaxUrl = sidora_util.ajaxUrl(jQuery("#"+formName).attr("count"));
+		}else{
+		  var ajaxUrl = window.location.href;
+		}
+		ajaxSettings = ({
+		  type: "POST",
+		  url: ajaxUrl,
+		  data: jQuery("#"+formName).serialize()+"&op=Submit&update=Update",
+      success: function( data ) {
+         if (data.indexOf("<h2 class=\"element-invisible\">Error message</h2")>0){
+           //If not successful, reload the page so that the user can see why
+           // store this error/failure in a queue message area with the proper SID to process after end of the current queue
+					 
+					 jQuery("#edit-update").click();
+           jQuery(".theoverlay").remove();
+         }else{
+           //If successful, kill itself.
+          /* if (sidora && sidora.CloseIFrame){
+             sidora.concept.forceRefreshOnNextLoadContent = true;
+             sidora.CloseIFrame(newPid, "edit metadata");
+						 sidora.concept.LoadContent();
+           }else{
+             console.log("This is not in the expected IFrame");
+           }*/
+         }
+      },
+		  dataType: "text"
+	  });//ends ajax settings
+	}
 	window.batchRequests.push(ajaxSettings);
 }//ends function prepIslandoraFormForSubmit
 
@@ -233,7 +307,7 @@ window.prepIslandoraFormForSubmit = function(formName, onSuccessfulFormSubmit, o
 window.createCodebook = function(){
 	jQuery("html").css("height","100%");
 	jQuery("body").css("height","100%");
-	var iframeUrl = Drupal.settings.basePath+"sidora/create_resource/"+window.currentInfo.parentPid+"/si%3AcodebookCModel/Codebook";
+	var iframeUrl = Drupal.settings.basePath+"sidora/create_resource/"+window.currentInfo.parentPid+"/si%3AcodebookCModel/Codebook/";
 	jQuery("body").append("<div id='ifh' style='width:100%;height:100%;position:absolute;top:0;left:0;opacity:0.5;background:black;'><iframe width='100%' height='99%' id='myiframe' src='"+iframeUrl+"'iframe></div>");
 	setTimeout(function(){
 		jQuery("#ifh").css("opacity","");

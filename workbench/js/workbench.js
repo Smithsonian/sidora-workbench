@@ -27,69 +27,72 @@ sidora.concept.LoadContentHelp.Resources ={};
  * Calls for the table setup information
  */
 sidora.concept.LoadContentHelp.Resources.TableLoad = function(conceptOfInterest){
+ // var dtPageLength = parseInt(readCookie('Drupal.pageLength'));
   sidora.resources.dataTable = jQuery('#res_table').dataTable({
      "oLanguage": {
-            "sLengthMenu": "Show _MENU_"
-                },
+       "sLengthMenu": "Show _MENU_"
+     },
      'sPaginationType': "input",
      'lengthMenu':[5,10,50,100],
+     'pageLength': (readCookie('Drupal.pageLength') == '')?parseInt('5'):parseInt(readCookie('Drupal.pageLength')),
+     'search': {
+       'search': (readCookie('Drupal.dtFilter') == '')?'':readCookie('Drupal.dtFilter')
+      },
      'processing': true,
      'serverSide': true,
-     'ordering' : false,
+     'ordering': false,
      'ajax': jQuery.fn.dataTable.pipeline({
        url: '../info/'+conceptOfInterest+'/resources/all/browser/dataTableServerSideProcessing',
        pages: 2
      })
   });
-  (function($){
-    var table = $('#res_table').DataTable();
-   $('#res_table tbody').on( 'click', 'tr', function (e) {
-      //If the mousedown is on something that is in the middle of a move process, ignore the mousedown
-      if (jQuery(this).hasClass("is-being-moved")){
-        console.log("Item is being moved, ignoring click");
-        return;
+  var table = jQuery('#res_table').DataTable();
+  jQuery('#res_table tbody').on( 'click', 'tr', function (e) {
+    //If the mousedown is on something that is in the middle of a move process, ignore the mousedown
+    if (jQuery(this).hasClass("is-being-moved")){
+      console.log("Item is being moved, ignoring click");
+      return;
+    }
+    if ( jQuery(this).hasClass('selected') ) {
+      if (this.id == sidora.resources.individualPanel.resourceOfInterest.pid){
+        sidora.resources.individualPanel.Remove();
+        sidora.resources.individualPanel.resourceOfInterest = null;
       }
-      if ( $(this).hasClass('selected') ) {
-        if (this.id == sidora.resources.individualPanel.resourceOfInterest.pid){
-          sidora.resources.individualPanel.Remove();
-          sidora.resources.individualPanel.resourceOfInterest = null;
-       }
-        $(this).removeClass('selected');
-      } else {
-        if (!e.ctrlKey){
-          table.$('tr.selected').removeClass('selected');
-          sidora.resources.individualPanel.resourceOfInterest = null;
-        }else{
-        }
-        $(this).addClass('selected');
+      jQuery(this).removeClass('selected');
+    } else {
+      if (!e.ctrlKey){
+        table.$('tr.selected').removeClass('selected');
+        sidora.resources.individualPanel.resourceOfInterest = null;
       }
-      //if we only have 1 left, make the resource of interest into the one that is left
-      var pids = sidora.resources.getHighlighted();
-      if (pids.length == 1 && sidora.resources.individualPanel.resourceOfInterest == null && pids[0] != sidora.resources.individualPanel.resourcesOfInterest){
-          sidora.resources.individualPanel.resourceOfInterest = {
-            'pid': pids[0],
-            'name': jQuery(jq(pids[0])).find("td").text()
-          };
-          sidora.resources.individualPanel.CreateAndInit();
-      }
-      //Edit metadata and delete are only available per resource (no batch yet) so disable them if not exactly one left
-      if (pids.length != 1){
-        jQuery("#edit-resource-metadata-menu").addClass("ui-state-disabled");
-        jQuery("#manage-resource").addClass("ui-state-disabled");
-      }else{
-        jQuery("#edit-resource-metadata-menu").removeClass("ui-state-disabled");
-        jQuery("#manage-resource").removeClass("ui-state-disabled");
-      }
-    });
-  }(jQuery));
-
+      jQuery(this).addClass('selected');
+    }
+    //if we only have 1 left, make the resource of interest into the one that is left
+    var pids = sidora.resources.getHighlighted();
+    if (pids.length == 1 && sidora.resources.individualPanel.resourceOfInterest == null && pids[0] != sidora.resources.individualPanel.resourcesOfInterest){
+      sidora.resources.individualPanel.resourceOfInterest = {
+        'pid': pids[0],
+        'name': jQuery(jq(pids[0])).find("td").text()
+      };
+      sidora.resources.individualPanel.CreateAndInit();
+    }
+    //Edit metadata and delete are only available per resource (no batch yet) so disable them if not exactly one left
+    if (pids.length != 1){
+   //   jQuery("#edit-resource-metadata-menu").addClass("ui-state-disabled");
+      jQuery("#manage-resource").addClass("ui-state-disabled");
+    }else{
+      jQuery("#edit-resource-metadata-menu").removeClass("ui-state-disabled");
+      jQuery("#manage-resource").removeClass("ui-state-disabled");
+    }
+  }); //End onclick
+    table.on( 'length', function ( e, settings, len ) {
+      writeCookie('Drupal.pageLength',parseInt(len),'30')
+    } );
 }
 /*
  * Prepares the resource table to respond to user inputs: dragging, changing filters, entering search parameters
  */
 sidora.concept.LoadContentHelp.Resources.TableActionsSetup = function(){
   //Put a more compact pager in place
-  if (true){
   jQuery("#res_table_wrapper").before('<div id="sidora-resources-button-row" style=""><div id="sidora-resources-button-first" class="sidora-resources-icon" style="    background-position: -306px -44px;"></div><div id="sidora-resources-button-prev" class="sidora-resources-icon" style="    background-position: -231px -4px;"></div><div id="sidora-resources-pager" style="display:inline-block;vertical-align: top;padding-top: 7px;"><div id="sidora-resources-page-text" style="display:inline-block">Page</div><input id="sidora-resources-page-number" type="text" size="2" class="form-text"/><div id="sidora-resources-page-count" style="display:inline-block">of </div></div><div id="sidora-resources-button-next" class="sidora-resources-icon" style="    background-position: -270px -4px;"></div><div id="sidora-resources-button-last" class="sidora-resources-icon" style="    background-position: -346px -44px;"></div></div>');
   jQuery("#sidora-resources-button-first").click(function(){ jQuery(".paginate_button.first").click();  });
   jQuery("#sidora-resources-button-prev").click(function(){ jQuery(".paginate_button.previous").click();  });
@@ -100,17 +103,22 @@ sidora.concept.LoadContentHelp.Resources.TableActionsSetup = function(){
     jQuery(".paginate_input").val(jQuery("#sidora-resources-page-number").val()).change();
   }); 
   jQuery('#res_table').on( 'draw.dt', function () {
-    jQuery(".sidora-resources-icon").addClass("disabled");
-    var info = jQuery(this).DataTable().page.info();
-    if (info.page+1 < info.pages) jQuery("#sidora-resources-button-next").removeClass("disabled");
-    if (info.page+1 < info.pages) jQuery("#sidora-resources-button-last").removeClass("disabled");
-    if (info.page > 0) jQuery("#sidora-resources-button-first").removeClass("disabled");
-    if (info.page > 0) jQuery("#sidora-resources-button-prev").removeClass("disabled");
+  jQuery(".sidora-resources-icon").addClass("disabled");
+  var info = jQuery(this).DataTable().page.info();
+  if (info.page+1 < info.pages) jQuery("#sidora-resources-button-next").removeClass("disabled");
+  if (info.page+1 < info.pages) jQuery("#sidora-resources-button-last").removeClass("disabled");
+  if (info.page > 0) jQuery("#sidora-resources-button-first").removeClass("disabled");
+  if (info.page > 0) jQuery("#sidora-resources-button-prev").removeClass("disabled");
     jQuery('#sidora-resources-page-number').val((1+info.page));
     jQuery('#sidora-resources-page-count').html(' of '+info.pages );
+    if (sidora.resources.individualPanel.resourceOfInterest){
+      jQuery(this).find(jq(sidora.resources.individualPanel.resourceOfInterest.pid)).trigger("click");
+      if (readCookie('Drupal.selectResource') == '1'){
+        writeCookie('Drupal.selectResource','0','30');
+        jQuery('#res_table tbody').children('tr:first').trigger('click');
+      }    
+    }
   } );
-  }
-
   //Drag and drop enabling
   jQuery('#res_table tbody').on('mousedown','tr', function (e) {
     //If the mousedown is on something that is in the middle of a move process, ignore the mousedown
@@ -134,70 +142,73 @@ sidora.concept.LoadContentHelp.Resources.TableActionsSetup = function(){
       //We are dragging something that is highlighted
       //No matter which one, do the operations on all of them
       //Since it's highlighted, the "dragResources" should point to all of the pids
-        sidora.util.dragResources = highlightedPids;
-        return jQuery.vakata.dnd.start(e, 
-          { 
-            'jstree' : true, 
-            'obj' : highlightedPids, 
-            'nodes' : [{ id : true, text: highlightedPids.length+' resources'}] 
-          }, 
+      sidora.util.dragResources = highlightedPids;
+      return jQuery.vakata.dnd.start(e, 
+        { 
+          'jstree' : true, 
+          'obj' : highlightedPids, 
+          'nodes' : [{ id : true, text: highlightedPids.length+' resources'}] 
+        }, 
         '<div id="jstree-dnd" class="jstree-default"><i class="jstree-icon jstree-er"></i>' + highlightedPids.length+' resources' + '<span class="fakejstree-copy" style="display:none">+</span></div>'
-        );
+      );
        
-      }
-      return jQuery.vakata.dnd.start(e, { 
+    }
+    return jQuery.vakata.dnd.start(e, 
+      { 
         'jstree' : true, 
         'obj' : jQuery(this), 
         'nodes' : [{ id : true, text: jQuery(this).text() }] 
       }, 
       '<div id="jstree-dnd" class="jstree-default"><i class="jstree-icon jstree-er"></i>' + jQuery(this).text() + '<span class="fakejstree-copy" style="display:none">+</span></div>'
-      );
-    });
-    /*
-    //Column highlighting (if I need it)
-    (function($){
-      var lastIdx = null;
-      var table = $('#res_table').DataTable();
-      console.log("BBB1");
-      $('#res_table tbody')
-        .on( 'mouseover', 'td', function () {
-      console.log("BBB2");
-            var colIdx = table.cell(this).index().column;
- 
-            if ( colIdx !== lastIdx ) {
-                $( table.cells().nodes() ).removeClass( 'highlight' );
-                $( table.column( colIdx ).nodes() ).addClass( 'highlight' );
-            }
-        } )
-        .on( 'mouseleave', function () {
-            $( table.cells().nodes() ).removeClass( 'highlight' );
-        } );
-    }(jQuery));
-    */
-    jQuery('#res_table_filter').after('<select id=\"sidora-resource-type-dropdown\" class="form-select" name=\"search\"><option value=\"\">All</option><option value=\"images\">Image</option><option value=\"pdf\">Digitized Text</option><option value=\"csv\">Tabular Dataset</option></select><input type="text" name="titleFilter" id="titleFilter" style="border: solid 1px lightblue;">');
-    jQuery("#res_table_length select").addClass("form-select");
-    sidora.resources.reloadDatatableBasedOnCurrentFilters = function(){
-      var changeTo = jQuery('#sidora-resource-type-dropdown').val();
-      jQuery('#res_table_filter input').val(changeTo);
-      var recentSearchVal = jQuery("#titleFilter").val();
-      changeTo += "\n"+recentSearchVal;
-      window.sidora.resources.dataTable.DataTable().search(changeTo).draw();
-      window.sidora.util.resourceSearchLastSearchVal = recentSearchVal;
-    }
-    jQuery("#titleFilter").keyup(function(){
-      sidora.util.resourceSearchCountdown = 'started';
-      var recentSearchVal = sidora.util.resourceSearchValue = jQuery("#titleFilter").val();
-      setTimeout(function(){
-        if (sidora.util.resourceSearchValue != sidora.util.resourceSearchLastSearchVal){
-          if (recentSearchVal == jQuery("#titleFilter").val()){
-            sidora.resources.reloadDatatableBasedOnCurrentFilters();
-          }
+    );
+  });
+	jQuery('#res_table_filter').after('<select id=\"sidora-resource-type-dropdown\" class="form-select" name=\"search\"><option value=\"\">All</option><option value=\"images\">Image</option><option value=\"pdf\">Digitized Text</option><option value=\"csv\">Tabular Dataset</option><option value=\"audio\">Audio</option></select><input type="text" name="titleFilter" id="titleFilter" style="border: solid 1px lightblue;">');
+	if (readCookie('Drupal.dtFilter') != ''){
+    jQuery("#sidora-resource-type-dropdown").val(readCookie('Drupal.dtFilter'));
+  }   
+  jQuery('#titleFilter').after(' <div id="sidora-resource-sort">  Sort: '+'<select id=\"sidora-resource-sort-dropdown\" class="form-select" name=\"sort\"><option value=\"title\">Title</option><option value=\"model\">Model</option><option value=\"created\" selected=\"selected\">Created</option></select></div>');
+  jQuery('#sidora-resource-sort-dropdown').after('  <select id=\"sidora-resource-sortorder-dropdown\" class="form-select" name=\"sortorder\"><option value=\"ASC\">Ascending</option><option value=\"DESC\" selected=\"selected\">Descending</option></select>');
+  if (readCookie('Drupal.sortOn') != ''){
+	  jQuery('#sidora-resource-sort-dropdown').val(readCookie('Drupal.sortOn'));
+	}
+	if (readCookie('Drupal.sortOrder') != ''){
+	  jQuery("#sidora-resource-sortorder-dropdown").val(readCookie('Drupal.sortOrder'));
+	}		  
+	jQuery("#res_table_length select").addClass("form-select");
+  sidora.resources.reloadDatatableBasedOnCurrentFilters = function(){
+    var changeTo = jQuery('#sidora-resource-type-dropdown').val();
+    jQuery('#res_table_filter input').val(changeTo);
+    var recentSearchVal = jQuery("#titleFilter").val();
+    changeTo += "\n"+recentSearchVal;
+    var sortOn = (readCookie('Drupal.sortOn') != '')?readCookie('Drupal.sortOn'):jQuery('#sidora-resource-sort-dropdown').val();
+		var sortOrder = (readCookie('Drupal.sortOrder') != '')?readCookie('Drupal.sortOrder'):jQuery('#sidora-resource-sortorder-dropdown').val();
+		changeTo += "\n"+sortOn+"\n"+sortOrder;
+		window.sidora.resources.dataTable.DataTable().search(changeTo).draw();
+    window.sidora.util.resourceSearchLastSearchVal = recentSearchVal;
+  }
+  jQuery("#titleFilter").keyup(function(){
+    sidora.util.resourceSearchCountdown = 'started';
+    var recentSearchVal = sidora.util.resourceSearchValue = jQuery("#titleFilter").val();
+    setTimeout(function(){
+      if (sidora.util.resourceSearchValue != sidora.util.resourceSearchLastSearchVal){
+        if (recentSearchVal == jQuery("#titleFilter").val()){
+          sidora.resources.reloadDatatableBasedOnCurrentFilters();
         }
-      },3000); //Start the search if there is no key press for 3 seconds
-    });
-    jQuery('#sidora-resource-type-dropdown').change(function(){
-      sidora.resources.reloadDatatableBasedOnCurrentFilters();
-    });
+      }
+    },3000); //Start the search if there is no key press for 3 seconds
+  });
+  jQuery('#sidora-resource-type-dropdown').change(function(){
+    writeCookie('Drupal.dtFilter',jQuery('#sidora-resource-type-dropdown').val(),'30')
+    sidora.resources.reloadDatatableBasedOnCurrentFilters();
+  });
+	jQuery('#sidora-resource-sort-dropdown').change(function(){
+   writeCookie('Drupal.sortOn',jQuery('#sidora-resource-sort-dropdown').val(),'30')
+	 sidora.resources.reloadDatatableBasedOnCurrentFilters();
+	 });
+	jQuery('#sidora-resource-sortorder-dropdown').change(function(){
+   writeCookie('Drupal.sortOrder',jQuery('#sidora-resource-sortorder-dropdown').val(),'30')
+	 sidora.resources.reloadDatatableBasedOnCurrentFilters();
+	 });
 }
 /*
  * Sets the visiblility of menu items on the concept menu.  Remember, this is UI only and is not to be used for security
@@ -223,9 +234,9 @@ sidora.concept.LoadContentHelp.Exhibition_view = function(conceptOfInterest){
     dataType: "json",
     url: '../info/'+conceptOfInterest+'/exhibition',
     success: function(exhibitions){
-			jQuery("#exhibitConcept").attr('onclick', '');
-			jQuery("#exhibitConcept").children('a').attr('onclick',exhibitions.action);
-			jQuery("#exhibitConcept").children('a').toggleClass('ui-state-disabled',exhibitions.ui_state_disable);
+      jQuery("#exhibitConcept").attr('onclick', '');
+      jQuery("#exhibitConcept").children('a').attr('onclick',exhibitions.action);
+      jQuery("#exhibitConcept").children('a').toggleClass('ui-state-disabled',exhibitions.ui_state_disable);
     }
   });
 }
@@ -308,7 +319,7 @@ sidora.concept.LoadContentHelp.CreateMenu = function(conceptOfInterest){
           if (typeof(form) != 'undefined') {
             url += form + "/" + ontologyId + "/fresh";
           }
-          console.log('form:'+form);
+          //console.log('form:'+form);
           Shadowbox.close();
           setTimeout(function(){
           Shadowbox.open({
@@ -436,16 +447,9 @@ sidora.InitiateJSTree = function(){
         jQuery("#forjstree").jstree("delete_node",data.node);
         return; //resource actions are handled by the 'dnd_stop.vakata' event
       }
-      //console.log("Copy:"+toMovePid+" to:"+moveToPid);
       var jst = jQuery("#forjstree").jstree(true);
-      var newParentExistingHtml = jst.get_node(data.parent).text;
       var newParentExistingChildConceptsNumber = parseInt(jQuery("#"+data.parent).children("a").attr("conceptchildren"));
       var npReplacer = newParentExistingChildConceptsNumber+1;
-      if (newParentExistingChildConceptsNumber == 0){
-        jst.rename_node(data.parent, newParentExistingHtml+" ("+npReplacer+")");
-      }else{
-        jst.rename_node(data.parent, newParentExistingHtml.substring(0,newParentExistingHtml.lastIndexOf(" ("))+" ("+npReplacer+")");
-      }
       jQuery("#"+data.parent).children("a").attr("conceptchildren",""+npReplacer);
       jst.get_node(data.parent).a_attr.conceptchildren = ""+npReplacer;
       sidora.queue.incomingRequestsAreSilent = true;
@@ -462,21 +466,13 @@ sidora.InitiateJSTree = function(){
       var toMovePid = data.node.a_attr.pid;
       var moveFromPid = jQuery("#"+data.parent+" a").attr('pid');
       var actionUrl = '../ajax_parts/unassociate/'+moveFromPid+'/'+toMovePid;
-
       var jst = jQuery("#forjstree").jstree(true);
       var poi = data.parent;
       //Old Parent renumber
-      var oldParentExistingHtml = jst.get_node(poi).text;
       var oldParentExistingChildConceptsNumber = parseInt(jQuery("#"+poi).children("a").attr("conceptchildren"));
       var opReplacer = oldParentExistingChildConceptsNumber-1;
-      if (opReplacer == 0){
-        jst.rename_node(poi,oldParentExistingHtml.substring(0,oldParentExistingHtml.lastIndexOf(" ("))); 
-      }else{
-        jst.rename_node(poi,oldParentExistingHtml.substring(0,oldParentExistingHtml.lastIndexOf(" ("))+" ("+opReplacer+")");
-      }
       jQuery("#"+poi).children("a").attr("conceptchildren",""+opReplacer);
       jst.get_node(poi).a_attr.conceptchildren = ""+opReplacer;
-
       //next requests are silent
       sidora.queue.incomingRequestsAreSilent = true;
       sidora.queue.Request('Remove concept association', actionUrl, function(){
@@ -490,8 +486,6 @@ sidora.InitiateJSTree = function(){
     });
 
     jQuery('#forjstree').bind('move_node.jstree',function(event,data){
-     //   jQuery.jstree.rollback(data.rlbk);
-      //`jQuery('#forjstree').jstree().restore_state();
       var toMovePid = data.node.a_attr.pid;
       var moveToPid = jQuery("#"+data.parent+" a").attr('pid');
       var moveFromPid = jQuery("#"+data.old_parent+" a").attr('pid');
@@ -501,29 +495,15 @@ sidora.InitiateJSTree = function(){
 
       var jst = jQuery("#forjstree").jstree(true);
       //New Parent renumber
-      var newParentExistingHtml = jst.get_node(data.parent).text;
       var newParentExistingChildConceptsNumber = parseInt(jQuery("#"+data.parent).children("a").attr("conceptchildren"));
       var npReplacer = newParentExistingChildConceptsNumber+1;
-      if (newParentExistingChildConceptsNumber == 0){
-        jst.rename_node(data.parent, newParentExistingHtml+" ("+npReplacer+")");
-      }else{
-        jst.rename_node(data.parent, newParentExistingHtml.substring(0,newParentExistingHtml.lastIndexOf(" ("))+" ("+npReplacer+")");
-      }
       jQuery("#"+data.parent).children("a").attr("conceptchildren",""+npReplacer);
       jst.get_node(data.parent).a_attr.conceptchildren = ""+npReplacer;
-
       //Old Parent renumber
-      var oldParentExistingHtml = jst.get_node(data.old_parent).text;
       var oldParentExistingChildConceptsNumber = parseInt(jQuery("#"+data.old_parent).children("a").attr("conceptchildren"));
       var opReplacer = oldParentExistingChildConceptsNumber-1;
-      if (opReplacer == 0){
-        jst.rename_node(data.old_parent,oldParentExistingHtml.substring(0,oldParentExistingHtml.lastIndexOf(" ("))); 
-      }else{
-        jst.rename_node(data.old_parent,oldParentExistingHtml.substring(0,oldParentExistingHtml.lastIndexOf(" ("))+" ("+opReplacer+")");
-      }
       jQuery("#"+data.old_parent).children("a").attr("conceptchildren",""+opReplacer);
       jst.get_node(data.old_parent).a_attr.conceptchildren = ""+opReplacer;
-
       //next requests are silent
       sidora.queue.incomingRequestsAreSilent = true;
       sidora.queue.Request('Concept move', actionUrl, function(){
@@ -534,13 +514,6 @@ sidora.InitiateJSTree = function(){
       sidora.queue.incomingRequestsAreSilent = false;
       sidora.queue.Next();
     });
-    /*
-    */
-    //console.log('the item being dragged '+data.rslt.o[0].id+ 'target '+data.rslt.np[0].id);
-    //lets assume we want to roll back
-    /*
-    alert('this move is not allowed');
-    */    
     jQuery("#forjstree").bind("before.jstree", function(e, data){
       console.log("bjt");
     });
@@ -578,20 +551,20 @@ sidora.InitiateJSTree = function(){
                 );
               }else{
                 //is a move
-  							var showText = "Move the following resources to "+jQuery("#"+mouseOverObject.id).children("a").attr("fullname")+" ("+jQuery("#"+mouseOverObject.id).children("a").attr("pid")+"):";
-          			showText += "<ul>";
-          			for (var i = 0; i < sidora.util.dragResources.length; i++){
-            			showText += "<li>"+jQuery(jq(sidora.util.dragResources[i])).find(".resource-list-label").text();
-            			showText += " ("+sidora.util.dragResources[i]+")</li>";
-          			}
-          			showText += "</ul>";
-          			sidora.util.Confirm("Move resource",showText,
-            		function(){
-              		sidora.resources.performCopyOrMove("move",mouseOverObject.id);
-            		}
-          			);
-							}	
-	            return false; //Dont immediately perform the copy
+                var showText = "Move the following resources to "+jQuery("#"+mouseOverObject.id).children("a").attr("fullname")+" ("+jQuery("#"+mouseOverObject.id).children("a").attr("pid")+"):";
+                showText += "<ul>";
+                for (var i = 0; i < sidora.util.dragResources.length; i++){
+                  showText += "<li>"+jQuery(jq(sidora.util.dragResources[i])).find(".resource-list-label").text();
+                  showText += " ("+sidora.util.dragResources[i]+")</li>";
+                }
+                showText += "</ul>";
+                sidora.util.Confirm("Move resource",showText,
+                function(){
+                  sidora.resources.performCopyOrMove("move",mouseOverObject.id);
+                }
+                );
+              } 
+              return false; //Dont immediately perform the copy
             }
           }else{
             if (sidora.util.userConfirmedCopy){
@@ -838,7 +811,26 @@ sidora.ResizeToBrowser = function(){
 
   
 }
+sidora.InitiateConfirmAccess = function(){
+  jQuery.ajax(
+  {
+    "dataType":"json",
+    "url":Drupal.settings.basePath+"sidora/info/si:root/permission",
+    "success":function(data){
+      if (typeof(data.create) == 'undefined'){
+        console.log("Bad permissions data, likely a user setup issue, redirecting to user profile");
+        window.location = Drupal.settings.basePath+"user";
+      }
+    },
+    "error":function(){
+       console.log("Problem getting basic data, redirecting to the user profile");
+       window.location = Drupal.settings.basePath+"user";
+    }
+  }
+);
+}
 sidora.InitiatePage = function(){
+  sidora.InitiateConfirmAccess();
   sidora.InitiateJSTree();
   sidora.RelocateTreeOnPage();
   sidora.ReformatPage();
@@ -856,6 +848,42 @@ sidora.InitiatePage = function(){
   jQuery("#branding").append("<div class='branding-user-info' style='float:right'> <a href='"+Drupal.settings.basePath+"user'>Profile</a> <a href='"+Drupal.settings.basePath+"user/logout'>Logout</a></div>");
 };
 /*
+ * Return thumbnail if resource has a unique thumbnail that is showing, otherwise return false
+ */
+sidora.resources.checkForThumbnailShownInResourceList = function(currPid){
+  var me = jQuery(jq(currPid));
+  if (typeof(me.children("td").children("div").children("img").attr("src")) == 'string'){
+    var imgChild = me.children("td").children("div").children("img");
+    var currentSrc = imgChild.attr("src");
+    if (currentSrc.indexOf(currPid) != -1) return currentSrc;
+  }
+  return false;
+}
+/*
+ * Attempt to update any thumbnails
+ */
+sidora.resources.updateThumbnails = function(){
+  jQuery("#res_table tr").map(function(){
+    var currPid = this.id;
+    var me = jQuery(this);
+    if (typeof(me.children("td").children("div").children("img").attr("src")) == 'string'){
+      var imgChild = me.children("td").children("div").children("img");
+      var currentSrc = imgChild.attr("src");
+      if (currentSrc.indexOf(currPid) == -1){  //If the current thumbnail is not unique to this item
+        var pidThumbnail = "../info/"+currPid+"/meta/TN/browser";
+        jQuery.ajax(pidThumbnail,{
+          complete:function(res){
+            var currType = res.getResponseHeader("content-type");
+            if (currType.indexOf("image") != -1){
+              imgChild.attr("src",pidThumbnail).attr("height","").attr("width","").addClass("resource-list-tn");
+            }
+          }
+        });
+      }
+    }
+  })
+}
+/*
  * Get the pids of the highlighed resources
  */
 sidora.resources.getHighlighted = function(){
@@ -867,12 +895,12 @@ sidora.resources.getHighlighted = function(){
   return toReturn;
 }
 /*
- * Direct browser opening of the resource.  ASSUMES OBJ AS DSID
+ * Open in a new viewer window
  */
 sidora.resources.openInNewWindow = function(){
   var pids = sidora.resources.getHighlighted();
   for(var i = 0; i < pids.length; i++){
-    window.open(Drupal.settings.basePath+"sidora/info/"+pids[i]+"/meta/OBJ/browser");
+   window.open(sidora.resources.createViewerUrl(pids[i]));
   }
 }
 /*
@@ -898,16 +926,57 @@ sidora.resources.performCopyOrMove = function(copyOrMove, toLocationId){
   var action = 'move/'+fromParent;
   if (copyOrMove == 'copy'){ action = 'copy'; }
   console.log("FCR "+action+" pids:"+pids.join(",")+" dropped on:"+jQuery("#"+toLocationId).find("a").attr("pid"));
+  var newParentExistingChildResourcesCount = parseInt(jQuery("#"+toLocationId).find("a").attr("resourcechildren")); // the original number of resources in the target pid
+  var jst = jQuery("#forjstree").jstree(true);
+  var onSuccessfulCopy = function(ajaxRequest,ajaxReturn){
+     var newParentExistingChildResourceNumber = parseInt(jQuery("#"+toLocationId).find("a").attr("resourcechildren"));
+     var newParentNewChildResourceNumber = newParentExistingChildResourceNumber+1;
+     var newParentExistingHtml = jQuery("#"+toLocationId).text();
+     if (newParentExistingChildResourceNumber == 0){
+        jst.rename_node("#"+toLocationId, newParentExistingHtml + " (" + newParentNewChildResourceNumber + ")");
+      }else{
+        jst.rename_node("#"+toLocationId, newParentExistingHtml.substring(0,newParentExistingHtml.lastIndexOf(" ("))+" (" + newParentNewChildResourceNumber + ")");
+      }
+     jQuery("#"+toLocationId).find("a").attr("resourcechildren",""+newParentNewChildResourceNumber);
+     if (newParentNewChildResourceNumber == (pids.length + newParentExistingChildResourcesCount)){
+       sidora.util.RefreshTree();
+    }  
+   }   
+  var onSuccessfulMove = function(ajaxRequest,ajaxReturn){
+     var newParentExistingChildResourceNumber = parseInt(jQuery("#"+toLocationId).find("a").attr("resourcechildren"));
+     var newParentNewChildResourceNumber = newParentExistingChildResourceNumber+1;
+     var newParentExistingHtml = jQuery("#"+toLocationId).text();
+     if (newParentExistingChildResourceNumber == 0){
+        jst.rename_node("#"+toLocationId, newParentExistingHtml + " (" + newParentNewChildResourceNumber + ")");
+      }else{
+        jst.rename_node("#"+toLocationId, newParentExistingHtml.substring(0,newParentExistingHtml.lastIndexOf(" ("))+" (" + newParentNewChildResourceNumber + ")");
+      }
+     jQuery("#"+toLocationId).find("a").attr("resourcechildren",""+newParentNewChildResourceNumber);
+     var fromSource = jq(fromParent).substring(1);
+     var oldParentExistingChildResourceNumber = parseInt(jQuery("[pid=" + fromSource + "]").attr("resourcechildren"));
+     var oldParentNewChildResourceNumber = oldParentExistingChildResourceNumber - 1;
+     var oldParentNode = jst.get_node(jQuery("[pid='" + fromSource + "']").closest("li").attr("id"));
+     var oldParentExistingHtml = jQuery("#"+oldParentNode.id).text();
+     if (oldParentNewChildResourceNumber == 0){
+        jst.rename_node(oldParentNode,oldParentExistingHtml.substring(0,oldParentExistingHtml.lastIndexOf(" ("))); 
+      }else{
+        jst.rename_node(oldParentNode,oldParentExistingHtml.substring(0,oldParentExistingHtml.lastIndexOf(" ("))+" ("+oldParentNewChildResourceNumber+")");
+      }
+      jQuery("[pid=" + fromSource + "]").attr("resourcechildren",""+oldParentNewChildResourceNumber);
+      if (newParentNewChildResourceNumber == (pids.length + newParentExistingChildResourcesCount)){
+        sidora.util.RefreshTree();
+      }  
+  }  
   for(var i=0;i<pids.length;i++){
     droppedPid = pids[i];
     var userFriendlyName = 'Unknown action';
     if (action != 'copy'){
       jQuery(jq(pids[i])).addClass("is-being-moved");
       userFriendlyName = "Moving "+droppedPid+" from "+fromParent+" to "+droppedOn;
-      sidora.queue.Request(userFriendlyName, '../ajax_parts/'+action+'/'+droppedOn+'/'+droppedPid, null, null, [fromParent,droppedOn,droppedPid]);
+      sidora.queue.Request(userFriendlyName, '../ajax_parts/'+action+'/'+droppedOn+'/'+droppedPid, onSuccessfulMove, null, [fromParent,droppedOn,droppedPid]);
     }else{
       userFriendlyName = "Copying "+droppedPid+" from "+fromParent+" to "+droppedOn;
-      sidora.queue.Request(userFriendlyName, '../ajax_parts/'+action+'/'+droppedOn+'/'+droppedPid, null, null, [droppedOn,droppedPid]);
+      sidora.queue.Request(userFriendlyName, '../ajax_parts/'+action+'/'+droppedOn+'/'+droppedPid, onSuccessfulCopy, null, [droppedOn,droppedPid]);
     }
     console.log(userFriendlyName);
   }
@@ -919,20 +988,20 @@ This function can possibly be used in future to generate a message alerting the 
 and also possibly providing the user with some custom actions like move & replace, ignore move etc.
 */
 sidora.resources.checkForDuplicateResourcesRA = function(copyOrMove, toLocationId){
-	// get the pid of the target 
-	var targetPid = jQuery("#"+toLocationId).children("a").attr("pid");
-	// ajax call to generate a list of the resources currently on the target
+  // get the pid of the target 
+  var targetPid = jQuery("#"+toLocationId).children("a").attr("pid");
+  // ajax call to generate a list of the resources currently on the target
  jQuery.ajax({
-			url: "../ajax_parts/generate_resource_list/"+targetPid,
-			success: function(resourceList){
+      url: "../ajax_parts/generate_resource_list/"+targetPid,
+      success: function(resourceList){
           var currentChildrenPids = JSON.parse(resourceList);;
           for (var i = 0; i < sidora.util.dragResources.length; i++){
             if (jQuery.inArray(sidora.util.dragResources[i],currentChildrenPids) > -1)
            { 
-					 //alert('we found a duplicate');
-					 }
+           //alert('we found a duplicate');
+           }
           }
-			}
+      }
  });
 }
 /*
@@ -987,6 +1056,7 @@ sidora.ontology._createSubmenu = function(ontologyChildren){
       var model = "";
       var formName = "";
       var classDisabled = "";//" disabled";
+      var ontologyId = "";
       if (typeof(obj.model) != 'undefined') model = ' model="'+obj.model+'"';
       if (typeof(obj.form) != 'undefined') formName = ' formname="'+obj.form+'"';
       if (typeof(obj['ontology-id']) != 'undefined') ontologyId = ' ontology-id="'+obj['ontology-id']+'"';
@@ -996,74 +1066,6 @@ sidora.ontology._createSubmenu = function(ontologyChildren){
   }
   return toReturn;
 }
-/*
-sidora.concept.OntologySelector = function(){
-  var htmlToShow = '<div id="ontologies" style="clear:both;height:90%;height:calc(100% - 47px);">';
-  htmlToShow += '<select name="OntologyLevel1" size="7" style="width:50%;width:calc(50% - 20px);margin:5px;height: 100%;"></select>';
-  htmlToShow += '<select size="7" name="OntologyLevel2" style="width:50%;width:calc(50% - 20px);margin:5px;height: 100%;"></select>';
-  htmlToShow += '</div>';
-  var htmlBottomPanel = "<div style='position:absolute;bottom:5px;right:5px;'><span id='conceptPermissionSave' href='#' onclick='return false;'>Create Concept</span></div>";
-  var fullHtml = "<div id='conceptPermissions' style='height:100%;background:white;'>"+htmlToShow+htmlBottomPanel+"</div>";
-  var sbOnFinish = function(){
-    jQuery("#conceptPermissionSave").button({disabled:true}).click(function(){
-      Shadowbox.close();
-      setTimeout(function(){
-      Shadowbox.open({
-        content:    "../edit_metadata/"+window.sidora.concept.GetPid()+"/EAC-CPF/Research%20Project",
-        player:     "iframe",
-        title:      "Create Concept",
-        options: {
-          onFinish:  function(){}
-        }
-      });},1000);
-    });
-    for (var propUnfiltered in window.sidora.ontology) {
-      prop = propUnfiltered.replace(/ /g,"");
-      var possTitle = window.sidora.ontology[propUnfiltered].description;
-      var trueTitle = "";
-      if (possTitle != "") trueTitle = " title='"+possTitle+"'";
-      jQuery("select[name='OntologyLevel1']").append("<option id='"+prop+"Option'"+trueTitle+">"+propUnfiltered+"</option>");
-      jQuery("#"+prop+"Option").click(
-        function(currProp){
-          return function(){
-            var addedOne = false;
-            jQuery("select[name='OntologyLevel2']").children().remove();
-            for (var prop2Unfiltered in window.sidora.ontology[currProp].children) {
-              prop2 = prop2Unfiltered.replace(/ /g,"");
-              addedOne = true;
-              var possTitle = window.sidora.ontology[currProp].children[prop2Unfiltered].description;
-              var trueTitle = "";
-              if (possTitle != "") trueTitle = " title='"+possTitle+"'";
-              jQuery("select[name='OntologyLevel2']").append("<option id='"+prop2+"Option'"+trueTitle+">"+prop2Unfiltered+"</option>");
-              jQuery("#"+prop2+"Option").click(function(){jQuery("#conceptPermissionSave").button("enable");});
-            }
-            if (addedOne){
-              jQuery("#conceptPermissionSave").button("disable");
-            }else{
-              jQuery("#conceptPermissionSave").button("enable");
-            }
-          }
-        }(propUnfiltered)
-      );
-    }
-  }
-  var sbH = jQuery(window).height() - 600;
-  if (sbH < 10) sbH = 400;
-  sbH = 323;
-  var sbW = 600;
-  Shadowbox.open({
-        content:    fullHtml,
-        player:     "html",
-        title:      "Concept Ontology",
-        height: sbH,
-        width: sbW,//jQuery(window).width()- 600,
-        options: {
-          onFinish:  sbOnFinish
-        }
-    });
-
-}
-*/
 /*
  *  Got tired of CSS fiddling, resizing the main div programmatically based on assumed navigation size
  */
@@ -1079,24 +1081,13 @@ sidora.ResizeOnWindowResize = function(){
 /*
  * Attempts to pull the number of child concepts from the tree
  */
-sidora.concept.GetConceptChildrenLength = function(suggestedName){
-  var conceptName = suggestedName;
-  //If didn't send in concept name, try to get it from tree
-  if (typeof(conceptName) == 'undefined' || conceptName == null){
-    var itemSelectorForCurrentItemInTree = 'a[href=\"'+window.location.pathname + window.location.search + window.location.hash +'\"]';
-    var directPull = jQuery(itemSelectorForCurrentItemInTree).attr("conceptchildren");
-    if (typeof(directPull) != 'undefined'){
-      return parseInt(directPull);
-    }
-    conceptName = jQuery(itemSelectorForCurrentItemInTree).text();
+sidora.concept.GetConceptChildrenLength = function(){
+  var itemSelectorForCurrentItemInTree = 'a[href=\"'+window.location.pathname + window.location.search + window.location.hash +'\"]';
+  var directPull = jQuery(itemSelectorForCurrentItemInTree).attr("conceptchildren");
+  if (typeof(directPull) != 'undefined'){
+    return parseInt(directPull);
   }
-  //If there's a (num) at the end, take number from there
-  var numConceptChildren = conceptName;
-  var newTitle = "0";
-  if (conceptName.lastIndexOf(" (") > 0){
-    newTitle = conceptName.substring(conceptName.lastIndexOf(" (")+2, conceptName.lastIndexOf(")"));
-  }
-  return parseInt(newTitle);
+  return parseInt("-1"); // return -1 if there's any error in retrieving the conceptchildren value.
 }
 /*
  * Attempts to pull a concept name from the tree or just returns whatever is passed in
@@ -1144,12 +1135,34 @@ sidora.CloseIFrame = function(newlyCreatedConceptId, typeOfClosure){
   }
   sidora.util.RefreshTree();
 }
+sidora.util.constantCheck = function(){
+  setTimeout(sidora.util.constantCheck, 30000);
+  sidora.resources.updateThumbnails();
+}
 /*
  * Goes to get the tree from the server and replaces exsiting tree
  * singleTripWaitMilliseconds - number of milliseconds to wait for other refreshTree requests to come in
  *      - so that only one refresh tree request goes out no matter how many times its called during that time period
  */
 sidora.util.refreshTreeRequestInProgress = false;
+sidora.util.RefreshTreeIfNew = function(secondsOfWait){
+  if (typeof(secondsOfWait) == 'undefined') secondsOfWait = .01;
+  setTimeout(function(){
+    jQuery.ajax({
+      url: '../ajax_parts/tree',
+    }).done(function(tree_html){
+      if (tree_html == '') window.location = Drupal.settings.basePath+'user';  //No tree indicates a user problem
+      if (tree_html == sidora.util.latestTreeGrab){
+        console.log("Tree same as prior tree, no update to UI");
+        return;
+      }
+      sidora.util.latestTreeGrab = tree_html;
+      sidora.RefreshTreeHtml(tree_html);
+    }).fail(function(failure_obj){
+      sidora.recentAjaxFailure(failure_obj);
+    });
+  },secondsOfWait*1000);
+}
 sidora.util.RefreshTree = function(singleTripWaitMilliseconds){
   if (typeof(singleTripWaitMilliseconds) == 'undefined') singleTripWaitMilliseconds = 10;
   //Wait to see if we get a few requests at a time before going thru with the reload
@@ -1159,6 +1172,11 @@ sidora.util.RefreshTree = function(singleTripWaitMilliseconds){
     jQuery.ajax({
       url: '../ajax_parts/tree',
     }).done(function(tree_html){
+      if (tree_html == '') window.location = Drupal.settings.basePath+'user';  //No tree indicates a user problem
+      sidora.util.latestTreeGrab = tree_html;
+      //Note that you may want to refresh the tree even if the latest is the same as the previous
+      //For example, a concept move has failed.  The concept move shows in the UI, so the tree
+      //needs to be reverted back.  If you want to update the tree only on if it's changed see RefreshTreeIfNew
       sidora.RefreshTreeHtml(tree_html);
     }).fail(function(failure_obj){
       sidora.recentAjaxFailure(failure_obj);
@@ -1223,6 +1241,21 @@ sidora.util.Confirm = function(title, questionText, onConfirmation, onCancel, co
  */
 sidora.concept.DeleteConcept = function(){
   jQuery('#deleteConceptDialog').remove();
+  if (sidora.concept.GetConceptChildrenLength() == "-1"){
+    jQuery("body").append("<div id='deleteConceptDialog' style='display:none;' title='Delete Concept'><p>Error getting the child concepts for this concept. Cannot delete this concept</p><p>"+sidora.concept.GetName()+" ("+sidora.concept.GetPid()+")</p></div>");
+    jQuery("#deleteConceptDialog").dialog({
+      resizable: false,
+      height:250,
+      width: 400,
+      modal: true,
+      buttons: {
+        "Close": function() {
+          jQuery( this ).dialog( "close" );
+        }
+      }
+    });
+    return;
+  }
   if (sidora.concept.GetConceptChildrenLength() + sidora.resources.GetLength() > 0){
     jQuery("body").append("<div id='deleteConceptDialog' style='display:none;' title='Delete Concept'><p>This concept has "+sidora.concept.GetConceptChildrenLength()+" concept(s) and has "+sidora.resources.GetLength()+" resource(s) as children. It cannot be deleted while it has children.</p><p>"+sidora.concept.GetName()+" ("+sidora.concept.GetPid()+")</p></div>");
     jQuery("#deleteConceptDialog").dialog({
@@ -1427,14 +1460,23 @@ sidora.resources.individualPanel.Create = function() {
   });
   jQuery('#edit-resource-metadata-menu').unbind('click');
   jQuery('#edit-resource-metadata-menu').click(function(){
-    var pids = sidora.resources.getHighlighted();
-    if (pids.length != 1) return;
-    Shadowbox.open({
-      content:    "../edit_metadata/"+sidora.resources.individualPanel.resourceOfInterest.pid+"",
+  var pids = sidora.resources.getHighlighted();
+	var pids_array = sidora.resources.getHighlighted();
+  //  if (pids.length != 1) return;
+  pids = pids_array.join("&");
+	  Shadowbox.open({
+      content:    "../edit_metadata/"+pids+"",
       player:     "iframe",
       title:      "Edit Metadata",
       options: {
-        onFinish:  function(){}
+        onFinish:  function(){
+          //Allow the frame to go fullscreen if needed
+          jQuery("#sb-player").attr("allowfullscreen","true");
+          jQuery("#sb-player").attr("webkitallowfullscreen","true");
+          jQuery("#sb-player").attr("mozallowfullscreen","true");
+          jQuery("#sb-player").attr("msallowfullscreen","true");
+          jQuery("#sb-player").attr("oallowfullscreen","true");
+        }
       }
     });
   });
@@ -1467,14 +1509,21 @@ sidora.resources.individualPanel.LoadRelationships = function(){
   }
 }
 /*
+ * Generates a url for the object viewer
+ */
+sidora.resources.createViewerUrl = function(pid){
+  return Drupal.settings.basePath+'sidora/resource_viewer/'+pid;
+}
+/*
  * Loads the viewer once an item has been clicked on
  */
 sidora.resources.individualPanel.LoadContent = function(suppressResourceViewerReload){
   if (typeof(suppressResourceViewerReload) == 'undefined'){ suppressResourceViewerReload = false; }
   roipid = sidora.resources.individualPanel.resourceOfInterest.pid;
-    //<iframe frameborder="0" height="100%" width="100%" src="http://***REMOVED***.dev1.my***REMOVED***.net/***REMOVED***/sidora/GitMain/viewer/si:258581/IMAGE/ids_iframe"></iframe>
   if (!suppressResourceViewerReload){
-    var resourceViewerHtml = '<iframe frameborder="0" height="100%" width="100%" src="'+Drupal.settings.basePath+'sidora/resource_viewer/'+sidora.resources.individualPanel.resourceOfInterest.pid+'"></iframe> ';
+    var viewerUrl = sidora.resources.createViewerUrl(sidora.resources.individualPanel.resourceOfInterest.pid);
+    var resourceViewerHtml = '<iframe id="iFrame" frameborder="0" height="100%" width="100%" allowfullscreen="true" webkitallowfullscreen="true" mozallowfullscreen="true" oallowfullscreen="true" msallowfullscreen="true" src="'+viewerUrl+'"></iframe> ';
+		//console.log("in individual panel : "+resourceViewerHtml);
     jQuery('#resourceIframeHolder').children().remove();
     jQuery('#resourceIframeHolder').append(resourceViewerHtml);
   }
@@ -1530,7 +1579,7 @@ sidora.util.deletePid = function(pidOfInterest, onSuccess, onFailure){
   }
   var url = '../ajax_parts/unassociate_delete_orphan/'+unassociateFrom+'/'+pidOfInterest;
   var userFriendlyToastName = "Remove "+pidOfInterest+" from "+unassociateFrom;
-	sidora.queue.RequestPost(userFriendlyToastName,url,"",onSuccess,onFailure,[pidOfInterest,unassociateFrom]);
+  sidora.queue.RequestPost(userFriendlyToastName,url,"",onSuccess,onFailure,[pidOfInterest,unassociateFrom]);
   sidora.queue.Next();
 }
 /*
@@ -1647,7 +1696,7 @@ sidora.manage.OpenCurrentConfig = function(){
             });
             jQuery("#addDatastream").click(function(){
               jQuery('#addDatastreamDialog').remove();
-              jQuery("body").append("<div id='addDatastreamDialog' style='display:none;' title='Add Datastream'><iframe height='1000%' width='100%' style='height:100%;width:100%' src='/sidora/manage/"+pid+"/upload' frameborder='0' marginwidth='0' marginheight='0' allowfullscreen></iframe></div>");
+              jQuery("body").append("<div id='addDatastreamDialog' style='display:none;' title='Add Datastream'><iframe height='1000%' width='100%' style='height:100%;width:100%' src='"+Drupal.settings.basePath+"sidora/manage/"+pid+"/upload' frameborder='0' marginwidth='0' marginheight='0' allowfullscreen></iframe></div>");
               jQuery("#addDatastreamDialog").dialog({
                 resizable: true,
                 height:600,
@@ -1711,6 +1760,7 @@ jQuery(window).resize(function() {
  * If the browser doesn't have a console, give it something so we're not creating JS errors
  */
 if (typeof(window.console) == 'undefined'||typeof(window.console.log)=='undefined'){window.console = {log:function(){}};}
+sidora.util.constantCheck(); //All polling links in to this function
 
 
 /**
@@ -1726,4 +1776,33 @@ http://learn.jquery.com/using-jquery-core/faq/how-do-i-select-an-element-by-an-i
 function jq( myid ) {
   return "#" + myid.replace( /(:|\.|\[|\])/g, "\\$1" );
 }
-
+function getNewPid( jsonString ) {
+  var pidString = jsonString.slice(jsonString.indexOf("New Pid:"),jsonString.indexOf(":End New Pid"));
+  var pidArray = pidString.split(":");
+  return (pidArray[1]+":"+pidArray[2]);
+} 
+function writeCookie(name,value,days) {
+    var date, expires;
+    if (days) {
+        date = new Date();
+        date.setTime(date.getTime()+(days*24*60*60*1000));
+        expires = "; expires=" + date.toGMTString();
+            }else{
+        expires = "";
+    }
+    document.cookie = name + "=" + value + expires;
+}
+function readCookie(name) {
+    var i, c, ca, nameEQ = name + "=";
+    ca = document.cookie.split(';');
+    for(i=0;i < ca.length;i++) {
+        c = ca[i];
+        while (c.charAt(0)==' ') {
+            c = c.substring(1,c.length);
+        }
+        if (c.indexOf(nameEQ) == 0) {
+            return c.substring(nameEQ.length,c.length);
+        }
+    }
+    return '';
+}

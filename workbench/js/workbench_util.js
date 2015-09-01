@@ -95,7 +95,7 @@ sidora_util.lock.Release = function(pidToKill){
 
 sidora_util.ParentPid = function(){
   var pid = '';
-  var checkAgainst = ["/sidora/create_concept","/sidora/create_resource","/sidora/edit_metadata"];
+  var checkAgainst = ["/sidora/create_concept","/sidora/create_resource","/sidora/edit_metadata","/sidora/edit_metamulti"];
   for (var i = 0; i < checkAgainst.length; i++){ 
     var piecesToCheck = checkAgainst[i];
     var ptcLocation = window.location.href.indexOf(piecesToCheck);
@@ -111,6 +111,13 @@ sidora_util.ParentPid = function(){
   }
   return decodeURIComponent(pid);
 }
+sidora_util.ajaxUrl = function(count){
+  var pidsBeingProcessedString = sidora_util.ParentPid();
+	var pidsBeingProcessedArray = pidsBeingProcessedString.split("&");
+	var pidsInUrl = window.location.href.indexOf(pidsBeingProcessedString)
+	var baseUrl = window.location.href.substr(0,pidsInUrl);
+	return baseUrl+pidsBeingProcessedArray[count];
+}	
 jQuery(document).ready(function(){
   var pp = sidora_util.ParentPid();
   if (pp != ''){
@@ -118,3 +125,4 @@ jQuery(document).ready(function(){
     sidora_util.lock.KeepAlive();
   }
 });
+  
