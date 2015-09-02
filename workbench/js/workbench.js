@@ -36,7 +36,7 @@ sidora.concept.LoadContentHelp.Resources.TableLoad = function(conceptOfInterest)
      'lengthMenu':[5,10,50,100],
      'pageLength': (readCookie('Drupal.pageLength') == '')?parseInt('5'):parseInt(readCookie('Drupal.pageLength')),
      'search': {
-       'search': (readCookie('Drupal.dtFilter') == '')?'':readCookie('Drupal.dtFilter')
+       'search': (readCookie('Drupal.dtFilter') == '')?'':readCookie('Drupal.dtFilter') + '\n' + '' + '\n' + ((readCookie('Drupal.sortOn') == '')?'':readCookie('Drupal.sortOn')) + '\n' + ((readCookie('Drupal.sortOrder') == '')?'':readCookie('Drupal.sortOrder'))
       },
      'processing': true,
      'serverSide': true,
