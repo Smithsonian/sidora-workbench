@@ -191,9 +191,7 @@ function sidora_menu() {
    ),
  );
 }
-function sidora_config_transfer(){
-  return 'yes BBB';
-}
+
 
 function sidora_management_ingest($pid, $dsid, $label = NULL, $mimeType = NULL){
   $object = sidora_obj($pid);
@@ -1605,31 +1603,67 @@ function sidora_settings_import($object){
       'content_model' => $association->content_model,
       'form_name' => $association->form_name,
       'dsid' => $association->dsid,
-      'title_field' => '['.implode('][',(array)($association->title_field)).']',
+      'title_field' => serialize((array)($association->title_field)),
       'transform' => $association->transform,
       'self_transform' => $association->self_transform,
       'template' => $association->template,
     );
-    dsm($a_object);
     $insert_success = db_insert('xml_form_builder_form_associations')
       ->fields($a_object)
       ->execute();
     $form_name = $association->form_name;
     $model = $association->content_model;
     if ($insert_success){
-      drupal_set_message(t('Successfully imported on form association "%name" to "%model".', array('%name' => $form_name, '%model' => $model)));
+      drupal_set_message(t('Successfully imported form association "%name" to "%model".', array('%name' => $form_name, '%model' => $model)));
     }else{
-      drupal_set_message(t('FAILED imported on form association "%name" to "%model".', array('%name' => $form_name, '%model' => $model)),'error');
+      drupal_set_message(t('FAILED import form association "%name" to "%model".', array('%name' => $form_name, '%model' => $model)),'error');
     }
   }
   foreach($admin_settings as $setting_name=>$setting_value){
     $original_value = variable_get($setting_name);
     if ($original_value === $setting_value){
-      drupal_set_message(t('Administrative setting "%name" was already set.',array('%name' => $setting_name)));
+      drupal_set_message(t('Administrative setting "%name" was already set to the content specified in this configuration.',array('%name' => $setting_name)));
     }else{
       variable_set($setting_name,$setting_value);
-      drupal_set_message(t('Administrative setting "%name" set from "%original" to "%newval".',array('%name' => $setting_name,'%original'=>$original_value,'%newval'=>$setting_value)));
+      drupal_set_message(t('Administrative setting "%name" set from <br/>"%original" <br/>to <br/>"%newval".',array('%name' => $setting_name,'%original'=>$original_value,'%newval'=>$setting_value)));
     }
+  }
+}
+function sidora_config_transfer($direct_download = ""){
+  $download_filename = 'site_config.json';
+  if ($direct_download == $download_filename){
+    $sidora_settings_object = sidora_settings_object();
+    header("Content-type: application/json");
+    header("Content-Disposition: attachment; filename=\"$download_filename\"");
+    print json_encode($sidora_settings_object);
+    exit();
+  }else{
+    $form = drupal_get_form('sidora_config_form');
+    $download_link = '<a href="config_transfer/'.$download_filename.'">Download current config</a>';
+    return $download_link.drupal_render($form);
+  }
+}
+function sidora_config_form($form, &$form_state){
+  $form['file'] = array(
+    '#type' => 'file',
+    '#title' => t('Config File'),
+    '#description' => t('This configuration will be immediately applied on clicking the "Import" button below.'),
+  );
+  $form['upload_submit'] = array(  //ensure this aligns with information in the validator on the #id check
+    '#type' => 'submit',
+    '#value' => t('Import And Apply Config File'),
+  );
+  return $form;
+}
+function sidora_config_form_submit($form, &$form_state) {
+  global $user;
+  $validators = array('file_validate_extensions' => array('json txt'));
+  $file = file_save_upload('file',$validators);
+  if (!empty($file)){
+    $filepath = drupal_realpath($file->uri);
+    $file_contents = file_get_contents($filepath);
+    $object = json_decode($file_contents);
+    sidora_settings_import($object);
   }
 }
 /*
@@ -1682,9 +1716,9 @@ function sidora_settings_object(){
     }
   }
   $full_export = array();
-  $full_export['forms'] = array_slice($forms,1,2);;
-  $full_export['associations'] = array_slice($associations,1,2);
-  $full_export['admin_settings'] = array_slice($settings_holder,1,2);
+  $full_export['forms'] = $forms;
+  $full_export['associations'] = $associations;
+  $full_export['admin_settings'] = $settings_holder;
   return $full_export;
 }
 /**
@@ -4641,12 +4675,10 @@ function sidora_html_tree($query_result_tree, $input_path = ''){
     $current_path = $input_path;
     if ($input_path != '') $current_path .= ',';
     $current_path .= $pid;
-   // $to_return .= '<li><a href="'.base_path().'sidora/workbench/#'.$pid.'?path='.$input_path.'" pid="'.$pid.'" fullname="'.$t_element['t']['value'].'" conceptchildren="'.$t_element['k0']['value'].'">';
     $resource_children_num = -1;
     if (array_key_exists('k1',$t_element)) $resource_children_num = $t_element['k1']['value'];
     $to_return .= '<li><a href="'.base_path().'sidora/workbench/#'.$pid.'?path='.$input_path.'" pid="'.$pid.'" fullname="'.$t_element['t']['value'].'" conceptchildren="'.$t_element['k0']['value'].'" resourcechildren="'.$resource_children_num.'">';
     $to_return .= $t_element['t']['value'];
-    //if ($t_element['k0']['value'] > 0) $to_return .= ' ('.$t_element['k0']['value'].')';
     if ($resource_children_num > 0) $to_return .= ' ('.$resource_children_num.')';
     $to_return .= '</a>';
     if (array_key_exists('children',$t_element)){
@@ -4798,14 +4830,15 @@ Array(
 
  *  ...and so on.  k0 is the number of children
  */
-function sidora_fill_concepts_children($query_result, $already_filled_pids = array()){
+function sidora_fill_concepts_children($query_result, $current_path = array()){
   if (is_array($query_result)){
     foreach ($query_result as $c_index=>$child){
       $child_pid = $child['o']['value'];
-      if (!in_array($child_pid,$already_filled_pids)){
-        $already_filled_pids[] = $child_pid;
+      if (!in_array($child_pid,$current_path)){
+        $path_to_send = $current_path;
+        $path_to_send[] = $child_pid;
         $results = _sidora_get_child_results_cache($child_pid);
-        $query_result[$c_index]['children'] = sidora_fill_concepts_children($results, $already_filled_pids);
+        $query_result[$c_index]['children'] = sidora_fill_concepts_children($results, $path_to_send);
       }else{
         $query_result[$c_index]['already_in_tree'] = true;
       }
