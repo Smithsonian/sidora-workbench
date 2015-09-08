@@ -379,7 +379,7 @@ sidora.concept.LoadContent = function(leaveContentIfAlreadyLoaded){
 sidora.util.hasElement = function(data){
   return /<[a-z][\s\S]*>/i.test(data);
 }
-sidora.util.jMenuConfig =  {ulWidth:250, openClick:true, TimeBeforeClosing:8000};
+sidora.util.jMenuConfig =  {ulWidth:250, openClick:false, TimeBeforeClosing:8000};
 sidora.queue = new SidoraQueue();
 sidora.InitiateJSTree = function(){
   jQuery('#forjstree').bind('loaded.jstree', function(e,data){setTimeout(function(){
@@ -1007,11 +1007,13 @@ sidora.ontology._createSubmenu = function(ontologyChildren){
       var formName = "";
       var classDisabled = "";//" disabled";
       var ontologyId = "";
-      if (typeof(obj.model) != 'undefined') model = ' model="'+obj.model+'"';
+      var classIcon = "";
+			if (typeof(obj.model) != 'undefined') model = ' model="'+obj.model+'"';
       if (typeof(obj.form) != 'undefined') formName = ' formname="'+obj.form+'"';
       if (typeof(obj['ontology-id']) != 'undefined') ontologyId = ' ontology-id="'+obj['ontology-id']+'"';
       if (typeof(obj.disabled) != 'undefined' && obj.disabled) classDisabled = " ui-state-disabled";
-      toReturn += ("<li title='"+obj.description+"' class=''><a onclick='return false;' href='#'"+model+formName+ontologyId+" class="+classDisabled+">"+key.replace(/ /g, '&nbsp;')+"</a>"+childrenHtml+"</li>\n");
+      if (childrenHtml.length > 0) classIcon = '<input type="image" align ="right" src="'+Drupal.settings.pathToTheme+'/images/list-item.png">';
+			toReturn += ("<li title='"+obj.description+"' class=''><a onclick='return false;' href='#'"+model+formName+ontologyId+" class="+classDisabled+">"+key.replace(/ /g, '&nbsp;')+classIcon+"</a>"+childrenHtml+"</li>\n");
     }
   }
   return toReturn;

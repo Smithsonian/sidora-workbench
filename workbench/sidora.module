@@ -3084,7 +3084,7 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
           $to_output .= '<li><a href="" model="si:fieldbookCModel" formname="Digitized Text (PDF)" ontology-id="DigitizedTextPdf">Digitized&nbsp;Text&nbsp;PDF&nbsp;(MODS)</a>';
           $to_output .= '</li>';
           $to_output .= '<li><a href="" model="si:datasetCModel" formname="Tabular Data Set Object" ontology-id="Datasets">Tabular&nbsp;Datasets</a></li>';
-          $to_output .= '<li><a href="">General&nbsp;Image</a><ul>';
+          $to_output .= '<li><a href="">General&nbsp;Image&nbsp;<input type="image" align ="right" src="' . file_create_url(path_to_theme()) . '/images/list-item.png"></a><ul>';
           $to_output .=   '<li><a href="" model="si:generalImageCModel" formname="General Image Description" ontology-id="GeneralImage_GeneralImage">General&nbsp;Image&nbsp;Description&nbsp;(MODS)</a></li>';
           $to_output .=   '<li><a href="" model="si:generalImageCModel" formname="Camera Trap Image" ontology-id="GeneralImage_CameraTrapImage">Camera&nbsp;Trap&nbsp;Image&nbsp;(MODS)</a></li>';
           $to_output .= '</ul></li>';
@@ -3270,6 +3270,7 @@ function sidora_xml_form_builder_get_transforms(){
  */
 function sidora_block_view($delta = ''){
   try{
+  drupal_add_js('jQuery.extend(Drupal.settings, { "pathToTheme": "' . file_create_url(path_to_theme()) . '" });', 'inline');
   if (strpos(current_path(), 'sidora/workbench') === FALSE){
     return;
   }
@@ -3327,7 +3328,7 @@ function sidora_block_view($delta = ''){
 </ul>'.
 */
  '';
-      $block['content'] .= '
+  	    $block['content'] .= '
   <div id="concept_tabs">
     <ul>
       <li><a href="#concept-meta">Concept Overview</a></li>
