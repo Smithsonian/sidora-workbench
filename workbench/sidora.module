@@ -2962,7 +2962,7 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
       if ($download == 'browser' && $formatted == 'dataTableServerSideProcessing'){
         $jsdt_title_and_type_search_val = filter_var($_GET['search']['value'], FILTER_SANITIZE_STRING);
 				//The search value holds both the type of object and the title search, pull those out
-        $vals = explode("\n",$jsdt_title_and_type_search_val);
+				$vals = explode("\n",$jsdt_title_and_type_search_val);
         $jsdt_search_val = $vals[0];
         $jsdt_title_search_val = empty($vals[1])?'':$vals[1];
         if (!array_key_exists($jsdt_search_val, $resource_types)){
