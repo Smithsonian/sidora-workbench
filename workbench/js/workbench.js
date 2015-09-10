@@ -1007,12 +1007,12 @@ sidora.ontology._createSubmenu = function(ontologyChildren){
       var formName = "";
       var classDisabled = "";//" disabled";
       var ontologyId = "";
-      var classIcon = "";
+      var classIcon = " ";
 			if (typeof(obj.model) != 'undefined') model = ' model="'+obj.model+'"';
       if (typeof(obj.form) != 'undefined') formName = ' formname="'+obj.form+'"';
       if (typeof(obj['ontology-id']) != 'undefined') ontologyId = ' ontology-id="'+obj['ontology-id']+'"';
       if (typeof(obj.disabled) != 'undefined' && obj.disabled) classDisabled = " ui-state-disabled";
-      if (childrenHtml.length > 0) classIcon = '<input type="image" align ="right" src="'+Drupal.settings.pathToTheme+'/images/list-item.png">';
+      if (childrenHtml.length > 0) classIcon = ' <input type="image" align ="right" position="absolute" src="'+Drupal.settings.pathToTheme+'/images/list-item.png">';
 			toReturn += ("<li title='"+obj.description+"' class=''><a onclick='return false;' href='#'"+model+formName+ontologyId+" class="+classDisabled+">"+key.replace(/ /g, '&nbsp;')+classIcon+"</a>"+childrenHtml+"</li>\n");
     }
   }
