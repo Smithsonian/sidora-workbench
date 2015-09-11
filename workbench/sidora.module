@@ -348,11 +348,16 @@ jQuery(document).ready(function(){
   </tbody></table>
   <input class="form-submit" value="Save Changes" onclick="" id="submitObjProperties"></div>
 <div id="objectManagementDatastreams" class="object-properties"><table>
-    <tbody><tr><th>ID</th><th>Label</th><th>State</th><th>Mime Type</th><th>Date Created</th><th>Actions</th></tr>
+    <tbody><tr><th>ID</th><th>Label</th><th>State</th><th>Mime Type</th><th>Date Created</th><th>Versions</th><th>Actions</th></tr>
 ';
   foreach($object as $dsid=>$datastream){
     print '<tr><td>'.$datastream->id.'</td><td>'.$datastream->label.'</td><td>'.$datastream->state.'</td><td>'.$datastream->mimetype.'</td><td>'.$datastream->createdDate.'</td><td>';
-    $viewer_filename = $datastream->id.'.';
+    if ($datastream->versionable) {
+      $datastream_url = "islandora/object/{$datastream->parent->id}/datastream/{$datastream->id}/version";
+      print '<a ref="#" onclick="window.sidora.manage.versionHistory(\''.$datastream_url.'\',\''.$datastream->id.'\'); return false;">'.count($datastream).'</a> ';
+    }
+    print '</td><td>';
+		$viewer_filename = $datastream->id.'.';
     if (strpos($datastream->mimetype,'image/') === 0)
       $viewer_filename .= substr($datastream->mimetype,6);
     else
