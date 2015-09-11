@@ -447,10 +447,10 @@ function sidora_resource_viewer($pid){
 								print sidora_audio_view_object($pid);
 								exit();
 								break;
-							/*case 'JW Video Player':
+							case 'JW Video Player':
 							  sidora_video_view_object($pid);
 								exit();
-								break;	*/
+								break;	
 							case 'IDS':
                 return sidora_view_ids_iframe($pid, $dsid);
                 break;
@@ -2189,7 +2189,7 @@ function sidora_create_resource_get_upload_form_html($model, $upload_button_text
     'si:datasetCModel' => array('csv', 'xml', 'xlsx', 'xls', 'dat', 'med', 'arg', 'slt'),
     'si:fieldbookCModel' => array('pdf'),
     'islandora:sp-audioCModel' => array('mp3','mp4','aiff','aac','ogg','wav','wma'),
-		'islandora:sp_videoCModel' => array('wmv','mp4','ogv','3gp'),
+		'islandora:sp_videoCModel' => array('ogg','mp4','mov','qt', 'm4a', 'avi'),
 		'*' => array('*'),
   );
   if (array_key_exists($model, $file_extensions)){
@@ -6612,10 +6612,10 @@ function sidora_audio_view_object($pid) {
   $output = drupal_get_css() . drupal_get_js() . $output;
   return $output;
 }
-/*function sidora_video_view_object($pid) {
+function sidora_video_view_object($pid) {
 	$object = sidora_obj($pid);
 	$variables = array('islandora_object' => $object);
 	islandora_video_islandora_sp_videoCModel_islandora_view_object($object,'','');
  // $output = drupal_get_css() . drupal_get_js() . $output;
  // return $output;
-}*/
+}
