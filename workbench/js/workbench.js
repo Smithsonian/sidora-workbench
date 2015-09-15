@@ -60,7 +60,7 @@ sidora.concept.LoadContentHelp.Resources.TableLoad = function(conceptOfInterest)
       }
       jQuery(this).removeClass('selected');
     } else {
-      if (!e.ctrlKey){
+      if (!e.ctrlKey && !e.metaKey){
         table.$('tr.selected').removeClass('selected');
         sidora.resources.individualPanel.resourceOfInterest = null;
       }
@@ -732,10 +732,10 @@ sidora.InitiateJSTree = function(){
   if (typeof(window.sidora.treeAlreadyBound) == 'undefined'){
     console.log("BINDING TREE");
     jQuery("body").keydown(function(e){
-      jQuery(".fakejstree-copy").toggle(e.ctrlKey);
+      jQuery(".fakejstree-copy").toggle(e.ctrlKey || e.metaKey);
     });
     jQuery("body").keyup(function(e){
-      jQuery(".fakejstree-copy").toggle(e.ctrlKey);
+      jQuery(".fakejstree-copy").toggle(e.ctrlKey || e.metaKey);
     });
     jQuery(document).on('dnd_start.vakata',function(event,data){
       ///console.log("saving tree");
