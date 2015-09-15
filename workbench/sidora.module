@@ -1546,7 +1546,24 @@ function sidora_osd_proxy($pid){
  */
 function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $extra = ''){
   global $user;
-  if ($one == 'osd_proxy'){
+  if ($one == 'make_mp4'){
+	  $object = sidora_obj($two);
+		$mime_detect = new MimeDetect();
+		$ext = $mime_detect->getExtension($object['OBJ']->mimeType);
+    $archival_file = str_replace(":", "-", $object->id) . ".OBJ.{$ext}";
+    $archival_file = file_create_filename($archival_file, 'temporary://');
+    $object['OBJ']->getContent($archival_file);
+	  $archival_file = drupal_realpath($archival_file);
+    $out_file = 'out_file.mp4';
+    $ffmpeg_executable = variable_get('islandora_video_ffmpeg_path', 'ffmpeg');
+    $command = "$ffmpeg_executable -i $archival_file -f mp4 -vcodec libx264 -preset medium -acodec libfaac -ab 128k -ac 2 -async 1 $out_file";
+    $return_value = FALSE;
+    echo $command;
+		exec($command, $output, $return_value);
+    echo "return : ".$return_value;
+		echo exec('pwd');
+	}  
+	if ($one == 'osd_proxy'){
     sidora_osd_proxy($two);
   }
 	if ($one == 'user_register'){
