@@ -2449,6 +2449,15 @@ function sidora_create_resource_get_metadata_form_html($parent_pid, $model, $for
  * Is a form to choose from their existing codebooks or to upload a new example data file to use
  */
 function sidora_codebook_upload_form($form, &$form_state){
+  $form['radio']['choice'] = array(
+    '#type' => 'radios',
+    '#title' => t('Select option for column headers'),
+    '#description' => t('This determines if the first line of the data files is a list of headings for the data, or is part of the data itself'),
+    '#options' => array( 
+      t('All uploaded data files will have a header row'),
+      t('Uploaded data files will not have a header row'),
+    ),
+  );
   $form['file'] = array(
     '#type' => 'file',
     '#title' => t('Example Data File'),
@@ -2458,7 +2467,7 @@ function sidora_codebook_upload_form($form, &$form_state){
     '#markup' => '<style>
        .form-item-files-file, .form-item-user-supplied-codebook-pid {width:270px;float:left;clear:both;} 
        #edit-upload-codebook-submit, #edit-pick-codebook-submit {float:left;vertical-align:top;margin-top:30px;}
-       #edit-user_supplied_codebook_pid, #edit-file { width:255px; padding:2px; }
+       #edit-user-supplied-codebook-pid, #edit-file { width:255px; padding:2px; }
      </style>',
   );
   $form['upload_codebook_submit'] = array(  //ensure this aligns with information in the validator on the #id check
