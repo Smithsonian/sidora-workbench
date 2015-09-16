@@ -354,7 +354,7 @@ jQuery(document).ready(function(){
     print '<tr><td>'.$datastream->id.'</td><td>'.$datastream->label.'</td><td>'.$datastream->state.'</td><td>'.$datastream->mimetype.'</td><td>'.$datastream->createdDate.'</td><td>';
     if ($datastream->versionable) {
       $datastream_url = "islandora/object/{$datastream->parent->id}/datastream/{$datastream->id}/version";
-      print '<a href="#" onclick="window.sidora.manage.versionHistory(\''.$datastream_url.'\',\''.$datastream->id.'\'); return false;">'.count($datastream).'</a> ';
+      print '<a href="#" onclick="window.sidora.manage.versionHistory(\''.$pid.'\',\''.$datastream->id.'\'); return false;">'.count($datastream).'</a> ';
     }
     print '</td><td>';
 		$viewer_filename = $datastream->id.'.';
@@ -1552,7 +1552,7 @@ function sidora_osd_proxy($pid){
 function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $extra = ''){
   global $user;
   if ($one == 'version_history'){
-	  sidora_view_datastream_version_history($two, $parent_pid);
+	  sidora_view_datastream_version_history($two);
 	}	
 	if ($one == 'osd_proxy'){
     sidora_osd_proxy($two);
@@ -3146,6 +3146,11 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
      $to_return = sidora_generic_upload($configure);
      return 'Upload XSL files:'.$to_return;
      break;
+	  case 'versionHistory' :
+	    module_load_include('inc', 'islandora', 'includes/datastream.version');
+	    $object = sidora_meta($pid);
+      var_dump(islandora_datastream_version_table($object[$specific_meta]));
+		  break;
   }
   print $to_output;
 }
@@ -6627,7 +6632,3 @@ function sidora_video_view_object($pid) {
  // $output = drupal_get_css() . drupal_get_js() . $output;
  // return $output;
 }
-function sidora_view_datastream_version_history($datastream, $pid){
-  $object = sidora_obj($pid);
-	var_dump(islandora_datastream_version_table($datastream));
-}	

@@ -1721,9 +1721,9 @@ sidora.manage.removeDatastream = function(pid,dsid){
   jQuery("#removeDatastreamDialog").css("overflow", "hidden");
   jQuery("#removeDatastreamDialog").closest(".ui-dialog").css("z-index", 1000); //shadowbox is 998
 }
-sidora.manage.versionHistory = function(url,datastream){
+sidora.manage.versionHistory = function(pid,datastream){
   jQuery('#versionHistoryDialog').remove();
-	jQuery("body").append("<div id='versionHistoryDialog' style='display:none;' title='"+datastream+" Previous Versions'><iframe height='100%' width='100%' style='height:100%;width:100%;' src='"+Drupal.settings.basePath+url+"' frameborder='0' marginwidth='0' marginheight='0' allowfullscreen></iframe></div>");
+	jQuery("body").append("<div id='versionHistoryDialog' style='display:none;' title='"+datastream+" Previous Versions'><iframe height='100%' width='100%' style='height:100%;width:100%;' src='"+Drupal.settings.basePath+"/sidora/info/"+pid+"/versionHistory/"+datastream+"' frameborder='0' marginwidth='0' marginheight='0' allowfullscreen></iframe></div>");
   jQuery("#versionHistoryDialog").dialog({
     resizable: true,
     height:600,
