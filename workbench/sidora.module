@@ -6629,17 +6629,15 @@ function sidora_contact_us_form(){
 	
   $form['mail'] = array(
     '#type' => 'textfield',
-    '#title' => t('E-mail address'),
+    '#title' => t('From:').'<span class="form-required"> *</span>',
     '#maxlength' => EMAIL_MAX_LENGTH,
-    '#description' => t('A valid e-mail address. All e-mails from the system will be sent to this address. The e-mail address is not made public and will only be used if you wish to receive a new password or wish to receive certain news or notifications by e-mail.'),
-    '#default_value' => (user_is_logged_in())?$user->mail:'',
-		'#required' => TRUE
+    '#description' => t('An email address we can use to contact you.'),
+    '#default_value' => (user_is_logged_in())?$user->mail:''
   );
   $form['helptext'] = array(
 	  '#type' => 'textarea',
-		'#title' => t('Describe what you need help with'),
-		'#description' => t('Please describe the problem you are having with your account'),
-		'#required' => TRUE
+		'#title' => t('Request Details:').'<span class="form-required"> *</span>',
+		'#description' => t('')
 	);	
   $form['submit'] = array(
     '#type' => 'submit',
@@ -6648,14 +6646,20 @@ function sidora_contact_us_form(){
   return $form;
 }
 function sidora_contact_us_form_validate($form, &$form_state) {
-    $email_address = $form_state['values']['mail'];
-    if (!valid_email_address($email_address)) {
-      form_set_error('mail', 'Enter a valid email address.');
-    }
-		$help_text = $form_state['values']['helptext'];
-		if ($help_text == ''){
-		  form_set_error('helptext', 'Describe what you need help with');
+  $error_check = 'false';
+  $email_address = $form_state['values']['mail'];
+  if (!valid_email_address($email_address)) {
+    form_set_error('mail', 'Invalid or missing entries.');
+    $error_check = 'true';
+	}
+	$help_text = $form_state['values']['helptext'];
+	if ($help_text == ''){
+	  if ($error_check == 'true'){
+		  form_set_error('helptext','');
+		}else{	
+		  form_set_error('helptext', 'Invalid or missing entries.');
 		}	
+	}	
 }
 function sidora_contact_us_form_submit($form, &$form_state) {
   module_load_include('inc', 'sidora', 'includes/utils');

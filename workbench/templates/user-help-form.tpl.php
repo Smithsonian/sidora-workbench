@@ -34,8 +34,10 @@ input.form-text {
 }
 </style>
 <div id="logo_container">
-  <img src="<?php echo base_path() . drupal_get_path('module', 'sidora'); ?>/images/logo.png" alt="Smithsonian logo">
-  <h1>Sidora Workbench</h1>
+  <!--
+	<img src="<?php echo base_path() . drupal_get_path('module', 'sidora'); ?>/images/logo.png" alt="Smithsonian logo">
+	-->
+  <h1>Contact SIdora Administrators</h1>
 </div>
 <?php 
 print drupal_render_children($form); 
