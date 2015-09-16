@@ -570,10 +570,6 @@ function sidora_view_ids_iframe($pid, $dsid) {
 $(function(){
 var ids_id = '";
   print str_replace('https','http',$GLOBALS['base_url']);
-/*
-http://***REMOVED***.my***REMOVED***.net/sidora/info/si:121379/meta/OBJ/browser
-*/
-//  print "/viewer/$pid/$dsid/download';
   print "/sidora/info/$pid/meta/$dsid/browser';
 
 var ids__ = jQuery('#containerIDS').ids({
@@ -6843,7 +6839,7 @@ function sidora_account_request_form_validate($form, &$form_state) {
 }
 function sidora_account_request_form_submit($form, &$form_state) {
   module_load_include('inc', 'sidora', 'includes/utils');
-	$default_to = variable_get('system_mail', '***REMOVED***');
+	$default_to = variable_get('system_mail', '');
   $default_from = variable_get('account_request_email_from', 'default_from');
 	if (sidora_mail($default_from, variable_get('account_request_email_to', $default_to), 'Request SIdora Account', 'Request for new account received from UserName : '.$form_state['values']['name'] . ' & Email : '.$form_state['values']['mail'])){
 	  drupal_set_message(t('Form submitted successfully'));
@@ -6897,7 +6893,7 @@ function sidora_contact_us_form_validate($form, &$form_state) {
 }
 function sidora_contact_us_form_submit($form, &$form_state) {
   module_load_include('inc', 'sidora', 'includes/utils');
-	$default_to = variable_get('system_mail', '***REMOVED***');
+	$default_to = variable_get('system_mail', '');
   $default_from = $form_state['values']['mail'];
 	if (sidora_mail($default_from, variable_get('account_request_email_to', $default_to), 'Account Help', $form_state['values']['helptext'])){
 	  drupal_set_message(t('Form submitted successfully'));
