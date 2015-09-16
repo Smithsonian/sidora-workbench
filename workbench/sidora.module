@@ -1,12 +1,26 @@
 <?php
+
+/*
+ * hook_init 
+ * run on every drupal call, loads items that the rest of the code needs
+ */
+function sidora_init(){
+/*
+//Unknown if the next two lines are needed.  If no problems arise in next release, please remove
 $islandora_module_path = drupal_get_path('module', 'islandora');
 @include_once 'sites/all/libraries/tuque/FedoraRelationships.php';
+*/
+  //The ahah call on the edit metadata form cannot find the function for the form
+  //because it assumes that islandora has already loaded it.  Since we are not using
+  //the Islandora interface, the form has not been loaded. The ahah call would
+  //throw an error on call, disallowing the addition or deletion of items with the add.png (green plus)
+  // -- the tags / tag element from the xml_form_builder
+  //This is related to SID-305
+  if (request_path() == 'system/ajax'){
+    module_load_include('inc', 'xml_forms', 'builder/includes/datastream.form'); 
+  }
+}
 
-
-module_load_include('inc', 'xml_forms', 'builder/includes/datastream.form'); //BBB TODO TBD REMOVE, figure out how to do this properly:
-//The issue is that the ahah call on the edit metadata form can't find the function for the form
-//So it throws an error.  This is related to SID-305
- 
 /**
  * Implements hook_help().
  *
