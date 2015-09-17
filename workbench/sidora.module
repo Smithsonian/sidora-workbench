@@ -1771,9 +1771,7 @@ function sidora_watchdog_filtering(array $log_entry) {
  * Implements hook_autologout_prevent
  */
 function sidora_autologout_prevent(){
-  print "RP:".request_path();
   if (sidora_startsWith(request_path(), 'sidora/ajax_parts/lock')){
-    print "Meow BBB";
     return TRUE;
   }
   if (sidora_startsWith(request_path(), 'sidora/info') && sidora_endsWith(request_path(),'meta/TN/browser')){
