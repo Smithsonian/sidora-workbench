@@ -25,7 +25,9 @@
 .form-item {
   text-align: center;
 }
-
+.form-item label {
+  float: left;
+}	
 input.form-text {
   width: 96%;
   height: 1.6rem;
