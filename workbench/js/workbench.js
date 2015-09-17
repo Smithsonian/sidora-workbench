@@ -1680,6 +1680,19 @@ sidora.manage.OpenCurrentConfig = function(){
               jQuery("#addDatastreamDialog").css("overflow", "hidden");
               jQuery("#addDatastreamDialog").closest(".ui-dialog").css("z-index", 1000); //shadowbox is 998
             });
+						jQuery("#versionHistory").click(function(){
+              var datastream = jQuery("#versionHistory").class();
+							jQuery('#versionHistoryDialog').remove();
+              jQuery("body").append("<div id='versionHistoryDialog' style='display:none;' title='Version History'><iframe height='1000%' width='100%' style='height:100%;width:100%' src='"+Drupal.settings.basePath+"islandora/object/"+pid+"/datastream/"+datastream+"/version' frameborder='0' marginwidth='0' marginheight='0' allowfullscreen></iframe></div>");
+              jQuery("#versionHistoryDialog").dialog({
+                resizable: true,
+                height:600,
+                width: 600,
+                modal: true,
+              });
+              jQuery("#versionHistoryDialog").css("overflow", "hidden");
+              jQuery("#versionHistoryDialog").closest(".ui-dialog").css("z-index", 1000); //shadowbox is 998
+            });
           }
         }
     });
@@ -1720,6 +1733,28 @@ sidora.manage.removeDatastream = function(pid,dsid){
   });
   jQuery("#removeDatastreamDialog").css("overflow", "hidden");
   jQuery("#removeDatastreamDialog").closest(".ui-dialog").css("z-index", 1000); //shadowbox is 998
+}
+sidora.manage.versionHistoryNew = function(pid,datastream){
+ // Shadowbox.close();
+ // jQuery.ajax(Drupal.settings.basePath+"sidora/manage/"+pid+"/versionHistory/"+datastream).done(function(html){
+ //   console.log(html);
+ jQuery('#versionHistoryDialog').remove();
+ jQuery("body").append("<div id='versionHistoryDialog' style='display:none;' title=''><iframe height='1000%' width='100%' style='height:100%;width:100%' src='"+Drupal.settings.basePath+"sidora/manage/"+pid+"/versionHistory/"+datastream+"' frameborder='0' marginwidth='0' marginheight='0' allowfullscreen></iframe></div>");
+ jQuery("#versionHistoryDialog").dialog({
+   resizable: true,
+   height:600,
+   width: 600,
+   modal: true,
+ });
+ jQuery("#addDatastreamDialog").css("overflow", "hidden");
+ jQuery("#addDatastreamDialog").closest(".ui-dialog").css("z-index", 1000); //shadowbox is 998
+	/*	Shadowbox.open({
+        content:    "../manage/"+pid+"/versionHistory/"+datastream,
+        player:     "iframe",
+        height: Math.max(600,jQuery("body").height()-100),
+        width: jQuery("body").width()-100,
+    });*/
+//  })
 }
 sidora.manage.versionHistory = function(pid,datastream){
   jQuery('#versionHistoryDialog').remove();
