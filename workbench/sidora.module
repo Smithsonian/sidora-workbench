@@ -1695,7 +1695,7 @@ function sidora_config_form_submit($form, &$form_state) {
 /*
  * Returns an object for moving settings between SIdora instances
  */
-function sidora_settings_object(){
+function sidora_settings_object($ignore_list = array('si_exhibition_website_location','osd_proxy_resolver_url')){
   global $conf;
   $starts_with = array();
   $starts_with[] = 'resource_viewer_dsid_';
@@ -1715,13 +1715,15 @@ function sidora_settings_object(){
   $exact_match[] = 'account_request_email_from';
   $settings_holder = array();
   foreach($conf as $drupal_setting_index=>$drupal_setting){
-    if (in_array($drupal_setting_index,$exact_match)){
+    if (in_array($drupal_setting_index,$exact_match) && !in_array($drupal_setting_index,$ignore_list)){
       $settings_holder[$drupal_setting_index] = $drupal_setting;
     }
     foreach($starts_with as $sw_check){
-      //print "<br/>swc:$sw_check dsi:$drupal_setting_index sp:".strpos($sw_check,$drupal_setting_index);
-      if (strpos($drupal_setting_index, $sw_check) === 0){
-        $settings_holder[$drupal_setting_index] = $drupal_setting;
+      if (!in_array($starts_with,$ignore_list)){
+        //print "<br/>swc:$sw_check dsi:$drupal_setting_index sp:".strpos($sw_check,$drupal_setting_index);
+        if (strpos($drupal_setting_index, $sw_check) === 0){
+          $settings_holder[$drupal_setting_index] = $drupal_setting;
+        }
       }
     }
   }
