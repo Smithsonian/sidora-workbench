@@ -1752,6 +1752,8 @@ function sidora_settings_object($ignore_list = array('si_exhibition_website_loca
 /**
  * Filter watchdog log entry. Works similar to hook_node_access().
  *
+ * Implements hook_watchdog_filtering
+ *
  * Requires the watchdog_filtering module to be installed/enabled
  * @param array $log_entry
  *   The watchdog log entry
@@ -1762,6 +1764,22 @@ function sidora_watchdog_filtering(array $log_entry) {
   }
   // Don't affect filtering on other messages.
   return WATCHDOG_FILTERING_IGNORE;
+}
+/**
+ * Do not refresh the timer for the thumbnail callbacks or the locking
+ * 
+ * Implements hook_autologout_prevent
+ */
+function sidora_autologout_prevent(){
+  print "RP:".request_path();
+  if (sidora_startsWith(request_path(), 'sidora/ajax_parts/lock')){
+    print "Meow BBB";
+    return TRUE;
+  }
+  if (sidora_startsWith(request_path(), 'sidora/info') && sidora_endsWith(request_path(),'meta/TN/browser')){
+    return TRUE;
+  }
+  
 }
 /**
  * Used only for testing purposes.  Should not be called by the main application
