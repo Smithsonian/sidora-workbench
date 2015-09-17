@@ -1395,7 +1395,7 @@ function sidora_mail($from = 'default_from', $to, $subject, $message) {
   $my_module = '';
   $my_mail_token = '';
   if ($from == 'default_from') {
-    $from = variable_get('system_mail', '***REMOVED***');
+    $from = variable_get('system_mail', '');
   }
 	$message = array(
     'id' => $my_module . $my_mail_token,
