@@ -36,7 +36,7 @@ sidora.concept.LoadContentHelp.Resources.TableLoad = function(conceptOfInterest)
      'lengthMenu':[5,10,50,100],
      'pageLength': (readCookie('Drupal.pageLength') == '')?parseInt('5'):parseInt(readCookie('Drupal.pageLength')),
      'search': {
-       'search': (readCookie('Drupal.dtFilter') == '')?'':readCookie('Drupal.dtFilter')
+       'search': ((readCookie('Drupal.dtFilter') == '')?'all':readCookie('Drupal.dtFilter')) + '\n' + '' + '\n' + ((readCookie('Drupal.sortOn') == '')?'':readCookie('Drupal.sortOn')) + '\n' + ((readCookie('Drupal.sortOrder') == '')?'':readCookie('Drupal.sortOrder')),
       },
      'processing': true,
      'serverSide': true,
@@ -60,7 +60,7 @@ sidora.concept.LoadContentHelp.Resources.TableLoad = function(conceptOfInterest)
       }
       jQuery(this).removeClass('selected');
     } else {
-      if (!e.ctrlKey){
+      if (!e.ctrlKey && !e.metaKey){
         table.$('tr.selected').removeClass('selected');
         sidora.resources.individualPanel.resourceOfInterest = null;
       }
@@ -732,10 +732,10 @@ sidora.InitiateJSTree = function(){
   if (typeof(window.sidora.treeAlreadyBound) == 'undefined'){
     console.log("BINDING TREE");
     jQuery("body").keydown(function(e){
-      jQuery(".fakejstree-copy").toggle(e.ctrlKey);
+      jQuery(".fakejstree-copy").toggle(e.ctrlKey || e.metaKey);
     });
     jQuery("body").keyup(function(e){
-      jQuery(".fakejstree-copy").toggle(e.ctrlKey);
+      jQuery(".fakejstree-copy").toggle(e.ctrlKey || e.metaKey);
     });
     jQuery(document).on('dnd_start.vakata',function(event,data){
       ///console.log("saving tree");

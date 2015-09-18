@@ -22,7 +22,7 @@ function sidora_admin_settings() {
     'si_exhibition_data_url' => array(
       '#type' => 'textfield',
       '#title' => t('Where to obtain the website configuration for the page (not where to obtain the Fedora data itself)'),
-      '#default_value' => variable_get('si_exhibition_data_url', 'http://***REMOVED***.dev1.my***REMOVED***.net/exhibition_config/info/'),
+      '#default_value' => variable_get('si_exhibition_data_url', 'http://server.net/exhibition_config/info/'),
       '#description' => t('The Fedora Commons pid will be directly appended to the above, end with / if needed.'),
     ),
 */
@@ -382,7 +382,7 @@ tr.removed.odd {
   $form['one']['si_exhibition_data_urli3'] = array(
       '#type' => 'textfield',
       '#title' => t('Where to obtain the website configuration for the page (not where to obtain the Fedora data itself)'),
-      '#default_value' => variable_get('si_exhibition_data_url', 'http://***REMOVED***.dev1.my***REMOVED***.net/exhibition_config/info/'),
+      '#default_value' => variable_get('si_exhibition_data_url', 'http://<server>/exhibition_config/info/'),
       '#description' => t('The Fedora Commons pid will be directly appended to the above, end with / if needed.'),
     );
 */
@@ -397,7 +397,7 @@ tr.removed.odd {
         '#type' => 'textfield',
         '#title' => t('Prefix the URL before the pid for the base image'),
         '#default_value' => variable_get('osd_proxy_pid_prefix', ''),
-        '#description' => t('The URL for the base image is made up of this prefix, then the pid, then the post-fix. (ex: http://***REMOVED***.my***REMOVED***.net:8080/fedora/objects/ )'),
+        '#description' => t('The URL for the base image is made up of this prefix, then the pid, then the post-fix. (ex: http://server.net:8080/fedora/objects/ )'),
       ),
       'osd_proxy_pid_postfix' => array(
         '#type' => 'textfield',
@@ -409,7 +409,7 @@ tr.removed.odd {
         '#type' => 'textfield',
         '#title' => t('The base URL for the resolver'),
         '#default_value' => variable_get('osd_proxy_resolver_url', ''),
-        '#description' => t('The resolver is the location of the image resizer itself. (ex: http://***REMOVED***.my***REMOVED***.net/adore-djatoka/resolver )'),
+        '#description' => t('The resolver is the location of the image resizer itself. (ex: http://server.net/adore-djatoka/resolver )'),
   ),
 	),
 	);

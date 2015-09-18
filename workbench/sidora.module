@@ -1,12 +1,26 @@
 <?php
+
+/*
+ * hook_init 
+ * run on every drupal call, loads items that the rest of the code needs
+ */
+function sidora_init(){
+/*
+//Unknown if the next two lines are needed.  If no problems arise in next release, please remove
 $islandora_module_path = drupal_get_path('module', 'islandora');
 @include_once 'sites/all/libraries/tuque/FedoraRelationships.php';
+*/
+  //The ahah call on the edit metadata form cannot find the function for the form
+  //because it assumes that islandora has already loaded it.  Since we are not using
+  //the Islandora interface, the form has not been loaded. The ahah call would
+  //throw an error on call, disallowing the addition or deletion of items with the add.png (green plus)
+  // -- the tags / tag element from the xml_form_builder
+  //This is related to SID-305
+  if (request_path() == 'system/ajax'){
+    module_load_include('inc', 'xml_forms', 'builder/includes/datastream.form'); 
+  }
+}
 
-
-module_load_include('inc', 'xml_forms', 'builder/includes/datastream.form'); //BBB TODO TBD REMOVE, figure out how to do this properly:
-//The issue is that the ahah call on the edit metadata form can't find the function for the form
-//So it throws an error.  This is related to SID-305
- 
 /**
  * Implements hook_help().
  *
@@ -175,15 +189,40 @@ function sidora_menu() {
 			'type' => MENU_CALLBACK,
    ),
 	 'sidora/workbench/request_account' => array(
-	    'title' => 'Request a new account',
-			'description' => 'Request a new account',
+	    'title' => 'Request a account',
+			'description' => 'Request a sidora account',
 			'page callback' => 'drupal_get_form',
 			'page arguments' => array('sidora_account_request_form'),
 			'access callback' => TRUE,
 			'type' => MENU_CALLBACK,
    ),
+   'admin/sidora/config_transfer' => array(
+      'title' => 'SIdora configuration transfer',
+      'description' => 'Save, export, and import SIdora configurations',
+      'page callback' => 'sidora_config_transfer',
+      'access arguments' => array('administer site configuration'),
+      'type' => MENU_CALLBACK,
+   ),
+	 'sidora/workbench/contact_us' => array(
+	    'title' => 'Contact Us',
+			'description' => 'Contact Us',
+			'page callback' => 'drupal_get_form',
+			'page arguments' => array('sidora_contact_us_form'),
+			'access callback' => TRUE,
+			'type' => MENU_CALLBACK,
+   ),
+	 'sidora/contact_us' => array(
+	    'title' => 'Contact Us',
+			'description' => 'Contact Us',
+			'page callback' => 'drupal_get_form',
+			'page arguments' => array('sidora_contact_us_form'),
+			'access callback' => TRUE,
+			'type' => MENU_CALLBACK,
+   )
  );
 }
+
+
 function sidora_management_ingest($pid, $dsid, $label = NULL, $mimeType = NULL){
   $object = sidora_obj($pid);
   $datastream = isset($object[$dsid]) ? $object[$dsid] : $object->constructDatastream($dsid);
@@ -545,10 +584,6 @@ function sidora_view_ids_iframe($pid, $dsid) {
 $(function(){
 var ids_id = '";
   print str_replace('https','http',$GLOBALS['base_url']);
-/*
-http://***REMOVED***.my***REMOVED***.net/sidora/info/si:121379/meta/OBJ/browser
-*/
-//  print "/viewer/$pid/$dsid/download';
   print "/sidora/info/$pid/meta/$dsid/browser';
 
 var ids__ = jQuery('#containerIDS').ids({
@@ -1586,6 +1621,210 @@ function sidora_create_codebook_from_url($url, $codebook_label){
   $new_fedora_object = islandora_add_object($codebook);
   return $new_fedora_object;
 }
+/*
+ * Sets the SIdora instance with the imported information
+ * Assumes the same style as sidora_settings_object() would produce
+ * If the parameter value is a string, assumes it is a json string to decode
+ * 
+ */
+function sidora_settings_import($object){
+  if (is_string($object)){ $object = json_decode($object); }
+  //$full_export['forms'] = $forms;
+  //$full_export['associations'] = $associations;
+  //$full_export['admin_settings'] = $settings_holder;
+  $forms = $object->forms;
+  $associations = $object->associations;
+  $admin_settings = $object->admin_settings;
+  module_load_include('inc', 'xml_form_builder', 'XMLFormRepository');
+  module_load_include('inc', 'xml_form_builder', 'XMLFormDatabase');
+  module_load_include('inc', 'xml_form_builder', 'includes/associations');
+  foreach($forms as $form_name=>$form_string){
+    $definition = new DOMDocument();
+    $definition->loadXML($form_string);
+    if (XMLFormDatabase::Delete($form_name)) {
+      foreach (xml_form_builder_get_associations(array($form_name)) as $assoc) {
+        db_delete('xml_form_builder_form_associations')
+          ->condition('id', intval($assoc['id']))
+          ->execute();
+        drupal_set_message(t('Deleted the association ID:%id with the form %form_name.', array(
+          '%id' => $assoc['id'],
+          '%form_name' => $form_name,
+        )));
+      }
+      drupal_set_message(t('Successfully deleted form "%name" in order to reimport it.', array('%name' => $form_name)));
+    }
+    if (XMLFormRepository::Create($form_name, $definition)){
+      drupal_set_message(t('Successfully imported form "%name".', array('%name' => $form_name)));
+    }else{
+      drupal_set_message(t('FAILED imported on form "%name".', array('%name' => $form_name)),'error');
+    }
+  }
+/*
+  $object = array(
+    'content_model' => $content_model, 
+    'form_name' => $form_name,
+    'dsid' => $dsid,
+    'title_field' => $title_field,
+    'transform' => $transform,
+    'self_transform' => $self_transform,
+    'template' => $template,
+  );
+*/
+  foreach($associations as $association){
+    $a_object = array(
+      'content_model' => $association->content_model,
+      'form_name' => $association->form_name,
+      'dsid' => $association->dsid,
+      'title_field' => serialize((array)($association->title_field)),
+      'transform' => $association->transform,
+      'self_transform' => $association->self_transform,
+      'template' => $association->template,
+    );
+    $insert_success = db_insert('xml_form_builder_form_associations')
+      ->fields($a_object)
+      ->execute();
+    $form_name = $association->form_name;
+    $model = $association->content_model;
+    if ($insert_success){
+      drupal_set_message(t('Successfully imported form association "%name" to "%model".', array('%name' => $form_name, '%model' => $model)));
+    }else{
+      drupal_set_message(t('FAILED import form association "%name" to "%model".', array('%name' => $form_name, '%model' => $model)),'error');
+    }
+  }
+  foreach($admin_settings as $setting_name=>$setting_value){
+    $original_value = variable_get($setting_name);
+    if ($original_value === $setting_value){
+      drupal_set_message(t('Administrative setting "%name" was already set to the content specified in this configuration.',array('%name' => $setting_name)));
+    }else{
+      variable_set($setting_name,$setting_value);
+      drupal_set_message(t('Administrative setting "%name" set from <br/>"%original" <br/>to <br/>"%newval".',array('%name' => $setting_name,'%original'=>$original_value,'%newval'=>$setting_value)));
+    }
+  }
+}
+function sidora_config_transfer($direct_download = ""){
+  $download_filename = 'site_config.json';
+  if ($direct_download == $download_filename){
+    $sidora_settings_object = sidora_settings_object();
+    header("Content-type: application/json");
+    header("Content-Disposition: attachment; filename=\"$download_filename\"");
+    print json_encode($sidora_settings_object);
+    exit();
+  }else{
+    $form = drupal_get_form('sidora_config_form');
+    $download_link = '<a href="config_transfer/'.$download_filename.'">Download current config</a>';
+    return $download_link.drupal_render($form);
+  }
+}
+function sidora_config_form($form, &$form_state){
+  $form['file'] = array(
+    '#type' => 'file',
+    '#title' => t('Config File'),
+    '#description' => t('This configuration will be immediately applied on clicking the "Import" button below.'),
+  );
+  $form['upload_submit'] = array(  //ensure this aligns with information in the validator on the #id check
+    '#type' => 'submit',
+    '#value' => t('Import And Apply Config File'),
+  );
+  return $form;
+}
+function sidora_config_form_submit($form, &$form_state) {
+  global $user;
+  $validators = array('file_validate_extensions' => array('json txt'));
+  $file = file_save_upload('file',$validators);
+  if (!empty($file)){
+    $filepath = drupal_realpath($file->uri);
+    $file_contents = file_get_contents($filepath);
+    $object = json_decode($file_contents);
+    sidora_settings_import($object);
+  }
+}
+/*
+ * Returns an object for moving settings between SIdora instances
+ */
+function sidora_settings_object($ignore_list = array('si_exhibition_website_location','osd_proxy_resolver_url')){
+  global $conf;
+  $starts_with = array();
+  $starts_with[] = 'resource_viewer_dsid_';
+  $starts_with[] = 'resource_viewer_viewer_';
+  $exact_match = array();
+  $exact_match[] = 'si_exhibition_website_location';
+  $exact_match[] = 'sidora_ontology_json';
+  $exact_match[] = 'xsl_form_config';
+  $exact_match[] = 'sidora_login_message';
+  $exact_match[] = 'sidora_automatic_person_model';
+  $exact_match[] = 'sidora_automatic_person_form';
+  $exact_match[] = 'sidora_automatic_person_dsid';
+  $exact_match[] = 'osd_proxy_pid_prefix';
+  $exact_match[] = 'osd_proxy_pid_postfix';
+  $exact_match[] = 'osd_proxy_resolver_url';
+  $exact_match[] = 'account_request_email_to';
+  $exact_match[] = 'account_request_email_from';
+  $settings_holder = array();
+  foreach($conf as $drupal_setting_index=>$drupal_setting){
+    if (in_array($drupal_setting_index,$exact_match) && !in_array($drupal_setting_index,$ignore_list)){
+      $settings_holder[$drupal_setting_index] = $drupal_setting;
+    }
+    foreach($starts_with as $sw_check){
+      if (!in_array($starts_with,$ignore_list)){
+        //print "<br/>swc:$sw_check dsi:$drupal_setting_index sp:".strpos($sw_check,$drupal_setting_index);
+        if (strpos($drupal_setting_index, $sw_check) === 0){
+          $settings_holder[$drupal_setting_index] = $drupal_setting;
+        }
+      }
+    }
+  }
+  //print json_encode($settings_holder);
+  module_load_include('inc', 'xml_form_builder', 'XMLFormRepository');
+  module_load_include('inc', 'xml_form_builder', 'includes/associations');
+  $names = XMLFormRepository::GetNames();
+  $associations = xml_form_builder_get_associations($names, array(), array(), FALSE);
+  //$associations = (json_encode($associations));
+  $forms = array();
+  foreach ($names as $form_info) {
+    $form_name = $form_info['name'];
+    if ($form_info['indb']) {
+      $definition = XMLFormRepository::Get($form_name);
+      $definition->formatOutput = TRUE;
+      $form_string = $definition->saveXML();
+      $forms[$form_name] = $form_string;
+    }
+  }
+  $full_export = array();
+  $full_export['forms'] = $forms;
+  $full_export['associations'] = $associations;
+  $full_export['admin_settings'] = $settings_holder;
+  return $full_export;
+}
+/**
+ * Filter watchdog log entry. Works similar to hook_node_access().
+ *
+ * Implements hook_watchdog_filtering
+ *
+ * Requires the watchdog_filtering module to be installed/enabled
+ * @param array $log_entry
+ *   The watchdog log entry
+ */
+function sidora_watchdog_filtering(array $log_entry) {
+  if (strpos($log_entry['message'], "LAME encoding failed for object") === 0){
+    return WATCHDOG_FILTERING_EXCLUDE;
+  }
+  // Don't affect filtering on other messages.
+  return WATCHDOG_FILTERING_IGNORE;
+}
+/**
+ * Do not refresh the timer for the thumbnail callbacks or the locking
+ * 
+ * Implements hook_autologout_prevent
+ */
+function sidora_autologout_prevent(){
+  if (sidora_startsWith(request_path(), 'sidora/ajax_parts/lock')){
+    return TRUE;
+  }
+  if (sidora_startsWith(request_path(), 'sidora/info') && sidora_endsWith(request_path(),'meta/TN/browser')){
+    return TRUE;
+  }
+  
+}
 /**
  * Used only for testing purposes.  Should not be called by the main application
  */
@@ -1616,6 +1855,23 @@ function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $ex
     //print 'not complete, did not want to add new item';
     exit();
   }
+  global $conf;
+  if ($one == 'export_settings'){
+    $full_export = sidora_settings_object();
+    print json_encode($full_export);
+    exit();
+  }
+  if ($one == 'import_tester'){
+    /*
+    Used to have $import_obj_string here but it made things go wonky in the editor
+    */
+    $settings_obj = json_decode($import_obj_string);
+    sidora_settings_import($settings_obj);
+    return "settings import test complete";
+  }
+  if ($one == 'conf'){
+    var_dump($conf);
+  }
   if ($one == 'osd_proxy'){
     sidora_osd_proxy($two);
   }
@@ -1623,10 +1879,27 @@ function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $ex
 	  return drupal_render(sidora_account_request_form());
 		exit();
 	} 
+	if ($one == 'user_help'){
+	 // var_dump(sidora_help_form());
+		print drupal_render_children(sidora_help_form());
+		//exit();
+	}	
   if ($one == 'modules'){
 	  $modules = implode(', ', module_list());
     print $modules;
 	}	
+  if ($one == 'xsl_config'){
+    $pid = $two;
+    dsm($pid);
+    $obj = sidora_obj($pid);
+    dsm($obj);
+    dsm($obj->label);
+    $o1 = sidora_get_form_and_dsid($pid);
+    dsm($o1);
+    $op = sidora_xsl_information($pid, TRUE);
+    dsm($op);
+    return 'okay';
+  }
 	if ($one == 'xsls'){
     if ($two != 'two'){
       //$object = sidora_obj($two);
@@ -1696,6 +1969,14 @@ function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $ex
   }
   if ($one == 'parenttable'){
     return sidora_get_parent_table($two);
+  }
+  if ($one == 'formassociations2'){
+    module_load_include('inc', 'xml_form_builder', 'XMLFormRepository');
+    module_load_include('inc', 'xml_form_builder', 'includes/associations');
+    $names = XMLFormRepository::GetNames();
+    $associations = xml_form_builder_get_associations($names, array(), array(), FALSE);
+    print (json_encode($associations));
+    exit();
   }
   if ($one == 'formassociations'){
     if ($two == 'two'){
@@ -2257,7 +2538,7 @@ function sidora_create_resource_get_upload_form_html($model, $upload_button_text
     'si:generalImageCModel' => array('jpg', 'png', 'gif', 'tiff', 'tif', 'jp2'),
     'si:datasetCModel' => array('csv', 'xml', 'xlsx', 'xls', 'dat', 'med', 'arg', 'slt'),
     'si:fieldbookCModel' => array('pdf'),
-    'islandora:sp-audioCModel' => array('mp3','mp4','aiff','aac','ogg','wav','wma'),
+    'islandora:sp-audioCModel' => array('mp3','aiff','wav'),
 		'*' => array('*'),
   );
   if (array_key_exists($model, $file_extensions)){
@@ -3207,8 +3488,8 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
       );
       if ($download == 'browser' && $formatted == 'dataTableServerSideProcessing'){
         $jsdt_title_and_type_search_val = filter_var($_GET['search']['value'], FILTER_SANITIZE_STRING);
-        //The search value holds both the type of object and the title search, pull those out
-        $vals = explode("\n",$jsdt_title_and_type_search_val);
+				//The search value holds both the type of object and the title search, pull those out
+				$vals = explode("\n",$jsdt_title_and_type_search_val);
         $jsdt_search_val = $vals[0];
         $jsdt_title_search_val = empty($vals[1])?'':$vals[1];
         if (!array_key_exists($jsdt_search_val, $resource_types)){
@@ -4718,12 +4999,10 @@ function sidora_html_tree($query_result_tree, $input_path = ''){
     $current_path = $input_path;
     if ($input_path != '') $current_path .= ',';
     $current_path .= $pid;
-   // $to_return .= '<li><a href="'.base_path().'sidora/workbench/#'.$pid.'?path='.$input_path.'" pid="'.$pid.'" fullname="'.$t_element['t']['value'].'" conceptchildren="'.$t_element['k0']['value'].'">';
     $resource_children_num = -1;
     if (array_key_exists('k1',$t_element)) $resource_children_num = $t_element['k1']['value'];
     $to_return .= '<li><a href="'.base_path().'sidora/workbench/#'.$pid.'?path='.$input_path.'" pid="'.$pid.'" fullname="'.$t_element['t']['value'].'" conceptchildren="'.$t_element['k0']['value'].'" resourcechildren="'.$resource_children_num.'">';
     $to_return .= $t_element['t']['value'];
-    //if ($t_element['k0']['value'] > 0) $to_return .= ' ('.$t_element['k0']['value'].')';
     if ($resource_children_num > 0) $to_return .= ' ('.$resource_children_num.')';
     $to_return .= '</a>';
     if (array_key_exists('children',$t_element)){
@@ -4874,14 +5153,15 @@ Array(
 
  *  ...and so on.  k0 is the number of children
  */
-function sidora_fill_concepts_children($query_result, $already_filled_pids = array()){
+function sidora_fill_concepts_children($query_result, $current_path = array()){
   if (is_array($query_result)){
     foreach ($query_result as $c_index=>$child){
       $child_pid = $child['o']['value'];
-      if (!in_array($child_pid,$already_filled_pids)){
-        $already_filled_pids[] = $child_pid;
+      if (!in_array($child_pid,$current_path)){
+        $path_to_send = $current_path;
+        $path_to_send[] = $child_pid;
         $results = _sidora_get_child_results_cache($child_pid);
-        $query_result[$c_index]['children'] = sidora_fill_concepts_children($results, $already_filled_pids);
+        $query_result[$c_index]['children'] = sidora_fill_concepts_children($results, $path_to_send);
       }else{
         $query_result[$c_index]['already_in_tree'] = true;
       }
@@ -6745,6 +7025,11 @@ function seven_theme() {
       'template' => 'user-register-form', // template file user-register-form.tpl.php
       'path' => drupal_get_path('module', 'sidora') . '/templates'
     ),
+    'sidora_contact_us_form' => array(
+      'render element' => 'form',
+      'template' => 'user-help-form', // template file user-help-form.tpl.php
+      'path' => drupal_get_path('module', 'sidora') . '/templates'
+    ),
    /*
 	  'user_register_form' => array(
        'render element' => 'form',
@@ -6817,8 +7102,6 @@ function sidora_form_user_login_block_alter(&$form, &$form_state) {
   $form['pass']['#attributes']['autocomplete'] = 'off';  //Autocomplete off for password
 }
 function sidora_account_request_form(){
-	//	$form['name'] = $reg_form['account']['name'];
-	//	$form['mail'] = $reg_form['account']['mail'];
   $form['name'] = array(
     '#type' => 'textfield',
     '#title' => t('Username'),
@@ -6839,7 +7122,7 @@ function sidora_account_request_form(){
     '#type' => 'submit',
     '#value' => t('Request a new account'),
   );
-return $form;
+  return $form;
 }
 function sidora_account_request_form_validate($form, &$form_state) {
     $email_address = $form_state['values']['mail'];
@@ -6849,7 +7132,7 @@ function sidora_account_request_form_validate($form, &$form_state) {
 }
 function sidora_account_request_form_submit($form, &$form_state) {
   module_load_include('inc', 'sidora', 'includes/utils');
-	$default_to = variable_get('system_mail', '***REMOVED***');
+	$default_to = variable_get('system_mail', '');
   $default_from = variable_get('account_request_email_from', 'default_from');
 	if (sidora_mail($default_from, variable_get('account_request_email_to', $default_to), 'Request SIdora Account', 'Request for new account received from UserName : '.$form_state['values']['name'] . ' & Email : '.$form_state['values']['mail'])){
 	  drupal_set_message(t('Form submitted successfully'));
@@ -6864,4 +7147,48 @@ function sidora_audio_view_object($pid) {
 	$output = theme('islandora_audio', $variables);
   $output = drupal_get_css() . drupal_get_js() . $output;
   return $output;
+}
+function sidora_contact_us_form(){
+  global $user;
+  $form['mail'] = array(
+    '#type' => 'textfield',
+    '#title' => t('From:').'<span class="form-required"> *</span>',
+    '#maxlength' => EMAIL_MAX_LENGTH,
+    '#description' => t('An email address we can use to contact you.'),
+    '#default_value' => (user_is_logged_in())?$user->mail:''
+  );
+  $form['helptext'] = array(
+	  '#type' => 'textarea',
+		'#title' => t('Request Details:').'<span class="form-required"> *</span>',
+		'#description' => t('')
+	);	
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Contact Us'),
+  );
+  return $form;
+}
+function sidora_contact_us_form_validate($form, &$form_state) {
+  $error_check = 'false';
+  $email_address = $form_state['values']['mail'];
+  if (!valid_email_address($email_address)) {
+    form_set_error('mail', 'Invalid or missing entries.');
+    $error_check = 'true';
+	}
+	$help_text = $form_state['values']['helptext'];
+	if ($help_text == ''){
+	  if ($error_check == 'true'){
+		  form_set_error('helptext','');
+		}else{	
+		  form_set_error('helptext', 'Invalid or missing entries.');
+		}	
+	}	
+}
+function sidora_contact_us_form_submit($form, &$form_state) {
+  module_load_include('inc', 'sidora', 'includes/utils');
+	$default_to = variable_get('system_mail', '');
+  $default_from = $form_state['values']['mail'];
+	if (sidora_mail($default_from, variable_get('account_request_email_to', $default_to), 'Account Help', $form_state['values']['helptext'])){
+	  drupal_set_message(t('Form submitted successfully'));
+	}	
 }
