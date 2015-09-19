@@ -407,7 +407,7 @@ jQuery(document).ready(function(){
     <input class="form-submit" value="Add Datastream" onclick="" id="addDatastream">
     </div></div>
 ';
-  exit();
+  drupal_exit();
 }
 /*
 * Attempts to load the item to get output as a JPEG
@@ -429,7 +429,7 @@ function sidora_direct_jpg_output($content, $output_to_browser = TRUE){
     if (!$output_to_browser) return FALSE;
     print t('There is no available view for this content');
   }
-  exit();
+  drupal_exit();
 }
 /**
  * returns what is set in the admin for the viewer of this object
@@ -462,7 +462,7 @@ function sidora_resource_viewer($pid){
 						switch ($viewer) {
               case 'direct':
                 sidora_info_json($pid, 'meta', $dsid, 'browser');
-                exit();
+                drupal_exit();
                 break;
               case 'web_view':
                 $viewable_mime_types = sidora_get_viewable_mime_types();
@@ -481,11 +481,11 @@ function sidora_resource_viewer($pid){
                 }else{
                   sidora_info_json($pid, 'meta', $dsid, 'browser');
                 }
-                exit();
+                drupal_exit();
                 break;
               case 'JW Audio Player':
 								print sidora_audio_view_object($pid);
-								exit();
+								drupal_exit();
 								break;
 							case 'IDS':
                 return sidora_view_ids_iframe($pid, $dsid);
@@ -503,7 +503,7 @@ function sidora_resource_viewer($pid){
   print '<br/>The possible models that this resource uses:';
   print '<br/>'.implode('<br/>',$models);
   print '<br/><div style="display:none">Possible viewers:<br/>'.implode('<br/>',$viewers).'</div>';
-  exit();
+  drupal_exit();
 }
 function sidora_view_openseadragon($pid, $dsid){
   print "\r\n".'<html>                                                                                                      ';
@@ -536,7 +536,7 @@ function sidora_view_openseadragon($pid, $dsid){
   print "\r\n".'    </div>                                                                                                  ';
   print "\r\n".'  </body>                                                                                                   ';
   print "\r\n".'</html>                                                                                                     ';
-  exit();
+  drupal_exit();
 }
 /**
  * IDS Iframe contents, direct to output, exit() at end
@@ -606,7 +606,7 @@ var ids__ = jQuery('#containerIDS').ids({
 ";
   print '</body>';
   print '</html>';
-  exit();
+  drupal_exit();
 }
 
 /**
@@ -1464,7 +1464,7 @@ function sidora_osd_proxy($pid){
         $qs);
   $url = variable_get('osd_proxy_resolver_url', '').'?'.$qs;
   print file_get_contents($url);
-  exit();
+  drupal_exit();
 }
 function sidora_create_codebook_from_url($url, $codebook_label){
   global $user;
@@ -1593,7 +1593,7 @@ function sidora_config_transfer($direct_download = ""){
     header("Content-type: application/json");
     header("Content-Disposition: attachment; filename=\"$download_filename\"");
     print json_encode($sidora_settings_object);
-    exit();
+    drupal_exit();
   }else{
     $form = drupal_get_form('sidora_config_form');
     $download_link = '<a href="config_transfer/'.$download_filename.'">Download current config</a>';
@@ -1744,7 +1744,7 @@ function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $ex
   if ($one == 'export_settings'){
     $full_export = sidora_settings_object();
     print json_encode($full_export);
-    exit();
+    drupal_exit();
   }
   if ($one == 'import_tester'){
     /*
@@ -1762,7 +1762,7 @@ function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $ex
   }
 	if ($one == 'user_register'){
 	  return drupal_render(sidora_account_request_form());
-		exit();
+		drupal_exit();
 	} 
 	if ($one == 'user_help'){
 	 // var_dump(sidora_help_form());
@@ -1807,14 +1807,14 @@ function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $ex
     var_dump($cbs);
     print 'dong';
     print sidora_get_related_codebook_table($pid);
-    exit();
+    drupal_exit();
   }
   if ($one == 'flexpaper'){
   $pid = $two;
   //$to_return .= '<li><a href="'.base_path().'sidora/workbench/#'.$root_pid.'" pid="'.$root_pid.'" fullname="'.$root->label.'">';
     //$base_path = 
     print sidora_get_html_flexpaper($pid);
-    exit();
+    drupal_exit();
   }
   if ($one == 'clearcache'){
     if ($two == 'all'){
@@ -1861,7 +1861,7 @@ function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $ex
     $names = XMLFormRepository::GetNames();
     $associations = xml_form_builder_get_associations($names, array(), array(), FALSE);
     print (json_encode($associations));
-    exit();
+    drupal_exit();
   }
   if ($one == 'formassociations'){
     if ($two == 'two'){
@@ -1870,18 +1870,18 @@ function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $ex
       $names = XMLFormRepository::GetNames();
       $associations = xml_form_builder_get_associations($names, array(), array(), FALSE);
       var_dump ($associations);
-      exit();
+      drupal_exit();
     }else{
       $dsids = sidora_get_proper_dsid($two, $parent_pid);
       var_dump($dsids);
-      exit();
+      drupal_exit();
     }
   }
   if ($one == 'guesser'){
     $object = sidora_obj($two);
     $the_guess = sidora_guess_dsid_and_form_name($object);
     var_dump($the_guess);
-    exit();
+    drupal_exit();
     return;
   }
   if ($one == 'models'){
@@ -1904,7 +1904,7 @@ function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $ex
     }
     var_dump($models);
     
-    exit();
+    drupal_exit();
   }
   if ($one == 'upload2'){
     $configure = array(
@@ -1963,7 +1963,7 @@ function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $ex
   }
   if ($one == 'php_info'){
     phpinfo();
-    exit();
+    drupal_exit();
   }
   if ($one == 'imagemagick'){
     $moth = image_load('/var/www/drupal/sites/all/modules/large_image_moth.jp2');
@@ -2019,7 +2019,7 @@ function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $ex
   if ($one == 'gd'){
     print "<pre>";
     var_dump(gd_info());
-    exit();
+    drupal_exit();
   }
   if ($one == 'get_user_root'){
     print 'gur<br/>';
@@ -2027,7 +2027,7 @@ function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $ex
     print '<br/><pre>'."\n";
     $drupal_user = user_load_by_name($two);
     var_dump($drupal_user);
-    exit();
+    drupal_exit();
   }
   if ($one == 'current_file_uploads'){
     $current_uploads = sidora_create_resource_get_current_uploads();
@@ -2108,7 +2108,7 @@ function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $ex
    // sidora_direct_jpg_output($contents);
     //header("Content-type: image/jpeg");
     //print $contents;
-    exit();
+    drupal_exit();
   }
   if ($one == 'id_to_filename'){
     $id_to_filename = cache_get("sidora:form_id_to_filename");
@@ -2149,7 +2149,7 @@ function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $ex
   }
   if ($one == 'xsl'){
     print sidora_xsl_string();
-    exit();
+    drupal_exit();
   }
   if ($one == 'upload'){
     $elements = array(
@@ -3187,7 +3187,7 @@ function sidora_open_access($info_type, $pid){
 	$pid_with_exhibition =	sidora_exhibition_exists_in_tree($pid, $pids_checked);
   if ($pid_with_exhibition == FALSE){
 		drupal_not_found();
-		exit();
+		drupal_exit();
 	}else{
 	switch($info_type) {
     case 'xsl':
@@ -3201,7 +3201,7 @@ function sidora_open_access($info_type, $pid){
       break;  
 	}
 	}
-  exit();
+  drupal_exit();
 }
 function sidora_info_json($pid, $type='resources', $specific_meta = '', $download = '', $formatted = '', $limit = NULL, $offset = NULL){
   global $user;
@@ -3242,7 +3242,7 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
         $return_when_encoded['description'] = t('No files to update');
       }
       print json_encode($return_when_encoded);
-      exit();
+      drupal_exit();
       break;
     case 'management':
       if (!sidora_allow($user,$pid,'view')) drupal_not_found();
@@ -3267,7 +3267,7 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
       $obj_prop['lastModifiedDate'] = $object->lastModifiedDate;
       $for_json_output['object_properties'] = $obj_prop;
       print json_encode($for_json_output);
-      exit();
+      drupal_exit();
       break;
     case 'permission':
       $permission['create'] = sidora_allow($user,$pid,'create');
@@ -3277,13 +3277,13 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
       $permission['permission'] = sidora_allow($user,$pid,'permission');
       $permission['manage'] = sidora_allow($user,$pid,'manage');
       print json_encode($permission);
-      exit();
+      drupal_exit();
       break;
     case 'base':
       $object = sidora_meta($pid);
       if (empty($object)){
         print t('Object not found');
-        exit();
+        drupal_exit();
       }
       var_dump($object);
       break;
@@ -3292,7 +3292,7 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
       $object = sidora_meta($pid);
       if (empty($object)){
         print t('Object not found');
-        exit();
+        drupal_exit();
       }
       if (!empty($specific_meta)){
         //If this is to be based on the xsl_form_config
@@ -3326,7 +3326,7 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
         }
         if (empty($datastream_content)){
           print t('Datastream not found by that name');
-          exit();
+          drupal_exit();
         }
         //var_dump($datastream);
         //datastream_content is now set.  perform the output
@@ -3360,7 +3360,7 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
           print '<div class="metadata-table">'.sidora_metadata_to_html_table_transform($datastream_content, $xsl_file).'</div>';
         }else{
           print $datastream_content;
-          exit();
+          drupal_exit();
         }
       }else{
         $for_json_output = array();
@@ -3368,7 +3368,7 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
           $for_json_output[] = $dsid; //array_keys will not work on the Fedora object - not true array?
         }
         print json_encode($for_json_output);
-        exit();
+        drupal_exit();
       }
       break;
     case 'resources':
@@ -3445,7 +3445,7 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
         
 
         print json_encode($jsdt_response);
-        exit();
+        drupal_exit();
       }
       if ($download == 'browser' && $formatted == 'html_placeholder'){
           $to_output = '<table id="res_table" class="display resources-table">';
@@ -3542,7 +3542,7 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
           }
       }         
       print json_encode($exhibitions);
-      exit();
+      drupal_exit();
       break; 
     case 'previewUploadedResources' :
       // the pid in this case will be the count of current item in the uploaded resources in temp directory
@@ -3552,7 +3552,7 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
       $handle = fopen($filepath, "r");
       $contents = fread($handle, filesize($filepath));
       sidora_direct_jpg_output($contents);
-      exit();
+      drupal_exit();
       break;
     case 'upload2': 
        $configure = array(
@@ -3850,7 +3850,7 @@ function sidora_block_content_individual_resource_info(){
 }
 function sidora_ontology_object(){
   print variable_get('sidora_ontology_json',sidora_ontology_json_default());
-  exit();
+  drupal_exit();
 }
 function sidora_ontology_json_default(){
   return '
@@ -4032,7 +4032,7 @@ function sidora_ajax_lock($pid, $operation = 'obtain'){
     }
   }
   print json_encode($to_print);
-  exit();
+  drupal_exit();
 }
 /**
  * Does a copy then unassociate (equivalent to a move)
@@ -4052,7 +4052,7 @@ function sidora_move($move_from_id, $copy_to_id, $pid, $show_output = TRUE){
     $to_output['code'] = "sm1";
     if ($show_output){
       print json_encode($to_output);
-      exit();
+      drupal_exit();
     }else{
       return $to_output;
     }
@@ -4067,7 +4067,7 @@ function sidora_move($move_from_id, $copy_to_id, $pid, $show_output = TRUE){
     $to_output['code'] = "sm2";
     if ($show_output){
       print json_encode($to_output);
-      exit();
+      drupal_exit();
     }else{
       return $to_output;
     }
@@ -4080,7 +4080,7 @@ function sidora_move($move_from_id, $copy_to_id, $pid, $show_output = TRUE){
   //if ($copied['error']){
     if ($show_output){
       print json_encode($copied);
-      exit();
+      drupal_exit();
     }else{
       return $copied;
     }
@@ -4123,7 +4123,7 @@ function sidora_unassociate($remove_from_pid, $pid_to_remove, $show_output = TRU
     $to_output['code'] = "su1";
     if ($show_output){
       print json_encode($to_output);
-      exit();
+      drupal_exit();
     }else{
       return $to_output;
     }
@@ -4137,7 +4137,7 @@ function sidora_unassociate($remove_from_pid, $pid_to_remove, $show_output = TRU
     $to_output['code'] = "su2";
     if ($show_output){
       print json_encode($to_output);
-      exit();
+      drupal_exit();
     }else{
       return $to_output;
     }
@@ -4149,7 +4149,7 @@ function sidora_unassociate($remove_from_pid, $pid_to_remove, $show_output = TRU
     $to_output['error'] = TRUE;
     $to_output['description'] = t("There is only one parent concept for this object. Protecting the object from being an orphan.");
     $to_output['code'] = "su3";
-    if ($show_output){ print json_encode($to_output); exit(); }else{ return $to_output; }
+    if ($show_output){ print json_encode($to_output); drupal_exit(); }else{ return $to_output; }
   }
   module_load_include('inc', 'sidora', 'includes/utils');
   //determine if this is a resource or a concept
@@ -4161,7 +4161,7 @@ function sidora_unassociate($remove_from_pid, $pid_to_remove, $show_output = TRU
     $to_output['code'] = "una";
     if ($show_output){
       print json_encode($to_output);
-      exit();
+      drupal_exit();
     }else{
       return $to_output;
     }
@@ -4182,7 +4182,7 @@ function sidora_unassociate($remove_from_pid, $pid_to_remove, $show_output = TRU
   $to_output['code'] = "una2";
   if ($show_output){
     print json_encode($to_output);
-    exit();
+    drupal_exit();
   }else{
     return $to_output;
   }
@@ -4203,7 +4203,7 @@ function sidora_unassociate_delete_if_orphaned($remove_from_pid, $pid_to_remove,
     $to_output['code'] = "udio1";
     if ($show_output){
       print json_encode($to_output);
-      exit();
+      drupal_exit();
     }else{
       return $to_output;
     }
@@ -4217,7 +4217,7 @@ function sidora_unassociate_delete_if_orphaned($remove_from_pid, $pid_to_remove,
     $to_output['code'] = "udio2";
     if ($show_output){
       print json_encode($to_output);
-      exit();
+      drupal_exit();
     }else{
       return $to_output;
     }
@@ -4227,7 +4227,7 @@ function sidora_unassociate_delete_if_orphaned($remove_from_pid, $pid_to_remove,
   if ($unassociated['error']){
     if ($show_output){
       print json_encode($unassociated);
-      exit();
+      drupal_exit();
     }else{
       return $unassociated;
     }
@@ -4242,7 +4242,7 @@ function sidora_unassociate_delete_if_orphaned($remove_from_pid, $pid_to_remove,
     $to_output['code'] = "udio";
     if ($show_output){
       print json_encode($to_output);
-      exit();
+      drupal_exit();
     }else{
       return $to_output;
     }
@@ -4260,7 +4260,7 @@ function sidora_unassociate_delete_if_orphaned($remove_from_pid, $pid_to_remove,
       }
       if (sidora_is_admin()) $delete_confirmation['pid'] = $pid_to_remove;  //Don't give pid back to non-admins (XSS issue)
       print json_encode($delete_confirmation);
-      exit();
+      drupal_exit();
     }else{
       return $delete_confirmation;
     }
@@ -4273,7 +4273,7 @@ function sidora_unassociate_delete_if_orphaned($remove_from_pid, $pid_to_remove,
   //var_dump ($parents);
   if ($show_output){
     print json_encode($to_output);
-    exit();
+    drupal_exit();
   }else{
     return $to_output;
   }
@@ -4294,7 +4294,7 @@ function sidora_copy($copy_to_id, $pid, $show_output = TRUE){
     $to_output['code'] = "sc1";
     if ($show_output){
       print json_encode($to_output);
-      exit();
+      drupal_exit();
     }else{
       return $to_output;
     }
@@ -4308,7 +4308,7 @@ function sidora_copy($copy_to_id, $pid, $show_output = TRUE){
     $to_output['code'] = "sc2";
     if ($show_output){
       print json_encode($to_output);
-      exit();
+      drupal_exit();
     }else{
       return $to_output;
     }
@@ -4327,7 +4327,7 @@ function sidora_copy($copy_to_id, $pid, $show_output = TRUE){
     $to_output['code'] = "copy1";
     if ($show_output){
       print json_encode($to_output);
-      exit();
+      drupal_exit();
     }else{
       return $to_output;
     }
@@ -4339,7 +4339,7 @@ function sidora_copy($copy_to_id, $pid, $show_output = TRUE){
     $to_output['code'] = "copy2";
     if ($show_output){
       print json_encode($to_output);
-      exit();
+      drupal_exit();
     }else{
       return $to_output;
     }
@@ -4371,7 +4371,7 @@ function sidora_copy($copy_to_id, $pid, $show_output = TRUE){
   if (!empty($to_output)){
     if ($show_output){
       print json_encode($to_output);
-      exit();
+      drupal_exit();
     }else{
       return $to_output;
     }
@@ -4382,7 +4382,7 @@ function sidora_copy($copy_to_id, $pid, $show_output = TRUE){
     $to_output['description'] = t("Object copied");
     $to_output['code'] = 'copy5';
     print json_encode($to_output);
-    exit();
+    drupal_exit();
   }else{
     return TRUE;
   }
@@ -4400,7 +4400,7 @@ function sidora_json_for_delete($pid, $show_output = TRUE){
     $to_output['code'] = "sjfd0";
     if ($show_output){
       print json_encode($to_output);
-      exit();
+      drupal_exit();
     }else{
       return $to_output;
     }
@@ -4415,7 +4415,7 @@ function sidora_json_for_delete($pid, $show_output = TRUE){
     $to_output['code'] = "sjfd2";
     if ($show_output){
       print json_encode($to_output);
-      exit();
+      drupal_exit();
     }else{
       return $to_output;
     }
@@ -4433,7 +4433,7 @@ function sidora_json_for_delete($pid, $show_output = TRUE){
          array('@children_count'=> count($children_concepts), '@resource_count' => count($children_resources)));
       if ($show_output){
         print json_encode($to_output);
-        exit();
+        drupal_exit();
       }else{
         return $to_output;
       }
@@ -4460,7 +4460,7 @@ function sidora_json_for_delete($pid, $show_output = TRUE){
   $to_output['error'] = FALSE;
   if ($show_output){
     print json_encode($to_output);
-    exit();  
+    drupal_exit();  
   }else{
     return $to_output;
   }
@@ -4474,7 +4474,7 @@ function sidora_html_tree_for_ajax($root_pid = ''){
   module_load_include('inc', 'sidora', 'includes/utils');
   if (empty($root_pid)) $root_pid = sidora_get_user_root_object();
   print sidora_html_string_tree($root_pid);
-  exit();
+  drupal_exit();
 }
 function sidora_html_string_tree($root_pid = '', $root = NULL){
   global $user;
@@ -4881,7 +4881,7 @@ if ($outputDebugCleanup) {
 }else{
   print 'upload complete';
 }
-exit();
+drupal_exit();
 }
 /*
  * Creates the html_tree.  
@@ -6855,7 +6855,7 @@ function sidora_remove_xsl($param1, $param2, $param3){
     }
     $return_when_encoded['files'][] = $curr_item;
     print json_encode($return_when_encoded);
-    exit();
+    drupal_exit();
 }
 /* The following 2 functions - sidora_generate_resource_list and  sidora_generate_child_resource_pid_only_sparql_query
 were created by RAmlani on 4/10/15. They are currently not being used anywhere.
@@ -6878,7 +6878,7 @@ function sidora_generate_resource_list($pid){
   }else{
     print json_encode("Error connecting to the repository");
   }     
-  exit();
+  drupal_exit();
 }     
 function sidora_generate_child_resource_pid_only_sparql_query($pid) {
        $query = "select ?object ?title from <#ri> where {
