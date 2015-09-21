@@ -3990,58 +3990,63 @@ function sidora_ajax_parts($call_type, $param1 = '', $param2 = '', $param3 = '')
  * 
  */
 function sidora_ajax_lock($pid, $operation = 'obtain'){
-  global $user;
-  $to_print = array();
-  $to_print['error'] = true;
-  $to_print['description'] = t('The locking operation was never attempted');
-  switch ($operation) {
-    case "obtain":
-      $clear_lock = false;
-      $obtain_lock = true;
-      break;
-    case "release":
-      $clear_lock = true;
-      $obtain_lock = false;
-      break;
-    case "renew":
-      $clear_lock = true;
-      $obtain_lock = true;
-      break;
-    default:
-      $clear_lock = false;
-      $obtain_lock = false;
-      $to_print['error'] = true;
-      $to_print['description'] = t('Invalid lock action.  Lock actions are: obtain, release, or renew.'); 
-  }
-  if ($clear_lock || $obtain_lock){
-    $who_has_lock = sidora_pid_is_locked($pid);
-    $username = $user->name;
-    //If a lock exists and the current user doesn't have the lock, they can't do any of these operations
-    if (!empty($who_has_lock) && $who_has_lock != $username){
-      $to_print['error'] = true;
-      $to_print['description'] = t('Another user has a lock on this object');
-      if (sidora_is_admin($user)){
-        $to_print['admin_only'] = array();
-        $to_print['admin_only']['lock_owner'] = $who_has_lock;
-      }
-    }else{
-      $spsl = sidora_pid_set_locked($pid, '', $obtain_lock, $clear_lock);
-      if (!empty($spsl)){
-        if ($spsl == $username){
-          $to_print['error'] = false;
-          $to_print['description'] = t('Current user has lock on desired pid');
-        }else{
-          $to_print['error'] = true;
-          $to_print['description'] = t('Another user was granted a lock on this pid');
-        } 
+  if (variable_get('sidora_disable_locking_by_pid', '') == 1){
+    $to_print['error'] = false;
+    $to_print['description'] = t('Pid locking is administratively disabled, no attempt at lock');
+  }else{
+    global $user;
+    $to_print = array();
+    $to_print['error'] = true;
+    $to_print['description'] = t('The locking operation was never attempted');
+    switch ($operation) {
+      case "obtain":
+        $clear_lock = false;
+        $obtain_lock = true;
+        break;
+      case "release":
+        $clear_lock = true;
+        $obtain_lock = false;
+        break;
+      case "renew":
+        $clear_lock = true;
+        $obtain_lock = true;
+        break;
+      default:
+        $clear_lock = false;
+        $obtain_lock = false;
+        $to_print['error'] = true;
+        $to_print['description'] = t('Invalid lock action.  Lock actions are: obtain, release, or renew.'); 
+    }
+    if ($clear_lock || $obtain_lock){
+      $who_has_lock = sidora_pid_is_locked($pid);
+      $username = $user->name;
+      //If a lock exists and the current user doesn't have the lock, they can't do any of these operations
+      if (!empty($who_has_lock) && strtolower($who_has_lock) != strtolower($username)){
+        $to_print['error'] = true;
+        $to_print['description'] = t('Another user has a lock on this object');
+        if (sidora_is_admin($user)){
+          $to_print['admin_only'] = array();
+          $to_print['admin_only']['lock_owner'] = $who_has_lock;
+        }
       }else{
-        //if user wanted to clear the lock this is the desired return
-        if ($operation == 'release'){
-          $to_print['error'] = false;
-          $to_print['description'] = t('Pid was released by current user');
+        $spsl = sidora_pid_set_locked($pid, '', $obtain_lock, $clear_lock);
+        if (!empty($spsl)){
+          if (is_string($spsl) && strtolower($spsl) == strtolower($username)){
+            $to_print['error'] = false;
+            $to_print['description'] = t('Current user has lock on desired pid');
+          }else{
+            $to_print['error'] = true;
+            $to_print['description'] = t('Another user was granted a lock on this pid');
+          } 
         }else{
-          $to_print['error'] = true;
-          $to_print['description'] = t('Could not set lock for pid, pid is not locked');
+          //if user wanted to clear the lock this is the desired return
+          if ($operation == 'release'){
+            $to_print['error'] = false;
+            $to_print['description'] = t('Pid was released by current user');
+          }else{
+            $to_print['error'] = true;
+            $to_print['description'] = t('Could not set lock for pid, pid is not locked');
+          }
         }
       }
     }
@@ -4955,11 +4960,14 @@ function sidora_clear_tree_cache($pid = ''){
  * Very simply attempts to obtain a lock on the pid
  * returns true to say that the lock was obtained, false otherwise
  * to be used to check if someone can perform an action
+ * ALWAYS Returns true if the locking mechanism is turned off
  */
 function sidora_obtain_lock($pid){
+  if (variable_get('sidora_disable_locking_by_pid', '') == 1) return TRUE;
   global $user;
   $spsl = sidora_pid_set_locked($pid, '', true);
-  return $user->name == $spsl;
+  if (!is_string($spsl)){ return FALSE; }
+  return strtolower($user->name) == strtolower($spsl);
 }
 /*
  * Convenience method to release a lock on the pid for the logged in user
@@ -4970,10 +4978,12 @@ function sidora_release_lock($pid){
 /**
  * returns the user name that the pid is locked to
  * returns FALSE if item is not locked
+ * ALWAYS returns FALSE if the locking mechanis is turned off
  * 
  * convenience method for readability, simply calls sidora_pid_set_locked
  */
 function sidora_pid_is_locked($pid){
+  if (variable_get('sidora_disable_locking_by_pid', '') == 1) return FALSE;
   return sidora_pid_set_locked($pid);
 }
 /**
@@ -4982,9 +4992,10 @@ function sidora_pid_is_locked($pid){
  * otherwise will not clear the lock.
  * Setting clear_lock and obtain_lock to true will refresh the time remaining on the lock
  *
- * returns the user that the pid is locked to or FALSE if not locked
+ * returns the user that the pid is locked to or FALSE if not locked, returns "" if locking is turned off
  */
 function sidora_pid_set_locked($pid, $set_locked_to_user = '', $obtain_lock = false, $clear_lock = false){
+  if (variable_get('sidora_disable_locking_by_pid', '') == 1) return "";  //Locking is administratively turned off
   $cache_name = "sidora:locking:".$pid;
   $pid_lock = cache_get($cache_name);
   if (!$obtain_lock && empty($pid_lock) && !$clear_lock) return FALSE; //Was a call to see who had the lock, and nobody has it
