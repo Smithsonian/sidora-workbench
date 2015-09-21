@@ -1714,6 +1714,12 @@ function sidora_autologout_prevent(){
  * Used only for testing purposes.  Should not be called by the main application
  */
 function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $extra = ''){
+  if (!sidora_is_admin() && variable_get('sidora_allow_all_to_debug','') != "ALL"){
+    return t("You must be an administrator or have an administrator set sidora_allow_all_to_debug in order to access this information");
+  }
+  if (!sidora_is_admin()){
+    print t("Remember that nonadmins will NOT see output from dsm!");
+  }
   global $user;
   if ($one == 'tabular_parse'){
     print 'tabular_parse';
@@ -1919,6 +1925,14 @@ function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $ex
     );
     $to_return = sidora_generic_upload($configure);
     return 'Upload XSL files:'.$to_return;
+  }
+  if ($one == 'cache'){
+    if ($two == 'two') $two = '';
+    $result = db_query("Select * from cache where cid like 'sidora:".$two."%'");
+    // Retrieve all records into an indexed array of stdClass objects.
+    $rows = $result->fetchAll();
+    dsm($rows);
+    return 'Drupal cache, quick link: <a href="two">All</a> <a href="locking">locking</a> <a href="children_results">children_results</a>';
   }
   if ($one == 'lock'){
     $to_return ='';
@@ -2623,8 +2637,8 @@ function sidora_codebook_upload_form($form, &$form_state){
     '#title' => t('Select option for column headers'),
     '#description' => t('This determines if the first line of the data files is a list of headings for the data, or is part of the data itself'),
     '#options' => array( 
-      'has_header' => t('All uploaded data files will have a header row'),
-      'no_header' => t('Uploaded data files will not have a header row'),
+      'TRUE' => t('All uploaded data files will have a header row'),
+      'FALSE' => t('Uploaded data files will not have a header row'),
     ),
     '#required' => TRUE,
   );
@@ -2717,12 +2731,13 @@ function sidora_codebook_upload_form_submit($form, &$form_state) {
   file_save($file);
   // Set a response to the user.
   drupal_set_message(t('The form has been submitted and the image has been saved, filename: @filename.', array('@filename' => $file->filename)));
+  $header_choice = $form_state['values']['header_choice']; //Note this is a string, not a boolean
   $url = 
-  'http://***REMOVED***.my***REMOVED***.net:8080/codebook/?url='.file_create_url($file->uri);
+  'http://***REMOVED***.my***REMOVED***.net:8080/codebook/?url='.file_create_url($file->uri).'&headers='.$header_choice;
   $codebook_label = 'codebook_label BBB';
   $codebook = sidora_create_codebook_from_url($url, $codebook_label);
   $_SESSION['codebook_choice']['codebook_id'] = $codebook->id; //Choice for this session
-  $_SESSION['codebook_choice']['header_choice'] = $form_state['values']['header_choice'];
+  $_SESSION['codebook_choice']['header_choice'] = $header_choice;
   $_SESSION['codebook_choice']['edit_complete'] = FALSE;
 }
 function sidora_codebook_hidden_step_form($form, &$form_state){
@@ -4673,31 +4688,41 @@ function sidora_get_plupload_html($elements, $button_text = 'Browse'){
           },
     },    
     init: {
-        PostInit: function() {
+      PostInit: function() {
         //document.getElementById("create-resource-upload_dropbox ").empty();
         //document.getElementById("filelist").innerHTML = "";
+        jQuery(this).files = [
+          { 
+            id: 1234,
+            loaded: 100,
+            name: "whuz BBB",
+            percent: 100,
+            size: 1234,
+            status: "DONE"
+          }
+        ];
         document.getElementById("uploadfiles").onclick = function() {
           uploader.start();
           return false;
         };
       },
       // added by RAmlani -SID 350
-       Browse: function(up) {
+      Browse: function(up) {
          // Called when file picker is clicked
         //console.log("browse");
         if (jQuery("#Next").length > 0)
           document.getElementById("Next").disabled=true;
         jQuery("#Next").addClass("form-button-disabled");
-           },
-       FilesAdded: function(up, files) {
+      },
+      FilesAdded: function(up, files) {
         if (jQuery("#Next").length > 0)
           document.getElementById("Next").disabled=true;
         jQuery("#Next").addClass("form-button-disabled");
-         plupload.each(files, function(file) {
-             var item = jQuery("<li class=\"plupload_view_list plupload_file ui-state-default plupload_file_loading plupload_delete\"></li>");
-             item.attr("id",file.id);
-             item.html("<div class=\"plupload_file_name\">"+file.name + "</div><div class=\"plupload_file_size\" style=\"width:100px;\">" + plupload.formatSize(file.size) + "   <b></b></div>" + "<div class=\"plupload_file_action\"><a class=\'remove-file-btn\' href=\'\'><img src=\'' . $path_for_remove_icon . 'minus_small.png\'/></a></div>");
-             // <a class=\'remove_btn_error\' href=\'\'>-</a>");
+        plupload.each(files, function(file) {
+          var item = jQuery("<li class=\"plupload_view_list plupload_file ui-state-default plupload_file_loading plupload_delete\"></li>");
+          item.attr("id",file.id);
+          item.html("<div class=\"plupload_file_name\">"+file.name + "</div><div class=\"plupload_file_size\" style=\"width:100px;\">" + plupload.formatSize(file.size) + "   <b></b></div>" + "<div class=\"plupload_file_action\"><a class=\'remove-file-btn\' href=\'\'><img src=\'' . $path_for_remove_icon . 'minus_small.png\'/></a></div>");
+          // <a class=\'remove_btn_error\' href=\'\'>-</a>");
              jQuery("#create-resource-upload_filelist").append(item);
              jQuery("#" + file.id + " .remove-file-btn").first().click(function(event) {
               event.preventDefault();
@@ -4714,7 +4739,6 @@ function sidora_get_plupload_html($elements, $button_text = 'Browse'){
                 },  
                 dataType: "text"
               });  
-    
             });
         });
         uploader.start();

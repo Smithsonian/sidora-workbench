@@ -434,6 +434,12 @@ tr.removed.odd {
 			),	
     ),
   );
+  $form['sidora_allow_all_to_debug'] = array(
+     '#type' => 'textfield',
+     '#title' => t('Allow all users access to debug'),
+     '#default_value' => variable_get('sidora_allow_all_to_debug',''),
+     '#description' => t('If set to "ALL" then all users have access to built-in sidora debug information.  Otherwise only administrators have access.'), //This was not stored as a "role" because we want to be able to give it to any user at the time the debugging happens then turn it off completely.  "ALL" here will give access to the sidora_testing functionality. In the future there may be different strings which give additional granularity
+  );
   $form['#attributes'] = array('OnSubmit' => 'formPreSubmit();');
   return system_settings_form($form);
 }
