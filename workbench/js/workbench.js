@@ -122,6 +122,8 @@ sidora.concept.LoadContentHelp.Resources.TableActionsSetup = function(){
   //Drag and drop enabling
   jQuery('#res_table tbody').on('mousedown','tr', function (e) {
     //If the mousedown is on something that is in the middle of a move process, ignore the mousedown
+    var isStartOfCopy = (e.ctrlKey || e.metaKey);
+    var displayPlusToIndicateCopy = isStartOfCopy ? "display:inline" : "display:none";
     if (jQuery(this).hasClass("is-being-moved")){
       console.log("Item is being moved, ignoring mousedown");
       return;
@@ -149,7 +151,7 @@ sidora.concept.LoadContentHelp.Resources.TableActionsSetup = function(){
           'obj' : highlightedPids, 
           'nodes' : [{ id : true, text: highlightedPids.length+' resources'}] 
         }, 
-        '<div id="jstree-dnd" class="jstree-default"><i class="jstree-icon jstree-er"></i>' + highlightedPids.length+' resources' + '<span class="fakejstree-copy" style="display:none">+</span></div>'
+        '<div id="jstree-dnd" class="jstree-default"><i class="jstree-icon jstree-er"></i>' + highlightedPids.length+' resources' + '<span class="fakejstree-copy" style="'+displayPlusToIndicateCopy+'">+</span></div>'
       );
        
     }
@@ -159,7 +161,7 @@ sidora.concept.LoadContentHelp.Resources.TableActionsSetup = function(){
         'obj' : jQuery(this), 
         'nodes' : [{ id : true, text: jQuery(this).text() }] 
       }, 
-      '<div id="jstree-dnd" class="jstree-default"><i class="jstree-icon jstree-er"></i>' + jQuery(this).text() + '<span class="fakejstree-copy" style="display:none">+</span></div>'
+      '<div id="jstree-dnd" class="jstree-default"><i class="jstree-icon jstree-er"></i>' + jQuery(this).text() + '<span class="fakejstree-copy" style="'+displayPlusToIndicateCopy+'">+</span></div>'
     );
   });
 	jQuery('#res_table_filter').after('<select id=\"sidora-resource-type-dropdown\" class="form-select" name=\"search\"><option value=\"\">All</option><option value=\"images\">Image</option><option value=\"pdf\">Digitized Text</option><option value=\"csv\">Tabular Dataset</option><option value=\"audio\">Audio</option></select><input type="text" name="titleFilter" id="titleFilter" style="border: solid 1px lightblue;">');
@@ -731,6 +733,9 @@ sidora.InitiateJSTree = function(){
   });
   if (typeof(window.sidora.treeAlreadyBound) == 'undefined'){
     console.log("BINDING TREE");
+    jQuery("body").mousedown(function(e){
+      jQuery(".fakejstree-copy").toggle(e.ctrlKey || e.metaKey);
+    });
     jQuery("body").keydown(function(e){
       jQuery(".fakejstree-copy").toggle(e.ctrlKey || e.metaKey);
     });
@@ -1691,7 +1696,7 @@ sidora.manage.OpenCurrentConfig = function(){
           enableKeys: false,
           onFinish:  function(){
             jQuery("#submitObjProperties").click(function(){
-              sidora.queue.RequestPost(userFriendlyToastName+":"+name+" ("+pid+")","/sidora/manage/"+pid+"/save","label="+jQuery("#objPropLabel").val()+"&owner="+jQuery("#objPropOwner").val(),function(){},function(){},pid);
+              sidora.queue.RequestPost(userFriendlyToastName+":"+name+" ("+pid+")",Drupal.settings.basePath+"sidora/manage/"+pid+"/save","label="+jQuery("#objPropLabel").val()+"&owner="+jQuery("#objPropOwner").val(),function(){},function(){},pid);
               sidora.queue.Next();
             });
             jQuery("#addDatastream").click(function(){
@@ -1731,7 +1736,7 @@ sidora.manage.removeDatastream = function(pid,dsid){
     modal: true,
     buttons: {
       "Yes, remove": function() {
-        sidora.queue.RequestPost("Removed Datastream "+dsid+" from "+pid,"/sidora/manage/"+pid+"/remove/"+dsid+"/confirm","",
+        sidora.queue.RequestPost("Removed Datastream "+dsid+" from "+pid,Drupal.settings.basePath+"sidora/manage/"+pid+"/remove/"+dsid+"/confirm","",
           function(){
             sidora.manage.resetFrame();
           },
