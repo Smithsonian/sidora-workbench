@@ -666,6 +666,7 @@ function sidora_islandora_object_ingested(AbstractObject $object){
         if ($file_obj->filepath == $file_location){
           unset($_SESSION['file_uploads'][$user->uid][$index]);
           $_SESSION['file_uploads'][$user->uid] = array_values($_SESSION['file_uploads'][$user->uid]);
+          unlink($file_obj->filepath);
         }
       }
     }
@@ -2609,12 +2610,14 @@ function sidora_create_resource_get_metadata_form_html($parent_pid, $model, $for
           }
         }
         $form_copy_array = $form;
-        for ($title_total = 0; $title_total < count($association['title_field']); $title_total++){
-          $form_copy_key = $association['title_field'][$title_total];
-          if (array_key_exists($form_copy_key,$form_copy_array)){
-            $form_copy_array = $form_copy_array[$form_copy_key];
-          } 
-        }  
+        if (!empty($association['title_field'][$title_total])){
+          for ($title_total = 0; $title_total < count($association['title_field']); $title_total++){
+            $form_copy_key = $association['title_field'][$title_total];
+            if (array_key_exists($form_copy_key,$form_copy_array)){
+              $form_copy_array = $form_copy_array[$form_copy_key];
+            } 
+          }
+        } //If there is no specified title in the form, then the label for the object will never get set either. 
         if (!empty($form_copy_array)){
           $form_copy_array['#value'] = substr($filename,0,strpos($filename,'.'));
           drupal_array_set_nested_value($form,$form_copy_array['#array_parents'],$form_copy_array);
