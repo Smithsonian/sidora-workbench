@@ -3,30 +3,35 @@
 #branding {
   display: none;
 }
+
 #logo_container {
   margin: 0 auto;
   width: 420px;
   text-align: center;
   font-family: "Georgia", "Times New Roman", Serif;
 }
+
 #logo_container h1 {
   font-size: 2.3em;
   font-weight: normal;
   margin-bottom: 20px;
 }
+
 #page {
   /*
   margin: 10% auto 0 auto;
   Added next 2 lines  */
   margin: 0 auto;
   padding: 20 0 0 0;
-  width: 700px;
+  width: 420px;
 }
+
 .form-item {
   text-align: center;
 }
+
 input.form-text {
-  width: 410px;
+  width: 96%;
   height: 1.6rem;
   font-size: 1rem;
   padding: 6px;
@@ -47,6 +52,9 @@ input.form-text {
     print variable_get('sidora_login_message', '');
     print drupal_render($form['actions']);
 ?>
+<!--<p>Not a member? <a href="mailto:***REMOVED***?Subject=Request SIdora Account&amp;body=My name is:-Enter Name- 
+  and my Email is:-Enter Email- and I would like to request a new SIdora Account"> Submit an Account Request</a><p>
+	-->
 	<p>Not a member? <a href="<?php echo base_path(); ?>sidora/request_account"> Submit an Account Request</a><p>
 <p>Need help? <?php $default_to = variable_get('system_mail', '***REMOVED***');
 echo '<a href="mailto:'.variable_get('account_request_email', $default_to).'?Subject=SIdora Account Help&body=My name is:-Enter Name- and my Email is:-Enter Email- and I am requesting help with my SIdora Account.  -Enter more information that indicates the kind of assistance you would like-)">Contact Us</a>';?></p>

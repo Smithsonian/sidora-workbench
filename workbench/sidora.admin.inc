@@ -362,7 +362,7 @@ tr.removed.odd {
       'sidora_automatic_person_model' => array(
         '#type' => 'textfield',
         '#title' => t('Model'),
-        '#default_value' => variable_get('sidora_automatic_person_model', 'si:HeirarchyObject'),
+        '#default_value' => variable_get('sidora_automatic_person_model', 'si:HierarchyObject'),
       ),
       'sidora_automatic_person_form' => array(
         '#type' => 'textfield',
@@ -433,6 +433,12 @@ tr.removed.odd {
 				'#description' => t('New account requests will be sent from this email address.'),
 			),	
     ),
+  );
+  $form['sidora_disable_locking_by_pid'] = array(
+    '#type' => 'checkbox',
+    '#title' => 'Disable locking',
+    '#description' => t('Usually pids have locks to eliminate multiple users attempting to access it at one.  Checking this box turns off that feature.'),
+    '#default_value' => variable_get('sidora_disable_locking_by_pid', ''),
   );
   $form['#attributes'] = array('OnSubmit' => 'formPreSubmit();');
   return system_settings_form($form);

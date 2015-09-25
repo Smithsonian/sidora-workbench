@@ -3,24 +3,29 @@
 #branding {
   display: none;
 }
+
 #logo_container {
   margin: 0 auto;
   width: 420px;
   text-align: center;
   font-family: "Georgia", "Times New Roman", Serif;
 }
+
 #logo_container h1 {
   font-size: 2.3em;
   font-weight: normal;
   margin-bottom: 20px;
 }
+
 #page {
   margin: 10% auto 0 auto;
   width: 420px;
 }
+
 .form-item {
   text-align: center;
 }
+
 input.form-text {
   width: 96%;
   height: 1.6rem;
