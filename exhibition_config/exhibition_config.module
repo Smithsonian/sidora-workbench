@@ -1,4 +1,7 @@
 <?php
+/*
+ * hook menu
+ */
 function exhibition_config_menu(){
   $items['admin/exhibition_config/configure'] = array(
       'title' => 'Exhibition Configuration',
@@ -35,12 +38,20 @@ function exhibition_config_menu(){
   );
   return $items;
 }
+/*
+ * Returns an array of exhibition information for the input user (or all users if empty string
+ * The array has elements which are arrays of the form:
+ *  'pid' => pid
+ *  'label' => label
+ *  'custom_url' => custom url
+ *  'is_available' => 0 if not available to public, 1 if available
+ */
 function exhibition_config_get_exhibition_pids_for_user($user_id){
   require_once ( dirname(__FILE__) . '/exhibition_config.util.inc');
   $repo = si_exhibition_get_repo();
 
   $exhibition_pids = array();
-  $result = db_query("select pid, custom_url from {exhibition_config}");
+  $result = db_query("select pid, custom_url, is_available from {exhibition_config}");
   foreach ($result as $records){
     $pid_to_test = $records->pid;
     $curr_label = '';
@@ -49,7 +60,7 @@ function exhibition_config_get_exhibition_pids_for_user($user_id){
       if ($exist){
         $object = $repo->getObject($pid_to_test); 
         $curr_label = $object->label;
-        $to_add = array('pid'=>$pid_to_test, 'label'=>$curr_label, 'custom_url'=>$records->custom_url);
+        $to_add = array('pid'=>$pid_to_test, 'label'=>$curr_label, 'custom_url'=>$records->custom_url, 'is_available'=>$records->is_available);
         if ($user_id == $object->owner || $user_id === '') $exhibition_pids[] = $to_add;
       }
     }catch(Exception $hce){
@@ -59,6 +70,40 @@ function exhibition_config_get_exhibition_pids_for_user($user_id){
   }
   return $exhibition_pids;
 }
+/*
+ * Returns an html table with a line for each exhibition owned by the user
+ */
+function exhibition_config_get_exhibition_html_table_for_user($user_name){
+  $epids = exhibition_config_get_exhibition_pids_for_user($user_name);
+  $epid_html = '<table><tr><th>ID</th><th>Label</th><th>Configure</th><th>Public</th><th>Link</th><th>Friendly Link</th></tr>';
+  foreach($epids as $epid){
+    $epid_html .= '<tr>';
+    $epid_html .= '<td>'.$epid['pid'].'</td>';
+    $epid_html .= '<td><a target="_blank" href="">'.$epid['label'].'</a></td>';
+    $epid_html .= '<td><a target="_blank" href ="'.base_path().'exhibition_config/config/'.$epid['pid'].'">Configure</a></td>';
+    $epid_html .= '<td>';
+    if ($epid['is_available']) $epid_html .= 'Shared';
+    else $epid_html .= 'Not Shared';
+    $epid_html .= '</td>';
+    $epid_html .= '<td><a target="_blank" href ="'.variable_get('si_exhibition_website_location', '').''.$epid['pid'].'">'.variable_get('si_exhibition_website_location', '').$epid['pid'].'</a></td>';
+    if ($epid['custom_url']){
+      $epid_html .= '<td><a target="_blank" href ="'.
+                  variable_get('si_exhibition_friendly_website_location', '').
+                  $epid['custom_url'].'">'.
+                  variable_get('si_exhibition_friendly_website_location', '').
+                  $epid['custom_url'].'</a></td>';
+    }else{
+      $epid_html .= '<td>None set</td>';
+    }
+    $epid_html .= '</tr>';
+  }
+  $epid_html .= '</table>';
+  return $epid_html;
+}
+/*
+ * hook_user_view
+ * Adds the table of the exhibitions they own to their user page
+ */
 function exhibition_config_user_view($account, $view_mode, $langcode){
   global $user;
   $is_logged_in_as_admin = FALSE;
@@ -70,26 +115,7 @@ function exhibition_config_user_view($account, $view_mode, $langcode){
   $user_pid = sidora_get_user_object($account);
   $members = array();
   if ($user_pid) {
-    $epids = exhibition_config_get_exhibition_pids_for_user($user->name);
-    $epid_html = '<table><tr><th>ID</th><th>Label</th><th>Configure</th><th>Link</th><th>Friendly Link</th></tr>';
-    foreach($epids as $epid){
-      $epid_html .= '<tr>';
-      $epid_html .= '<td>'.$epid['pid'].'</td>';
-      $epid_html .= '<td>'.$epid['label'].'</td>';
-      $epid_html .= '<td><a target="_blank" href ="'.base_path().'exhibition_config/config/'.$epid['pid'].'">Configure</a></td>';
-      $epid_html .= '<td><a target="_blank" href ="'.variable_get('si_exhibition_website_location', '').''.$epid['pid'].'">'.variable_get('si_exhibition_website_location', '').$epid['pid'].'</a></td>';
-      if ($epid['custom_url']){
-        $epid_html .= '<td><a target="_blank" href ="'.
-                    variable_get('si_exhibition_friendly_website_location', '').
-                    $epid['custom_url'].'">'.
-                    variable_get('si_exhibition_friendly_website_location', '').
-                    $epid['custom_url'].'</a></td>';
-      }else{
-        $epid_html .= '<td>None set</td>';
-      }
-      $epid_html .= '</tr>';
-    }
-    $epid_html .= '</table>';
+    $epid_html = exhibition_config_get_exhibition_html_table_for_user($user->name);
     $account->content[] = array(//['Wexhibition_config_pids'] = array(
       '#title' => 'Exhibitions',
       '#markup' => $epid_html,
@@ -97,6 +123,9 @@ function exhibition_config_user_view($account, $view_mode, $langcode){
     );
   }
 }
+/*
+ * Pulls all info from the database for this pid
+ */
 function exhibition_config_get_config_data($pid){
   $result = db_query("Select ". //SELECT
 " is_available, link_bar_links, use_parent_config, pid, logo, logo_width, logo_height, title, header_html, css_script, footer_html, precontent_html, postcontent_html, sidebar_left_html, sidebar_right_html, nav_location, nav_type, custom_url ".
@@ -110,6 +139,10 @@ function exhibition_config_get_config_data($pid){
   }
   return $row;
 }
+/*
+ * Returns nothing, does an exit
+ * prints out each pid that has the input custom_url, should only be one if input configuration checked properly
+ */
 function exhibition_config_custom_url($custom_url){
   $result = db_query("Select pid FROM {exhibition_config} where custom_url = :custom_url", array(':custom_url'=>$custom_url));
   $row = null;
@@ -118,6 +151,10 @@ function exhibition_config_custom_url($custom_url){
   }
   exit();
 }
+/*
+ * Returns nothing, does not perform exit, but prints to output
+ * prints a JSON object of the configuration for this pid
+ */
 function exhibition_config_json_data($pid){
   $pid = urldecode($pid);
   $row = exhibition_config_get_config_data($pid);
@@ -166,11 +203,16 @@ function exhibition_config_json_data($pid){
     print '{ "error": true, "error_message" : "database problem" }';
   }
 }
-
+/*
+ * helper function to give easy PHP startsWith
+ */
 function startsWith($haystack, $needle)
 {
     return $needle === "" || strpos($haystack, $needle) === 0;
 }
+/*
+ * Validates the exhibition_config_form
+ */
 function exhibition_config_form_validate($form, &$form_state){
     $pid = $form['pid']['#value'];
     $check_url =  $form['custom_url']['#value'];
@@ -229,10 +271,12 @@ function exhibition_config_form_validate($form, &$form_state){
       */
     }
 }
+/*
+ * hook_form_submit for exhibition_config
+ */
 function exhibition_config_form_submit($form, &$form_state) {
     $pid = $form['pid']['#value'];
     $allowed = exhibition_config_allowed_to_edit($pid);
-    $allowed = true; //BBB
     if (!$allowed){
       drupal_set_message(t('Your user is not allowed to change the configuration of this object.  To change the configuration, the object must be viewable in Fedora by your user, and you must either be the owner of the object or have the "Exhibition Configuration Administrator" role.'), 'error');
       return;
@@ -240,13 +284,11 @@ function exhibition_config_form_submit($form, &$form_state) {
     if (isset($_FILES['files']['name']['logo_upload'])){
        $dir = dirname(__FILE__) . '/files/';
        $dir = drupal_tempnam($dir,'');
-       //$dir = drupal_get_path('module', 'exhibition_config') . '/files';
-       //$dir = variable_get('file_private_path');//file_directory_path();//drupal_get_path('module', 'exhibition_config') . '/files';
        $name = $_FILES['files']['name']['logo_upload'];
        $size = $_FILES['files']['size']['logo_upload'];
        $type = $_FILES['files']['type']['logo_upload'];
        if (!empty($name)){
-         $file = file_save_upload('logo_upload', array(), 'public://');//,array(),$dir);//'exhibition_config_uploads', array() , $dir);
+         $file = file_save_upload('logo_upload', array(), 'public://');
          if($file){
            $form['top']['logo']['#value'] = file_create_url($file->destination);
          }else{
@@ -447,7 +489,6 @@ function get_pid_tree_ec($pid, $owner_id, &$pid_list = array()){
       $to_return['object'] = $object;
       $to_return['children'] = array();
       $pid_list[] = $pid;
-      //return $object->owner; //si_exhibition_get_child_concept_info($object);
       $children = si_exhibition_get_child_concept_info($object);
       //Get the children
       foreach($children as $child){
@@ -471,12 +512,12 @@ function get_pid_tree_ec($pid, $owner_id, &$pid_list = array()){
 
 function exhibition_config_main_form($pid){
   $pid = urldecode($pid);
-  
   return drupal_get_form('exhibition_config_form',$pid);
 }
 /*
-$owner_id - null or empty indicates the current logged in user
-*/
+ * Returns TRUE if the logged in user should be able to edit
+ * $owner_id - null or empty indicates the current logged in user
+ */
 function exhibition_config_allowed_to_edit($pid, $user_id = null){
   global $user;
   require_once ( dirname(__FILE__) . '/exhibition_config.util.inc');
@@ -490,7 +531,6 @@ function exhibition_config_allowed_to_edit($pid, $user_id = null){
   if (in_array('Exhibition Configuration Administrator', array_values($user_profile->roles))){
     $exist = si_exhibition_check_object_info_accessible(array('pid' => $pid));
     return $exist;
-    return true;
   }else{
     $repo = si_exhibition_get_repo();
     try{
@@ -505,6 +545,9 @@ function exhibition_config_allowed_to_edit($pid, $user_id = null){
   return false;
 }
 
+/*
+ * Get the object if the user is allowed to see it
+ */
 function _exhibition_config_get_object($pid){
   require_once ( dirname(__FILE__) . '/exhibition_config.util.inc');
   $repo = si_exhibition_get_repo();
@@ -515,11 +558,12 @@ function _exhibition_config_get_object($pid){
   }
   return null;
 }
-
+/*
+ * Main form for configuring the exhibition
+ */
 function exhibition_config_form($form, $form_state){
   $pid = $form_state['build_info']['args'][0];
   $allowed = exhibition_config_allowed_to_edit($pid);
-    $allowed = true; //BBB
   if (!$allowed){
     drupal_set_message(t('Your user is not allowed to change the configuration of this object.  To change the configuration, the object must be viewable in Fedora by your user, and you must either be the owner of the object or have the "Exhibition Configuration Administrator" role.'), 'error');
     return;
@@ -553,7 +597,6 @@ function exhibition_config_form($form, $form_state){
 <a href="javascript:void(0);" onclick="togglePreviewEditLinks();" title="Turns off the \'Edit\' quick links to get a better view of the sample, or turns them back on to quickly jump to a section to edit">Toggle Placeholder Text and Links</a><br/>
 <a href="javascript:void(0);" onclick="window.open(\''.
 variable_get('si_exhibition_website_location', '').
-//variable_get('sidora_exhibit_url','').'/fedora/repository/'.
 $pid.'\')" title="Opens the current exhibit in a new window">Direct Link to Exhibition</a>
 <script>
 window.sidora = {
