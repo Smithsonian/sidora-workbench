@@ -667,6 +667,7 @@ function sidora_islandora_object_ingested(AbstractObject $object){
       foreach($_SESSION['file_uploads'][$user->uid] as $index => $file_obj){
         if ($file_obj->filepath == $file_location){
           unset($_SESSION['file_uploads'][$user->uid][$index]);
+          //If this was the codebook sample, reset the codebook sample information
           $_SESSION['file_uploads'][$user->uid] = array_values($_SESSION['file_uploads'][$user->uid]);
         }
       }
@@ -2429,7 +2430,7 @@ function sidora_create_resource_get_current_uploads(){
  * gives the proper upload form for the model selected
  * returns string of HTML
  */
-function sidora_create_resource_get_upload_form_html($model, $upload_button_text = 'Browse'){
+function sidora_create_resource_get_upload_form_html($model, $upload_button_text = 'Browse', $clear_file_list = TRUE){
   global $user;
   $to_return = '';
   $file_extensions = array(
@@ -2449,7 +2450,9 @@ function sidora_create_resource_get_upload_form_html($model, $upload_button_text
     $to_return .= sidora_get_plupload_html($elements, $upload_button_text);
     $to_return .= "<input class=\"form-submit\" id=\"Next\" value=\"Next\" onclick=\"jQuery('#create-resource-upload').hide(); location.reload();\"></input>";
     $to_return .= "</div>";
-    $_SESSION['file_uploads'][$user->uid] = array();
+    if ($clear_file_list){
+      $_SESSION['file_uploads'][$user->uid] = array();
+    }
   }
   return $to_return;
 }
@@ -2459,6 +2462,15 @@ function sidora_create_resource_get_upload_form_html($model, $upload_button_text
  */
 function sidora_is_create_resource_codebook_choice_required($model){
   return ($model == 'si:datasetCModel');
+}
+function sidora_reset_codebook_choice($codebook_pid = NULL){
+  $_SESSION['codebook_choice'] = array();
+  $_SESSION['codebook_choice']['sample_uploaded'] = FALSE;
+  $_SESSION['codebook_choice']['edit_complete'] = FALSE;
+  $_SESSION['codebook_choice']['header_choice'] = SIDORA_NEVER_SET;
+  $_SESSION['codebook_choice']['codebook_id'] = $codebook_pid;
+  $_SESSION['codebook_choice']['filepath'] = NULL;
+  $_SESSION['codebook_choice']['upload_browser_already_shown'] = FALSE;
 }
 /* 
  * Returns whether user still needs to make a choice about a codebook
@@ -2488,10 +2500,7 @@ function sidora_is_create_resource_codebook_choice_completed($model){
         drupal_set_message(t('Invalid codebook, please choose a different codebook'), 'warning');
         $ask_for_codebook = TRUE;
       }else{ 
-        $_SESSION['codebook_choice'] = array();
-        $_SESSION['codebook_choice']['edit_complete'] = FALSE;
-        $_SESSION['codebook_choice']['header_choice'] = SIDORA_NEVER_SET;
-        $_SESSION['codebook_choice']['codebook_id'] = $codebook_pid; //Choice for this session
+        sidora_reset_codebook_choice($codebook_pid);
         $edit['data']['recent_codebook_id'] = $codebook_pid; //Choice for any time they log in
         user_save($user,$edit);
       }
@@ -2587,7 +2596,8 @@ function sidora_create_resource_get_metadata_form_html($parent_pid, $model, $for
       ));
       if (!empty($current_uploads[$form_total])){
         $filename = $current_uploads[$form_total]->filename;
-				$associations = xml_form_builder_get_associations(array($form_name), array(), array(), FALSE); // get the association for the current form to get the title field label
+				$associations = xml_form_builder_get_associations(array($form_name), array(), array(), FALSE);
+        // get the association for the current form to get the title field label
 				$association = null;
         foreach($associations as $curr_association){
           if ($curr_association['form_name'] == $form_name){
@@ -2597,7 +2607,7 @@ function sidora_create_resource_get_metadata_form_html($parent_pid, $model, $for
         $form_copy_array = $form;
         for ($title_total = 0; $title_total < count($association['title_field']); $title_total++){
           $form_copy_key = $association['title_field'][$title_total];
-          if (array_key_exists($form_copy_key,$form_copy_array)){
+          if (!empty($form_copy_key) && array_key_exists($form_copy_key,$form_copy_array)){
             $form_copy_array = $form_copy_array[$form_copy_key];
           } 
         }  
@@ -2734,11 +2744,19 @@ function sidora_codebook_upload_form_submit($form, &$form_state) {
   $header_choice = $form_state['values']['header_choice']; //Note this is a string, not a boolean
   $url = 
   'http://***REMOVED***.my***REMOVED***.net:8080/codebook/?url='.file_create_url($file->uri).'&headers='.$header_choice;
-  $codebook_label = 'codebook_label BBB';
+  $codebook_label = 'Codebook '.date('Ymd_His');
+
+  $file_info = new stdClass();
+  $file_info->filename = basename(file_create_url($file->uri));
+  $file_info->filepath = drupal_realpath($file->uri);
+  $_SESSION['file_uploads'][$user->uid][] = $file_info;
+
   $codebook = sidora_create_codebook_from_url($url, $codebook_label);
-  $_SESSION['codebook_choice']['codebook_id'] = $codebook->id; //Choice for this session
-  $_SESSION['codebook_choice']['header_choice'] = $header_choice;
+  $_SESSION['codebook_choice']['sample_uploaded'] = TRUE;
   $_SESSION['codebook_choice']['edit_complete'] = FALSE;
+  $_SESSION['codebook_choice']['header_choice'] = $header_choice;
+  $_SESSION['codebook_choice']['codebook_id'] = $codebook->id; //Choice for this session
+  $_SESSION['codebook_choice']['filepath'] = $file_info->filepath;
 }
 function sidora_codebook_hidden_step_form($form, &$form_state){
   global $user;
@@ -2805,13 +2823,7 @@ function sidora_create_resource($parent_pid = 'si:root', $model = 'si:collection
     if (array_key_exists('file_uploads', $_SESSION)){
       $_SESSION['file_uploads'][$user->uid] = array();
     }
-    if (array_key_exists('codebook_choice', $_SESSION)){
-      $_SESSION['codebook_choice'] = array();
-      $_SESSION['codebook_choice']['codebook_id'] = NULL;
-      $_SESSION['codebook_choice']['edit_complete'] = NULL;
-      $_SESSION['codebook_choice']['header_choice'] = SIDORA_NEVER_SET;
-    }
-    
+    sidora_reset_codebook_choice();
     drupal_goto($path);
   }
   module_load_include('inc', 'islandora', 'includes/utilities');
@@ -2847,17 +2859,55 @@ function sidora_create_resource($parent_pid = 'si:root', $model = 'si:collection
       //Specialty because we may need to prepopulate the example file here
       $to_return .= '
 <script>
-jQuery(document).ready(){
+jQuery(document).ready(function(){
   jQuery(window.parent.window.document).find("#sb-title-inner").text("Create Resource");
 });
 </script>
 ';
-      if ($check_for_uploads && empty($current_uploads)){
-        $form_html = sidora_create_resource_get_upload_form_html($model);
+      $create_upload_form = TRUE;
+      if ($_SESSION['codebook_choice']['sample_uploaded']){
+        $create_upload_form = (count($current_uploads) < 2 && $_SESSION['codebook_choice']['upload_browser_already_shown'] == FALSE);
+        //If the user has uploaded a single item that is the sample upload, so 0 uploads or 1, create the upload form
+        if (count($current_uploads) == 1 && $create_upload_form){
+          $example_file = $current_uploads[0];
+          $mime_detect = new MimeDetect();
+          $mimeType = $mime_detect->getMimeType($example_file->filename);
+          $filesize = filesize($example_file->filepath);
+          //Since we need to have the upload browser show the file to remove, add in a fake file which represents it
+          //Adding in the fake file will create an additional entry into Session, so when it's in session, remove that one
+          $to_return .= '
+            <script>
+            sidoraUploaderPostInit = function(){
+              window.myFile = new o.File(); 
+              myFile.name = "'.$example_file->filename.'"; 
+              myFile.origSize = '.$filesize.'; 
+              myFile.size = '.$filesize.'; 
+              myFile.type = "'.$mimeType.'"; 
+              myFile.loaded = '.$filesize.'; 
+              myFile.percent = 100; 
+              myFile.status = 5;
+              uploader.addFile(myFile);
+            };
+            sidoraCodebookGhostRemoved = false;
+            sidoraUploadComplete = function(up,files){
+              if (sidoraCodebookGhostRemoved) return;
+              if (files[0].name == "'.$example_file->filename.'"){
+                var url = Drupal.settings.basePath+"sidora/ajax_parts/remove_file_from_upload_queue/'.$example_file->filename.'/1";
+                jQuery.ajax ({ type: "POST", url: url, dataType: "text" });
+                sidoraCodebookGhostRemoved = true;
+              }
+            }
+            </script>
+          ';
+        }
+      }
+      if ($check_for_uploads && $create_upload_form){
+        $form_html = sidora_create_resource_get_upload_form_html($model,'Browse',FALSE);
         if (!empty($form_html)){
           $to_return .= $form_html;
           $show_form = FALSE;
         }
+        $_SESSION['codebook_choice']['upload_browser_already_shown'] = TRUE;
       }
     }
   }else{
@@ -2968,7 +3018,7 @@ function sidora_allow($user_pid_or_drupal_user, $pid_or_fedora_object, $type_of_
   }
 
   //the owner has rights to all except manage
-  if ($object->owner == $drupal_user->name && $type_of_operation != 'manage'){
+  if (strtolower($object->owner) == strtolower($drupal_user->name) && $type_of_operation != 'manage'){
    return TRUE;
   }
   
@@ -3972,12 +4022,20 @@ function sidora_ajax_parts($call_type, $param1 = '', $param2 = '', $param3 = '')
      return sidora_generate_resource_list($param1);
   } 
   if ($call_type == 'remove_file_from_upload_queue'){
+      $current_instances_found = 0;
+      $which_instance_to_remove = (empty($param2)) ? 0 : intval($param2);
+      //There can be multiple files with the same name, if so, which instance is stored in the second param 
+      //(0 represents first instance)
       if ((array_key_exists('file_uploads', $_SESSION)) && (!empty($_SESSION['file_uploads']))){
         foreach($_SESSION['file_uploads'][$user->uid] as $index => $file_obj){
             if ($file_obj->filename == $param1){
-              unset($_SESSION['file_uploads'][$user->uid][$index]);
-              $_SESSION['file_uploads'][$user->uid] = array_values($_SESSION['file_uploads'][$user->uid]);
-              return(json_encode($_SESSION));
+              if ($which_instance_to_remove == $current_instances_found){
+                unset($_SESSION['file_uploads'][$user->uid][$index]);
+                $_SESSION['file_uploads'][$user->uid] = array_values($_SESSION['file_uploads'][$user->uid]);
+                print (json_encode($_SESSION));
+                drupal_exit();
+              }
+              $current_instances_found++;
             }
           } 
       }
@@ -4414,7 +4472,7 @@ function sidora_json_for_delete($pid, $show_output = TRUE){
   global $user;
   if ($show_output) header('Content-Type: application/json');
   $object = sidora_obj($pid);
-  if (!sidora_is_admin($user) && $object->owner != $user->name){
+  if (!sidora_is_admin($user) && strtolower($object->owner) != strtolower($user->name)){
     $to_output['error'] = TRUE;
     $to_output['description'] = t("This functionality is restricted to administrators or object owner.");
     $to_output['code'] = "sjfd0";
@@ -4694,18 +4752,7 @@ function sidora_get_plupload_html($elements, $button_text = 'Browse'){
     },    
     init: {
       PostInit: function() {
-        //document.getElementById("create-resource-upload_dropbox ").empty();
-        //document.getElementById("filelist").innerHTML = "";
-        jQuery(this).files = [
-          { 
-            id: 1234,
-            loaded: 100,
-            name: "whuz BBB",
-            percent: 100,
-            size: 1234,
-            status: "DONE"
-          }
-        ];
+        if (typeof(sidoraUploaderPostInit) == "function"){ sidoraUploaderPostInit(); }
         document.getElementById("uploadfiles").onclick = function() {
           uploader.start();
           return false;
@@ -4714,12 +4761,12 @@ function sidora_get_plupload_html($elements, $button_text = 'Browse'){
       // added by RAmlani -SID 350
       Browse: function(up) {
          // Called when file picker is clicked
-        //console.log("browse");
         if (jQuery("#Next").length > 0)
           document.getElementById("Next").disabled=true;
         jQuery("#Next").addClass("form-button-disabled");
       },
       FilesAdded: function(up, files) {
+        if (typeof(sidoraUploaderFilesAdded) == "function"){ sidoraUploaderFilesAdded(up,files); }
         if (jQuery("#Next").length > 0)
           document.getElementById("Next").disabled=true;
         jQuery("#Next").addClass("form-button-disabled");
@@ -4727,24 +4774,26 @@ function sidora_get_plupload_html($elements, $button_text = 'Browse'){
           var item = jQuery("<li class=\"plupload_view_list plupload_file ui-state-default plupload_file_loading plupload_delete\"></li>");
           item.attr("id",file.id);
           item.html("<div class=\"plupload_file_name\">"+file.name + "</div><div class=\"plupload_file_size\" style=\"width:100px;\">" + plupload.formatSize(file.size) + "   <b></b></div>" + "<div class=\"plupload_file_action\"><a class=\'remove-file-btn\' href=\'\'><img src=\'' . $path_for_remove_icon . 'minus_small.png\'/></a></div>");
-          // <a class=\'remove_btn_error\' href=\'\'>-</a>");
-             jQuery("#create-resource-upload_filelist").append(item);
-             jQuery("#" + file.id + " .remove-file-btn").first().click(function(event) {
-              event.preventDefault();
-              up.removeFile(file);
-              jQuery("#" + file.id).remove();
-               var toDelete = file.name;
-               console.log(toDelete);
-               var url = Drupal.settings.basePath+"sidora/ajax_parts/remove_file_from_upload_queue/"+toDelete;
-               jQuery.ajax ({
-                type: "POST",
-                url: url,
-                done: function(msg){
-                  console.log("Return from ajax delete"+msg);
-                },  
-                dataType: "text"
-              });  
-            });
+          jQuery("#create-resource-upload_filelist").append(item);
+          jQuery("#" + file.id + " .remove-file-btn").first().click(function(event) {
+            event.preventDefault();
+            up.removeFile(file);
+            jQuery("#" + file.id).remove();
+            var toDelete = file.name;
+            console.log(toDelete);';
+            //TBD TODO Put in a check here to remove the correct file when multiple files have same filename
+            
+print  '
+            var url = Drupal.settings.basePath+"sidora/ajax_parts/remove_file_from_upload_queue/"+toDelete;
+            jQuery.ajax ({
+              type: "POST",
+              url: url,
+              done: function(msg){
+                console.log("Return from ajax delete"+msg);
+              },  
+              dataType: "text"
+            });  
+          });
         });
         uploader.start();
       },
@@ -4757,8 +4806,8 @@ function sidora_get_plupload_html($elements, $button_text = 'Browse'){
   print implode(",",$elements['#extensions']);
   print '";
       },
-      // added by RAmlani -SID 350
       UploadComplete: function(up,files){
+        if (typeof(sidoraUploadComplete) == "function"){ sidoraUploadComplete(up,files); }
         if (jQuery("#Next").length > 0)
           document.getElementById("Next").disabled=false;
         jQuery("#Next").removeClass("form-button-disabled");
@@ -5019,7 +5068,7 @@ function sidora_pid_set_locked($pid, $set_locked_to_user = '', $obtain_lock = fa
     //just trying to see who has it
     return $currently_locked_to_name;
   }
-  if ($clear_lock && $drupal_user_name == $currently_locked_to_name){
+  if ($clear_lock && strtolower($drupal_user_name) == strtolower($currently_locked_to_name)){
     cache_clear_all($cache_name, 'cache', TRUE);
     $currently_locked_to_name = '';
   }
@@ -5032,7 +5081,7 @@ function sidora_pid_set_locked($pid, $set_locked_to_user = '', $obtain_lock = fa
     sidora_allow($drupal_user,$pid,'permission');
 
   if ($obtain_lock && !empty($drupal_user_name) && $can_obtain_lock){
-    if (!empty($currently_locked_to_name) && $currently_locked_to_name != $drupal_user_name){
+    if (!empty($currently_locked_to_name) && strtolower($currently_locked_to_name) != strtolower($drupal_user_name)){
       //it's currently locked to someone and it's not the user you're interested in...
       return $currently_locked_to_name;
     }

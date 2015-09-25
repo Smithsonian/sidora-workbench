@@ -90,7 +90,6 @@ window.updateCodebookComplete = function(formName, ajaxCall, data){
 	if (window != window.parent && window.parent.updateCodebookComplete){
 		window.parent.updateCodebookComplete(formName, ajaxCall, data);
 	}else{
-		console.log(data);
 		newPid = window.successfulCreationPid(data);
     if (newPid == "") newPid = window.editedMetadataPid(data);
 		jQuery("#user_supplied_codebook_pid").val(newPid);
@@ -212,7 +211,7 @@ window.closeMyself = function(newPid){
 	if (window.parent.sidora && window.parent.sidora.CloseIFrame){
 		window.parent.sidora.CloseIFrame(newPid, 'simple close');
 	}else{
-		console.log("This is not in the expected IFrame");
+    //Codebook creation process has no parent.sidora, put any necessary processing for it here.
 	}
 }
 /*
