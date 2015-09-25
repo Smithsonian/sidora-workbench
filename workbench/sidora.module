@@ -2746,7 +2746,7 @@ function sidora_codebook_upload_form_submit($form, &$form_state) {
   drupal_set_message(t('The form has been submitted and the image has been saved, filename: @filename.', array('@filename' => $file->filename)));
   $header_choice = $form_state['values']['header_choice']; //Note this is a string, not a boolean
   $url = 
-  'http://***REMOVED***.my***REMOVED***.net:8080/codebook/?url='.file_create_url($file->uri).'&headers='.$header_choice;
+  variable_get('sidora_codebook_parser_url', '').'url='.file_create_url($file->uri).'&headers='.$header_choice;
   $codebook_label = 'Codebook '.date('Ymd_His');
 
   $file_info = new stdClass();

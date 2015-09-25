@@ -434,6 +434,21 @@ tr.removed.odd {
 			),	
     ),
   );
+	$form['codebook_parser'] = array(
+     'fieldset' => array(
+      '#type' => 'fieldset',
+      '#title' => 'Codebook Parser',
+      '#description' => t(''),
+      '#collapsible' => TRUE,
+      '#collapsed' => TRUE,
+			'sidora_codebook_parser_url' => array(
+			  '#type' => 'textfield',
+				'#title' => t('Codebook Parser URL'),
+				'#default_value' => variable_get('sidora_codebook_parser_url', ''),
+				'#description' => t('The location of codebook parser. Valid entry looks like this: http://&lt;server&gt;:&lt;port&gt;/codebook/?'),
+			),	
+    ),
+  );
   $form['sidora_allow_all_to_debug'] = array(
      '#type' => 'textfield',
      '#title' => t('Allow all users access to debug'),
@@ -447,7 +462,6 @@ tr.removed.odd {
     '#description' => t('Usually pids have locks to eliminate multiple users attempting to access it at one.  Checking this box turns off that feature.'),
     '#default_value' => variable_get('sidora_disable_locking_by_pid', ''),
   );
-  dsm(variable_get('sidora_enable_locking_by_pid',1000));
   $form['#attributes'] = array('OnSubmit' => 'formPreSubmit();');
   return system_settings_form($form);
 }
