@@ -1680,24 +1680,24 @@ sidora.manage.OpenCurrentConfig = function(){
               jQuery("#addDatastreamDialog").css("overflow", "hidden");
               jQuery("#addDatastreamDialog").closest(".ui-dialog").css("z-index", 1000); //shadowbox is 998
             });
-						jQuery("#versionHistory").click(function(){
-              var datastream = jQuery("#versionHistory").class();
+						jQuery(".versionHistory").click(function(){
+              var datastreamUrl = jQuery(this).attr('url');
+							var datastreamTitle = jQuery(this).attr('datastream');
 							jQuery('#versionHistoryDialog').remove();
-              jQuery("body").append("<div id='versionHistoryDialog' style='display:none;' title='Version History'><iframe height='1000%' width='100%' style='height:100%;width:100%' src='"+Drupal.settings.basePath+"islandora/object/"+pid+"/datastream/"+datastream+"/version' frameborder='0' marginwidth='0' marginheight='0' allowfullscreen></iframe></div>");
+							jQuery("body").append("<div id='versionHistoryDialog' style='display:none;' title='"+datastreamTitle+" Version History'><iframe height='1000%' width='100%' style='height:100%;width:100%' src='"+datastreamUrl+"' frameborder='0' marginwidth='0' marginheight='0' allowfullscreen></iframe></div>");
               jQuery("#versionHistoryDialog").dialog({
                 resizable: true,
-                height:600,
-                width: 600,
+                height: jQuery("#objectManagement").height()+50,
+                width: jQuery("#objectManagement").width()+50,
                 modal: true,
               });
               jQuery("#versionHistoryDialog").css("overflow", "hidden");
               jQuery("#versionHistoryDialog").closest(".ui-dialog").css("z-index", 1000); //shadowbox is 998
-            });
+						});	
+           }
           }
-        }
     });
   })
-
 }
 /*
  * Reopens the frame to show an update to the user

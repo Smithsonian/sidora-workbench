@@ -324,14 +324,6 @@ jQuery(document).ready(function(){
     }
     return;
   }
-	if ($show_or_save == 'versionHistory'){
-	  module_load_include('inc', 'islandora', 'includes/datastream.version');
-	  $object = sidora_meta($pid);
-    $to_return = islandora_datastream_version_table($object[$dsid_to_remove]);
-    return $to_return;
-		//error_log("\nIn sidora_management, return from islandora :".print_r($to_return,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
-		//return '<div id="versionHistory" style="position:absolute;background:whitesmoke;width:100%;height:100%;overflow:scroll;">'.$to_return.'</div>';
-	}
   if (!sidora_allow($user,$pid,'view')) drupal_not_found();
 
   $object = sidora_meta($pid);
@@ -361,9 +353,9 @@ jQuery(document).ready(function(){
   foreach($object as $dsid=>$datastream){
     print '<tr><td>'.$datastream->id.'</td><td>'.$datastream->label.'</td><td>'.$datastream->state.'</td><td>'.$datastream->mimetype.'</td><td>'.$datastream->createdDate.'</td><td>';
     if ($datastream->versionable) {
-      $datastream_url = "islandora/object/{$datastream->parent->id}/datastream/{$datastream->id}/version";
-    //  print '<a href="#" onclick="window.sidora.manage.versionHistoryNew(\''.$pid.'\',\''.$datastream->id.'\'); return false;">'.count($datastream).'</a> ';
-      print '<a href="#" id = "versionHistory" class="' . $datastream->id . '">' . count($datastream) . '</a>';
+      $datastream_url = base_path()."islandora/object/{$datastream->parent->id}/datastream/{$datastream->id}/version";
+    //  print '<a href="' . base_path() . $datastream_url . '">'.count($datastream).'</a> ';
+      print '<a href="#" class = "versionHistory" url="' . $datastream_url . '" datastream="' . $datastream->id . '">' . count($datastream) . '</a>';
 		}
     print '</td><td>';
 		$viewer_filename = $datastream->id.'.';
@@ -1560,7 +1552,10 @@ function sidora_osd_proxy($pid){
  */
 function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $extra = ''){
   global $user;
-  if ($one == 'version_history'){
+  if ($one == 'test_string'){
+	  test_string_to_json();
+	}	
+	if ($one == 'version_history'){
 	  sidora_view_datastream_version_history($two);
 	}	
 	if ($one == 'osd_proxy'){
@@ -2064,13 +2059,33 @@ function sidora_form_alter(&$form, &$form_state, $form_id){
     'no-store, no-cache, must-revalidate, post-check=0, pre-check=0', 
     FALSE
   );
-  module_load_include('inc', 'xml_form_builder', 'includes/associations');
+  if (($form_id == 'islandora_revert_datastream_version_form') || ($form_id == 'islandora_delete_datastream_version_form')){
+		unset($form['actions']['cancel']['#href']);
+		$form['actions']['cancel']['#href'] = '';
+		$form['actions']['cancel']['#id'] = 'cancel';
+		$form['#attached']['css'] = array(
+     array(
+		 'data' => base_path() . drupal_get_path('module', 'sidora') . '/css/workbench_create_resource.css',
+     'type' => 'external',
+		 ),
+		 array(
+      'data' => '#edit-submit { display:inline-block; }',
+      'type' => 'inline',
+     ),
+		);
+		$form['#attached']['js'] = array(
+       array(
+       'data' => 'jQuery(function(){ var title = jQuery(".page-title"); jQuery("#edit-actions").parent("div").prepend(title); jQuery("#cancel").click(function(){ window.parent.jQuery("#versionHistoryDialog").dialog("close");});})',
+       'type' => 'inline',
+       ),
+     );
+	}
+	module_load_include('inc', 'xml_form_builder', 'includes/associations');
   module_load_include('inc', 'islandora','includes/ingest.form');
   if (!array_key_exists('#submit', $form)) $form['#submit'] = array();
   array_unshift($form['#submit'], 'sidora_form_submit_alter');
   $association = NULL;
   if ($form_id == 'xml_form_builder_ingest_form' || $form_id == 'islandora_ingest_form' || $form_id == 'xml_form_builder_datastream_form_metadata_form'){
-  //if ($form_id == 'xml_form_builder_ingest_form' || $form_id == 'islandora_ingest_form'){
     if (array_key_exists('form_build_id', $_POST)){
       $submitted_form_id = $_POST['form_build_id'];
       $association = sidora_find_association($form_state, $submitted_form_id);
@@ -2102,7 +2117,7 @@ function sidora_form_alter(&$form, &$form_state, $form_id){
 			'?Subject=SIdora Account Help&body=My name is:-Enter Name- and my Email is:-Enter Email- and I am requesting help with my SIdora Account.  -Enter more information that indicates the kind of assistance you would like-').'</div>\');</script>');
 			$form['login_message'] = array('#markup' => ''.variable_get('sidora_login_message', '').'');
       break;
-  }
+	}
 }
 /**
  * Helper to step through the entire form and remove actual validation, putting a red * in its place
@@ -6642,3 +6657,123 @@ function sidora_video_view_object($pid) {
  // $output = drupal_get_css() . drupal_get_js() . $output;
  // return $output;
 }
+
+function sidora_menu_alter(&$items) {
+  if (isset($items['islandora/object/%islandora_object/datastream/%islandora_datastream/version'])) {
+    unset($items['islandora/object/%islandora_object/datastream/%islandora_datastream/version']['file']);
+		$items['islandora/object/%islandora_object/datastream/%islandora_datastream/version']['page callback'] = 'sidora_datastream_version_view';
+    $items['islandora/object/%islandora_object/datastream/%islandora_datastream/version']['page arguments'] = array(4);
+	}
+	if (isset($items['islandora/object/%islandora_object/datastream/%islandora_datastream/version/%/view'])) {
+    unset($items['islandora/object/%islandora_object/datastream/%islandora_datastream/version/%/view']['file']);
+		$items['islandora/object/%islandora_object/datastream/%islandora_datastream/version/%/view']['page callback'] = 'sidora_view_datastream';
+		$items['islandora/object/%islandora_object/datastream/%islandora_datastream/version/%/view']['page arguments'] = array(4, FALSE, 6);
+	}	
+}
+function sidora_datastream_version_view($datastream) {
+	module_load_include('inc', 'islandora', 'includes/datastream.version');
+  module_load_include('inc', 'islandora', 'includes/datastream');
+  module_load_include('inc', 'islandora', 'includes/utilities');
+  $parent = $datastream->parent;
+  drupal_set_title(t("@dsid Previous Versions", array('@dsid' => $datastream->id)));
+  $audit_values = islandora_get_audit_trail($parent->id, $datastream->id);
+  $header = array();
+  $header[] = array('data' => t('Created Date'));
+  $header[] = array('data' => t('Size'));
+  $header[] = array('data' => t('Label'));
+  $header[] = array('data' => t('Responsibility'));
+  $header[] = array('data' => t('Mime type'));
+  $header[] = array('data' => t('Operations'), 'colspan' => '2');
+  $rows = array();
+  foreach ($datastream as $version => $datastream_version) {
+    $row = array();
+    $reponsibility = $parent->owner;
+    foreach ($audit_values as $audit_value) {
+      $internal = $datastream_version->createdDate;
+      if ($audit_value['date'] == $datastream_version->createdDate) {
+        $reponsibility = $audit_value['responsibility'];
+      }
+    }
+      $user_val = $reponsibility;
+    $row[] = array(
+      'class' => 'datastream-date',
+			'data' => theme('islandora_datastream_view_link', array(
+        'datastream' => $datastream,
+        'label' => $datastream_version->createdDate->format(DATE_RFC850),
+        'version' => $version,
+      )),
+    );
+    $row[] = array(
+      'class' => 'datastream-size',
+      'data' => islandora_datastream_get_human_readable_size($datastream_version),
+    );
+    $row[] = array(
+      'class' => 'datastream-label',
+      'data' => $datastream_version->label,
+    );
+    $row[] = array(
+      'class' => 'datastream-responsibility',
+      'data' => $user_val,
+    );
+    $row[] = array(
+      'class' => 'datastream-mime',
+      'data' => $datastream_version->mimeType,
+    );
+    $row[] = array(
+      'class' => 'datastream-delete',
+      'data' => theme('islandora_datastream_delete_link', array(
+        'datastream' => $datastream,
+        'version' => $version,
+      )),
+    );
+    $row[] = array(
+      'class' => 'datastream-revert',
+      'data' => theme('islandora_datastream_revert_link', array(
+        'datastream' => $datastream,
+        'version' => $version,
+      )),
+    );
+    $rows[] = $row;
+  }
+  $to_return = theme('table', array('header' => $header, 'rows' => $rows));
+ //   $to_return = islandora_datastream_version_table($datastream);
+	//	$to_return_array = explode('<td class="datastream-responsibility">',$to_return);
+	//error_log("\nIn sidora_datastream_version_view, return from islandora :".print_r($to_return,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
+ //  $to_return = $rows;
+		drupal_add_css(drupal_get_path('module','sidora').'/css/workbench_create_resource.css',array('weight' => '1000000', 'group' => CSS_THEME));
+    drupal_add_css('table.sticky-header { display: none !important; }', array('type' => 'inline')); 
+    return $to_return;
+}  		
+function sidora_view_datastream($datastream, $download = FALSE, $version){
+  module_load_include('inc', 'sidora', 'includes/utils');
+  $xsl_file = '';
+  if ($version !== NULL) {
+    if (isset($datastream[$version])) {
+      $datastream = $datastream[$version];
+    }
+    else {
+      return drupal_not_found();
+    }
+  }
+  $datastream_content = $datastream->content;
+        if (empty($datastream_content)){
+          print t('Datastream not found by that name');
+          exit();
+        }
+        //var_dump($datastream);
+        //datastream_content is now set.  perform the output
+        $mime_type = (empty($datastream))?'text/xml':$datastream->mimeType;
+
+        $file_extension = '';
+        if ($mime_type != ''){
+          $file_extension = sidora_get_file_extension_from_mime($mime_type);
+        } 
+     //   if ((strpos($mime_type,"xml") !== FALSE || strpos($mime_type,"text") !== FALSE)){ //html, text, csv
+          header("Content-type: html");
+     //   }else{
+      //    header("Content-type: $mime_type");
+      //  }
+          print '<html>'.$datastream_content.'</html>';
+	error_log("\nIn sidora_datastream_version_view, return from islandora :".print_r($datastream_content,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
+}	
+	
