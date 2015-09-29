@@ -287,7 +287,7 @@ sidora.concept.LoadContentHelp.CreateMenu = function(conceptOfInterest){
     url: '../info/'+conceptOfInterest+'/create_resource_menu',
   }).done(function(menu_html){
     var availableResourcesToCreateForConceptHtml = menu_html;
-    jQuery("#resource-create").remove();
+		jQuery("#resource-create").remove();
     if (menu_html.length > 0){
       jQuery("#resource-files-menu").append('<li id="resource-create"><a id="resource-create-link" href="#" onclick="return false;"><input type="image" src="'+Drupal.settings.basePath+'sites/all/modules/islandora_xml_forms-7.x/elements/images/add.png" title="Create a new resource as a child of the highlighted concept."> Add&nbsp;resource</a>'+availableResourcesToCreateForConceptHtml+'</li>');
       jQuery("#resource-create a").attr("onclick","return false;");
@@ -1012,8 +1012,14 @@ sidora.ontology._createSubmenu = function(ontologyChildren){
       if (typeof(obj.form) != 'undefined') formName = ' formname="'+obj.form+'"';
       if (typeof(obj['ontology-id']) != 'undefined') ontologyId = ' ontology-id="'+obj['ontology-id']+'"';
       if (typeof(obj.disabled) != 'undefined' && obj.disabled) classDisabled = " ui-state-disabled";
-      if (childrenHtml.length > 0) classIcon = ' <input type="image" align ="right" position="absolute" src="'+Drupal.settings.pathToTheme+'/images/list-item.png">';
+      if (childrenHtml.length > 0) {
+			 classIcon = ' <input type="image" style="position:absolute; right:0px; padding-right:2px;" src="'+Drupal.settings.pathToTheme+'/images/list-item.png" />';
+			}
+			else {
+			 classIcon = '&nbsp;&nbsp;';
+			}  
 			toReturn += ("<li title='"+obj.description+"' class=''><a onclick='return false;' href='#'"+model+formName+ontologyId+" class="+classDisabled+">"+key.replace(/ /g, '&nbsp;')+classIcon+"</a>"+childrenHtml+"</li>\n");
+		//	toReturn += ("<li title='"+obj.description+"' class=''><a onclick='return false;' href='#'"+model+formName+ontologyId+" class="+classDisabled+">"+key.replace(/ /g, '&nbsp;')+classIcon+"</a>"+childrenHtml+"</li>\n");
     }
   }
   return toReturn;
