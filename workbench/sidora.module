@@ -1786,6 +1786,27 @@ function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $ex
   if ($one == 'osd_proxy'){
     sidora_osd_proxy($two);
   }
+	if ($one == 'view_tabular'){
+    module_load_include('inc', 'sidora', 'includes/utils');
+	  $object = sidora_meta($two);
+    $datastream_content = $object['OBJ']->content;
+    $datastream = $object['OBJ'];
+	  $mime_type = (empty($datastream))?'text/xml':$datastream->mimeType;
+	  $file_extension = '';
+    if ($mime_type != ''){
+      $file_extension = sidora_get_file_extension_from_mime($mime_type);
+    } 
+    $filename = $two.'_OBJ'.$file_extension;//get_suggest_filename($label, $mime_type);
+	  $file_uri = drupal_tempnam(file_directory_temp(), $filename);
+	  $file = new stdClass();
+    $file->uri = $file_uri;
+    $file->filename = $filename;
+    $file->filemime = $mime_type;
+    $file->status = 0; // Temporary file.
+	  file_unmanaged_save_data($datastream_content, file_directory_temp() . '/'.$filename, FILE_EXISTS_REPLACE); 
+		$temp = file_directory_temp();
+		sidora_tabular_view_phpexcelreader($temp.'/'.$filename);
+	}	
 	if ($one == 'user_register'){
 	  return drupal_render(sidora_account_request_form());
 		exit();
@@ -3336,7 +3357,7 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
           $to_output .= '<li><a href="" model="si:fieldbookCModel" formname="Digitized Text (PDF)" ontology-id="DigitizedTextPdf">Digitized&nbsp;Text&nbsp;PDF&nbsp;(MODS)</a>';
           $to_output .= '</li>';
           $to_output .= '<li><a href="" model="si:datasetCModel" formname="Tabular Data Set Object" ontology-id="Datasets">Tabular&nbsp;Datasets</a></li>';
-          $to_output .= '<li><a href="">General&nbsp;Image</a><ul>';
+          $to_output .= '<li><a href="">General&nbsp;Image&nbsp;<input type="image" style="position:absolute; right:0px; padding-right:2px;" src="' . base_path().path_to_theme() . '/images/list-item.png"/></a><ul>';
           $to_output .=   '<li><a href="" model="si:generalImageCModel" formname="General Image Description" ontology-id="GeneralImage_GeneralImage">General&nbsp;Image&nbsp;Description&nbsp;(MODS)</a></li>';
           $to_output .=   '<li><a href="" model="si:generalImageCModel" formname="Camera Trap Image" ontology-id="GeneralImage_CameraTrapImage">Camera&nbsp;Trap&nbsp;Image&nbsp;(MODS)</a></li>';
           $to_output .= '</ul></li>';
@@ -3520,6 +3541,7 @@ function sidora_xml_form_builder_get_transforms(){
  */
 function sidora_block_view($delta = ''){
   try{
+  drupal_add_js('jQuery.extend(Drupal.settings, { "pathToTheme": "' . base_path() . path_to_theme() . '" });', 'inline');
   if (strpos(current_path(), 'sidora/workbench') === FALSE){
     return;
   }
@@ -3577,7 +3599,7 @@ function sidora_block_view($delta = ''){
 </ul>'.
 */
  '';
-      $block['content'] .= '
+  	    $block['content'] .= '
   <div id="concept_tabs">
     <ul>
       <li><a href="#concept-meta">Concept Overview</a></li>
@@ -6912,4 +6934,22 @@ function sidora_contact_us_form_submit($form, &$form_state) {
 	if (sidora_mail($default_from, variable_get('account_request_email_to', $default_to), 'Account Help', $form_state['values']['helptext'])){
 	  drupal_set_message(t('Form submitted successfully'));
 	}	
+}
+function sidora_tabular_view_phpexcelreader($filename){
+require_once(libraries_get_path('PHPExcel') . '/Classes/PHPExcel/IOFactory.php');
+$objPHPExcel = PHPExcel_IOFactory::load($filename);
+$worksheet = $objPHPExcel->getActiveSheet();
+echo '<table style="border:thin solid; width:90%; border-collapse:collapse;">';
+foreach ($worksheet->getRowIterator() as $row) {
+	echo '<tr style="border-bottom:thin solid; border-top:none; border-right:none; border-left:none; padding:"><td style="border-right:thin solid; padding:3px;">' . $row->getRowIndex() . '</td>';
+    $cellIterator = $row->getCellIterator();
+		$cellIterator->setIterateOnlyExistingCells(false); // Loop all cells, even if it is not set
+    foreach ($cellIterator as $cell) {
+        if (!is_null($cell)) {
+            echo '<td style="border-right:thin solid; padding:5px;">' . $cell->getValue() . '</td>';
+        }
+    }
+		echo '</tr>';
+}
+echo '</table>';
 }
