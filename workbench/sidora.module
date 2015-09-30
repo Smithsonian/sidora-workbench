@@ -357,7 +357,6 @@ jQuery(document).ready(function(){
     if ($label != $object->label){
       sidora_clear_tree_cache($pid);
       $object->label = $label;
-      dsm("cleared cache:".$pid);
     }
     if ($owner != $object->owner){
       $object->owner = $owner;
@@ -675,7 +674,11 @@ function sidora_islandora_object_ingested(AbstractObject $object){
     }
   }
   $id_to_creation_info = cache_get("sidora:form_id_to_creation_info");
-  if (empty($id_to_creation_info)){ $id_to_creation_info = array(); dsm("didnt exist yet"); }else{ $id_to_creation_info = $id_to_creation_info->data; }
+  if (empty($id_to_creation_info)){ 
+    $id_to_creation_info = array(); // so additional checks no longer has to ask if this array exists
+  }else{ 
+    $id_to_creation_info = $id_to_creation_info->data; 
+  }
   if (array_key_exists('form_build_id', $_POST)){
     $submitted_form_id = $_POST['form_build_id'];
     $all_meta_entered = filter_input(INPUT_POST, 'all_meta_entered', FILTER_SANITIZE_URL);
@@ -693,11 +696,10 @@ function sidora_islandora_object_ingested(AbstractObject $object){
 <initial_dsid>'.$creation_info['dsid'].'</initial_dsid>
 </sidora>', 'SIDORA');
     }else{
-      dsm("no creation infor for this form");
-      dsm($id_to_creation_info);
+      //Items like Codebooks have no creation info, this should only be items that were not created via the menu
     }
   }else{
-    dsm("no build ID");
+    dsm("no build ID"); //This is likely an error.  Currently no known instances of valid workbench use should enter this branch
   }
 
   if ($parent_pid){
@@ -707,13 +709,11 @@ function sidora_islandora_object_ingested(AbstractObject $object){
     $is_concept = sidora_is_concept($object);
     $is_codebook = sidora_is_codebook($object);
     if ($is_concept){
-      dsm("is_concept");
       $parent->relationships->add(FEDORA_RELS_EXT_URI, 'hasConcept', $object->id);
       //clear THEIR parents out since the number in parens is held there
       $grandparents = sidora_get_parent_concepts($parent);
       foreach($grandparents as $grandparent_pid => $grandparent){ sidora_clear_tree_cache($grandparent_pid); }
     }else if ($is_codebook){
-      dsm("is_codebook");
       //add codebook to user object (not the intended parent)
       $user_projects_pid = sidora_get_user_object();
       $user_projects = $tuque->repository->getObject($user_projects_pid);
@@ -721,9 +721,7 @@ function sidora_islandora_object_ingested(AbstractObject $object){
       //set the user's recent codebook to this new codebook
       $edit['data']['recent_codebook_id'] = $object->id;
       user_save($user,$edit);
-      dsm($user);
     }else{
-      dsm("is_resource");
       $parent->relationships->add(FEDORA_RELS_EXT_URI, 'hasResource', $object->id);
       $tuque = islandora_get_tuque_connection();
       $apim = $tuque->repository->api->m;
@@ -799,7 +797,7 @@ function sidora_islandora_datastream_modified(AbstractObject $object, AbstractDa
  * Implements hook_islandora_datastream_ingested
  */
 function sidora_islandora_datastream_ingested(AbstractObject $object, AbstractDatastream $datastream) {
-  //dsm("Sidora Datastream Ingested");
+  //("Sidora Datastream Ingested");
 }
 /** 
  * Implements hook_islandora_datastream_alter
@@ -909,7 +907,7 @@ PDF metadata:
     /*
     $object_content_models = $object->relationships->get('info:fedora/fedora-system:def/model#', 'hasModel'); 
     foreach($object_content_models as $ocm){
-      dsm($ocm['object']['value']);
+      ($ocm['object']['value']);
     }
     */
   }else{
@@ -1716,6 +1714,7 @@ function sidora_autologout_prevent(){
  * Used only for testing purposes.  Should not be called by the main application
  */
 function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $extra = ''){
+  //This begins the sidora_testing function.  dsm is used in sidora_testing often and should be allowed to remain there
   if (!sidora_is_admin() && variable_get('sidora_allow_all_to_debug','') != "ALL"){
     return t("You must be an administrator or have an administrator set sidora_allow_all_to_debug in order to access this information");
   }
@@ -2230,6 +2229,7 @@ if ($one == 'deletexsl'){
 	if ($one == 'get_cache'){
 	  var_dump(cache_get("sidora:children_results:".$two));
 	}   
+  //This ends the testing function and should also indicate the end of liberal use of the dsm function
 }
 /*
  * Show the form to create a concept
@@ -2366,7 +2366,7 @@ function remove_validation_for_this_and_children(&$item, $current_location = '')
 }
 
 function sidora_form_submit_alter($form, &$form_state){
-  //dsm('sidora_form_submit_alter');
+  //('sidora_form_submit_alter');
 }
 
 /**
@@ -2468,7 +2468,6 @@ function sidora_reset_codebook_choice($codebook_pid = NULL){
   $_SESSION['codebook_choice'] = array();
   $_SESSION['codebook_choice']['sample_uploaded'] = FALSE;
   $_SESSION['codebook_choice']['edit_complete'] = FALSE;
-  $_SESSION['codebook_choice']['header_choice'] = SIDORA_NEVER_SET;
   $_SESSION['codebook_choice']['codebook_id'] = $codebook_pid;
   $_SESSION['codebook_choice']['filepath'] = NULL;
   $_SESSION['codebook_choice']['upload_browser_already_shown'] = FALSE;
@@ -2659,6 +2658,12 @@ function sidora_codebook_upload_form($form, &$form_state){
     '#type' => 'file',
     '#title' => t('Example Data File'),
     '#description' => t('The codebook will be generated on this uploaded example data.'),
+    '#upload_validators' => array(
+      'file_validate_extensions' => array('csv xls'),
+    ),
+    '#attributes' => array(
+      'accept'=> '.csv, .xls',
+    ),
   );
   $form['some_text'] = array(
     '#markup' => '<style>
@@ -2715,6 +2720,25 @@ function sidora_codebook_upload_form_validate($form, &$form_state) {
       if ($file = file_move($file, 'public://')) {
         // Save the file for use in the submit handler.
         $form_state['storage']['file'] = $file;
+        // Make the storage of the file permanent.
+        $file->status = FILE_STATUS_PERMANENT;
+        // Save file status.
+        file_save($file);
+        // Set a response to the user.
+        //drupal_set_message(t('The form has been submitted and the image has been saved, filename: @filename.', array('@filename' => $file->filename)));
+        $header_choice = $form_state['values']['header_choice']; //Note this is a string, not a boolean
+        $url = 
+        variable_get('sidora_codebook_parser_url', '').'url='.file_create_url($file->uri).'&headers='.$header_choice;
+        $codebook_label = 'Codebook '.date('Ymd_His');
+        print 'About to create from:'.$url;//BBB
+        try{
+          $codebook = sidora_create_codebook_from_url($url, $codebook_label);
+          $form_state['storage']['codebook'] = $codebook;
+        }catch(Exception $e){
+          watchdog('SIdora_Tabular_Parse',t("Problem with creating a codebook:<br/>").$e->getMessage().t("URL:").$url);
+          form_set_error('file',t("Unable to parse the uploaded file. Contact an administrator if you believe this file should be able to parsed.  Please send a screenshot of this page, include the file you uploaded, and the time and date this occurred.  The administrator should check the Drupal log for 'SIdora_Tabular_Parse' for more information."));
+          return;
+        }
       }
       else {
         form_set_error('file', t("Failed to write the uploaded file to the site's file folder."));
@@ -2727,7 +2751,7 @@ function sidora_codebook_upload_form_validate($form, &$form_state) {
   if ($form_state['triggering_element']['#id'] == 'edit-pick-codebook-submit'){
     dsm('Picker');
   }
-  dsm($form_state);
+  dsm($form_state); //BBB
 }
 
 /**
@@ -2738,26 +2762,15 @@ function sidora_codebook_upload_form_submit($form, &$form_state) {
   $file = $form_state['storage']['file'];
   // We are done with the file, remove it from storage.
   unset($form_state['storage']['file']);
-  // Make the storage of the file permanent.
-  $file->status = FILE_STATUS_PERMANENT;
-  // Save file status.
-  file_save($file);
-  // Set a response to the user.
-  drupal_set_message(t('The form has been submitted and the image has been saved, filename: @filename.', array('@filename' => $file->filename)));
-  $header_choice = $form_state['values']['header_choice']; //Note this is a string, not a boolean
-  $url = 
-  variable_get('sidora_codebook_parser_url', '').'url='.file_create_url($file->uri).'&headers='.$header_choice;
-  $codebook_label = 'Codebook '.date('Ymd_His');
 
   $file_info = new stdClass();
   $file_info->filename = basename(file_create_url($file->uri));
   $file_info->filepath = drupal_realpath($file->uri);
   $_SESSION['file_uploads'][$user->uid][] = $file_info;
 
-  $codebook = sidora_create_codebook_from_url($url, $codebook_label);
+  $codebook = $form_state['storage']['codebook'];
   $_SESSION['codebook_choice']['sample_uploaded'] = TRUE;
   $_SESSION['codebook_choice']['edit_complete'] = FALSE;
-  $_SESSION['codebook_choice']['header_choice'] = $header_choice;
   $_SESSION['codebook_choice']['codebook_id'] = $codebook->id; //Choice for this session
   $_SESSION['codebook_choice']['filepath'] = $file_info->filepath;
 }
@@ -2957,7 +2970,6 @@ function sidora_user_initialize($account){
       sleep(15); //Arbitrary sleep to allow fedora to create the objects.  Even though the ID comes back it's apparently not available immediately
       $data['data']['islandora_user_pid'] = $object->id;
       user_save($account,$data);
-      //dsm("Created Sidora object for user:".$object->id);
     }
   }catch(Exception $exc){
     //dsm("User ID reused"); //BBB don't cause the error to happen in the first place

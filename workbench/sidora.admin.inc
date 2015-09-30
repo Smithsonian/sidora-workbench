@@ -466,9 +466,4 @@ tr.removed.odd {
   return system_settings_form($form);
 }
 
-/*
-function sidora_admin_settings_save(){
-  dsm("Form saving");
-}
-*/
 
