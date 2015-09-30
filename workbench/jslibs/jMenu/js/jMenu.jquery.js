@@ -77,7 +77,7 @@
                         });
 
 
-                    if(!opts.openClick)
+										if(!opts.openClick)
                         $(this).bind({
                             mouseenter:function() {
                                 if($(this).hasClass('jmenu-level-0')) {
