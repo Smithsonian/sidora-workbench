@@ -1016,8 +1016,19 @@ xmlns:cpf="urn:isbn:1-931666-33-4"
     $xsl->importStyleSheet($doc);
     $docToLoad = ('<'.'?xml version="1.0" encoding="UTF-8"?'.'>'.$object['SIDORA']->content);
     $doc->loadXML($docToLoad);
-    $ontology_id = trim($xsl->transformToDoc($doc)->firstChild->wholeText);
-
+    $found_ontology_id = FALSE;
+    $ontology_id = SIDORA_NEVER_SET;
+    $xsl_transformed = $xsl->transformToDoc($doc);
+    if (!empty($xsl_transformed)){
+      $fc = $xsl_transformed->firstChild;
+      if (!empty($fc)){
+        $ontology_id = trim($xsl->transformToDoc($doc)->firstChild->wholeText);^M
+        $found_ontology_id = TRUE;
+      }
+    }
+    if (!$found_ontology_id){
+      $ontology_id = '';
+    }
     $checker = xml_form_builder_get_associations(array(), array(), array(), FALSE);   
     //Sidora assumes that we will only have one form that we care about as metadata, and that we will only have one association of model to form
     $found_dsid = '';
