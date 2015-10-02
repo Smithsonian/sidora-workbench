@@ -1022,7 +1022,7 @@ xmlns:cpf="urn:isbn:1-931666-33-4"
     if (!empty($xsl_transformed)){
       $fc = $xsl_transformed->firstChild;
       if (!empty($fc)){
-        $ontology_id = trim($xsl->transformToDoc($doc)->firstChild->wholeText);^M
+        $ontology_id = trim($xsl->transformToDoc($doc)->firstChild->wholeText);
         $found_ontology_id = TRUE;
       }
     }
@@ -2637,7 +2637,7 @@ function sidora_create_resource_get_metadata_form_html($parent_pid, $model, $for
           }
         }
         $form_copy_array = $form;
-        if (!empty($association['title_field'][$title_total])){
+        if (!empty($association['title_field'])){
           for ($title_total = 0; $title_total < count($association['title_field']); $title_total++){
             $form_copy_key = $association['title_field'][$title_total];
             if (array_key_exists($form_copy_key,$form_copy_array)){
