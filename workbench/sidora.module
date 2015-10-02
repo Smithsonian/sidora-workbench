@@ -344,7 +344,7 @@ jQuery(document).ready(function(){
       return t('This action cannot be undone.  Are you sure?');
     }
     if (!empty($dsid_to_remove)){
-      $object = sidora_meta($pid);
+      $object = sidora_obj($pid);
       $object->purgeDatastream($dsid_to_remove);
     }
     return 'DS purge complete';
@@ -353,7 +353,7 @@ jQuery(document).ready(function(){
     if (!sidora_allow($user,$pid,'update')) drupal_not_found();
     $label = filter_input(INPUT_POST, 'label', FILTER_SANITIZE_STRING);
     $owner = filter_input(INPUT_POST, 'owner', FILTER_SANITIZE_URL);
-    $object = sidora_meta($pid);
+    $object = sidora_obj($pid);
     if ($label != $object->label){
       sidora_clear_tree_cache($pid);
       $object->label = $label;
@@ -365,7 +365,7 @@ jQuery(document).ready(function(){
   }
   if (!sidora_allow($user,$pid,'view')) drupal_not_found();
 
-  $object = sidora_meta($pid);
+  $object = sidora_obj($pid);
   print '
 <style>
 .object-properties {
@@ -1780,7 +1780,7 @@ function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $ex
   }
 	if ($one == 'view_tabular'){
     module_load_include('inc', 'sidora', 'includes/utils');
-	  $object = sidora_meta($two);
+	  $object = sidora_obj($two);
     $datastream_content = $object['OBJ']->content;
     $datastream = $object['OBJ'];
 	  $mime_type = (empty($datastream))?'text/xml':$datastream->mimeType;
@@ -2783,7 +2783,6 @@ function sidora_codebook_upload_form_validate($form, &$form_state) {
   if ($form_state['triggering_element']['#id'] == 'edit-pick-codebook-submit'){
     dsm('Picker');
   }
-  dsm($form_state); //BBB
 }
 
 /**
@@ -2840,10 +2839,9 @@ function sidora_codebook_hidden_step_form($form, &$form_state){
   return $form;
 }
 /*
- *
+ * Check if this step of the tabular data workflow is completed
  */
 function sidora_is_create_resource_codebook_edit_completed() {
-  global $user;
   return !(empty($_SESSION['codebook_choice']['edit_complete']));
 }
 
@@ -3206,29 +3204,17 @@ function sidora_get_xsl_file_config_for_object($pid){
   $dsid_to_use = '';
   $curr_check = NULL;
   for ($sfci = 0; $sfci < sizeof($sfc->xsl_config) && !$perfect_match; $sfci++){
-
     $curr_check = $sfc->xsl_config[$sfci];
-    //var_dump($curr_check);
     $model_match = in_array($curr_check->model,$models);
     $form_match = $curr_check->form == $form_name;
-    //$dsid_match = $curr_check->dsid == $preferred_dsid;
-    //print 'mm:'.$model_match.' for:'.$curr_check->model."\n";
-    //var_dump($models);
-    //print 'fm:'.$form_match.' for:'.$form_name.' vs:'.$curr_check->form."\n";
-
     if ($model_match && $form_match){
       $perfect_match = TRUE;
       $dsid_to_use = $curr_check->dsid;
-      //print 'Setting dsid to use to '.$dsid_to_use;
     }
     if ($model_match && $form_match){
       $xsl_file = $curr_check->file;
     }
   }
-  //print "\n";
-  //print 'perfect match:'.$perfect_match;
-  //print "\n";
-  //var_dump($curr_check);
   if ($perfect_match) return $curr_check;
   return NULL;
 }
@@ -3237,6 +3223,11 @@ function sidora_get_xsl_file_for_object($pid){
   if (empty($curr_check)) return NULL;
   return $curr_check->file;
 }
+/*
+ * If an item's ancestry (parent/grandparent/etc) includes an exhibition, then the item is allowed to be shown by exhibition
+ * So this checks up the tree to find if there is an exhibition somewhere in the object's ancestry.
+ * This function calls itself and keeps track of already checked items
+ */
 function sidora_exhibition_exists_in_tree($pid_to_check, $pids_checked_array){
   global $pids_checked_array;
   if (($pid_to_check != 'si:root') && ((!is_array($pids_checked_array)) || (!in_array($pid_to_check,$pids_checked_array)))){
@@ -3294,6 +3285,11 @@ function sidora_generate_parent_concept_query($pid) {
     order by $t';
 }
 
+/*
+ * This function is called by exhibition to get specified exhibition information
+ * The current design requires that it must be able to be run by the public (ajax call in the exhibition)
+ *
+ */
 function sidora_open_access($info_type, $pid){
 	$pids_checked = Array();
 	$pid_with_exhibition =	sidora_exhibition_exists_in_tree($pid, $pids_checked);
@@ -3315,10 +3311,13 @@ function sidora_open_access($info_type, $pid){
 	}
   drupal_exit();
 }
+/*
+ * A catch all for many of the ajax calls
+ * TODO: split the various cases into separate functions
+ */
 function sidora_info_json($pid, $type='resources', $specific_meta = '', $download = '', $formatted = '', $limit = NULL, $offset = NULL){
   global $user;
   $to_output = '';
-  //$pid = 'si:257075';
   switch ($type) {
     case 'relationships':
       print sidora_get_parent_table($pid);
@@ -3328,7 +3327,6 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
       $return_when_encoded = array();
       $all_uploads = $_SESSION['file_uploads'][$user->uid];
       $directory_to_list_for_xsl = DRUPAL_ROOT.'/'.drupal_get_path('module','sidora').'/XSL';
-      //$xsl_filenames = array_diff(scandir($directory_to_list_for_xsl), array('..', '.'));
       $return_when_encoded['files'] = array();
       if (!empty($all_uploads)){
         foreach($all_uploads as $curr_upload){
@@ -3358,7 +3356,7 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
       break;
     case 'management':
       if (!sidora_allow($user,$pid,'view')) drupal_not_found();
-      $object = sidora_meta($pid);
+      $object = sidora_obj($pid);
       $for_json_output = array();
       $ds_info = array();
       foreach($object as $dsid=>$datastream){
@@ -3392,7 +3390,7 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
       drupal_exit();
       break;
     case 'base':
-      $object = sidora_meta($pid);
+      $object = sidora_obj($pid);
       if (empty($object)){
         print t('Object not found');
         drupal_exit();
@@ -3401,7 +3399,7 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
       break;
     case 'meta':
       module_load_include('inc', 'sidora', 'includes/utils');
-      $object = sidora_meta($pid);
+      $object = sidora_obj($pid);
       if (empty($object)){
         print t('Object not found');
         drupal_exit();
@@ -3440,10 +3438,8 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
           print t('Datastream not found by that name');
           drupal_exit();
         }
-        //var_dump($datastream);
         //datastream_content is now set.  perform the output
         $mime_type = (empty($datastream))?'text/xml':$datastream->mimeType;
-
         if ($specific_meta == 'all'){
           $datastream_content = '<xml_root><general_info><owner>'.$object->owner.'</owner><label>'.$object->label.'</label></general_info>'."\n".$datastream_content."\n".'</xml_root>';
           $mime_type = 'text/xml';
@@ -3459,7 +3455,6 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
         }
         if ($download=='download'){
           $content_size = strlen($datastream_content);
-          //$filename = $pid.'_'.$specific_meta;//get_suggest_filename($label, $mime_type);
           $filename = $pid.'_'.$specific_meta.$file_extension;//get_suggest_filename($label, $mime_type);
           if ($content_size > 0) {
             header("Content-length: $content_size");
@@ -3477,7 +3472,7 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
       }else{
         $for_json_output = array();
         foreach($object as $dsid=>$datastream){
-          $for_json_output[] = $dsid; //array_keys will not work on the Fedora object - not true array?
+          $for_json_output[] = $dsid; //array_keys will not work on the Fedora object - not true array
         }
         print json_encode($for_json_output);
         drupal_exit();
@@ -3511,10 +3506,6 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
         $offset = $jsdt_start;
         $resources_count = sidora_concept_resource_listing_count($pid,$resource_types); 
         $filtered_resources_count = sidora_concept_resource_listing_count($pid,$resource_types, $jsdt_search_val, $jsdt_title_search_val); 
-			  //$offset = $filtered_resources_count - ($limit*$jsdt_draw);
-        //if ($offset < 0){
-			  //  $offset = 0;
-			  //}
 				$resources = sidora_concept_resource_listing($pid,$resource_types,$limit,$offset, $jsdt_search_val, $jsdt_title_search_val, $jsdt_order_on, $jsdt_order_by); 
         $jsdt_response = array();
         $jsdt_response['draw'] = $jsdt_draw;
@@ -3554,8 +3545,6 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
           }
         }
         $jsdt_response['data'] = $jsdt_data;
-        
-
         print json_encode($jsdt_response);
         drupal_exit();
       }
@@ -3630,7 +3619,7 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
 					$to_output .= '</ul>';
         }
       break;
-   // added by RA on 3/12/15 - the ajax call to see if there is an exhibition for the current concept and enable/disable the "Exhibit" menu link accordingly
+   // the ajax call to see if there is an exhibition for the current concept and enable/disable the "Exhibit" menu link accordingly
     case 'exhibition': 
       $exhibitions['action'] = 'return false;';
       $exhibitions['ui_state_disable'] = true;
@@ -3688,9 +3677,6 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
  */
 
 function sidora_obj($pid){
-  return sidora_meta($pid);
-}
-function sidora_meta($pid){
   $object = array();
   $tuque = islandora_get_tuque_connection();
   if ($tuque) {
