@@ -1251,6 +1251,9 @@ function sidora_edit_metadata($object_id_string = '', $dsid = '', $form_name = '
   drupal_add_js(drupal_get_path('module','sidora').'/js/workbench_uploader.js',array('weight' => '1000000', 'group' => JS_THEME));
   return $to_return;
 }
+/*
+ * Returns array of mime types which are "displayable" directly to browser
+ */
 function sidora_get_viewable_mime_types(){
   return array(
     'image/jpeg',
@@ -1282,6 +1285,9 @@ function sidora_get_proper_dsid($model_id, $form_name){
   }
   return $to_return;
 }
+/*
+ * Returns HTML containing a table of codebooks or empty string if no codebooks are associated with the pid
+ */
 function sidora_get_related_codebook_table($pid){
   module_load_include('inc', 'sidora', 'includes/utils');
   $output = 'Codebook';
@@ -1303,9 +1309,12 @@ function sidora_get_related_codebook_table($pid){
   }
   return $output;
 }
+/*
+ * Returns HTML that is a table containing the parents with removal links (if more than one parent) or HTML indicating it is an orphan.
+ */
 function sidora_get_parent_table($pid){
   module_load_include('inc', 'sidora', 'includes/utils');
-  $output = 'Parents';
+  $output = t('Parents');
   $object = sidora_obj($pid);
   $parents = sidora_get_parent_concepts($object);
     
@@ -1317,7 +1326,7 @@ function sidora_get_parent_table($pid){
     
     $text_link = array(
       '#type' => 'submit',
-      '#value' => 'Remove',
+      '#value' => t('Remove'),
       '#attributes' => array("ppid"=>$parent['pid'], "class"=>array('parent-removal')),
     );
     $sidora_data = sidora_get_form_and_dsid($parent['pid']);
@@ -1338,7 +1347,7 @@ function sidora_get_parent_table($pid){
   if (!empty($rows)){
     $output .= theme('table', array('header'=>$header, 'rows'=>$rows, 'attributes'=>$table_attributes));
   }else{
-    $output .= '<div>This is an orphan.</div>';
+    $output .= '<div>'.t('This is an orphan.').'</div>';
   }
   $output .= '<script>jQuery(document).ready(function(){
   jQuery("input.parent-removal").click(function(){
@@ -1450,6 +1459,9 @@ function sidora_get_html_flexpaper($pid,$dsid = 'OBJ.swf'){
 ';
   return $to_return;
 }
+/*
+ * Direct output to browser for the XSL for the pid, or the configuration about the XSL information for the pid
+ */
 function sidora_xsl_information($pid, $return_file_content = FALSE){
   $xsl_config = sidora_get_xsl_file_config_for_object($pid);
   if (empty($xsl_config)) return;
@@ -1477,6 +1489,9 @@ function sidora_osd_proxy($pid){
   print file_get_contents($url);
   drupal_exit();
 }
+/*
+ * Creates a codebook in the Fedora repo and returns the Fedora object
+ */
 function sidora_create_codebook_from_url($url, $codebook_label){
   global $user;
   module_load_include('inc', 'islandora', 'includes/utilities');
@@ -1597,6 +1612,9 @@ function sidora_settings_import($object){
     }
   }
 }
+/*
+ * Downloads the current SIdora configuration or shows a form to allow importing a configuration
+ */
 function sidora_config_transfer($direct_download = ""){
   $download_filename = 'site_config.json';
   if ($direct_download == $download_filename){
@@ -1611,6 +1629,10 @@ function sidora_config_transfer($direct_download = ""){
     return $download_link.drupal_render($form);
   }
 }
+/*
+ * Form for uploading a configuration file to import settings from a previously saved SIdora configuration or saved from 
+ * a different server
+ */
 function sidora_config_form($form, &$form_state){
   $form['file'] = array(
     '#type' => 'file',
@@ -1623,6 +1645,9 @@ function sidora_config_form($form, &$form_state){
   );
   return $form;
 }
+/*
+ * Imports the file into the system configuration 
+ */
 function sidora_config_form_submit($form, &$form_state) {
   global $user;
   $validators = array('file_validate_extensions' => array('json txt'));
@@ -1662,19 +1687,16 @@ function sidora_settings_object($ignore_list = array('si_exhibition_website_loca
     }
     foreach($starts_with as $sw_check){
       if (!in_array($starts_with,$ignore_list)){
-        //print "<br/>swc:$sw_check dsi:$drupal_setting_index sp:".strpos($sw_check,$drupal_setting_index);
         if (strpos($drupal_setting_index, $sw_check) === 0){
           $settings_holder[$drupal_setting_index] = $drupal_setting;
         }
       }
     }
   }
-  //print json_encode($settings_holder);
   module_load_include('inc', 'xml_form_builder', 'XMLFormRepository');
   module_load_include('inc', 'xml_form_builder', 'includes/associations');
   $names = XMLFormRepository::GetNames();
   $associations = xml_form_builder_get_associations($names, array(), array(), FALSE);
-  //$associations = (json_encode($associations));
   $forms = array();
   foreach ($names as $form_info) {
     $form_name = $form_info['name'];
@@ -1729,9 +1751,8 @@ function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $ex
   if (!sidora_is_admin() && variable_get('sidora_allow_all_to_debug','') != "ALL"){
     return t("You must be an administrator or have an administrator set sidora_allow_all_to_debug in order to access this information");
   }
-  if (!sidora_is_admin()){
-    print t("Remember that nonadmins will NOT see output from dsm!");
-  }
+  if (!sidora_is_admin()) print t("Remember that nonadmins will NOT see output from dsm!");
+
   global $user;
   if ($one == 'tabular_parse'){
     print 'tabular_parse';
