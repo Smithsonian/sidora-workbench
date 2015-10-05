@@ -473,6 +473,10 @@ function sidora_resource_viewer($pid){
                   }
                 }
                 break;
+              case 'pdfjs':
+                print sidora_get_html_pdfjs($pid,$dsid);
+                drupal_exit();
+                break;
               case 'flexpaper_pdf':
                 //***REMOVED***: 3/4/2015, does not need to do pdf to swf conversion
                 if ($ds->mimetype == 'application/x-shockwave-flash') {
@@ -668,7 +672,7 @@ function sidora_islandora_object_ingested(AbstractObject $object){
           unset($_SESSION['file_uploads'][$user->uid][$index]);
           //If this was the codebook sample, reset the codebook sample information
           $_SESSION['file_uploads'][$user->uid] = array_values($_SESSION['file_uploads'][$user->uid]);
-          unlink($file_obj->filepath);
+          //unlink($file_obj->filepath);
         }
       }
     }
@@ -1383,6 +1387,10 @@ function sidora_get_parent_table($pid){
   });
 });</script>';
   return $output;
+}
+function sidora_get_html_pdfjs($pid,$dsid = 'OBJ'){
+ global $base_url; 
+ drupal_goto($base_url.'/sites/all/modules/sidora/workbench/jslibs/pdfjs/web/viewer.html?file='.$base_url.'/sidora/info/'.$pid.'/meta/'.$dsid.'/download');
 }
 /**
  * returns an entite html page that loads the javascript for flexpaper and a OBJ.swf from a fedora object

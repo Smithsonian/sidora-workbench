@@ -288,6 +288,7 @@ tr.removed.odd {
         //remember to change this and the one below it when adding a new type
 				'direct' => t('Direct stream to browser (actual image / binary / text)'),
 				'web_view' => t('Direct stream to browser for web viewable items, download message for others'),
+        'pdfjs' => t('PDF to HTML5 via Javascript (pdf.js)'),
         'flexpaper_pdf' => t('Flexpaper / Convert to flexpaper / direct stream to browser'),
 				'IDS' => t('Smithsonian IDS Viewer'),
         'OpenSeaDragon' => t('OpenSeaDragon'),
@@ -314,6 +315,7 @@ tr.removed.odd {
         '#options' => array(
           'direct' => t('Direct stream to browser (actual image / binary / text)'),
 				  'web_view' => t('Direct stream to browser for web viewable items, download message for others'),
+          'pdfjs' => t('PDF to HTML5 via Javascript (pdf.js)'),
           'flexpaper_pdf' => t('Flexpaper / Convert to flexpaper / direct stream to browser'),
           'JW Audio Player' => t('JW Player for audio'),
 					'IDS' => t('Smithsonian IDS Viewer'),
