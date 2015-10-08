@@ -303,14 +303,21 @@ sidora.concept.LoadContentHelp.Metadata = function(conceptOfInterest){
  * Loads the menu for the add resources menu and replaces the existing one.  This is not necessary at the current time since the menu is
  * unchanging, but for the future they envision that types of resources may be excluded from certain concepts.
  */
-sidora.concept.LoadContentHelp.CreateMenu = function(conceptOfInterest){
-  jQuery.ajax({
-    url: '../info/'+conceptOfInterest+'/create_resource_menu',
-  }).done(function(menu_html){
+sidora.concept.LoadContentHelp.CreateResourceMenu = function(conceptOfInterest){
+  var ontologyUrl = Drupal.settings.basePath+"sidora/info/"+conceptOfInterest+"/resource_menu_json";
+  jQuery.ajax(
+  {
+    dataType: "json",
+    url: ontologyUrl,
+    error: function(){
+      console.log("error on create resource menu");
+    },
+    success: function (json_obj){
+    var menu_html = window.sidora.ontology._createSubmenu(json_obj);
     var availableResourcesToCreateForConceptHtml = menu_html;
 		jQuery("#resource-create").remove();
     if (menu_html.length > 0){
-      jQuery("#resource-files-menu").append('<li id="resource-create"><a id="resource-create-link" href="#" onclick="return false;"><input type="image" src="'+Drupal.settings.basePath+'sites/all/modules/islandora_xml_forms-7.x/elements/images/add.png" title="Create a new resource as a child of the highlighted concept."> Add&nbsp;resource</a>'+availableResourcesToCreateForConceptHtml+'</li>');
+      jQuery("#resource-files-menu").append('<li id="resource-create"><a id="resource-create-link" href="#" onclick="return false;"><input type="image" src="'+Drupal.settings.basePath+'sites/all/modules/islandora_xml_forms-7.x/elements/images/add.png" title="Create a new resource as a child of the highlighted concept."> Add&nbsp;resource</a><ul>'+availableResourcesToCreateForConceptHtml+'</ul></li>');
       jQuery("#resource-create a").attr("onclick","return false;");
       jQuery("#resource-create a").click(function(){
         var model = jQuery(this).attr("model");
@@ -321,7 +328,6 @@ sidora.concept.LoadContentHelp.CreateMenu = function(conceptOfInterest){
           if (typeof(form) != 'undefined') {
             url += form + "/" + ontologyId + "/fresh";
           }
-          //console.log('form:'+form);
           Shadowbox.close();
           setTimeout(function(){
           Shadowbox.open({
@@ -336,9 +342,10 @@ sidora.concept.LoadContentHelp.CreateMenu = function(conceptOfInterest){
       });
     }
     resetMenu("resource-menu");
-    //jQuery("#resource-menu").jMenu(sidora.util.jMenuConfig);
-  }).fail(function(failure_obj){
-    sidora.recentAjaxFailure(failure_obj);
+    },
+    fail: function(failure_obj){
+      sidora.recentAjaxFailure(failure_obj);
+    }
   });
 }
 /*
@@ -353,7 +360,7 @@ sidora.concept.LoadContentHelp.FullTableReload = function(conceptOfInterest){
     jQuery('#concept-resource-list-internal').append(myDiv);
     sidora.concept.LoadContentHelp.Resources.TableLoad(conceptOfInterest);
     sidora.concept.LoadContentHelp.Resources.TableActionsSetup();
-    sidora.concept.LoadContentHelp.CreateMenu(conceptOfInterest);
+    sidora.concept.LoadContentHelp.CreateResourceMenu(conceptOfInterest);
     sidora.concept.LoadContentHelp.Relationships();
     sidora.ResizeToBrowser();
   }).fail(function(failure_obj){
@@ -843,9 +850,8 @@ sidora.InitiatePage = function(){
   sidora.concept.LoadContent();
   jQuery("#page-title").after(jQuery("#workbench-menu"));
   jQuery("#concept-meta").prepend(jQuery("#concept-meta-menu"));
-  //jQuery("#concept-menu").jMenu(sidora.util.jMenuConfig);
   jQuery('#concept-menu ul li').children(':contains("Permissions")').addClass("ui-state-disabled").css("margin",0).css("padding-left","5px").css("border",0);
-  sidora.ontology.CreateMenu();
+  sidora.ontology.CreateConceptMenu();
   sidora.ResizeOnWindowResize();
   jQuery(document).tooltip(
   { position: { my: "left-7 bottom", at: "right center" } }
@@ -1012,10 +1018,12 @@ sidora.resources.checkForDuplicateResourcesRA = function(copyOrMove, toLocationI
 /*
  * Gets the current concept json object and creates a menu from it
  */
-sidora.ontology.CreateMenu = function(){
-  jQuery.ajax({
+sidora.ontology.CreateConceptMenu = function(){
+  var ontologyUrl = Drupal.settings.basePath+"sidora/ajax_parts/ontology";
+  jQuery.ajax(
+  {
     dataType: "json",
-    url: Drupal.settings.basePath+"sidora/ajax_parts/ontology",
+    url: ontologyUrl,
     error: function(){
       console.log("error on create menu");
     },
@@ -1074,7 +1082,6 @@ sidora.ontology._createSubmenu = function(ontologyChildren){
 			 classIcon = '&nbsp;&nbsp;';
 			}  
 			toReturn += ("<li title='"+obj.description+"' class=''><a onclick='return false;' href='#'"+model+formName+ontologyId+" class="+classDisabled+">"+key.replace(/ /g, '&nbsp;')+classIcon+"</a>"+childrenHtml+"</li>\n");
-		//	toReturn += ("<li title='"+obj.description+"' class=''><a onclick='return false;' href='#'"+model+formName+ontologyId+" class="+classDisabled+">"+key.replace(/ /g, '&nbsp;')+classIcon+"</a>"+childrenHtml+"</li>\n");
     }
   }
   return toReturn;

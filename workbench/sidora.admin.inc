@@ -45,9 +45,33 @@ function sidora_admin_settings() {
       '#type' => 'textarea',
       '#title' => t('JSON determining the layout and form choices presented for add new concept'),
       '#default_value' => variable_get('sidora_ontology_json',sidora_ontology_json_default()),
+      '#suffix' => '<script>
+jQuery("#edit-sidora-ontology-json").on(\'change keyup paste\', function() {
+  jQuery("#ontology_json_check").remove();
+  try {
+    var c = jQuery.parseJSON(jQuery("#edit-sidora-ontology-json").val());
+    jQuery("#edit-sidora-ontology-json").after("<div id=\'ontology_json_check\' class=\'status messages\'>Valid</div>");
+  }catch (err) {
+    jQuery("#edit-sidora-ontology-json").after("<div id=\'ontology_json_check\' class=\'error messages\'>Invalid</div>");
+  }
+});</script>',
+    ),
+    'sidora_resource_ontology_json' => array(
+      '#type' => 'textarea',
+      '#title' => t('JSON determining the layout and form choices presented for add new resource'),
+      '#default_value' => variable_get('sidora_resource_ontology_json',sidora_ontology_json_default()),
+      '#suffix' => '<script>
+jQuery("#edit-sidora-resource-ontology-json").on(\'change keyup paste\', function() {
+  jQuery("#resource_ontology_json_check").remove();
+  try {
+    var c = jQuery.parseJSON(jQuery("#edit-sidora-resource-ontology-json").val());
+    jQuery("#edit-sidora-resource-ontology-json").after("<div id=\'resource_ontology_json_check\' class=\'status messages\'>Valid</div>");
+  }catch (err) {
+    jQuery("#edit-sidora-resource-ontology-json").after("<div id=\'resource_ontology_json_check\' class=\'error messages\'>Invalid</div>");
+  }
+});</script>',
     ),
   );
-  //$form['#submit'][]= 'sidora_admin_settings_save';
 
   module_load_include('inc', 'xml_form_builder', 'XMLFormRepository');
   $names = XMLFormRepository::GetNames();

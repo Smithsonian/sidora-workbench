@@ -1678,6 +1678,7 @@ function sidora_settings_object($ignore_list = array('si_exhibition_website_loca
   $exact_match = array();
   $exact_match[] = 'si_exhibition_website_location';
   $exact_match[] = 'sidora_ontology_json';
+  $exact_match[] = 'sidora_resource_ontology_json';
   $exact_match[] = 'xsl_form_config';
   $exact_match[] = 'sidora_login_message';
   $exact_match[] = 'sidora_automatic_person_model';
@@ -1776,7 +1777,7 @@ function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $ex
     $new_datastream = $codebook->constructDatastream($datastream_id);
     $new_datastream->label = 'DDI';
     $new_datastream->mimetype = 'something/something';
-    $new_datastream->setContentFromUrl('http://***REMOVED***.my***REMOVED***.net:8080/codebook/?url=http://***REMOVED***.my***REMOVED***.net/***REMOVED***/***REMOVED***');
+    $new_datastream->setContentFromUrl('http://***REMOVED***:8080/codebook/?url=http://***REMOVED***/~***REMOVED***/***REMOVED***');
     $codebook->ingestDatastream($new_datastream);
     print 'object ready ';
     //Also need to add SIDORA datastream
@@ -3629,6 +3630,16 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
         $to_output = json_encode($resources);
       }
       break;
+      case 'resource_menu_json':
+        //if the user is able to create under this concept, give them a create menu
+        global $user;
+        if (!sidora_allow($user, $pid, 'create')){
+            $to_output = '';
+        }else{
+          print variable_get('sidora_resource_ontology_json','');
+          drupal_exit();
+        }
+      break;
       case 'create_resource_menu':
         //if the user is able to create under this concept, give them a create menu
         global $user;
@@ -3977,85 +3988,86 @@ function sidora_block_content_individual_resource_info(){
   return 'sidora_individual_resource_info';
 }
 function sidora_ontology_object(){
+  //header('Content-Type: text/html; charset=UTF-8');
   print variable_get('sidora_ontology_json',sidora_ontology_json_default());
   drupal_exit();
 }
-function sidora_ontology_json_default(){
-  return '
- {
-  "Project":{"description":"This concept is used to represent a project as a whole or some major subdivision of a project. In both cases it is where you can give a project a title, talk about who is involved, describe the work of the project in a general way, etc.","children":{},"model":"si:projectCModel","form":"Research Project"},
-  "Actor":{
-      "description":"",
-      "children":{
-      "Person":{"description":"The Person object is used to describe a person. It includes information about exist dates, full name, address, occupations and biographical information","children":{},"model":"si:projectCModel","form":"Person"},
-      "Organization":{"description":"The Organization, Institution or Expedition content model is used to organize the concepts relating to an Organization or Expedition.","children":{},"model":"si:projectCModel","form":"Organization"},
-      "Expedition":{"description":"The Organization, Institution or Expedition content model is used to organize the concepts relating to an Organization or Expedition.","children":{},"model":"si:projectCModel","form":"Expedition"}
-      }
-    },
-  "Place":{
-      "description":"",
-      "children":{
-      "General Place":{"description":"This concept is a general concept used to describe a place and includes very basic information such as place name, description, etc.","children":{},"model":"si:projectCModel","form":"Research Project", "disabled":true},
-      "Archaeological Site":{"description":"This concept describes a characteristics of an archaeological site or excavation including stratigraphy, location etc.","children":{},"model":"si:ctPlotCModel","form":"Archaeology Site"},
-      "Research Site":{"description":"This concept describes a data set pertaining to a geographic area.","children":{},"model":"si:projectCModel","form":"Research Site or Area - Full Description", "disabled":true}
-
-      }
-    },
-  "Built Environment":{"description":"This concept describes a man-made construction or landscape, such as a building, garden or facility of some kind.","children":{},"model":"si:projectCModel","form":"Research Project"},
-  "Object or Entity":{
-      "description":"",
-      "children":{
-      "Cultural Heritage Entity or Object":{"description":"The Cultural Heritage Entity or Object Concept can be used to describe Artifacts, works of Art, and human-built entities such as a fountain standing in a square etc. ","children":{},"model":"si:lidoCollectionCModel","form":"Cultural Heritage Entity or Object"},
-      "Archaeological Feature":{"description":"This concept is used to describe an archaeological feature that is discovered as part of an excavation such as a tomb, a midden or a housing structure.","children":{},"model":"si:projectCModel","form":"Research Project", "disabled":true}
-      }
-    },
-  "Animal":{
-      "description":"",
-      "children":{
-      "Species":{"description":"This concept is used to describe general characteristics of an animal species.","children":{},"model":"si:dwcCModel","form":"Animal Species or Specimen - Brief Description", "disabled":true},
-      "Specimen":{"description":"This concept is used to describe general characteristics of an animal specimen used as part of a research project and includes the catalog number, scientific name and common name of a specific specimen.","children":{},"model":"si:dwcCModel","form":"Animal Species or Specimen - Brief Description"},
-      "Component":{"description":"This concept is used to describe a specific body part or component of a specimen used as part of a researc project.","children":{},"model":"si:projectCModel","form":"Research Project", "disabled":true}
-      }
-    },
-  "Plant":{
-      "description":"",
-      "children":{
-      "Species":{"description":"This concept is used to describe general characteristics of a plant species.","children":{},"model":"si:projectCModel","form":"Research Project", "disabled":true},
-      "Specimen":{"description":"This concept is used to describe general characteristics of an animal specimen used as part of a research project and includes the catalog number, scientific name and common name of a specific specimen.","children":{},"model":"si:projectCModel","form":"Research Project", "disabled":true},
-      "Component":{"description":"This concept is used to describe a specific body part or component of a specimen used as part of a research project.","children":{},"model":"si:projectCModel","form":"Research Project", "disabled":true}
-
-      }
-    },
-  "Deployment":{
-      "description":"",
-      "children":{
-      "Instrument Deployment":{"description":"This concept describes an arbitrary instrument deployed to capture data.","children":{},"model":"si:projectCModel","form":"Research Project", "disabled":true},
-       "Camera Deployment":{"description":"The Camera Deployment concept describes the deployment of an camera that collect images automatically at a specific location for a specific period of time.","children":{},"model":"si:cameraTrapCModel","form":"Camera Trap Deployment"}
-      }
-    },
-  "Collection":{
-      "description":"",
-      "children":{
-      "General Collection":{"description":"This concept is used to describe a general grouping of items as part of a research project.  It includes at the very least a title and description.","children":{},"model":"si:projectCModel","form":"Research Project"},
-      "Natural History Collection":{"description":"NCD (Natural Collections Description) concepts capture information about collections of Natural History materials. The Natural Collections Description covers all types of collections of natural history material including specimens, original artwork, photographs, archives, published material or a mixture. Each record describes one entire collection, including information on the extent and purpose of the collection, conditions of access and use and who to contact for more information. ","children":{},"model":"si:projectCModel","form":"Research Project"},
-      "Dataset":{"description":"This concept is used to describe the characteristics of set resources including the collector of the data and the reason the data was collected.","children":{},"model":"si:projectCModel","form":"Research Project", "disabled":true}
-
-      }
-    },
-  "Experiment":{"description":"This concept is used to describe the characteristics of a research experiment including the hypothesis, process steps, observations and conclusion of the experiment.","children":{},"model":"si:projectCModel","form":"Research Project", "disabled":true},
-  "Event":{"description":"This concept is used to describe a general event including a date, time and description of the significance of the event.","children":{},"model":"si:projectCModel","form":"Research Project", "disabled":true},
-  "Idea":{"description":"This concept is used to describe an idea or an organizing concept or theme pertaining to a research project.","children":{},"model":"si:projectCModel","form":"Research Project", "disabled":true}
-}
-';
-
-}
-/*
- * Catch all for ajax
- */
-function sidora_ajax_parts($call_type, $param1 = '', $param2 = '', $param3 = ''){
-  global $user;
-  if ($call_type == 'ontology'){
-    return sidora_ontology_object();
+  function sidora_ontology_json_default(){
+    return '
+   {
+    "Project":{"description":"This concept is used to represent a project as a whole or some major subdivision of a project. In both cases it is where you can give a project a title, talk about who is involved, describe the work of the project in a general way, etc.","children":{},"model":"si:projectCModel","form":"Research Project"},
+    "Actor":{
+        "description":"",
+        "children":{
+        "Person":{"description":"The Person object is used to describe a person. It includes information about exist dates, full name, address, occupations and biographical information","children":{},"model":"si:projectCModel","form":"Person"},
+        "Organization":{"description":"The Organization, Institution or Expedition content model is used to organize the concepts relating to an Organization or Expedition.","children":{},"model":"si:projectCModel","form":"Organization"},
+        "Expedition":{"description":"The Organization, Institution or Expedition content model is used to organize the concepts relating to an Organization or Expedition.","children":{},"model":"si:projectCModel","form":"Expedition"}
+        }
+      },
+    "Place":{
+        "description":"",
+        "children":{
+        "General Place":{"description":"This concept is a general concept used to describe a place and includes very basic information such as place name, description, etc.","children":{},"model":"si:projectCModel","form":"Research Project", "disabled":true},
+        "Archaeological Site":{"description":"This concept describes a characteristics of an archaeological site or excavation including stratigraphy, location etc.","children":{},"model":"si:ctPlotCModel","form":"Archaeology Site"},
+        "Research Site":{"description":"This concept describes a data set pertaining to a geographic area.","children":{},"model":"si:projectCModel","form":"Research Site or Area - Full Description", "disabled":true}
+  
+        }
+      },
+    "Built Environment":{"description":"This concept describes a man-made construction or landscape, such as a building, garden or facility of some kind.","children":{},"model":"si:projectCModel","form":"Research Project"},
+    "Object or Entity":{
+        "description":"",
+        "children":{
+        "Cultural Heritage Entity or Object":{"description":"The Cultural Heritage Entity or Object Concept can be used to describe Artifacts, works of Art, and human-built entities such as a fountain standing in a square etc. ","children":{},"model":"si:lidoCollectionCModel","form":"Cultural Heritage Entity or Object"},
+        "Archaeological Feature":{"description":"This concept is used to describe an archaeological feature that is discovered as part of an excavation such as a tomb, a midden or a housing structure.","children":{},"model":"si:projectCModel","form":"Research Project", "disabled":true}
+        }
+      },
+    "Animal":{
+        "description":"",
+        "children":{
+        "Species":{"description":"This concept is used to describe general characteristics of an animal species.","children":{},"model":"si:dwcCModel","form":"Animal Species or Specimen - Brief Description", "disabled":true},
+        "Specimen":{"description":"This concept is used to describe general characteristics of an animal specimen used as part of a research project and includes the catalog number, scientific name and common name of a specific specimen.","children":{},"model":"si:dwcCModel","form":"Animal Species or Specimen - Brief Description"},
+        "Component":{"description":"This concept is used to describe a specific body part or component of a specimen used as part of a researc project.","children":{},"model":"si:projectCModel","form":"Research Project", "disabled":true}
+        }
+      },
+    "Plant":{
+        "description":"",
+        "children":{
+        "Species":{"description":"This concept is used to describe general characteristics of a plant species.","children":{},"model":"si:projectCModel","form":"Research Project", "disabled":true},
+        "Specimen":{"description":"This concept is used to describe general characteristics of an animal specimen used as part of a research project and includes the catalog number, scientific name and common name of a specific specimen.","children":{},"model":"si:projectCModel","form":"Research Project", "disabled":true},
+        "Component":{"description":"This concept is used to describe a specific body part or component of a specimen used as part of a research project.","children":{},"model":"si:projectCModel","form":"Research Project", "disabled":true}
+  
+        }
+      },
+    "Deployment":{
+        "description":"",
+        "children":{
+        "Instrument Deployment":{"description":"This concept describes an arbitrary instrument deployed to capture data.","children":{},"model":"si:projectCModel","form":"Research Project", "disabled":true},
+         "Camera Deployment":{"description":"The Camera Deployment concept describes the deployment of an camera that collect images automatically at a specific location for a specific period of time.","children":{},"model":"si:cameraTrapCModel","form":"Camera Trap Deployment"}
+        }
+      },
+    "Collection":{
+        "description":"",
+        "children":{
+        "General Collection":{"description":"This concept is used to describe a general grouping of items as part of a research project.  It includes at the very least a title and description.","children":{},"model":"si:projectCModel","form":"Research Project"},
+        "Natural History Collection":{"description":"NCD (Natural Collections Description) concepts capture information about collections of Natural History materials. The Natural Collections Description covers all types of collections of natural history material including specimens, original artwork, photographs, archives, published material or a mixture. Each record describes one entire collection, including information on the extent and purpose of the collection, conditions of access and use and who to contact for more information. ","children":{},"model":"si:projectCModel","form":"Research Project"},
+        "Dataset":{"description":"This concept is used to describe the characteristics of set resources including the collector of the data and the reason the data was collected.","children":{},"model":"si:projectCModel","form":"Research Project", "disabled":true}
+  
+        }
+      },
+    "Experiment":{"description":"This concept is used to describe the characteristics of a research experiment including the hypothesis, process steps, observations and conclusion of the experiment.","children":{},"model":"si:projectCModel","form":"Research Project", "disabled":true},
+    "Event":{"description":"This concept is used to describe a general event including a date, time and description of the significance of the event.","children":{},"model":"si:projectCModel","form":"Research Project", "disabled":true},
+    "Idea":{"description":"This concept is used to describe an idea or an organizing concept or theme pertaining to a research project.","children":{},"model":"si:projectCModel","form":"Research Project", "disabled":true}
+  }
+  ';
+  
+  }
+  /*
+   * Catch all for ajax
+   */
+  function sidora_ajax_parts($call_type, $param1 = '', $param2 = '', $param3 = ''){
+    global $user;
+    if ($call_type == 'ontology'){
+      return sidora_ontology_object();
   }
   if ($call_type == 'tree'){
     return sidora_html_tree_for_ajax($param1);
