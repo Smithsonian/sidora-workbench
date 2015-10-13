@@ -1681,10 +1681,10 @@ sidora.manage.OpenCurrentConfig = function(){
               jQuery("#addDatastreamDialog").closest(".ui-dialog").css("z-index", 1000); //shadowbox is 998
             });
 						jQuery(".versionHistory").click(function(){
-              var datastreamUrl = jQuery(this).attr('url');
+              var pid = jQuery(this).attr('pid');
 							var datastreamTitle = jQuery(this).attr('datastream');
 							jQuery('#versionHistoryDialog').remove();
-							jQuery("body").append("<div id='versionHistoryDialog' style='display:none;' title='"+datastreamTitle+" Version History'><iframe height='1000%' width='100%' style='height:100%;width:100%' src='"+datastreamUrl+"' frameborder='0' marginwidth='0' marginheight='0' allowfullscreen></iframe></div>");
+							jQuery("body").append("<div id='versionHistoryDialog' style='display:none;' title='"+datastreamTitle+" Version History'><iframe height='1000%' width='100%' style='height:100%;width:100%' src='"+Drupal.settings.basePath+"sidora/version_history/"+pid+"/"+datastreamTitle+"' frameborder='0' marginwidth='0' marginheight='0' allowfullscreen></iframe></div>");
               jQuery("#versionHistoryDialog").dialog({
                 resizable: true,
                 height: jQuery("#objectManagement").height()+50,

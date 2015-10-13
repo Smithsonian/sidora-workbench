@@ -23,7 +23,7 @@
     };
     this.baseURL = baseURL;
     this.imageID = imageID;
-    var djatoka_get_success = function(data, textStatus, jqXHR) {
+		var djatoka_get_success = function(data, textStatus, jqXHR) {
       // Determine if the path to "imagefile" has backslashes in it.
       if (data.match(/\"imagefile\"\: \"[^\"]*?(\\).*\"/g)) {
         // Since Djatoka isn't returning a true JSON object (http://bit.ly/1id6dBo),
