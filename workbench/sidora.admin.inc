@@ -316,6 +316,7 @@ tr.removed.odd {
 				  'web_view' => t('Direct stream to browser for web viewable items, download message for others'),
           'flexpaper_pdf' => t('Flexpaper / Convert to flexpaper / direct stream to browser'),
           'JW Audio Player' => t('JW Player for audio'),
+					'JW Video Player' => t('JW Player for video'),
 					'IDS' => t('Smithsonian IDS Viewer'),
           'OpenSeaDragon' => t('OpenSeaDragon'),
           'SimpleXLSX' => t('SimpleXLSX'),
