@@ -45,9 +45,33 @@ function sidora_admin_settings() {
       '#type' => 'textarea',
       '#title' => t('JSON determining the layout and form choices presented for add new concept'),
       '#default_value' => variable_get('sidora_ontology_json',sidora_ontology_json_default()),
+      '#suffix' => '<script>
+jQuery("#edit-sidora-ontology-json").on(\'change keyup paste\', function() {
+  jQuery("#ontology_json_check").remove();
+  try {
+    var c = jQuery.parseJSON(jQuery("#edit-sidora-ontology-json").val());
+    jQuery("#edit-sidora-ontology-json").after("<div id=\'ontology_json_check\' class=\'status messages\'>Valid</div>");
+  }catch (err) {
+    jQuery("#edit-sidora-ontology-json").after("<div id=\'ontology_json_check\' class=\'error messages\'>Invalid</div>");
+  }
+});</script>',
+    ),
+    'sidora_resource_ontology_json' => array(
+      '#type' => 'textarea',
+      '#title' => t('JSON determining the layout and form choices presented for add new resource'),
+      '#default_value' => variable_get('sidora_resource_ontology_json',sidora_ontology_json_default()),
+      '#suffix' => '<script>
+jQuery("#edit-sidora-resource-ontology-json").on(\'change keyup paste\', function() {
+  jQuery("#resource_ontology_json_check").remove();
+  try {
+    var c = jQuery.parseJSON(jQuery("#edit-sidora-resource-ontology-json").val());
+    jQuery("#edit-sidora-resource-ontology-json").after("<div id=\'resource_ontology_json_check\' class=\'status messages\'>Valid</div>");
+  }catch (err) {
+    jQuery("#edit-sidora-resource-ontology-json").after("<div id=\'resource_ontology_json_check\' class=\'error messages\'>Invalid</div>");
+  }
+});</script>',
     ),
   );
-  //$form['#submit'][]= 'sidora_admin_settings_save';
 
   module_load_include('inc', 'xml_form_builder', 'XMLFormRepository');
   $names = XMLFormRepository::GetNames();
@@ -288,6 +312,7 @@ tr.removed.odd {
         //remember to change this and the one below it when adding a new type
 				'direct' => t('Direct stream to browser (actual image / binary / text)'),
 				'web_view' => t('Direct stream to browser for web viewable items, download message for others'),
+        'pdfjs' => t('PDF to HTML5 via Javascript (pdf.js)'),
         'flexpaper_pdf' => t('Flexpaper / Convert to flexpaper / direct stream to browser'),
 				'IDS' => t('Smithsonian IDS Viewer'),
         'OpenSeaDragon' => t('OpenSeaDragon'),
@@ -314,9 +339,10 @@ tr.removed.odd {
         '#options' => array(
           'direct' => t('Direct stream to browser (actual image / binary / text)'),
 				  'web_view' => t('Direct stream to browser for web viewable items, download message for others'),
+					'JW Video Player' => t('JW Player for video'),
+          'pdfjs' => t('PDF to HTML5 via Javascript (pdf.js)'),
           'flexpaper_pdf' => t('Flexpaper / Convert to flexpaper / direct stream to browser'),
           'JW Audio Player' => t('JW Player for audio'),
-					'JW Video Player' => t('JW Player for video'),
 					'IDS' => t('Smithsonian IDS Viewer'),
           'OpenSeaDragon' => t('OpenSeaDragon'),
           'SimpleXLSX' => t('SimpleXLSX'),
@@ -436,13 +462,34 @@ tr.removed.odd {
 			),	
     ),
   );
+	$form['codebook_parser'] = array(
+     'fieldset' => array(
+      '#type' => 'fieldset',
+      '#title' => 'Codebook Parser',
+      '#description' => t(''),
+      '#collapsible' => TRUE,
+      '#collapsed' => TRUE,
+			'sidora_codebook_parser_url' => array(
+			  '#type' => 'textfield',
+				'#title' => t('Codebook Parser URL'),
+				'#default_value' => variable_get('sidora_codebook_parser_url', ''),
+				'#description' => t('The location of codebook parser. Valid entry looks like this: http://&lt;server&gt;:&lt;port&gt;/codebook/?'),
+			),	
+    ),
+  );
+  $form['sidora_allow_all_to_debug'] = array(
+     '#type' => 'textfield',
+     '#title' => t('Allow all users access to debug'),
+     '#default_value' => variable_get('sidora_allow_all_to_debug',''),
+     '#description' => t('If set to "ALL" then all users have access to built-in sidora debug information.  Otherwise only administrators have access.'), //This was not stored as a "role" because we want to be able to give it to any user at the time the debugging happens then turn it off completely.  "ALL" here will give access to the sidora_testing functionality. In the future there may be different strings which give additional granularity
+  );
+
+  $form['sidora_disable_locking_by_pid'] = array(
+    '#type' => 'checkbox',
+    '#title' => 'Disable locking',
+    '#description' => t('Usually pids have locks to eliminate multiple users attempting to access it at one.  Checking this box turns off that feature.'),
+    '#default_value' => variable_get('sidora_disable_locking_by_pid', ''),
+  );
   $form['#attributes'] = array('OnSubmit' => 'formPreSubmit();');
   return system_settings_form($form);
 }
-
-/*
-function sidora_admin_settings_save(){
-  dsm("Form saving");
-}
-*/
-
