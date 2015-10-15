@@ -499,7 +499,7 @@ function sidora_resource_viewer($pid){
                 drupal_exit();
                 break;
               case 'flexpaper_pdf':
-                //***REMOVED***: 3/4/2015, does not need to do pdf to swf conversion
+                //****REMOVED****: 3/4/2015, does not need to do pdf to swf conversion
                 if ($ds->mimetype == 'application/x-shockwave-flash') {
                   print sidora_get_html_flexpaper($pid,$dsid);
                 }else{
@@ -1802,7 +1802,7 @@ function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $ex
     $new_datastream = $codebook->constructDatastream($datastream_id);
     $new_datastream->label = 'DDI';
     $new_datastream->mimetype = 'something/something';
-    $new_datastream->setContentFromUrl('http://***REMOVED***:8080/codebook/?url=http://***REMOVED***/~***REMOVED***/***REMOVED***');
+    $new_datastream->setContentFromUrl('http://****REMOVED****/codebook/?url=http://****REMOVED****.csv');
     $codebook->ingestDatastream($new_datastream);
     print 'object ready ';
     //Also need to add SIDORA datastream
@@ -2371,7 +2371,7 @@ function sidora_create_concept($parent_pid = 'si:root', $model = 'si:collectionC
  * We want to remove "required" fields, but also know when user's didn't enter info in the field
  * TBD / TODO: Create a system that will track if users entered info in the field
  *
- * Add a link to tell ***REMOVED*** there is a request for an account
+ * Add a link to tell Admin there is a request for an account
   
  */
 function sidora_form_alter(&$form, &$form_state, $form_id){
@@ -2992,7 +2992,7 @@ jQuery(document).ready(function(){
 });
 </script>
 ';
-      $create_upload_form = TRUE;
+      $create_upload_form = !$_SESSION['codebook_choice']['upload_browser_already_shown'];
       if ($_SESSION['codebook_choice']['sample_uploaded']){
         $create_upload_form = (count($current_uploads) < 2 && $_SESSION['codebook_choice']['upload_browser_already_shown'] == FALSE);
         //If the user has uploaded a single item that is the sample upload, so 0 uploads or 1, create the upload form
@@ -7487,7 +7487,7 @@ function sidora_resource_version_viewer($pid, $datastream, $viewer, $version){
                 }
                 break;
               case 'flexpaper_pdf':
-                //***REMOVED***: 3/4/2015, does not need to do pdf to swf conversion
+                //****REMOVED****: 3/4/2015, does not need to do pdf to swf conversion
                 if ($ds[$version]->mimetype == 'application/x-shockwave-flash') {
                   print sidora_get_html_flexpaper($pid,$dsid);
                 }else{
@@ -7522,7 +7522,7 @@ function sidora_info_json_version($pid, $datastream, $version, $download='browsw
 	$mime_type = (empty($datastream))?'text/xml':$datastream_content->mimeType;
 	if (($download == 'browser') && (strpos($mime_type,"xml") !== FALSE || strpos($mime_type,"text") !== FALSE)){ //html, text, csv
     header("Content-type: html");
-	  print file_get_contents(variable_get('osd_proxy_pid_prefix', 'http://***REMOVED***:8080/fedora/objects/').$pid."/datastreams/".$ds->id."/content?asOfDateTime=".$datastream_content->createdDate);
+	  print file_get_contents(variable_get('osd_proxy_pid_prefix', 'http://****REMOVED****/fedora/objects/').$pid."/datastreams/".$ds->id."/content?asOfDateTime=".$datastream_content->createdDate);
   }else{
     header("Content-type: $mime_type");
     if ($datastream_content->controlGroup == 'M' || $datastream_content->controlGroup == 'X') {
@@ -7534,7 +7534,7 @@ function sidora_info_json_version($pid, $datastream, $version, $download='browsw
     $filename = $label;
     $filename .= $extension;
     header("Content-Disposition: attachment; filename=\"$filename\"");
-    print file_get_contents(variable_get('osd_proxy_pid_prefix', 'http://***REMOVED***:8080/fedora/objects/').$pid."/datastreams/".$ds->id."/content?asOfDateTime=".$datastream_content->createdDate);
+    print file_get_contents(variable_get('osd_proxy_pid_prefix', 'http://****REMOVED****/fedora/objects/').$pid."/datastreams/".$ds->id."/content?asOfDateTime=".$datastream_content->createdDate);
     exit();
   }
 }	
