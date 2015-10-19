@@ -1276,6 +1276,10 @@ function sidora_edit_metadata($object_id_string = '', $dsid = '', $form_name = '
     drupal_add_js('window.isConcept = false;',array('type' => 'inline', 'weight' => '1000000', 'group' => JS_THEME));
   $pic_shown = FALSE;
   if (!$is_concept){
+    if ($association['content_model'] == "si:codebookCModel") {
+     dsm("Codebook");
+     dsm(sidora_get_where_codebook_used($object));
+    }
     $vmt = sidora_get_viewable_mime_types();
     if (!empty($object['OBJ']) &&  strpos($object['OBJ']->mimetype, 'image') !== FALSE){
       $to_return .= '<div class="picHolder" style="overflow:auto">';
@@ -1351,20 +1355,41 @@ function sidora_get_related_codebook_table($pid){
   $output = 'Codebook';
   $cbs = sidora_get_codebooks($pid);
   $rows = array(); 
-  $header = array(t('Title'), t('Codebook ID'));
+  $header = array(t('Title'), t('Edit Codebook'));
   foreach ($cbs as $cb) {
+    $text_link = array(
+      '#type' => 'submit',
+      '#value' => t('Edit Codebook'),
+      '#attributes' => array("cbid"=>$cb->id, "class"=>array('codebook-edit')),
+    );
+
     $row = array(
       array('data' => $cb->label),
-      array('data' => $cb->id),
+      array('data' => $text_link),
     );
     $rows[] = $row;
   }
-  $table_attributes = array();//'id' => 'codebook_table');
+  $table_attributes = array();
   if (!empty($rows)){
     $output .= theme('table', array('header'=>$header, 'rows'=>$rows, 'attributes'=>$table_attributes));
   }else{
     $output = ''; //No codebook table if no codebooks
   }
+  $output .= '<script>
+jQuery(document).ready(function(){
+  jQuery("input.codebook-edit").click(function(){
+    id = jQuery(this).attr("cbid");
+    Shadowbox.open({
+        content:    "../edit_metadata/"+id+"",
+        player:     "iframe",
+        title:      "Edit Metadata",
+        options: {
+          onFinish:  function(){}
+        }
+    });
+  });
+});
+</script>';
   return $output;
 }
 /*

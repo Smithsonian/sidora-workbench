@@ -539,6 +539,36 @@ function sidora_get_number_of_children(AbstractObject $object) {
 }
 
 /**
+ * Gets the items that the codebook is used on
+ *
+ * @param AbstractObject $object
+ *   The child object.
+ *
+ * @return array
+ *   An associative array describing the parent concepts.
+ */
+function sidora_get_where_codebook_used(AbstractObject $object) {
+  $out = array();
+  $query = "SELECT ?pid ?label ?model FROM <#ri> WHERE {
+      {
+        ?pid  <fedora-rels-ext:hasCodebook> <info:fedora/{$object->id}>;
+          <fedora-model:state> <fedora-model:Active>;
+          <fedora-model:label> ?label;
+          <fedora-model:hasModel> ?model.
+        FILTER(!sameTerm(?model, <info:fedora/fedora-system:FedoraObject-3.0>) &&
+               !sameTerm(?model, <info:fedora/si:conceptCModel>))
+      }
+    } ORDER BY ?label";
+  $results = $object->repository->ri->query($query, 'sparql');
+  foreach ($results as $result) {
+    $pid = $result['pid']['value'];
+    $out[$pid]['pid'] = $pid;
+    $out[$pid]['label'] = $result['label']['value'];
+    $out[$pid]['models'][] = $result['model']['value'];
+  }
+  return $out;
+}
+/**
  * Gets the parent concepts the given object belongs to.
  *
  * @param AbstractObject $object

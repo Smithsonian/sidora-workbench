@@ -970,12 +970,8 @@ sidora.resources.performCopyOrMove = function(copyOrMove, toLocationId){
   var onSuccessfulCopy = function(ajaxRequest,ajaxReturn){
      var newParentExistingChildResourceNumber = parseInt(jQuery("#"+toLocationId).find("a").attr("resourcechildren"));
      var newParentNewChildResourceNumber = newParentExistingChildResourceNumber+1;
-     var newParentExistingHtml = jQuery("#"+toLocationId).text();
-     if (newParentExistingChildResourceNumber == 0){
-        jst.rename_node("#"+toLocationId, newParentExistingHtml + " (" + newParentNewChildResourceNumber + ")");
-      }else{
-        jst.rename_node("#"+toLocationId, newParentExistingHtml.substring(0,newParentExistingHtml.lastIndexOf(" ("))+" (" + newParentNewChildResourceNumber + ")");
-      }
+     var newParentName = jQuery("#"+toLocationId+" a").attr("fullname");
+     jst.rename_node("#"+toLocationId, newParentName + " (" + newParentNewChildResourceNumber + ")");
      jQuery("#"+toLocationId).find("a").attr("resourcechildren",""+newParentNewChildResourceNumber);
      if (newParentNewChildResourceNumber == (pids.length + newParentExistingChildResourcesCount)){
        sidora.util.RefreshTree();
@@ -984,22 +980,18 @@ sidora.resources.performCopyOrMove = function(copyOrMove, toLocationId){
   var onSuccessfulMove = function(ajaxRequest,ajaxReturn){
      var newParentExistingChildResourceNumber = parseInt(jQuery("#"+toLocationId).find("a").attr("resourcechildren"));
      var newParentNewChildResourceNumber = newParentExistingChildResourceNumber+1;
-     var newParentExistingHtml = jQuery("#"+toLocationId).text();
-     if (newParentExistingChildResourceNumber == 0){
-        jst.rename_node("#"+toLocationId, newParentExistingHtml + " (" + newParentNewChildResourceNumber + ")");
-      }else{
-        jst.rename_node("#"+toLocationId, newParentExistingHtml.substring(0,newParentExistingHtml.lastIndexOf(" ("))+" (" + newParentNewChildResourceNumber + ")");
-      }
+     var newParentName = jQuery("#"+toLocationId+" a").attr("fullname");
+     jst.rename_node("#"+toLocationId, newParentName + " (" + newParentNewChildResourceNumber + ")");
      jQuery("#"+toLocationId).find("a").attr("resourcechildren",""+newParentNewChildResourceNumber);
      var fromSource = jq(fromParent).substring(1);
      var oldParentExistingChildResourceNumber = parseInt(jQuery("[pid=" + fromSource + "]").attr("resourcechildren"));
      var oldParentNewChildResourceNumber = oldParentExistingChildResourceNumber - 1;
      var oldParentNode = jst.get_node(jQuery("[pid='" + fromSource + "']").closest("li").attr("id"));
-     var oldParentExistingHtml = jQuery("#"+oldParentNode.id).text();
+     var oldParentName = jQuery("#"+oldParentNode.id+" a").attr("fullname");
      if (oldParentNewChildResourceNumber == 0){
-        jst.rename_node(oldParentNode,oldParentExistingHtml.substring(0,oldParentExistingHtml.lastIndexOf(" ("))); 
+        jst.rename_node(oldParentNode,oldParentName);
       }else{
-        jst.rename_node(oldParentNode,oldParentExistingHtml.substring(0,oldParentExistingHtml.lastIndexOf(" ("))+" ("+oldParentNewChildResourceNumber+")");
+        jst.rename_node(oldParentNode,oldParentName+" ("+oldParentNewChildResourceNumber+")");
       }
       jQuery("[pid=" + fromSource + "]").attr("resourcechildren",""+oldParentNewChildResourceNumber);
       if (newParentNewChildResourceNumber == (pids.length + newParentExistingChildResourcesCount)){
@@ -1009,14 +1001,23 @@ sidora.resources.performCopyOrMove = function(copyOrMove, toLocationId){
   for(var i=0;i<pids.length;i++){
     droppedPid = pids[i];
     var userFriendlyName = 'Unknown action';
+    var pidList = null;
+    var onSuccess = null;
     if (action != 'copy'){
+      pidListForRequest = [fromParent,droppedOn,droppedPid];
       jQuery(jq(pids[i])).addClass("is-being-moved");
-      userFriendlyName = "Moving "+droppedPid+" from "+fromParent+" to "+droppedOn;
-      sidora.queue.Request(userFriendlyName, '../ajax_parts/'+action+'/'+droppedOn+'/'+droppedPid, onSuccessfulMove, null, [fromParent,droppedOn,droppedPid]);
+      userFriendlyName = "Moving ";
+      onSuccess = onSuccessfulMove;
     }else{
-      userFriendlyName = "Copying "+droppedPid+" from "+fromParent+" to "+droppedOn;
-      sidora.queue.Request(userFriendlyName, '../ajax_parts/'+action+'/'+droppedOn+'/'+droppedPid, onSuccessfulCopy, null, [droppedOn,droppedPid]);
+      pidListForRequest = [droppedOn,droppedPid];
+      userFriendlyName = "Copying ";
+      onSuccess = onSuccessfulCopy;
     }
+    userFriendlyName += "<em>"+sidora.util.FriendlyNameDirect(droppedPid)+"</em>";
+    userFriendlyName += " from <em>"+sidora.util.FriendlyNameDirect(fromParent)+"</em>";
+    userFriendlyName += " to <em>"+sidora.util.FriendlyNameDirect(droppedOn)+"</em>";
+    var requestUrl = '../ajax_parts/'+action+'/'+droppedOn+'/'+droppedPid;
+    sidora.queue.Request(userFriendlyName, requestUrl, onSuccess, null, pidListForRequest);
     console.log(userFriendlyName);
   }
   sidora.queue.Next();
@@ -1141,22 +1142,13 @@ sidora.concept.GetConceptChildrenLength = function(){
  * Attempts to pull a concept name from the tree or just returns whatever is passed in
  */
 sidora.concept.GetName = function(suggestedName){
-  var conceptName = suggestedName;
   //If didn't send in concept name, try to get it from tree
-  if (typeof(conceptName) == 'undefined' || conceptName == null){
-    var itemSelectorForCurrentItemInTree = 'a[href=\"'+window.location.pathname + window.location.search + window.location.hash +'\"]';
-    var directPull = jQuery(itemSelectorForCurrentItemInTree).attr("fullname");
-    if (typeof(directPull) != 'undefined'){
-      return directPull;
-    }
-    conceptName = jQuery(itemSelectorForCurrentItemInTree).text();
+  if (typeof(suggestedName) == 'undefined' || suggestedName == null){
+    var selectorForCurrentItemInTree = 'a[href=\"'+window.location.pathname + window.location.search + window.location.hash +'\"]';
+    var directPull = jQuery(selectorForCurrentItemInTree).attr("fullname");
+    if (typeof(directPull) != 'undefined') return directPull;
   }
-  //If there's a (num) at the end, remove it
-  var newTitle = conceptName;
-  if (conceptName.lastIndexOf(" (") > 0){
-    newTitle = conceptName.substring(0,conceptName.lastIndexOf(" ("));
-  }
-  return newTitle;
+  return suggestedName;
 }
 /*
  * Rename the in-page name to reflect the new conceptName passed in
@@ -1510,7 +1502,6 @@ sidora.resources.individualPanel.Create = function() {
   jQuery('#edit-resource-metadata-menu').click(function(){
   var pids = sidora.resources.getHighlighted();
 	var pids_array = sidora.resources.getHighlighted();
-  //  if (pids.length != 1) return;
   pids = pids_array.join("&");
 	  Shadowbox.open({
       content:    "../edit_metadata/"+pids+"",
@@ -1626,9 +1617,90 @@ sidora.util.deletePid = function(pidOfInterest, onSuccess, onFailure){
     }
   }
   var url = '../ajax_parts/unassociate_delete_orphan/'+unassociateFrom+'/'+pidOfInterest;
-  var userFriendlyToastName = "Remove "+pidOfInterest+" from "+unassociateFrom;
+  var userFriendlyToastName = "Remove <em>"+sidora.util.FriendlyNameDirect(pidOfInterest);
+  userFriendlyToastName += "</em> from <em>"+sidora.util.FriendlyNameDirect(unassociateFrom)+"</em>";
   sidora.queue.RequestPost(userFriendlyToastName,url,"",onSuccess,onFailure,[pidOfInterest,unassociateFrom]);
   sidora.queue.Next();
+}
+/*
+ * Get a friendly name for the pid if it's currently available as a concept or resource (most pids UI deals with are)
+ */
+sidora.util.FriendlyNameDirect = function(pid){
+  var pidName = null;
+  var resourceName = jQuery(jq(pid)).find(".resource-list-label").html();
+  if (typeof(resourceName) == 'string') pidName = resourceName;
+  var concept =  jQuery("a").filter(function(index){ return jQuery(this).attr("pid") == pid; });
+  var conceptName = concept.attr("fullname");
+  if (typeof(conceptName) == 'string') pidName = conceptName;
+  return pidName;
+}
+/*
+ * Get a friendly name for the pids any way we can.  Use this in the following way:
+ * 
+ * sidora.util.FriendlyNames("si:root,si:123,si:389025").then(function(data){
+ *   console.log(data); //Whatever processing here
+ * })
+ *
+ * The data is in an associative array that will look like this:
+ * ===
+ * data["si:root"] = "Smithsonian Root"
+ * data["si:289025"] = "Whatever the label is for this"
+ * ===
+ * Since si:123 label couldn't be determined, it is not in the output
+ */
+sidora.util.FriendlyNamesPromise = function(pidsInput){
+  if (typeof(pidsInput) == 'string'){
+    //If a comma separated string, pull them out
+    if (pidsInput.indexOf(",") > -1){
+      pids = pidsInput.split(",");
+    }else{
+      //Else assume it's just a single pid
+      pids = [pidsInput];
+    }
+  }else{
+    //If not a string, then it should be an array of pids as strings
+    pids = pidsInput;
+  }
+  var toReturn = [];
+  var deferredAllPidsComplete = jQuery.Deferred();
+  var ajaxTasks = [];
+  for (var pidIndex = 0; pidIndex < pids.length; pidIndex++){
+    var pid = pids[pidIndex];
+    var pidName = null;
+    var resourceName = jQuery(jq(pid)).find(".resource-list-label").html();
+    if (typeof(resourceName) == 'string') pidName = resourceName;
+    var concept =  jQuery("a").filter(function(index){ return jQuery(this).attr("pid") == pid; });
+    var conceptName = concept.attr("fullname");
+    if (typeof(conceptName) == 'string') pidName = conceptName;
+    if (pidName == null){
+      //So this pid isn't in our tree or our current list of resources.  Go and get it from the server
+      var updateArray = function(arrayToUpdate,pid){
+        return function(data,textStatus,jqXHR){ 
+          if (typeof(data) == 'string'){
+            console.log("FriendlyPid Error 2: Problem getting name for pid:"+pid);
+            //object not found
+          }else{
+            var possibleLabels = data.getElementsByTagName("label");
+            if (possibleLabels.length > 0){
+              arrayToUpdate[pid] = possibleLabels[0].innerHTML;
+            }else{
+              //Unknown error
+              console.log("FriendlyPid Error 2: Problem getting name for pid:"+pid);
+            }
+          }
+        }
+      };
+      ajaxTasks.push(
+        jQuery.ajax({ url: '../info/'+pid+'/meta/all' }).done(updateArray(toReturn,pid))
+      );
+    }else{
+      toReturn[pid] = pidName;
+    }
+  }
+  jQuery.when.apply(null, ajaxTasks).then(function(data){
+    deferredAllPidsComplete.resolve(toReturn);
+  });
+  return deferredAllPidsComplete.promise();
 }
 /*
  * Handle loading of the metadata and resource viewer when a resource from the table is clicked on
@@ -1674,8 +1746,6 @@ sidora.resources.individualPanel.ResizeIt = function (e, ui)
   jQuery(ui.element).resizable('option', 'maxWidth', maxWidth); 
 
   var newMinHeight = Math.max(600,jQuery("#resourceResizable").height(),jQuery("#res_table_wrapper").height(), jQuery("#resource-meta").height()+jQuery("#resourceResizable ul").height()+10);
-  //jQuery("#concept-resource-list-internal").css('min-height',newMinHeight);
-  //jQuery("#resourceIframeHolder").height(newMinHeight-40);
   //Protect the cursor input from being taken into the iframe by making the overlay displayable
   jQuery("#iframeOverlay").show();
   
@@ -1739,7 +1809,7 @@ sidora.manage.OpenCurrentConfig = function(){
           enableKeys: false,
           onFinish:  function(){
             jQuery("#submitObjProperties").click(function(){
-              sidora.queue.RequestPost(userFriendlyToastName+":"+name+" ("+pid+")",Drupal.settings.basePath+"sidora/manage/"+pid+"/save","label="+jQuery("#objPropLabel").val()+"&owner="+jQuery("#objPropOwner").val(),function(){},function(){},pid);
+              sidora.queue.RequestPost(userFriendlyToastName+":<em>"+name+"</em> ("+pid+")",Drupal.settings.basePath+"sidora/manage/"+pid+"/save","label="+jQuery("#objPropLabel").val()+"&owner="+jQuery("#objPropOwner").val(),function(){},function(){},pid);
               sidora.queue.Next();
             });
             jQuery("#addDatastream").click(function(){
@@ -1792,7 +1862,7 @@ sidora.manage.removeDatastream = function(pid,dsid){
     modal: true,
     buttons: {
       "Yes, remove": function() {
-        sidora.queue.RequestPost("Removed Datastream "+dsid+" from "+pid,Drupal.settings.basePath+"sidora/manage/"+pid+"/remove/"+dsid+"/confirm","",
+        sidora.queue.RequestPost("Removed Datastream "+dsid+" from "+pid+" <em>"+sidora.util.FriendlyNameDirect(pid)+"</em>",Drupal.settings.basePath+"sidora/manage/"+pid+"/remove/"+dsid+"/confirm","",
           function(){
             sidora.manage.resetFrame();
           },

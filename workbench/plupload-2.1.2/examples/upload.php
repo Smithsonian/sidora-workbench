@@ -38,7 +38,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
 // usleep(5000);
 
 // Settings
-$targetDir = '/home/randerson/projects/sidora/plupload/sites/all/tmp';//file_directory_temp();//ini_get("upload_tmp_dir") . DIRECTORY_SEPARATOR . "plupload";
+$targetDir = '/home/***REMOVED***/projects/sidora/plupload/sites/all/tmp';//file_directory_temp();//ini_get("upload_tmp_dir") . DIRECTORY_SEPARATOR . "plupload";
 //$targetDir = 'uploads';
 $cleanupTargetDir = false; // Remove old files
 $maxFileAge = 5 * 3600; // Temp file age in seconds
