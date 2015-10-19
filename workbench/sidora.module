@@ -1277,8 +1277,16 @@ function sidora_edit_metadata($object_id_string = '', $dsid = '', $form_name = '
   $pic_shown = FALSE;
   if (!$is_concept){
     if ($association['content_model'] == "si:codebookCModel") {
-     dsm("Codebook");
-     dsm(sidora_get_where_codebook_used($object));
+      $codebook_used_on = (sidora_get_where_codebook_used($object));
+      if (!empty($codebook_used_on)){
+        drupal_set_message(t('This codebook is used on %num %objects:', array(
+          '%num' => count($codebook_used_on),
+          '%objects' => count($codebook_used_on)==1?'object':'objects',
+        )));
+        foreach ($codebook_used_on as $curr_used_on){
+          drupal_set_message('<div style="display:none">'.$curr_used_on['pid'].'</div>'.$curr_used_on['label']);
+        }
+      }
     }
     $vmt = sidora_get_viewable_mime_types();
     if (!empty($object['OBJ']) &&  strpos($object['OBJ']->mimetype, 'image') !== FALSE){
