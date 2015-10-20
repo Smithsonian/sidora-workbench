@@ -542,13 +542,16 @@ function sidora_resource_viewer($pid){
 								break;
 							case 'JW Video Player':
 							  sidora_video_view_object($pid);
-								exit();
+								drupal_exit();
 								break;	
 							case 'IDS':
                 return sidora_view_ids_iframe($pid, $dsid);
                 break;
               case 'OpenSeaDragon':
                 return sidora_view_openseadragon($pid, $dsid);
+                break;
+              case 'PHPExcel':
+                return sidora_tabular_view_phpexcelreader($pid,$dsid);
                 break;
             }
           }
@@ -1896,25 +1899,7 @@ function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $ex
     sidora_osd_proxy($two);
   }
 	if ($one == 'view_tabular'){
-    module_load_include('inc', 'sidora', 'includes/utils');
-	  $object = sidora_obj($two);
-    $datastream_content = $object['OBJ']->content;
-    $datastream = $object['OBJ'];
-	  $mime_type = (empty($datastream))?'text/xml':$datastream->mimeType;
-	  $file_extension = '';
-    if ($mime_type != ''){
-      $file_extension = sidora_get_file_extension_from_mime($mime_type);
-    } 
-    $filename = $two.'_OBJ'.$file_extension;//get_suggest_filename($label, $mime_type);
-	  $file_uri = drupal_tempnam(file_directory_temp(), $filename);
-	  $file = new stdClass();
-    $file->uri = $file_uri;
-    $file->filename = $filename;
-    $file->filemime = $mime_type;
-    $file->status = 0; // Temporary file.
-	  file_unmanaged_save_data($datastream_content, file_directory_temp() . '/'.$filename, FILE_EXISTS_REPLACE); 
-		$temp = file_directory_temp();
-		sidora_tabular_view_phpexcelreader($temp.'/'.$filename);
+    return sidora_tabular_view_phpexcelreader($two,'OBJ');
 	}	
 	if ($one == 'user_register'){
 	  return drupal_render(sidora_account_request_form());
@@ -7366,23 +7351,101 @@ function sidora_contact_us_form_submit($form, &$form_state) {
 	  drupal_set_message(t('Form submitted successfully'));
 	}	
 }
-function sidora_tabular_view_phpexcelreader($filename){
-require_once(libraries_get_path('PHPExcel') . '/Classes/PHPExcel/IOFactory.php');
-$objPHPExcel = PHPExcel_IOFactory::load($filename);
-$worksheet = $objPHPExcel->getActiveSheet();
-echo '<table style="border:thin solid; width:90%; border-collapse:collapse;">';
-foreach ($worksheet->getRowIterator() as $row) {
-	echo '<tr style="border-bottom:thin solid; border-top:none; border-right:none; border-left:none; padding:"><td style="border-right:thin solid; padding:3px;">' . $row->getRowIndex() . '</td>';
-    $cellIterator = $row->getCellIterator();
-		$cellIterator->setIterateOnlyExistingCells(false); // Loop all cells, even if it is not set
-    foreach ($cellIterator as $cell) {
-        if (!is_null($cell)) {
-            echo '<td style="border-right:thin solid; padding:5px;">' . $cell->getValue() . '</td>';
-        }
-    }
-		echo '</tr>';
+/*
+ * Returns the full view for the phpexcelreader plus javascript
+ */
+function sidora_tabular_view_phpexcelreader($pid,$dsid = 'OBJ'){
+  module_load_include('inc', 'sidora', 'includes/utils');
+  $object = sidora_obj($pid);
+  $datastream_content = $object[$dsid]->content;
+  $datastream = $object[$dsid];
+  $mime_type = (empty($datastream))?'text/xml':$datastream->mimeType;
+  $file_extension = '';
+  if ($mime_type != ''){
+    $file_extension = sidora_get_file_extension_from_mime($mime_type);
+  } 
+  $filename = $pid.'_'.$dsid.$file_extension;//get_suggest_filename($label, $mime_type);
+  $file_uri = drupal_tempnam(file_directory_temp(), $filename);
+  $file = new stdClass();
+  $file->uri = $file_uri;
+  $file->filename = $filename;
+  $file->filemime = $mime_type;
+  $file->status = 0; // Temporary file.
+  file_unmanaged_save_data($datastream_content, file_directory_temp() . '/'.$filename, FILE_EXISTS_REPLACE); 
+  $temp = file_directory_temp();
+  echo '<html>
+<head>
+  <link rel="stylesheet" href="'.$GLOBALS['base_url'].'/'.drupal_get_path('module','sidora').'/jslibs/dataTables/css/jquery.dataTables.css"></link>
+  <script src="'.$GLOBALS['base_url'].'/'.drupal_get_path('module','sidora').'/jslibs/dataTables/js/jquery.js"></script>
+  <script src="//cdn.datatables.net/1.10.9/js/jquery.dataTables.min.js"></script>
+  <style>
+     #hasHeader { display:none }
+     #noHeader { display:none }
+     #hasHeader_wrapper { display:none }
+     #noHeader_wrapper { display:none }
+  </style>
+  <script>
+    jQuery(document).ready(function(){
+      jQuery("table").DataTable();
+      jQuery("table").show();
+      jQuery("#noHeader_wrapper").show();
+      jQuery("#showHeaderTable").click(function(){
+        jQuery("#noHeader_wrapper").toggle();
+        jQuery("#hasHeader_wrapper").toggle();
+      });
+    });
+  </script>
+</head>
+<body>';
+  echo '<input type="checkbox" id="showHeaderTable" />Has Header Row';
+  echo sidora_tabular_view_phpexcelreader_html($temp.'/'.$filename, TRUE, 'hasHeader');
+  echo sidora_tabular_view_phpexcelreader_html($temp.'/'.$filename, FALSE, 'noHeader');
+  echo '</body>
+</html>';
+  drupal_exit();
 }
-echo '</table>';
+/*
+ * Returns the pure HTML table based on the given filename
+ */
+function sidora_tabular_view_phpexcelreader_html($filename, $first_line_header = TRUE, $table_id = ''){
+  require_once(libraries_get_path('PHPExcel') . '/Classes/PHPExcel/IOFactory.php');
+  $objPHPExcel = PHPExcel_IOFactory::load($filename);
+  $worksheet = $objPHPExcel->getActiveSheet();
+  $table_header = '<thead><tr>';
+  $table_data = '<tbody>';
+  $is_first = TRUE;
+  $count = 0;
+  foreach ($worksheet->getRowIterator() as $row) {
+  	if (!$is_first || !$first_line_header){
+      $table_data .= '<tr>';// class="'.(count%2==0)?'odd':'even'.'">';
+    }
+    $cellIterator = $row->getCellIterator();
+  	$cellIterator->setIterateOnlyExistingCells(false); // Loop all cells, even if it is not set
+    foreach ($cellIterator as $cell) {
+      if ($is_first){
+        if ($first_line_header){
+          $table_header .= '<th>' . $cell->getValue() . '</th>';
+        }else{
+          $table_header .= '<th></th>'; 
+        }
+      }
+      if (!is_null($cell) && !($is_first && $first_line_header)) {
+        $table_data .= '<td>' . $cell->getValue() . '</td>';
+      }
+    }
+  	if (!$is_first || !$first_line_header){
+		  $table_data .= '</tr>';
+    }
+    $is_first = FALSE;
+  }
+  $table_header .= '</tr></thead>';
+  $table_data .= '</tbody>';
+
+  $to_return = '<table class="display" id="'.$table_id.'">';
+  $to_return .= $table_header;
+  $to_return .= $table_data;
+  $to_return .= '</table>';
+  return $to_return;
 }
 function sidora_video_view_object($pid) {
 	$object = sidora_obj($pid);
