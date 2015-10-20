@@ -7377,7 +7377,7 @@ function sidora_tabular_view_phpexcelreader($pid,$dsid = 'OBJ'){
 <head>
   <link rel="stylesheet" href="'.$GLOBALS['base_url'].'/'.drupal_get_path('module','sidora').'/jslibs/dataTables/css/jquery.dataTables.css"></link>
   <script src="'.$GLOBALS['base_url'].'/'.drupal_get_path('module','sidora').'/jslibs/dataTables/js/jquery.js"></script>
-  <script src="//cdn.datatables.net/1.10.9/js/jquery.dataTables.min.js"></script>
+  <script src="'.$GLOBALS['base_url'].'/'.drupal_get_path('module','sidora').'/jslibs/dataTables/js/jquery.dataTables.min.js"></script>
   <style>
      #hasHeader { display:none }
      #noHeader { display:none }
