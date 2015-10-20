@@ -7373,6 +7373,7 @@ function sidora_tabular_view_phpexcelreader($pid,$dsid = 'OBJ'){
   $file->status = 0; // Temporary file.
   file_unmanaged_save_data($datastream_content, file_directory_temp() . '/'.$filename, FILE_EXISTS_REPLACE); 
   $temp = file_directory_temp();
+  $rels = $object->relationships->get(FEDORA_RELS_EXT_URI, 'hasCodebook');
   echo '<html>
 <head>
   <link rel="stylesheet" href="'.$GLOBALS['base_url'].'/'.drupal_get_path('module','sidora').'/jslibs/dataTables/css/jquery.dataTables.css"></link>
@@ -7395,9 +7396,76 @@ function sidora_tabular_view_phpexcelreader($pid,$dsid = 'OBJ'){
       });
     });
   </script>
+';
+  $use_codebook_headers = '';
+  if (!empty($rels)){
+    $codebook_pid = ($rels[0]['object']['value']);
+    $codebook_obj = sidora_obj($codebook_pid);
+    if (!empty($codebook_obj['DDI'])){
+      $doc = new DOMDocument();
+      $content = $codebook_obj['DDI']->content;
+      $doc->loadXML($content);
+      $label_elements = $doc->getElementsByTagName('label');
+      $labels = array(); 
+      foreach($label_elements as $element){
+        $labels[] = $element->nodeValue;
+      }
+      $use_codebook_headers = '<br/><input type="checkbox" id="useCodebookHeaders" />Use Codebook Headers';
+      echo '
+  <script>
+    jQuery(document).ready(function(){
+      window.tablesInfo = {};
+      tablesInfo.originalHasHeader = [];
+      tablesInfo.codebookLabels = [';
+      foreach($labels as $i => $label){
+        if ($i > 0) echo ',';
+        echo '"'.$label.'"';
+      }
+      echo '
+      ];
+      jQuery("#hasHeader th").each(function(index,value){
+        tablesInfo.originalHasHeader.push(jQuery(value).text());
+      });
+      jQuery("#useCodebookHeaders").click(function(){
+        if (jQuery("#useCodebookHeaders").prop("checked")){
+          jQuery("#noHeader th").each(function(index,value){
+            if (tablesInfo.codebookLabels.length > index){
+              value.innerHTML = tablesInfo.codebookLabels[index];
+            }else{
+              value.innerHTML = "";
+            }
+          });
+          jQuery("#hasHeader th").each(function(index,value){
+            if (tablesInfo.codebookLabels.length > index){
+              value.innerHTML = tablesInfo.codebookLabels[index];
+            }else{
+              value.innerHTML = "";
+            }
+          });
+        }else{
+          jQuery("#noHeader th").each(function(index,value){
+            value.innerHTML = "";
+          });
+          jQuery("#hasHeader th").each(function(index,value){
+            if (tablesInfo.originalHasHeader.length > index){
+              value.innerHTML = tablesInfo.originalHasHeader[index];
+            }else{
+              value.innerHTML = "";
+            }
+          });
+        } 
+      });
+    });
+  </script>
+';
+    }
+  }
+  echo '
 </head>
-<body>';
+<body>
+';
   echo '<input type="checkbox" id="showHeaderTable" />Has Header Row';
+  echo $use_codebook_headers;
   echo sidora_tabular_view_phpexcelreader_html($temp.'/'.$filename, TRUE, 'hasHeader');
   echo sidora_tabular_view_phpexcelreader_html($temp.'/'.$filename, FALSE, 'noHeader');
   echo '</body>
