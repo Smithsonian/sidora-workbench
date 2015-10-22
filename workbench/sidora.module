@@ -7527,7 +7527,8 @@ function sidora_menu_alter(&$items) {
  * is currently not being versioned. 
  * Sidora Admin Config Changes - Resource Viewer Settings
  * For Islandora Audio Content Model, set JWPlayer as the viewer for OBJ and Proxy_MP3 datatstreams.
- * Currently, different versions of OBJ and Proxy_MP3 datatstreams for Audio resources can only be downloaded, not viewed.
+ * Currently, different versions of OBJ can only be downloaded, not viewed.
+ * Only the most recent Proxy_MP3 version will be played in the viewer.
  */ 
 function sidora_datastream_version_view($pid, $datastream) {
 	module_load_include('inc', 'islandora', 'includes/datastream.version');
@@ -7601,7 +7602,7 @@ function sidora_datastream_version_view($pid, $datastream) {
       ));
 		}else{
 			if ((isset($version_view_link['viewer'])) && ($version_view_link['viewer'] != '')){
-			  if ($version_view_link['viewer'] == 'JW Audio Player'){
+			  if (($version_view_link['viewer'] == 'JW Audio Player') && (strtoupper($datastream) == 'OBJ')){
 				  $version_view_link['data'] = l($datastream_version->createdDate->format(DATE_RFC850), $GLOBALS['base_url'] . '/sidora/version_info/' . $parent->id . '/' . $datastream . '/' . $version . '/download');
 				}else{
 				  $version_view_link['data'] = l($datastream_version->createdDate->format(DATE_RFC850), $GLOBALS['base_url'] . '/sidora/version_viewer/' . $parent->id . '/' . $datastream . '/' . $viewer . '/' . $version);
@@ -7698,15 +7699,10 @@ function sidora_resource_version_viewer($pid, $datastream, $viewer, $version = '
           print(drupal_goto($base_url.'/sites/all/modules/sidora/workbench/jslibs/pdfjs/web/viewer.html?file='.$base_url.'/sidora/version_info/'.$pid.'/'.$datastream.'/'.$version.'/download'));
           drupal_exit();
           break;
-        /**
-				* Not being used currently, since Audio OBJ & Derivatives datastreams can only be downloaded, not viewed
-				*/ 
-				/*
 				case 'JW Audio Player':
 					print sidora_audio_view_object($pid);
 					drupal_exit();
 					break;
-				*/	
 				case 'IDS':
           return sidora_view_ids_iframe($pid, $dsid);
           break;
