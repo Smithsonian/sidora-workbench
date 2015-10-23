@@ -1645,8 +1645,11 @@ function sidora_create_codebook_from_url($url, $codebook_label){
  * dry_run will not make any changes, just give the messages
  * 
  */
-function sidora_settings_import($object, $ignore_settings = array(), $dry_run = TRUE){
-  $ignore_settings = array_map('strtolower',$ignore_settings); //make the comparisons case insensitive by having all lower
+function sidora_settings_import($object, $ignore_settings = array(), $only_apply_settings = array(), $dry_run = TRUE, $show_ignores_as_warnings = FALSE){
+  $ignore_message_type = $show_ignores_as_warnings?'warning':'status';
+  //make the comparisons case insensitive by having all lower
+  $ignore_settings = array_map('strtolower',$ignore_settings); 
+  $only_apply_settings = array_filter(array_map('strtolower',$only_apply_settings));
   if (is_string($object)){ $object = json_decode($object); }
   
   $dry_run_prefix = ($dry_run)?t('DRY RUN, NO CHANGE:'):'';
@@ -1661,7 +1664,11 @@ function sidora_settings_import($object, $ignore_settings = array(), $dry_run = 
   module_load_include('inc', 'xml_form_builder', 'XMLFormDatabase');
   module_load_include('inc', 'xml_form_builder', 'includes/associations');
   foreach($forms as $form_name=>$form_string){
-    if (!in_array(strtolower($form_name),$ignore_settings)){
+    if (
+      !in_array(strtolower($form_name),$ignore_settings) 
+      && 
+      (empty($only_apply_settings) || sidora_contains($form_name,$only_apply_settings,TRUE))
+    ){
       $definition = new DOMDocument();
       $definition->loadXML($form_string);
       $success_delete = ($dry_run || XMLFormDatabase::Delete($form_name));
@@ -1686,7 +1693,7 @@ function sidora_settings_import($object, $ignore_settings = array(), $dry_run = 
         drupal_set_message($dry_run_prefix . t('FAILED imported on form "%name".', array('%name' => $form_name)),'error');
       }
    }else{
-     drupal_set_message($dry_run_prefix . t('Ignored form "%name".', array('%name' => $form_name)));
+     drupal_set_message($dry_run_prefix . t('Ignored form "%name".', array('%name' => $form_name)),$ignore_message_type);
    }
   }
   foreach($associations as $association){
@@ -1701,7 +1708,12 @@ function sidora_settings_import($object, $ignore_settings = array(), $dry_run = 
     );
     $form_name = $association->form_name;
     $model = $association->content_model;
-    if (!in_array(strtolower($association->content_model.'-'.$association->form_name),$ignore_settings)){
+    $setting_name_for_ignore = $association->content_model.'-'.$association->form_name;
+    if (
+      !in_array(strtolower($setting_name_for_ignore),$ignore_settings)
+      && 
+      (empty($only_apply_settings) || sidora_contains($setting_name_for_ignore,$only_apply_settings,TRUE))
+    ){
       $insert_success = ( $dry_run ||
         db_insert('xml_form_builder_form_associations')
         ->fields($a_object)
@@ -1713,11 +1725,15 @@ function sidora_settings_import($object, $ignore_settings = array(), $dry_run = 
         drupal_set_message($dry_run_prefix . t('FAILED import form association "%name" to "%model" ( "%model-%name"  ).', array('%name' => $form_name, '%model' => $model)),'error');
       }
     }else{
-      drupal_set_message($dry_run_prefix . t('Ignored association "%name" to "%model" ( "%model-%name"  ).', array('%name' => $form_name, '%model' => $model)));
+      drupal_set_message($dry_run_prefix . t('Ignored association "%name" to "%model" ( "%model-%name"  ).', array('%name' => $form_name, '%model' => $model)),$ignore_message_type);
     }
   }
   foreach($admin_settings as $setting_name=>$setting_value){
-    if (!in_array(strtolower($setting_name),$ignore_settings)){
+    if (
+      !in_array(strtolower($setting_name),$ignore_settings)
+      && 
+      (empty($only_apply_settings) || sidora_contains($setting_name,$only_apply_settings,TRUE))
+    ){
       $original_value = variable_get($setting_name);
       if ($original_value === $setting_value){
         drupal_set_message($dry_run_prefix . t('Administrative setting "%name" was already set to the content specified in this configuration.',array('%name' => $setting_name)));
@@ -1726,7 +1742,7 @@ function sidora_settings_import($object, $ignore_settings = array(), $dry_run = 
         drupal_set_message($dry_run_prefix . t('Administrative setting "%name" set from <br/>"%original" <br/>to <br/>"%newval".',array('%name' => $setting_name,'%original'=>$original_value,'%newval'=>$setting_value)));
       }
     }else{
-      drupal_set_message($dry_run_prefix . t('Ignored administrative setting "%name".',array('%name' => $setting_name)));
+      drupal_set_message($dry_run_prefix . t('Ignored administrative setting "%name".',array('%name' => $setting_name)),$ignore_message_type);
     }
   }
 }
@@ -1757,10 +1773,21 @@ function sidora_config_form($form, &$form_state){
     '#title' => t('Config File'),
     '#description' => t('This configuration will be immediately applied on clicking the "Import" button below.'),
   );
+  $form['show_ignores_as_warnings'] = array(
+    '#type' =>'checkbox',
+    '#title'=>t('Show ignores as warnings (otherwise will appear as normal message info)'),
+    '#default_value' =>TRUE, // for default checked and false is not checked
+  );
   $form['dry_run'] = array(
     '#type' =>'checkbox',
     '#title'=>t('Dry Run (no not actually make changes)'),
     '#default_value' =>TRUE, // for default checked and false is not checked
+  );
+  $form['only_apply_settings'] = array(
+    '#type' => 'textarea',
+    '#title' => t('Only apply settings that have one of the following in the name'),
+    '#description' => t('Put parts of names of the settings one per line (form name / model-form name / variable name)'),
+    '#default_value' => variable_get("sidora_config_only_apply",""),
   );
   $form['ignore_settings'] = array(
     '#type' => 'textarea',
@@ -1782,13 +1809,16 @@ function sidora_config_form_submit($form, &$form_state) {
   $validators = array('file_validate_extensions' => array('json txt'));
   $file = file_save_upload('file',$validators);
   variable_set("sidora_config_import_ignores",$form_state['values']['ignore_settings']);
+  variable_set("sidora_config_only_apply",$form_state['values']['only_apply_settings']);
   $ignore_settings = array_map('trim', explode("\n",$form_state['values']['ignore_settings'])); //Explode it and trim any whitespace
+  $only_apply_settings = array_map('trim', explode("\n",$form_state['values']['only_apply_settings'])); //Explode it and trim any whitespace
   $dry_run = $form_state['values']['dry_run'];
+  $show_ignores_as_warnings = $form_state['values']['show_ignores_as_warnings'];
   if (!empty($file)){
     $filepath = drupal_realpath($file->uri);
     $file_contents = file_get_contents($filepath);
     $object = json_decode($file_contents);
-    sidora_settings_import($object,$ignore_settings,$dry_run);
+    sidora_settings_import($object,$ignore_settings,$only_apply_settings,$dry_run,$show_ignores_as_warnings);
   }
 }
 /*
@@ -2954,7 +2984,7 @@ function sidora_codebook_upload_form_validate($form, &$form_state) {
           $form_state['storage']['codebook'] = $codebook;
         }catch(Exception $e){
           watchdog('SIdora_Tabular_Parse',t("Problem with creating a codebook:<br/>").$e->getMessage().t("URL:").$url);
-          form_set_error('file',t("Unable to parse the uploaded file. Contact an administrator if you believe this file should be able to parsed.  Please send a screenshot of this page, include the file you uploaded, and the time and date this occurred.  The administrator should check the Drupal log for 'SIdora_Tabular_Parse' for more information."));
+          form_set_error('file',t("Unable to parse the uploaded file. Contact an administrator if you believe this file should be able to be parsed.  Please send a screenshot of this page, include the file you uploaded, and the time and date this occurred.  The administrator should check the Drupal log for 'SIdora_Tabular_Parse' for more information."));
           return;
         }
       }
@@ -7139,7 +7169,27 @@ xmlns:cpf="urn:isbn:1-931666-33-4"
 </xsl:stylesheet> 
 ';
 }
-
+/*
+ * Returns true if any of the haystacks contain any of the needles
+ * otherwise returns false
+ */
+function sidora_contains($haystacks, $needles, $ignoreCase = false) {
+    if (!is_array($haystacks)) $haystacks = array($haystacks);
+    if (!is_array($needles)) $needles = array($needles); 
+    foreach($haystacks as $haystack){
+      foreach($needles as $needle){
+      if ($ignoreCase) {
+        $haystack = strtolower($haystack);
+        $needle   = strtolower($needle);
+      }
+      $needlePos = strpos($haystack, $needle);
+      if ($needlePos !== false){
+        return true;
+      }
+    }
+  }
+  return false;
+}
 
 function sidora_startsWith($haystack, $needle) {
     // search backwards starting from haystack length characters from the end
