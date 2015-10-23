@@ -1641,10 +1641,16 @@ function sidora_create_codebook_from_url($url, $codebook_label){
  * Sets the SIdora instance with the imported information
  * Assumes the same style as sidora_settings_object() would produce
  * If the parameter value is a string, assumes it is a json string to decode
+ * ignore_settings 
+ * dry_run will not make any changes, just give the messages
  * 
  */
-function sidora_settings_import($object){
+function sidora_settings_import($object, $ignore_settings = array(), $dry_run = TRUE){
+  $ignore_settings = array_map('strtolower',$ignore_settings); //make the comparisons case insensitive by having all lower
   if (is_string($object)){ $object = json_decode($object); }
+  
+  $dry_run_prefix = ($dry_run)?t('DRY RUN, NO CHANGE:'):'';
+  
   //$full_export['forms'] = $forms;
   //$full_export['associations'] = $associations;
   //$full_export['admin_settings'] = $settings_holder;
@@ -1655,37 +1661,34 @@ function sidora_settings_import($object){
   module_load_include('inc', 'xml_form_builder', 'XMLFormDatabase');
   module_load_include('inc', 'xml_form_builder', 'includes/associations');
   foreach($forms as $form_name=>$form_string){
-    $definition = new DOMDocument();
-    $definition->loadXML($form_string);
-    if (XMLFormDatabase::Delete($form_name)) {
-      foreach (xml_form_builder_get_associations(array($form_name)) as $assoc) {
-        db_delete('xml_form_builder_form_associations')
-          ->condition('id', intval($assoc['id']))
-          ->execute();
-        drupal_set_message(t('Deleted the association ID:%id with the form %form_name.', array(
-          '%id' => $assoc['id'],
-          '%form_name' => $form_name,
-        )));
+    if (!in_array(strtolower($form_name),$ignore_settings)){
+      $definition = new DOMDocument();
+      $definition->loadXML($form_string);
+      $success_delete = ($dry_run || XMLFormDatabase::Delete($form_name));
+      if ($success_delete) {
+        foreach (xml_form_builder_get_associations(array($form_name)) as $assoc) {
+          if (!$dry_run){
+            db_delete('xml_form_builder_form_associations')
+            ->condition('id', intval($assoc['id']))
+            ->execute();
+          }
+          drupal_set_message($dry_run_prefix . t('Deleted the association ID:%id with the form %form_name.', array(
+            '%id' => $assoc['id'],
+            '%form_name' => $form_name,
+          )));
+        }
+        drupal_set_message($dry_run_prefix . t('Successfully deleted form "%name" in order to reimport it.', array('%name' => $form_name)));
       }
-      drupal_set_message(t('Successfully deleted form "%name" in order to reimport it.', array('%name' => $form_name)));
-    }
-    if (XMLFormRepository::Create($form_name, $definition)){
-      drupal_set_message(t('Successfully imported form "%name".', array('%name' => $form_name)));
-    }else{
-      drupal_set_message(t('FAILED imported on form "%name".', array('%name' => $form_name)),'error');
-    }
+      $create_success = ($dry_run || XMLFormRepository::Create($form_name, $definition));
+      if ($create_success){
+        drupal_set_message($dry_run_prefix . t('Successfully imported form "%name".', array('%name' => $form_name)));
+      }else{
+        drupal_set_message($dry_run_prefix . t('FAILED imported on form "%name".', array('%name' => $form_name)),'error');
+      }
+   }else{
+     drupal_set_message($dry_run_prefix . t('Ignored form "%name".', array('%name' => $form_name)));
+   }
   }
-/*
-  $object = array(
-    'content_model' => $content_model, 
-    'form_name' => $form_name,
-    'dsid' => $dsid,
-    'title_field' => $title_field,
-    'transform' => $transform,
-    'self_transform' => $self_transform,
-    'template' => $template,
-  );
-*/
   foreach($associations as $association){
     $a_object = array(
       'content_model' => $association->content_model,
@@ -1696,24 +1699,34 @@ function sidora_settings_import($object){
       'self_transform' => $association->self_transform,
       'template' => $association->template,
     );
-    $insert_success = db_insert('xml_form_builder_form_associations')
-      ->fields($a_object)
-      ->execute();
     $form_name = $association->form_name;
     $model = $association->content_model;
-    if ($insert_success){
-      drupal_set_message(t('Successfully imported form association "%name" to "%model".', array('%name' => $form_name, '%model' => $model)));
+    if (!in_array(strtolower($association->content_model.'-'.$association->form_name),$ignore_settings)){
+      $insert_success = ( $dry_run ||
+        db_insert('xml_form_builder_form_associations')
+        ->fields($a_object)
+        ->execute()
+      );
+      if ($insert_success){
+        drupal_set_message($dry_run_prefix . t('Successfully imported form association "%name" to "%model" ( "%model-%name"  ).', array('%name' => $form_name, '%model' => $model)));
+      }else{
+        drupal_set_message($dry_run_prefix . t('FAILED import form association "%name" to "%model" ( "%model-%name"  ).', array('%name' => $form_name, '%model' => $model)),'error');
+      }
     }else{
-      drupal_set_message(t('FAILED import form association "%name" to "%model".', array('%name' => $form_name, '%model' => $model)),'error');
+      drupal_set_message($dry_run_prefix . t('Ignored association "%name" to "%model" ( "%model-%name"  ).', array('%name' => $form_name, '%model' => $model)));
     }
   }
   foreach($admin_settings as $setting_name=>$setting_value){
-    $original_value = variable_get($setting_name);
-    if ($original_value === $setting_value){
-      drupal_set_message(t('Administrative setting "%name" was already set to the content specified in this configuration.',array('%name' => $setting_name)));
+    if (!in_array(strtolower($setting_name),$ignore_settings)){
+      $original_value = variable_get($setting_name);
+      if ($original_value === $setting_value){
+        drupal_set_message($dry_run_prefix . t('Administrative setting "%name" was already set to the content specified in this configuration.',array('%name' => $setting_name)));
+      }else{
+        if (!$dry_run) variable_set($setting_name,$setting_value);
+        drupal_set_message($dry_run_prefix . t('Administrative setting "%name" set from <br/>"%original" <br/>to <br/>"%newval".',array('%name' => $setting_name,'%original'=>$original_value,'%newval'=>$setting_value)));
+      }
     }else{
-      variable_set($setting_name,$setting_value);
-      drupal_set_message(t('Administrative setting "%name" set from <br/>"%original" <br/>to <br/>"%newval".',array('%name' => $setting_name,'%original'=>$original_value,'%newval'=>$setting_value)));
+      drupal_set_message($dry_run_prefix . t('Ignored administrative setting "%name".',array('%name' => $setting_name)));
     }
   }
 }
@@ -1744,6 +1757,17 @@ function sidora_config_form($form, &$form_state){
     '#title' => t('Config File'),
     '#description' => t('This configuration will be immediately applied on clicking the "Import" button below.'),
   );
+  $form['dry_run'] = array(
+    '#type' =>'checkbox',
+    '#title'=>t('Dry Run (no not actually make changes)'),
+    '#default_value' =>TRUE, // for default checked and false is not checked
+  );
+  $form['ignore_settings'] = array(
+    '#type' => 'textarea',
+    '#title' => t('Ignore these settings if in the import file'),
+    '#description' => t('Put the names of the settings one per line (form name / model-form name / variable name)'),
+    '#default_value' => variable_get("sidora_config_import_ignores","si_exhibition_website_location\nosd_proxy_resolver_url"),
+  );
   $form['upload_submit'] = array(  //ensure this aligns with information in the validator on the #id check
     '#type' => 'submit',
     '#value' => t('Import And Apply Config File'),
@@ -1757,11 +1781,14 @@ function sidora_config_form_submit($form, &$form_state) {
   global $user;
   $validators = array('file_validate_extensions' => array('json txt'));
   $file = file_save_upload('file',$validators);
+  variable_set("sidora_config_import_ignores",$form_state['values']['ignore_settings']);
+  $ignore_settings = array_map('trim', explode("\n",$form_state['values']['ignore_settings'])); //Explode it and trim any whitespace
+  $dry_run = $form_state['values']['dry_run'];
   if (!empty($file)){
     $filepath = drupal_realpath($file->uri);
     $file_contents = file_get_contents($filepath);
     $object = json_decode($file_contents);
-    sidora_settings_import($object);
+    sidora_settings_import($object,$ignore_settings,$dry_run);
   }
 }
 /*
