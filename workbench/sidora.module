@@ -556,6 +556,10 @@ function sidora_resource_viewer($pid){
               case 'PHPExcel':
                 return sidora_tabular_view_phpexcelreader($pid,$dsid);
                 break;
+							case 'JW Video Player':
+							  sidora_video_view_object($pid);
+								drupal_exit();
+								break;		
             }
           }
         }
@@ -1899,6 +1903,7 @@ function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $ex
     var_dump($conf);
   }
   if ($one == 'make_mp4'){
+    module_load_include('inc', 'islandora_video', 'includes/derivatives');
 	  $object = sidora_obj($two);
 		$mime_detect = new MimeDetect();
 		$ext = $mime_detect->getExtension($object['OBJ']->mimeType);
@@ -1906,14 +1911,17 @@ function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $ex
     $archival_file = file_create_filename($archival_file, 'temporary://');
     $object['OBJ']->getContent($archival_file);
 	  $archival_file = drupal_realpath($archival_file);
-    $out_file = 'out_file.mp4';
+    $out_file = $archival_file . '.mp4';
     $ffmpeg_executable = variable_get('islandora_video_ffmpeg_path', 'ffmpeg');
-    $command = "$ffmpeg_executable -i $archival_file -f mp4 -vcodec libx264 -preset medium -acodec libfaac -ab 128k -ac 2 -async 1 $out_file";
-    $return_value = FALSE;
-    echo $command;
+    $command = "$ffmpeg_executable -i $archival_file -f mp4 -vcodec libx264 -preset medium -acodec libfdk_aac -ab 128k -ac 2 -async 1 $out_file";
+		$return_value = FALSE;
+    echo "command is : ".$command;
 		exec($command, $output, $return_value);
-    echo "return : ".$return_value;
-		echo exec('pwd');
+    echo "\nreturn : ".$return_value;
+		echo "\n" . exec('pwd');
+		islandora_video_add_datastream($object, 'MP4', $out_file, 'Display MP4.');
+    file_unmanaged_delete($out_file);
+
 	}  
 	if ($one == 'osd_proxy'){
     sidora_osd_proxy($two);
@@ -2620,6 +2628,7 @@ function sidora_create_resource_get_upload_form_html($model, $upload_button_text
     'si:datasetCModel' => array('csv', 'xml', 'xlsx', 'xls', 'dat', 'med', 'arg', 'slt'),
     'si:fieldbookCModel' => array('pdf'),
     'islandora:sp-audioCModel' => array('mp3','aiff','wav'),
+		'islandora:sp_videoCModel' => array('ogg','mp4','mov','qt', 'm4a', 'avi'),
 		'*' => array('*'),
   );
   if (array_key_exists($model, $file_extensions)){
@@ -3628,13 +3637,13 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
       break;
     case 'resources':
       $resource_types = array(
-        'all' => array('si:imageCModel', 'si:generalImageCModel','si:fieldbookCModel','si:datasetCModel','islandora:sp-audioCModel'),
+        'all' => array('si:imageCModel', 'si:generalImageCModel','si:fieldbookCModel','si:datasetCModel','islandora:sp-audioCModel','islandora:sp_videoCModel'),
         'images' => array('si:imageCModel', 'si:generalImageCModel'),
         'pdf' => array('si:fieldbookCModel'),
         'csv' => array('si:datasetCModel'),
 				'audio' => array('islandora:sp-audioCModel'),
-        'text' => FALSE,
-        'video' => FALSE
+        'video' => array('islandora:sp_videoCModel'),
+				'text' => FALSE
       );
       if ($download == 'browser' && $formatted == 'dataTableServerSideProcessing'){
         $jsdt_title_and_type_search_val = filter_var($_GET['search']['value'], FILTER_SANITIZE_STRING);
@@ -3774,6 +3783,7 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
           $to_output .= '</ul></li>';
           //$to_output .= '<li><a href="" model="si:siBasicObject" formname="Dataset" ontology-id="Datasets">Audio&nbsp;Files</a></li>';
           $to_output .= '<li><a href="" model="islandora:sp-audioCModel" formname="Sidora Audio Mods Form" ontology-id="Audio">Audio&nbsp;Files</a></li>';
+					$to_output .= '<li><a href="" model="islandora:sp_videoCModel" formname="Video MODS form" ontology-id="Video">Video&nbsp;Files</a></li>';
 					$to_output .= '</ul>';
         }
       break;
@@ -7789,4 +7799,14 @@ function sidora_osd_proxy_version($pid, $datastream='OBJ', $version='0'){
   $url = variable_get('osd_proxy_resolver_url', '').'?'.$qs;
   print file_get_contents($url);
   exit();
+}
+function sidora_islandora_sp_videoCModel_islandora_ingest_steps_alter(array &$steps, array &$form_state) {
+	 unset($steps['islandora_video_upload']);
+}
+function sidora_video_view_object($pid) {
+	$object = sidora_obj($pid);
+	$variables = array('islandora_object' => $object);
+	islandora_video_islandora_sp_videoCModel_islandora_view_object($object,'','');
+ // $output = drupal_get_css() . drupal_get_js() . $output;
+ // return $output;
 }
