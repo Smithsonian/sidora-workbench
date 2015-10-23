@@ -927,8 +927,12 @@ PDF metadata:
   $to_return['dsid'] = '';
   $to_return['form_name'] = '';
 
+  $is_codebook = sidora_is_codebook($object);
   $is_concept = sidora_is_concept($object);
-  if ($is_concept){
+  if ($is_codebook){
+    $to_return['dsid'] = 'DDI';
+    $to_return['form_name'] = 'Codebook';
+  }else if ($is_concept){
     if (!empty($object['EAC-CPF'])){
       $to_return['dsid'] = 'EAC-CPF'; 
       if (sidora_startsWith($object->id, 'si-user:')){
