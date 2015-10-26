@@ -7638,7 +7638,6 @@ function sidora_datastream_version_view($pid, $datastream) {
         'label' => $datastream_version->createdDate->format(DATE_RFC850),
         'version' => $version,
         ));
-				$row[] = $version_view_link;
 			}	
 		}	 					
     $row[] = $version_view_link;
