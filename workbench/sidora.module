@@ -2894,7 +2894,10 @@ function sidora_create_resource_get_metadata_form_html($parent_pid, $model, $for
  * Is a form to choose from their existing codebooks or to upload a new example data file to use
  */
 function sidora_codebook_upload_form($form, &$form_state){
-  $form['radio']['header_choice'] = array(
+  $form['gen-codebook'] = array(
+    '#type' => 'fieldset',
+  );
+  $form['gen-codebook']['radio']['header_choice'] = array(
     '#type' => 'radios',
     '#title' => t('Select option for column headers'),
     '#description' => t('This determines if the first line of the data files is a list of headings for the data, or is part of the data itself'),
@@ -2904,7 +2907,7 @@ function sidora_codebook_upload_form($form, &$form_state){
     ),
     '#required' => TRUE,
   );
-  $form['file'] = array(
+  $form['gen-codebook']['file'] = array(
     '#type' => 'file',
     '#title' => t('Example Data File'),
     '#description' => t('The codebook will be generated on this uploaded example data.'),
@@ -2915,14 +2918,14 @@ function sidora_codebook_upload_form($form, &$form_state){
       'accept'=> '.csv, .xls',
     ),
   );
-  $form['some_text'] = array(
+  $form['gen-codebook']['some_text'] = array(
     '#markup' => '<style>
        .form-item-files-file, .form-item-user-supplied-codebook-pid {width:270px;float:left;clear:both;} 
        #edit-upload-codebook-submit, #edit-pick-codebook-submit {float:left;vertical-align:top;margin-top:30px;}
        #edit-user-supplied-codebook-pid, #edit-file { width:255px; padding:2px; }
      </style>',
   );
-  $form['upload_codebook_submit'] = array(  //ensure this aligns with information in the validator on the #id check
+  $form['gen-codebook']['upload_codebook_submit'] = array(  //ensure this aligns with information in the validator on the #id check
     '#type' => 'submit',
     '#value' => t('Upload and Generate New'),
   );
@@ -2940,16 +2943,19 @@ function sidora_codebook_upload_form($form, &$form_state){
       $codebook_options[$codebook_pid] = $codebook->label;
     }
   }
-  $form['user_supplied_codebook_pid'] = array(
+  $form['existing-codebook'] = array(
+    '#type' => 'fieldset',
+  );
+  $form['existing-codebook']['user_supplied_codebook_pid'] = array(
     '#type' => 'select',
-    '#title' => t('or:<br/>Choose From Your Existing Codebooks'),
+    '#title' => t('Choose From Your Existing Codebooks'),
     '#size' => 10,
     '#attributes' => array(
       'class' => array('existing-codebooks-select'),
     ),
     '#options' => $codebook_options,
   );
-  $form['pick_codebook_submit'] = array(  //ensure this aligns with information in the validator on the #id check
+  $form['existing-codebook']['pick_codebook_submit'] = array(  //ensure this aligns with information in the validator on the #id check
     '#type' => 'submit',
     '#value' => t('Use Selected Codebook'),
     '#submit' => array('sidora_codebook_upload_form_pick_codebook_submit'),
@@ -3111,8 +3117,32 @@ function sidora_create_resource($parent_pid = 'si:root', $model = 'si:collection
     $ask_for_codebook = sidora_is_create_resource_codebook_choice_completed($model);
     $codebook_edit_step_completed = sidora_is_create_resource_codebook_edit_completed();
     if ($ask_for_codebook){
+      $to_return .= '<script>
+jQuery(document).ready(function(){
+  jQuery("body").prepend(\'<div id="cover" style="width:100%;height:100%;position:absolute;left:0;top:0;z-index:100;background:white;"><p style="margin:20px;">Tabular data files require a codebook which describes the contents of the data. You can choose to automatically generate a codebook based on one of your files, or choose an existing codebook that describes your data. Use one of the two options below, clicking one of the buttons to make your choice.<input id="gen-codebook" type="submit" class="form-submit" value="Generate codebook" style="    margin: 20px;"><input id="pick-existing" type="submit" class="form-submit" value="Pick from your existing codebooks"></p></div>\');
+  jQuery("#pick-existing").click(function(){
+    jQuery(".form-wrapper").show();
+    jQuery("#edit-gen-codebook").hide();
+    jQuery("#cover").hide();
+    addBackButton();
+  });
+  jQuery("#gen-codebook").click(function(){
+    jQuery(".form-wrapper").show();
+    jQuery("#edit-existing-codebook").hide();
+    jQuery("#cover").hide();
+    addBackButton();
+  });
+  addBackButton = function(){
+    jQuery("#content").append(\'<input id="back-button" type="submit" class="form-submit" value="Back"/>\');
+    jQuery("#back-button").click(function(){
+      jQuery("#back-button").remove();
+      jQuery("#cover").show();
+    });
+  }
+});
+</script>';
       //First step for codebook is the upload or choose step (SID-243)
-      $to_return .= '<div>Tabular data files require a codebook which describes the contents of the data.  You can choose to automatically generate a codebook based on one of your files, or choose an existing codebook that describes your data.  Use one of the two options below, clicking one of the buttons to make your choice.</div>';
+      $to_return .= '<div style="display:none">Tabular data files require a codebook which describes the contents of the data.  You can choose to automatically generate a codebook based on one of your files, or choose an existing codebook that describes your data.  Use one of the two options below, clicking one of the buttons to make your choice.</div>';
       $form = drupal_get_form('sidora_codebook_upload_form');  
       $to_return .= drupal_render($form);
       $show_form = FALSE;
