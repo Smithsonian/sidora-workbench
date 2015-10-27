@@ -4322,7 +4322,7 @@ function sidora_ontology_object(){
       //(0 represents first instance)
       if ((array_key_exists('file_uploads', $_SESSION)) && (!empty($_SESSION['file_uploads']))){
         foreach($_SESSION['file_uploads'][$user->uid] as $index => $file_obj){
-            if ($file_obj->filename == $param1){
+            if (urldecode($file_obj->filename) == urldecode($param1)){
               if ($which_instance_to_remove == $current_instances_found){
                 unset($_SESSION['file_uploads'][$user->uid][$index]);
                 $_SESSION['file_uploads'][$user->uid] = array_values($_SESSION['file_uploads'][$user->uid]);
