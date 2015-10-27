@@ -3142,6 +3142,8 @@ jQuery(document).ready(function(){
       jQuery("#cover").show();
     });
   }
+  jQuery("#cover").prepend(jQuery("#console"));
+  jQuery("#console").css("margin","20px");
 });
 </script>';
       //First step for codebook is the upload or choose step (SID-243)
