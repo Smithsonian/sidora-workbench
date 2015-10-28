@@ -927,8 +927,12 @@ PDF metadata:
   $to_return['dsid'] = '';
   $to_return['form_name'] = '';
 
+  $is_codebook = sidora_is_codebook($object);
   $is_concept = sidora_is_concept($object);
-  if ($is_concept){
+  if ($is_codebook){
+    $to_return['dsid'] = 'DDI';
+    $to_return['form_name'] = 'Codebook';
+  }else if ($is_concept){
     if (!empty($object['EAC-CPF'])){
       $to_return['dsid'] = 'EAC-CPF'; 
       if (sidora_startsWith($object->id, 'si-user:')){
@@ -1641,10 +1645,19 @@ function sidora_create_codebook_from_url($url, $codebook_label){
  * Sets the SIdora instance with the imported information
  * Assumes the same style as sidora_settings_object() would produce
  * If the parameter value is a string, assumes it is a json string to decode
+ * ignore_settings 
+ * dry_run will not make any changes, just give the messages
  * 
  */
-function sidora_settings_import($object){
+function sidora_settings_import($object, $ignore_settings = array(), $only_apply_settings = array(), $dry_run = TRUE, $show_ignores_as_warnings = FALSE){
+  $ignore_message_type = $show_ignores_as_warnings?'warning':'status';
+  //make the comparisons case insensitive by having all lower
+  $ignore_settings = array_map('strtolower',$ignore_settings); 
+  $only_apply_settings = array_filter(array_map('strtolower',$only_apply_settings));
   if (is_string($object)){ $object = json_decode($object); }
+  
+  $dry_run_prefix = ($dry_run)?t('DRY RUN, NO CHANGE:'):'';
+  
   //$full_export['forms'] = $forms;
   //$full_export['associations'] = $associations;
   //$full_export['admin_settings'] = $settings_holder;
@@ -1655,37 +1668,38 @@ function sidora_settings_import($object){
   module_load_include('inc', 'xml_form_builder', 'XMLFormDatabase');
   module_load_include('inc', 'xml_form_builder', 'includes/associations');
   foreach($forms as $form_name=>$form_string){
-    $definition = new DOMDocument();
-    $definition->loadXML($form_string);
-    if (XMLFormDatabase::Delete($form_name)) {
-      foreach (xml_form_builder_get_associations(array($form_name)) as $assoc) {
-        db_delete('xml_form_builder_form_associations')
-          ->condition('id', intval($assoc['id']))
-          ->execute();
-        drupal_set_message(t('Deleted the association ID:%id with the form %form_name.', array(
-          '%id' => $assoc['id'],
-          '%form_name' => $form_name,
-        )));
+    if (
+      !in_array(strtolower($form_name),$ignore_settings) 
+      && 
+      (empty($only_apply_settings) || sidora_contains($form_name,$only_apply_settings,TRUE))
+    ){
+      $definition = new DOMDocument();
+      $definition->loadXML($form_string);
+      $success_delete = ($dry_run || XMLFormDatabase::Delete($form_name));
+      if ($success_delete) {
+        foreach (xml_form_builder_get_associations(array($form_name)) as $assoc) {
+          if (!$dry_run){
+            db_delete('xml_form_builder_form_associations')
+            ->condition('id', intval($assoc['id']))
+            ->execute();
+          }
+          drupal_set_message($dry_run_prefix . t('Deleted the association ID:%id with the form %form_name.', array(
+            '%id' => $assoc['id'],
+            '%form_name' => $form_name,
+          )));
+        }
+        drupal_set_message($dry_run_prefix . t('Successfully deleted form "%name" in order to reimport it.', array('%name' => $form_name)));
       }
-      drupal_set_message(t('Successfully deleted form "%name" in order to reimport it.', array('%name' => $form_name)));
-    }
-    if (XMLFormRepository::Create($form_name, $definition)){
-      drupal_set_message(t('Successfully imported form "%name".', array('%name' => $form_name)));
-    }else{
-      drupal_set_message(t('FAILED imported on form "%name".', array('%name' => $form_name)),'error');
-    }
+      $create_success = ($dry_run || XMLFormRepository::Create($form_name, $definition));
+      if ($create_success){
+        drupal_set_message($dry_run_prefix . t('Successfully imported form "%name".', array('%name' => $form_name)));
+      }else{
+        drupal_set_message($dry_run_prefix . t('FAILED imported on form "%name".', array('%name' => $form_name)),'error');
+      }
+   }else{
+     drupal_set_message($dry_run_prefix . t('Ignored form "%name".', array('%name' => $form_name)),$ignore_message_type);
+   }
   }
-/*
-  $object = array(
-    'content_model' => $content_model, 
-    'form_name' => $form_name,
-    'dsid' => $dsid,
-    'title_field' => $title_field,
-    'transform' => $transform,
-    'self_transform' => $self_transform,
-    'template' => $template,
-  );
-*/
   foreach($associations as $association){
     $a_object = array(
       'content_model' => $association->content_model,
@@ -1696,24 +1710,43 @@ function sidora_settings_import($object){
       'self_transform' => $association->self_transform,
       'template' => $association->template,
     );
-    $insert_success = db_insert('xml_form_builder_form_associations')
-      ->fields($a_object)
-      ->execute();
     $form_name = $association->form_name;
     $model = $association->content_model;
-    if ($insert_success){
-      drupal_set_message(t('Successfully imported form association "%name" to "%model".', array('%name' => $form_name, '%model' => $model)));
+    $setting_name_for_ignore = $association->content_model.'-'.$association->form_name;
+    if (
+      !in_array(strtolower($setting_name_for_ignore),$ignore_settings)
+      && 
+      (empty($only_apply_settings) || sidora_contains($setting_name_for_ignore,$only_apply_settings,TRUE))
+    ){
+      $insert_success = ( $dry_run ||
+        db_insert('xml_form_builder_form_associations')
+        ->fields($a_object)
+        ->execute()
+      );
+      if ($insert_success){
+        drupal_set_message($dry_run_prefix . t('Successfully imported form association "%name" to "%model" ( "%model-%name"  ).', array('%name' => $form_name, '%model' => $model)));
+      }else{
+        drupal_set_message($dry_run_prefix . t('FAILED import form association "%name" to "%model" ( "%model-%name"  ).', array('%name' => $form_name, '%model' => $model)),'error');
+      }
     }else{
-      drupal_set_message(t('FAILED import form association "%name" to "%model".', array('%name' => $form_name, '%model' => $model)),'error');
+      drupal_set_message($dry_run_prefix . t('Ignored association "%name" to "%model" ( "%model-%name"  ).', array('%name' => $form_name, '%model' => $model)),$ignore_message_type);
     }
   }
   foreach($admin_settings as $setting_name=>$setting_value){
-    $original_value = variable_get($setting_name);
-    if ($original_value === $setting_value){
-      drupal_set_message(t('Administrative setting "%name" was already set to the content specified in this configuration.',array('%name' => $setting_name)));
+    if (
+      !in_array(strtolower($setting_name),$ignore_settings)
+      && 
+      (empty($only_apply_settings) || sidora_contains($setting_name,$only_apply_settings,TRUE))
+    ){
+      $original_value = variable_get($setting_name);
+      if ($original_value === $setting_value){
+        drupal_set_message($dry_run_prefix . t('Administrative setting "%name" was already set to the content specified in this configuration.',array('%name' => $setting_name)));
+      }else{
+        if (!$dry_run) variable_set($setting_name,$setting_value);
+        drupal_set_message($dry_run_prefix . t('Administrative setting "%name" set from <br/>"%original" <br/>to <br/>"%newval".',array('%name' => $setting_name,'%original'=>$original_value,'%newval'=>$setting_value)));
+      }
     }else{
-      variable_set($setting_name,$setting_value);
-      drupal_set_message(t('Administrative setting "%name" set from <br/>"%original" <br/>to <br/>"%newval".',array('%name' => $setting_name,'%original'=>$original_value,'%newval'=>$setting_value)));
+      drupal_set_message($dry_run_prefix . t('Ignored administrative setting "%name".',array('%name' => $setting_name)),$ignore_message_type);
     }
   }
 }
@@ -1744,6 +1777,28 @@ function sidora_config_form($form, &$form_state){
     '#title' => t('Config File'),
     '#description' => t('This configuration will be immediately applied on clicking the "Import" button below.'),
   );
+  $form['show_ignores_as_warnings'] = array(
+    '#type' =>'checkbox',
+    '#title'=>t('Show ignores as warnings (otherwise will appear as normal message info)'),
+    '#default_value' =>TRUE, // for default checked and false is not checked
+  );
+  $form['dry_run'] = array(
+    '#type' =>'checkbox',
+    '#title'=>t('Dry Run (no not actually make changes)'),
+    '#default_value' =>TRUE, // for default checked and false is not checked
+  );
+  $form['only_apply_settings'] = array(
+    '#type' => 'textarea',
+    '#title' => t('Only apply settings that have one of the following in the name'),
+    '#description' => t('Put parts of names of the settings one per line (form name / model-form name / variable name)'),
+    '#default_value' => variable_get("sidora_config_only_apply",""),
+  );
+  $form['ignore_settings'] = array(
+    '#type' => 'textarea',
+    '#title' => t('Ignore these settings if in the import file'),
+    '#description' => t('Put the names of the settings one per line (form name / model-form name / variable name)'),
+    '#default_value' => variable_get("sidora_config_import_ignores","si_exhibition_website_location\nosd_proxy_resolver_url"),
+  );
   $form['upload_submit'] = array(  //ensure this aligns with information in the validator on the #id check
     '#type' => 'submit',
     '#value' => t('Import And Apply Config File'),
@@ -1757,11 +1812,17 @@ function sidora_config_form_submit($form, &$form_state) {
   global $user;
   $validators = array('file_validate_extensions' => array('json txt'));
   $file = file_save_upload('file',$validators);
+  variable_set("sidora_config_import_ignores",$form_state['values']['ignore_settings']);
+  variable_set("sidora_config_only_apply",$form_state['values']['only_apply_settings']);
+  $ignore_settings = array_map('trim', explode("\n",$form_state['values']['ignore_settings'])); //Explode it and trim any whitespace
+  $only_apply_settings = array_map('trim', explode("\n",$form_state['values']['only_apply_settings'])); //Explode it and trim any whitespace
+  $dry_run = $form_state['values']['dry_run'];
+  $show_ignores_as_warnings = $form_state['values']['show_ignores_as_warnings'];
   if (!empty($file)){
     $filepath = drupal_realpath($file->uri);
     $file_contents = file_get_contents($filepath);
     $object = json_decode($file_contents);
-    sidora_settings_import($object);
+    sidora_settings_import($object,$ignore_settings,$only_apply_settings,$dry_run,$show_ignores_as_warnings);
   }
 }
 /*
@@ -2833,7 +2894,11 @@ function sidora_create_resource_get_metadata_form_html($parent_pid, $model, $for
  * Is a form to choose from their existing codebooks or to upload a new example data file to use
  */
 function sidora_codebook_upload_form($form, &$form_state){
-  $form['radio']['header_choice'] = array(
+  $form['gen-codebook'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Generate Codebook From Example File'),
+  );
+  $form['gen-codebook']['radio']['header_choice'] = array(
     '#type' => 'radios',
     '#title' => t('Select option for column headers'),
     '#description' => t('This determines if the first line of the data files is a list of headings for the data, or is part of the data itself'),
@@ -2843,7 +2908,7 @@ function sidora_codebook_upload_form($form, &$form_state){
     ),
     '#required' => TRUE,
   );
-  $form['file'] = array(
+  $form['gen-codebook']['file'] = array(
     '#type' => 'file',
     '#title' => t('Example Data File'),
     '#description' => t('The codebook will be generated on this uploaded example data.'),
@@ -2854,14 +2919,14 @@ function sidora_codebook_upload_form($form, &$form_state){
       'accept'=> '.csv, .xls',
     ),
   );
-  $form['some_text'] = array(
+  $form['gen-codebook']['some_text'] = array(
     '#markup' => '<style>
-       .form-item-files-file, .form-item-user-supplied-codebook-pid {width:270px;float:left;clear:both;} 
-       #edit-upload-codebook-submit, #edit-pick-codebook-submit {float:left;vertical-align:top;margin-top:30px;}
-       #edit-user-supplied-codebook-pid, #edit-file { width:255px; padding:2px; }
+       .form-item-files-file, .form-item-user-supplied-codebook-pid {width:100%;float:left;clear:both;} 
+       #edit-upload-codebook-submit, #edit-pick-codebook-submit {float:left;vertical-align:top;}
+       #edit-user-supplied-codebook-pid, #edit-file { width:100%; padding:2px; }
      </style>',
   );
-  $form['upload_codebook_submit'] = array(  //ensure this aligns with information in the validator on the #id check
+  $form['gen-codebook']['upload_codebook_submit'] = array(  //ensure this aligns with information in the validator on the #id check
     '#type' => 'submit',
     '#value' => t('Upload and Generate New'),
   );
@@ -2878,17 +2943,22 @@ function sidora_codebook_upload_form($form, &$form_state){
       $codebook = sidora_obj($codebook_pid);
       $codebook_options[$codebook_pid] = $codebook->label;
     }
+    $codebook_options['last'] = 'QWERTYUIOIJUHGFDSXCVBNJMKIU&^%$#WSDCVFBGHNJI*&^%R$DFVBHNJIK';
+    $codebook_options = array_reverse($codebook_options);
   }
-  $form['user_supplied_codebook_pid'] = array(
+  $form['existing-codebook'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Choose From Your Existing Codebooks'),
+  );
+  $form['existing-codebook']['user_supplied_codebook_pid'] = array(
     '#type' => 'select',
-    '#title' => t('or:<br/>Choose From Your Existing Codebooks'),
     '#size' => 10,
     '#attributes' => array(
       'class' => array('existing-codebooks-select'),
     ),
     '#options' => $codebook_options,
   );
-  $form['pick_codebook_submit'] = array(  //ensure this aligns with information in the validator on the #id check
+  $form['existing-codebook']['pick_codebook_submit'] = array(  //ensure this aligns with information in the validator on the #id check
     '#type' => 'submit',
     '#value' => t('Use Selected Codebook'),
     '#submit' => array('sidora_codebook_upload_form_pick_codebook_submit'),
@@ -2927,7 +2997,7 @@ function sidora_codebook_upload_form_validate($form, &$form_state) {
           $form_state['storage']['codebook'] = $codebook;
         }catch(Exception $e){
           watchdog('SIdora_Tabular_Parse',t("Problem with creating a codebook:<br/>").$e->getMessage().t("URL:").$url);
-          form_set_error('file',t("Unable to parse the uploaded file. Contact an administrator if you believe this file should be able to parsed.  Please send a screenshot of this page, include the file you uploaded, and the time and date this occurred.  The administrator should check the Drupal log for 'SIdora_Tabular_Parse' for more information."));
+          form_set_error('file',t("Unable to parse the uploaded file. Contact an administrator if you believe this file should be able to be parsed.  Please send a screenshot of this page, include the file you uploaded, and the time and date this occurred.  The administrator should check the Drupal log for 'SIdora_Tabular_Parse' for more information."));
           return;
         }
       }
@@ -3050,8 +3120,34 @@ function sidora_create_resource($parent_pid = 'si:root', $model = 'si:collection
     $ask_for_codebook = sidora_is_create_resource_codebook_choice_completed($model);
     $codebook_edit_step_completed = sidora_is_create_resource_codebook_edit_completed();
     if ($ask_for_codebook){
+      $to_return .= '<script>
+jQuery(document).ready(function(){
+  jQuery("body").prepend(\'<div id="cover" style="width:100%;height:100%;position:absolute;left:0;top:0;z-index:100;background:white;"><p style="margin:20px;">Tabular data files require a codebook which describes the contents of the data. You can choose to automatically generate a codebook based on one of your files, or choose an existing codebook that describes your data. Use one of the two options below, clicking one of the buttons to make your choice.<br/><input id="gen-codebook" type="submit" class="form-submit" value="Generate codebook" style="    margin: 20px;"><input id="pick-existing" type="submit" class="form-submit" value="Pick from your existing codebooks"></p></div>\');
+  jQuery("#pick-existing").click(function(){
+    jQuery(".form-wrapper").show();
+    jQuery("#edit-gen-codebook").hide();
+    jQuery("#cover").hide();
+    addBackButton();
+  });
+  jQuery("#gen-codebook").click(function(){
+    jQuery(".form-wrapper").show();
+    jQuery("#edit-existing-codebook").hide();
+    jQuery("#cover").hide();
+    addBackButton();
+  });
+  addBackButton = function(){
+    jQuery("#content").append(\'<input id="back-button" type="submit" class="form-submit" value="Back"/>\');
+    jQuery("#back-button").click(function(){
+      jQuery("#back-button").remove();
+      jQuery("#cover").show();
+    });
+  }
+  jQuery("#cover").prepend(jQuery("#console"));
+  jQuery("#console").css("margin","20px");
+});
+</script>';
       //First step for codebook is the upload or choose step (SID-243)
-      $to_return .= '<div>Tabular data files require a codebook which describes the contents of the data.  You can choose to automatically generate a codebook based on one of your files, or choose an existing codebook that describes your data.  Use one of the two options below, clicking one of the buttons to make your choice.</div>';
+      $to_return .= '<div style="display:none">Tabular data files require a codebook which describes the contents of the data.  You can choose to automatically generate a codebook based on one of your files, or choose an existing codebook that describes your data.  Use one of the two options below, clicking one of the buttons to make your choice.</div>';
       $form = drupal_get_form('sidora_codebook_upload_form');  
       $to_return .= drupal_render($form);
       $show_form = FALSE;
@@ -4231,7 +4327,7 @@ function sidora_ontology_object(){
       //(0 represents first instance)
       if ((array_key_exists('file_uploads', $_SESSION)) && (!empty($_SESSION['file_uploads']))){
         foreach($_SESSION['file_uploads'][$user->uid] as $index => $file_obj){
-            if ($file_obj->filename == $param1){
+            if (urldecode($file_obj->filename) == urldecode($param1)){
               if ($which_instance_to_remove == $current_instances_found){
                 unset($_SESSION['file_uploads'][$user->uid][$index]);
                 $_SESSION['file_uploads'][$user->uid] = array_values($_SESSION['file_uploads'][$user->uid]);
@@ -7112,7 +7208,27 @@ xmlns:cpf="urn:isbn:1-931666-33-4"
 </xsl:stylesheet> 
 ';
 }
-
+/*
+ * Returns true if any of the haystacks contain any of the needles
+ * otherwise returns false
+ */
+function sidora_contains($haystacks, $needles, $ignoreCase = false) {
+    if (!is_array($haystacks)) $haystacks = array($haystacks);
+    if (!is_array($needles)) $needles = array($needles); 
+    foreach($haystacks as $haystack){
+      foreach($needles as $needle){
+      if ($ignoreCase) {
+        $haystack = strtolower($haystack);
+        $needle   = strtolower($needle);
+      }
+      $needlePos = strpos($haystack, $needle);
+      if ($needlePos !== false){
+        return true;
+      }
+    }
+  }
+  return false;
+}
 
 function sidora_startsWith($haystack, $needle) {
     // search backwards starting from haystack length characters from the end
