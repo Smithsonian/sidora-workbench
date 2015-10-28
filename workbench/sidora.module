@@ -557,7 +557,7 @@ function sidora_resource_viewer($pid){
                 return sidora_tabular_view_phpexcelreader($pid,$dsid);
                 break;
 							case 'JW Video Player':
-							  sidora_video_view_object($pid);
+							  print sidora_video_view_object($pid);
 								drupal_exit();
 								break;		
             }
@@ -1909,10 +1909,10 @@ function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $ex
 		$ext = $mime_detect->getExtension($object['OBJ']->mimeType);
     $archival_file = str_replace(":", "-", $object->id) . ".OBJ.{$ext}";
     $archival_file = file_create_filename($archival_file, 'temporary://');
-    $object['OBJ']->getContent($archival_file);
+		$object['OBJ']->getContent($archival_file);
 	  $archival_file = drupal_realpath($archival_file);
-    $out_file = $archival_file . '.mp4';
-    $ffmpeg_executable = variable_get('islandora_video_ffmpeg_path', 'ffmpeg');
+	  $out_file = $archival_file . '.mp4';
+		$ffmpeg_executable = variable_get('islandora_video_ffmpeg_path', 'ffmpeg');
     $command = "$ffmpeg_executable -i $archival_file -f mp4 -vcodec libx264 -preset medium -acodec libfdk_aac -ab 128k -ac 2 -async 1 $out_file";
 		$return_value = FALSE;
     echo "command is : ".$command;
@@ -2628,7 +2628,7 @@ function sidora_create_resource_get_upload_form_html($model, $upload_button_text
     'si:datasetCModel' => array('csv', 'xml', 'xlsx', 'xls', 'dat', 'med', 'arg', 'slt'),
     'si:fieldbookCModel' => array('pdf'),
     'islandora:sp-audioCModel' => array('mp3','aiff','wav'),
-		'islandora:sp_videoCModel' => array('ogg','mp4','mov','qt', 'm4a', 'avi'),
+		'islandora:sp_videoCModel' => array('ogg','mp4','mov','qt', 'm4a', 'm4v', 'avi', 'mkv'),
 		'*' => array('*'),
   );
   if (array_key_exists($model, $file_extensions)){
@@ -7629,7 +7629,7 @@ function sidora_datastream_version_view($pid, $datastream) {
       ));
 		}else{
 			if ((isset($version_view_link['viewer'])) && ($version_view_link['viewer'] != '')){
-			  if (($version_view_link['viewer'] == 'JW Audio Player') && (strtoupper($datastream) == 'OBJ')){
+			  if ((($version_view_link['viewer'] == 'JW Audio Player') || ($version_view_link['viewer'] == 'JW Video Player')) && (strtoupper($datastream) == 'OBJ')){
 				  $version_view_link['data'] = l($datastream_version->createdDate->format(DATE_RFC850), $GLOBALS['base_url'] . '/sidora/version_info/' . $parent->id . '/' . $datastream . '/' . $version . '/download');
 				}else{
 				  $version_view_link['data'] = l($datastream_version->createdDate->format(DATE_RFC850), $GLOBALS['base_url'] . '/sidora/version_viewer/' . $parent->id . '/' . $datastream . '/' . $viewer . '/' . $version);
@@ -7729,6 +7729,10 @@ function sidora_resource_version_viewer($pid, $datastream, $viewer, $version = '
 					print sidora_audio_view_object($pid);
 					drupal_exit();
 					break;
+				case 'JW Video Player':
+					print sidora_video_view_object($pid);
+					drupal_exit();
+					break;
 				case 'IDS':
           return sidora_view_ids_iframe($pid, $dsid);
           break;
@@ -7806,8 +7810,8 @@ function sidora_islandora_sp_videoCModel_islandora_ingest_steps_alter(array &$st
 }
 function sidora_video_view_object($pid) {
 	$object = sidora_obj($pid);
-	$variables = array('islandora_object' => $object);
-	islandora_video_islandora_sp_videoCModel_islandora_view_object($object,'','');
- // $output = drupal_get_css() . drupal_get_js() . $output;
- // return $output;
+	$variables = array('object' => $object);
+	$output = theme('islandora_video', $variables);
+  $output = drupal_get_css() . drupal_get_js() . $output;
+  return $output;
 }
