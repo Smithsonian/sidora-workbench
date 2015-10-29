@@ -549,9 +549,6 @@ function sidora_view_ids_iframe($pid, $dsid) {
 $(function(){
 var ids_id = '";
   print str_replace('https','http',$GLOBALS['base_url']);
-/*
-http://***REMOVED***/sidora/info/si:121379/meta/OBJ/browser
-*/
 //  print "/viewer/$pid/$dsid/download';
   print "/sidora/info/$pid/meta/$dsid/browser';
 
@@ -2206,7 +2203,7 @@ function sidora_create_resource_get_upload_form_html($model, $upload_button_text
     'si:datasetCModel' => array('csv', 'xml', 'xlsx', 'xls', 'dat', 'med', 'arg', 'slt'),
     'si:fieldbookCModel' => array('pdf'),
     'islandora:sp-audioCModel' => array('mp3','mp4','aiff','aac','ogg','wav','wma'),
-		'islandora:sp_videoCModel' => array('ogg','mp4','mov','qt', 'm4a', 'avi'),
+		'islandora:sp_videoCModel' => array('ogg','mp4','mov','qt', 'm4a', 'm4v', 'avi', 'mkv'),
 		'*' => array('*'),
   );
   if (array_key_exists($model, $file_extensions)){
@@ -2962,8 +2959,7 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
         'csv' => array('si:datasetCModel'),
 				'audio' => array('islandora:sp-audioCModel'),
 				'video' => array('islandora:sp_videoCModel'),
-        'text' => FALSE,
-        'video' => FALSE
+        'text' => FALSE
       );
       if ($download == 'browser' && $formatted == 'dataTableServerSideProcessing'){
         $jsdt_title_and_type_search_val = filter_var($_GET['search']['value'], FILTER_SANITIZE_STRING);
