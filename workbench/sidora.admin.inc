@@ -368,10 +368,10 @@ tr.removed.odd {
         '#options' => array(
           'direct' => t('Direct stream to browser (actual image / binary / text)'),
 				  'web_view' => t('Direct stream to browser for web viewable items, download message for others'),
-					'JW Video Player' => t('JW Player for video'),
+					'JW Audio Player' => t('JW Player for audio'),
           'pdfjs' => t('PDF to HTML5 via Javascript (pdf.js)'),
           'flexpaper_pdf' => t('Flexpaper / Convert to flexpaper / direct stream to browser'),
-          'JW Audio Player' => t('JW Player for audio'),
+					'JW Video Player' => t('JW Player for video'),
 					'IDS' => t('Smithsonian IDS Viewer'),
           'OpenSeaDragon' => t('OpenSeaDragon'),
           'PHPExcel' => t('PHPExcel'),
