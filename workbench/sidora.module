@@ -2859,9 +2859,11 @@ function sidora_create_resource_get_metadata_form_html($parent_pid, $model, $for
         if (!empty($association['title_field'])){
           for ($title_total = 0; $title_total < count($association['title_field']); $title_total++){
             $form_copy_key = $association['title_field'][$title_total];
-            if (array_key_exists($form_copy_key,$form_copy_array)){
-              $form_copy_array = $form_copy_array[$form_copy_key];
-            } 
+            if (!empty($form_copy_key)) {
+              if (array_key_exists($form_copy_key,$form_copy_array)){
+                $form_copy_array = $form_copy_array[$form_copy_key];
+              } 
+            }
           }
         } //If there is no specified title in the form, then the label for the object will never get set either. 
         if (!empty($form_copy_array)){
@@ -2944,7 +2946,6 @@ function sidora_codebook_upload_form($form, &$form_state){
       $codebook = sidora_obj($codebook_pid);
       $codebook_options[$codebook_pid] = $codebook->label;
     }
-    $codebook_options['last'] = 'QWERTYUIOIJUHGFDSXCVBNJMKIU&^%$#WSDCVFBGHNJI*&^%R$DFVBHNJIK';
     $codebook_options = array_reverse($codebook_options);
   }
   $form['existing-codebook'] = array(
@@ -3009,9 +3010,6 @@ function sidora_codebook_upload_form_validate($form, &$form_state) {
     else {
       form_set_error('file', t('No file was uploaded.'));
     }
-  }
-  if ($form_state['triggering_element']['#id'] == 'edit-pick-codebook-submit'){
-    dsm('Picker');
   }
 }
 
