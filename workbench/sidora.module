@@ -2747,7 +2747,8 @@ function sidora_is_create_resource_codebook_choice_completed($model){
       $codebook_pid = $_POST['user_supplied_codebook_pid'];
       $codebook_obj = sidora_obj($codebook_pid);
       if (empty($codebook_obj)){
-        drupal_set_message(t('Invalid codebook, please choose a different codebook'), 'warning');
+        drupal_set_message(t('Invalid codebook, please choose a different codebook.'), 'warning');
+        watchdog('SIdora',t("Problem during codebook selection, user picked invalid codebook:").$codebook_pid);
         $ask_for_codebook = TRUE;
       }else{ 
         sidora_reset_codebook_choice($codebook_pid);
