@@ -726,11 +726,12 @@ function sidora_islandora_object_ingested(AbstractObject $object){
   */
   $id_to_filename = cache_get("sidora:form_id_to_filename");
   if (empty($id_to_filename)){ $id_to_filename = array(); }else{ $id_to_filename = $id_to_filename->data; }
-  $file_location = '';
+	$file_location = '';
   if (array_key_exists('form_build_id', $_POST)){
     $submitted_form_id = $_POST['form_build_id'];
     if (array_key_exists($submitted_form_id, $id_to_filename)){ //Wont be on concepts or non-file upload forms
-      $file_location = $id_to_filename[$submitted_form_id];
+      $file_location = $id_to_filename[$submitted_form_id]['filepath'];
+			$file_name = $id_to_filename[$submitted_form_id]['filename'];
       foreach($_SESSION['file_uploads'][$user->uid] as $index => $file_obj){
         if ($file_obj->filepath == $file_location){
           unset($_SESSION['file_uploads'][$user->uid][$index]);
@@ -793,7 +794,7 @@ function sidora_islandora_object_ingested(AbstractObject $object){
       $parent->relationships->add(FEDORA_RELS_EXT_URI, 'hasResource', $object->id);
       $tuque = islandora_get_tuque_connection();
       $apim = $tuque->repository->api->m;
-      sidora_update_datastream($object, $file_location,'OBJ');
+      sidora_update_datastream($object, $file_location, 'OBJ', $file_name);
       //if it's a tabular, see if there is a proper codebook
       if ($creation_info['model'] == 'si:datasetCModel'){
         $codebook_pid = $user->data['recent_codebook_id'];
@@ -2667,7 +2668,7 @@ function sidora_create_resource_get_current_uploads(){
   if (array_key_exists('file_uploads', $_SESSION) && !empty($_SESSION['file_uploads'])){
     $fu = $_SESSION['file_uploads'];
     if (array_key_exists($user->uid, $fu)){
-      $current_uploads = $_SESSION['file_uploads'][$user->uid];
+			$current_uploads = $_SESSION['file_uploads'][$user->uid];
       if (!empty($current_uploads)){
         return $current_uploads;
       }
@@ -2872,7 +2873,7 @@ function sidora_create_resource_get_metadata_form_html($parent_pid, $model, $for
         }   
         $id_to_filename = cache_get("sidora:form_id_to_filename");
         if (empty($id_to_filename)){ $id_to_filename = array(); }else{ $id_to_filename = $id_to_filename->data; }
-        $id_to_filename[$form['#build_id']] = $current_uploads[$form_total]->filepath;
+        $id_to_filename[$form['#build_id']] = array('filename' => $filename, 'filepath' => $current_uploads[$form_total]->filepath);
         cache_set("sidora:form_id_to_filename",$id_to_filename);
       }
       
@@ -3697,7 +3698,7 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
           $mime_type = 'text/xml';
         }
         $file_extension = '';
-        if ($mime_type != ''){
+				if ($mime_type != ''){
           $file_extension = sidora_get_file_extension_from_mime($mime_type);
         } 
         if ($download=='browser' && (strpos($mime_type,"xml") !== FALSE || strpos($mime_type,"text") !== FALSE)){ //html, text, csv
@@ -3707,7 +3708,12 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
         }
         if ($download=='download'){
           $content_size = strlen($datastream_content);
-          $filename = $pid.'_'.$specific_meta.$file_extension;//get_suggest_filename($label, $mime_type);
+          //$filename = $pid.'_'.$specific_meta;//get_suggest_filename($label, $mime_type);
+          if ((strtoupper($specific_meta) == 'OBJ') && (strtoupper($datastream->label) != 'OBJ')){
+					  $filename = $datastream->label;
+          }else{
+            $filename = $pid.'_'.$specific_meta.$file_extension;//get_suggest_filename($label, $mime_type);
+					}	
           if ($content_size > 0) {
             header("Content-length: $content_size");
           }
@@ -5000,7 +5006,6 @@ function sidora_get_plupload_html($elements, $button_text = 'Browse'){
     document.getElementsByTagName("head")[0].appendChild(fileref)
   }
   runtimesBrowserSpecific = "html5,flash,html4";
-  //changed by RAmlani - SID 364
   //runtimesBrowserSpecific = "flash,html5,html4";   
   if (navigator.userAgent.match(/(Firefox)/i) != null){
     //Firefox gets weird with the flash version between http and https, sometimes http doesnt work
