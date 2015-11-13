@@ -732,8 +732,13 @@ function sidora_update_datastream(AbstractObject $object, $file, $dsid, $label =
   $ds = isset($object[$dsid]) ? $object[$dsid] : $object->constructDatastream($dsid, $control_group);
   $is_file = file_exists($file);
   $ds->label = isset($label) ? $label : $dsid;
-  $ds->mimetype = isset($mimetype) ? $mimetype :
-    $is_file ? $mime_detector->getMimeType($file) : 'text/xml';
+  if (isset($mimetype)){
+	  $ds->mimetype = $mimetype;
+	}elseif ($is_file){
+	  $ds->mimetype = $mime_detector->getMimeType($file);
+	}else{
+	  $ds->mimetype = 'text/xml';
+	}			
   if ($is_file) {
     $ds->setContentFromFile($file, $copy);
   }
@@ -742,6 +747,7 @@ function sidora_update_datastream(AbstractObject $object, $file, $dsid, $label =
   }
   if (empty($object[$dsid])) {
     $object->ingestDatastream($ds);
+
   }
   return TRUE;
 }
@@ -1048,7 +1054,7 @@ function sidora_create_default_person_eaccpf(AbstractObject $object, $account) {
 </eac-cpf>
 EOT;
 }
-function sidora_get_file_extension_from_mime($file_mime_type){
+function sidora_get_file_extension_from_mime($file_mime_type, $get_mime = FALSE){
       $file_extensions_for_mime_types_map = array(
         'image/x-jg' => '.art',
         'text/asp' => '.asp',
@@ -1178,12 +1184,22 @@ function sidora_get_file_extension_from_mime($file_mime_type){
 				'audio/aac' => '.aac',
 				'audio/x-ms-wma' => '.wma',
 				);
-      if (isset($file_extensions_for_mime_types_map[$file_mime_type]))
-      {
+      if (!$get_mime) {
+        if (isset($file_extensions_for_mime_types_map[$file_mime_type]))
+        {
           return $file_extensions_for_mime_types_map[$file_mime_type];
-      }
-      $pieces = explode('/', $file_mime_type);
-      return '.' . array_pop($pieces);
+        }
+        $pieces = explode('/', $file_mime_type);
+        return '.' . array_pop($pieces);
+			}else{
+			  $mime_type_for_extension_map = array_flip($file_extensions_for_mime_types_map);
+				$file_extension = '.' . $file_mime_type;
+				if (isset($mime_type_for_extension_map[$file_extension]))
+				{
+				  return $mime_type_for_extension_map[$file_extension];
+				}
+				return FALSE;
+			}		
 }
 /* This function takes the ontology id from the sidora datastream of a pid and 
  * retrieves the corresponding concept type from the sidora_ontology_json string

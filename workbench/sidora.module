@@ -744,7 +744,18 @@ function sidora_islandora_object_ingested(AbstractObject $object){
       $parent->relationships->add(FEDORA_RELS_EXT_URI, 'hasResource', $object->id);
       $tuque = islandora_get_tuque_connection();
       $apim = $tuque->repository->api->m;
-      sidora_update_datastream($object, $file_location, 'OBJ', $file_name);
+      // if its a video, set the mime type for OBJ explicitly
+			if ($creation_info['model'] == 'islandora:sp_videoCModel'){
+			  $file_mime_type = '';
+			  if (sidora_get_file_extension_from_mime(pathinfo($file_location, PATHINFO_EXTENSION), TRUE)) {
+			    $file_mime_type = sidora_get_file_extension_from_mime(pathinfo($file_location, PATHINFO_EXTENSION), TRUE);
+			    sidora_update_datastream($object, $file_location, 'OBJ', $file_name, $file_mime_type);
+			  }else{
+			    sidora_update_datastream($object, $file_location, 'OBJ', $file_name);
+			  }
+			}else{
+			  sidora_update_datastream($object, $file_location, 'OBJ', $file_name);
+			}		
       //if it's a tabular, see if there is a proper codebook
       if ($creation_info['model'] == 'si:datasetCModel'){
         $codebook_pid = $user->data['recent_codebook_id'];
