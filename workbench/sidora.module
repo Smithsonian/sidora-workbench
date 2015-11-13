@@ -491,11 +491,6 @@ function sidora_direct_jpg_output($content, $output_to_browser = TRUE){
  * returns what is set in the admin for the viewer of this object
  */
 function sidora_resource_viewer($pid){
-  /*
-  $resource_viewer_dsid_prefix = 'resource_viewer_dsid_';
-  $resource_viewer_view_prefix = 'resource_viewer_viewer_';
-  TODO: make these static and used in the module and admin.inc
-  */
   //Determine the model of the object
   $obj = sidora_obj($pid);
   if (empty($obj)){ return; }
@@ -515,52 +510,7 @@ function sidora_resource_viewer($pid){
         if (!empty($dsid)){
           $ds = $obj[$dsid];
           if (!empty($ds)){
-						switch ($viewer) {
-              case 'direct':
-                sidora_info_json($pid, 'meta', $dsid, 'browser');
-                drupal_exit();
-                break;
-              case 'web_view':
-                $viewable_mime_types = sidora_get_viewable_mime_types();
-                if (in_array($ds->mimetype, $viewable_mime_types)){
-                  return sidora_info_json($pid, 'meta', $dsid, 'browser');
-                }else{
-                  if (sidora_direct_jpg_output($ds->content, FALSE)){
-                    sidora_direct_jpg_output($ds->content);
-                  }
-                }
-                break;
-              case 'pdfjs':
-                print sidora_get_html_pdfjs($pid,$dsid);
-                drupal_exit();
-                break;
-              case 'flexpaper_pdf':
-                //****REMOVED****: 3/4/2015, does not need to do pdf to swf conversion
-                if ($ds->mimetype == 'application/x-shockwave-flash') {
-                  print sidora_get_html_flexpaper($pid,$dsid);
-                }else{
-                  sidora_info_json($pid, 'meta', $dsid, 'browser');
-                }
-                drupal_exit();
-                break;
-              case 'JW Audio Player':
-								print sidora_audio_view_object($pid);
-								drupal_exit();
-								break;
-							case 'IDS':
-                return sidora_view_ids_iframe($pid, $dsid);
-                break;
-              case 'OpenSeaDragon':
-                return sidora_view_openseadragon($pid, $dsid);
-                break;
-              case 'PHPExcel':
-                return sidora_tabular_view_phpexcelreader($pid,$dsid);
-                break;
-							case 'JW Video Player':
-							  print sidora_video_view_object($pid);
-								drupal_exit();
-								break;		
-            }
+            sidora_resource_version_viewer_display($pid,$dsid,$viewer);
           }
         }
       }//end dsids loop
@@ -3482,6 +3432,7 @@ function sidora_get_xsl_file_for_object($pid){
  * If an item's ancestry (parent/grandparent/etc) includes an exhibition, then the item is allowed to be shown by exhibition
  * So this checks up the tree to find if there is an exhibition somewhere in the object's ancestry.
  * This function calls itself and keeps track of already checked items
+ * returns the pid of what has the exhibition, or returns FALSE
  */
 function sidora_exhibition_exists_in_tree($pid_to_check, $pids_checked_array){
   module_load_include('inc', 'sidora', 'includes/utils');
@@ -3493,6 +3444,7 @@ function sidora_exhibition_exists_in_tree($pid_to_check, $pids_checked_array){
     }else{
       $pids_checked_array[] = $pid_to_check;
       $object = sidora_obj($pid_to_check);
+      if (empty($object)) return FALSE;
       $parents = sidora_get_parent_concepts($object);
       foreach($parents as $parent_pid => $parent){
         $parent_has_exhibition = sidora_exhibition_exists_in_tree($parent_pid, $pids_checked_array);
@@ -3553,13 +3505,24 @@ function sidora_open_access($info_type, $pid){
 	switch($info_type) {
     case 'xsl':
       $file = sidora_get_xsl_file_for_object($pid);
-      $directory_for_xsl = DRUPAL_ROOT.'/'.drupal_get_path('module','sidora').'/XSL';
-      $full_file = ($directory_for_xsl . '/' . $file);
-      if ($file) $output_info = readfile($full_file);
+      //empty string means use default xsl, NULL means there is no file
+      if ($file === '') {
+        print sidora_xsl_string($xsl_file);
+      }
+      else {
+        $directory_for_xsl = DRUPAL_ROOT.'/'.drupal_get_path('module','sidora').'/XSL';
+        $full_file = ($directory_for_xsl . '/' . $file);
+        if ($file) $output_info = readfile($full_file);
+      }
       break;
     case 'xsl_config':
       sidora_xsl_information($pid, $info_type == 'xsl');
       break;  
+    case 'viewer':
+      print 'hi';
+      drupal_exit();
+      sidora_resource_viewer($pid);
+      break;
 	}
 	}
   drupal_exit();
@@ -7808,9 +7771,17 @@ jQuery("#xmlview a").attr("target","_blank");
 /**
  * returns what is set in the admin for the viewer of this object given a specific version of a datastream
  * This is a duplicate of the sidora_resource_viewer with some modifications for handling versions
- * TO DO : Integrate this function into sidora_resource_viewer
  */
 function sidora_resource_version_viewer($pid, $datastream, $viewer, $version = '0'){
+  sidora_resource_version_viewer_display($pid, $datastream, $viewer, $version);
+  print 'The Administrator has not chosen a viewer for this combination of resource and dataset type.';
+  drupal_exit();
+}
+/*
+ * If this returns a value then a viewer was NOT found.  
+ * All viewers will immediately print and exit.
+ */
+function sidora_resource_version_viewer_display($pid, $dsid, $viewer, $version = '0'){
   /*
   $resource_viewer_dsid_prefix = 'resource_viewer_dsid_';
   $resource_viewer_view_prefix = 'resource_viewer_viewer_';
@@ -7819,51 +7790,51 @@ function sidora_resource_version_viewer($pid, $datastream, $viewer, $version = '
   global $base_url;  
 	$obj = sidora_obj($pid);
   if (empty($obj)){ return; }
-    $ds = $obj[$datastream];
-    if (!empty($ds)){
-		  switch ($viewer) {
-        case 'direct':
-          return sidora_info_version($pid, $datastream, $version, 'browser');
-          drupal_exit();
-          break;
-        case 'web_view':
-          $viewable_mime_types = sidora_get_viewable_mime_types();
-          if (in_array($ds[$version]->mimetype, $viewable_mime_types)){
-            return sidora_info_version($pid, $datastream, $version, 'browser');
+  $ds = $obj[$dsid];
+  if (!empty($ds)){
+    switch ($viewer) {
+      case 'direct':
+        sidora_info_version($pid, $dsid, $version, 'browser');
+        break;
+      case 'web_view':
+        $viewable_mime_types = sidora_get_viewable_mime_types();
+        if (in_array($ds[$version]->mimetype, $viewable_mime_types)){
+          sidora_info_version($pid, $dsid, $version, 'browser');
+        }else{
+          $datastream_content = $ds[$version];
+          $islandora_base_url = variable_get('islandora_base_url','');
+          $datastream_version_content = file_get_contents(variable_get('osd_proxy_pid_prefix', $islandora_base_url . '/objects/').$pid."/datastreams/".$ds->id."/content?asOfDateTime=".$datastream_content->createdDate);
+          if (sidora_direct_jpg_output($datastream_version_content, FALSE)){
+            sidora_direct_jpg_output($datastream_version_content);
           }else{
-            $datastream_content = $ds[$version];
-            $islandora_base_url = variable_get('islandora_base_url','');
-		        $datastream_version_content = file_get_contents(variable_get('osd_proxy_pid_prefix', $islandora_base_url . '/objects/').$pid."/datastreams/".$ds->id."/content?asOfDateTime=".$datastream_content->createdDate);
-            if (sidora_direct_jpg_output($datastream_version_content, FALSE)){
-              sidora_direct_jpg_output($datastream_version_content);
-            }else{
-					    return sidora_info_version($pid,$datastream, $version, 'download');
-						}
+            sidora_info_version($pid,$dsid, $version, 'download');
           }
-					break;
-        case 'pdfjs':
-          print(drupal_goto($base_url.'/sites/all/modules/sidora/workbench/jslibs/pdfjs/web/viewer.html?file='.$base_url.'/sidora/version_info/'.$pid.'/'.$datastream.'/'.$version.'/download'));
-          drupal_exit();
-          break;
-				case 'JW Audio Player':
-					print sidora_audio_view_object($pid);
-					drupal_exit();
-					break;
-				case 'JW Video Player':
-					print sidora_video_view_object($pid);
-					drupal_exit();
-					break;
-				case 'IDS':
-          return sidora_view_ids_iframe($pid, $dsid);
-          break;
-        case 'OpenSeaDragon':
-          return sidora_view_openseadragon($pid, $datastream, $version);
-          break;
-      }
+        }
+        break;
+      case 'pdfjs':
+        drupal_goto($base_url.'/sites/all/modules/sidora/workbench/jslibs/pdfjs/web/viewer.html?file='.$base_url.'/sidora/version_info/'.$pid.'/'.$dsid.'/'.$version.'/download');
+        drupal_exit();
+        break;
+      case 'JW Audio Player':
+        print sidora_audio_view_object($pid);
+        drupal_exit();
+        break;
+      case 'JW Video Player':
+        print sidora_video_view_object($pid);
+        drupal_exit();
+        break;
+      case 'IDS':
+        sidora_view_ids_iframe($pid, $dsid);
+        break;
+      case 'OpenSeaDragon':
+        sidora_view_openseadragon($pid, $dsid, $version);
+        break;
+      case 'PHPExcel':
+        sidora_tabular_view_phpexcelreader($pid,$dsid);
+        break;
     }
-    print 'The Administrator has not chosen a viewer for this combination of resource and dataset type.  You can still download the object through the View > Download option.';
-    print '<br/><div style="display:none">Possible viewers:<br/>'.implode('<br/>',$viewers).'</div>';
-    drupal_exit();
+  }
+  return NULL;
 }
 /**
  * This function was created to enable viewing and download of different versions of a
@@ -7896,8 +7867,8 @@ function sidora_info_version($pid, $datastream, $version='0', $download='browswe
     $filename .= $extension;
     header("Content-Disposition: attachment; filename=\"$filename\"");
     print file_get_contents(variable_get('osd_proxy_pid_prefix', $islandora_base_url . '/objects/').$pid."/datastreams/".$ds->id."/content?asOfDateTime=".$datastream_content->createdDate);
-    drupal_exit();
   }
+  drupal_exit();
 }	
 function sidora_revert_datastream_form_submit(array $form, array &$form_state){
 	$form_state['redirect'] = "sidora/version_history/" . $form_state['object_id'] . "/" . $form_state['dsid'];	
