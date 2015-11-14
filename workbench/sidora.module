@@ -491,35 +491,18 @@ function sidora_direct_jpg_output($content, $output_to_browser = TRUE){
  * returns what is set in the admin for the viewer of this object
  */
 function sidora_resource_viewer($pid) {
-  //Determine the model of the object
   $obj = sidora_obj($pid);
   if (empty($obj)){ return; }
-  $models = $obj->models;
-  //Go through the models "in order" to find something that has a viewer.
-  //Once something is found with a viewer, immediately return
-  $viewers = array();
-  foreach($models as $model){
-    $viewer = variable_get('resource_viewer_viewer_'.$model,'never');
-    $viewers[] = $viewer;
-    if ($viewer != 'never' && $viewer != 'none'){
-      $list_of_dsids = variable_get('resource_viewer_dsid_'.$model,'');
-      $dsids = preg_split('/\s*,\s*/',trim($list_of_dsids));
-      foreach($dsids as $dsid){
-        //$dsid = variable_get('resource_viewer_dsid_'.$model,'');
-        //The admin may have typed in something poorly or unexpected data.  See that the DS exists
-        if (!empty($dsid)){
-          $ds = $obj[$dsid];
-          if (!empty($ds)){
-            sidora_resource_version_viewer_display($pid,$dsid,$viewer,'0');
-          }
-        }
-      }//end dsids loop
-    }
+  $viewer_config = sidora_get_viewer_config($pid);
+  if (empty($viewer_config)){
+    print 'The Administrator has not chosen a viewer for this combination of resource and dataset type.  You can still download the object through the View > Download option.';
+    print '<br/>The possible models that this resource uses:';
+    print '<br/>'.implode('<br/>',$models);
+    print '<br/><div style="display:none">Possible viewers:<br/>'.implode('<br/>',$viewers).'</div>';
   }
-  print 'The Administrator has not chosen a viewer for this combination of resource and dataset type.  You can still download the object through the View > Download option.';
-  print '<br/>The possible models that this resource uses:';
-  print '<br/>'.implode('<br/>',$models);
-  print '<br/><div style="display:none">Possible viewers:<br/>'.implode('<br/>',$viewers).'</div>';
+  else {
+    sidora_resource_version_viewer_display($pid,$viewer_config['dsid'],$viewer_config['viewer_id'],'0');
+  }
   drupal_exit();
 }
 function sidora_view_openseadragon($pid, $dsid, $version='0'){
@@ -7646,7 +7629,11 @@ function sidora_get_viewer_id($pid) {
   return $config['viewer_id'];
 }
 /*
- * returns an array object that contains viewer configuration for this object
+ * returns an array object that contains viewer configuration for this object of form:
+ * array(
+ *   'viewer_id' => viewer short identifier
+ *   'dsid' => the datastream id to use
+ * )
  */
 function sidora_get_viewer_config($pid) {
 	$obj = sidora_obj($pid);
