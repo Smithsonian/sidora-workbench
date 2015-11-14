@@ -489,8 +489,9 @@ function sidora_direct_jpg_output($content, $output_to_browser = TRUE){
 }
 /**
  * returns what is set in the admin for the viewer of this object
+ * $open_access - if the viewers should refer to open_access information instead of logged in info
  */
-function sidora_resource_viewer($pid){
+function sidora_resource_viewer($pid, $open_access = FALSE){
   //Determine the model of the object
   $obj = sidora_obj($pid);
   if (empty($obj)){ return; }
@@ -510,7 +511,7 @@ function sidora_resource_viewer($pid){
         if (!empty($dsid)){
           $ds = $obj[$dsid];
           if (!empty($ds)){
-            sidora_resource_version_viewer_display($pid,$dsid,$viewer);
+            sidora_resource_version_viewer_display($pid,$dsid,$viewer,'0',$open_access);
           }
         }
       }//end dsids loop
@@ -3530,9 +3531,10 @@ function sidora_open_access($info_type, $pid){
       sidora_xsl_information($pid, $info_type == 'xsl');
       break;  
     case 'viewer':
-      print 'hi';
-      drupal_exit();
       sidora_resource_viewer($pid);
+      break;
+    case 'direct':
+      
       break;
 	}
 	}
@@ -7640,6 +7642,29 @@ function sidora_menu_alter(&$items) {
     $items['islandora/object/%islandora_object/datastream/%islandora_datastream/version']['page arguments'] = array(2,4);
 	}
 }
+function sidora_get_viewer_id($pid) {
+	$obj = sidora_obj($pid);
+  $models = $obj->models;
+  $viewers = array();
+  foreach($models as $model){
+    $viewer = variable_get('resource_viewer_viewer_'.$model,'never');
+    $viewers[] = $viewer;
+    if ($viewer != 'never' && $viewer != 'none'){
+      $list_of_dsids = variable_get('resource_viewer_dsid_'.$model,'');
+      $dsids = preg_split('/\s*,\s*/',trim($list_of_dsids));
+      foreach($dsids as $dsid){
+        if ((!empty($dsid)) && ($dsid == $datastream)){
+          $ds = $obj[$dsid];
+          if (!empty($ds)){
+            return $viewer;
+          }
+        }
+      }  //ends foreach dsids
+    }
+  } //ends foreach models
+  return NULL;
+}
+
 /**
  * This function sets the viewer for different versions of datastreams.
  * Audio Resource type - 
@@ -7673,37 +7698,18 @@ function sidora_datastream_version_view($pid, $datastream) {
 	* If a resource, get viewer settings from admin. If the listed model and datastream is listed, get that viewer
 	*/
   $is_concept = sidora_is_concept($parent);
-	if ($is_concept){
-	    $version_view_link = array(
-       'id' => 'xmlview',
-			 'class' => 'datastream-date',
+  $version_view_link = array(
+    'id' => 'xmlview',
+    'class' => 'datastream-date',
+  );
+	if (!$is_concept){
+    $determined_viewer_id = sidora_get_viewer_id($pid);
+    if ($viewer_id !== NULL){
+      $version_view_link = array(
+        'class' => 'datastream-date',
+        'viewer' => $viewer_id,
       );
-	}else{	
-	   $models = $parent->models;
-		 $viewers = array();
-     $version_view_link = array(
-			 'id' => 'xmlview',
-			 'class' => 'datastream-date',
-     );
-		 foreach($models as $model){
-     $viewer = variable_get('resource_viewer_viewer_'.$model,'never');
-     $viewers[] = $viewer;
-     if ($viewer != 'never' && $viewer != 'none'){
-      $list_of_dsids = variable_get('resource_viewer_dsid_'.$model,'');
-      $dsids = preg_split('/\s*,\s*/',trim($list_of_dsids));
-      foreach($dsids as $dsid){
-        if ((!empty($dsid)) && ($dsid == $datastream)){
-          if (!empty($ds)){
-            $version_view_link = array(
-						  'class' => 'datastream-date',
-							'viewer' => $viewer,
-						);
-						break 2;
-					}
-			 }
-			} 
-	 	}
-	}
+    }
 	}			   						
   foreach ($ds as $version => $datastream_version) {
     $row = array();
@@ -7724,15 +7730,21 @@ function sidora_datastream_version_view($pid, $datastream) {
 		}else{
 			if ((isset($version_view_link['viewer'])) && ($version_view_link['viewer'] != '')){
 			  if ((($version_view_link['viewer'] == 'JW Audio Player') || ($version_view_link['viewer'] == 'JW Video Player')) && (strtoupper($datastream) == 'OBJ')){
-				  $version_view_link['data'] = l($datastream_version->createdDate->format(DATE_RFC850), $GLOBALS['base_url'] . '/sidora/version_info/' . $parent->id . '/' . $datastream . '/' . $version . '/download');
+				  $version_view_link['data'] = l(
+            $datastream_version->createdDate->format(DATE_RFC850), 
+            $GLOBALS['base_url'] . '/sidora/version_info/' . $parent->id . '/' . $datastream . '/' . $version . '/download'
+          );
 				}else{
-				  $version_view_link['data'] = l($datastream_version->createdDate->format(DATE_RFC850), $GLOBALS['base_url'] . '/sidora/version_viewer/' . $parent->id . '/' . $datastream . '/' . $viewer . '/' . $version);
+				  $version_view_link['data'] = l(
+            $datastream_version->createdDate->format(DATE_RFC850), 
+            $GLOBALS['base_url'] . '/sidora/version_viewer/' . $parent->id . '/' . $datastream . '/' . $viewer . '/' . $version
+          );
 				}	
 			}else{
 			  $version_view_link['data'] = theme('islandora_datastream_view_link', array(
-        'datastream' => $ds,
-        'label' => $datastream_version->createdDate->format(DATE_RFC850),
-        'version' => $version,
+          'datastream' => $ds,
+          'label' => $datastream_version->createdDate->format(DATE_RFC850),
+          'version' => $version,
         ));
 			}	
 		}	 					
@@ -7783,8 +7795,8 @@ jQuery("#xmlview a").attr("target","_blank");
  * returns what is set in the admin for the viewer of this object given a specific version of a datastream
  * This is a duplicate of the sidora_resource_viewer with some modifications for handling versions
  */
-function sidora_resource_version_viewer($pid, $datastream, $viewer, $version = '0'){
-  sidora_resource_version_viewer_display($pid, $datastream, $viewer, $version);
+function sidora_resource_version_viewer($pid, $datastream, $viewer, $version = '0', $open_access = FALSE){
+  sidora_resource_version_viewer_display($pid, $datastream, $viewer, $version, $open_access);
   print 'The Administrator has not chosen a viewer for this combination of resource and dataset type.';
   drupal_exit();
 }
@@ -7792,7 +7804,7 @@ function sidora_resource_version_viewer($pid, $datastream, $viewer, $version = '
  * If this returns a value then a viewer was NOT found.  
  * All viewers will immediately print and exit.
  */
-function sidora_resource_version_viewer_display($pid, $dsid, $viewer, $version = '0'){
+function sidora_resource_version_viewer_display($pid, $dsid, $viewer, $version = '0', $open_access = FALSE){
   /*
   $resource_viewer_dsid_prefix = 'resource_viewer_dsid_';
   $resource_viewer_view_prefix = 'resource_viewer_viewer_';
@@ -7852,7 +7864,7 @@ function sidora_resource_version_viewer_display($pid, $dsid, $viewer, $version =
  * datastream and is currently invoked by sidora_resource_version_viewer. Originally
  * adapted from sidora_info_json
  */
-function sidora_info_version($pid, $datastream, $version='0', $download='browswer'){
+function sidora_info_version($pid, $datastream, $version='0', $download='browser'){
   module_load_include('inc', 'sidora', 'includes/utils');
   $object = sidora_obj($pid);
   if (empty($object)){
