@@ -489,9 +489,8 @@ function sidora_direct_jpg_output($content, $output_to_browser = TRUE){
 }
 /**
  * returns what is set in the admin for the viewer of this object
- * $open_access - if the viewers should refer to open_access information instead of logged in info
  */
-function sidora_resource_viewer($pid, $open_access = FALSE){
+function sidora_resource_viewer($pid) {
   //Determine the model of the object
   $obj = sidora_obj($pid);
   if (empty($obj)){ return; }
@@ -511,7 +510,7 @@ function sidora_resource_viewer($pid, $open_access = FALSE){
         if (!empty($dsid)){
           $ds = $obj[$dsid];
           if (!empty($ds)){
-            sidora_resource_version_viewer_display($pid,$dsid,$viewer,'0',$open_access);
+            sidora_resource_version_viewer_display($pid,$dsid,$viewer,'0');
           }
         }
       }//end dsids loop
@@ -3510,33 +3509,32 @@ function sidora_generate_parent_concept_query($pid) {
 function sidora_open_access($info_type, $pid){
 	$pids_checked = Array();
 	$pid_with_exhibition =	sidora_exhibition_exists_in_tree($pid, $pids_checked);
-  if ($pid_with_exhibition == FALSE){
+  if ($pid_with_exhibition == FALSE) {
 		drupal_not_found();
 		drupal_exit();
-	}else{
-	switch($info_type) {
-    case 'xsl':
-      $file = sidora_get_xsl_file_for_object($pid);
-      //empty string means use default xsl, NULL means there is no file
-      if ($file === '') {
-        print sidora_xsl_string($xsl_file);
-      }
-      else {
-        $directory_for_xsl = DRUPAL_ROOT.'/'.drupal_get_path('module','sidora').'/XSL';
-        $full_file = ($directory_for_xsl . '/' . $file);
-        if ($file) $output_info = readfile($full_file);
-      }
-      break;
-    case 'xsl_config':
-      sidora_xsl_information($pid, $info_type == 'xsl');
-      break;  
-    case 'viewer':
-      sidora_resource_viewer($pid);
-      break;
-    case 'direct':
-      
-      break;
 	}
+  else {
+    switch($info_type) {
+      case 'xsl':
+        $file = sidora_get_xsl_file_for_object($pid);
+        //empty string means use default xsl, NULL means there is no file
+        if ($file === '') {
+          print sidora_xsl_string($xsl_file);
+        }
+        else {
+          $directory_for_xsl = DRUPAL_ROOT.'/'.drupal_get_path('module','sidora').'/XSL';
+          $full_file = ($directory_for_xsl . '/' . $file);
+          if ($file) $output_info = readfile($full_file);
+        }
+        break;
+      case 'xsl_config':
+        sidora_xsl_information($pid, $info_type == 'xsl');
+        break;  
+      case 'viewer_config':
+        $return_when_encoded = sidora_get_viewer_config($pid);
+        print json_encode($return_when_encoded);
+        break;
+    }
 	}
   drupal_exit();
 }
@@ -7643,6 +7641,14 @@ function sidora_menu_alter(&$items) {
 	}
 }
 function sidora_get_viewer_id($pid) {
+  $config = sidora_get_viewer_config($pid);
+  if (empty($config)) return NULL;
+  return $config['viewer_id'];
+}
+/*
+ * returns an array object that contains viewer configuration for this object
+ */
+function sidora_get_viewer_config($pid) {
 	$obj = sidora_obj($pid);
   $models = $obj->models;
   $viewers = array();
@@ -7653,10 +7659,13 @@ function sidora_get_viewer_id($pid) {
       $list_of_dsids = variable_get('resource_viewer_dsid_'.$model,'');
       $dsids = preg_split('/\s*,\s*/',trim($list_of_dsids));
       foreach($dsids as $dsid){
-        if ((!empty($dsid)) && ($dsid == $datastream)){
+        if (!empty($dsid)){
           $ds = $obj[$dsid];
           if (!empty($ds)){
-            return $viewer;
+            $to_return = array();
+            $to_return['viewer_id'] = $viewer;
+            $to_return['dsid'] = $dsid;
+            return $to_return;
           }
         }
       }  //ends foreach dsids
@@ -7795,8 +7804,8 @@ jQuery("#xmlview a").attr("target","_blank");
  * returns what is set in the admin for the viewer of this object given a specific version of a datastream
  * This is a duplicate of the sidora_resource_viewer with some modifications for handling versions
  */
-function sidora_resource_version_viewer($pid, $datastream, $viewer, $version = '0', $open_access = FALSE){
-  sidora_resource_version_viewer_display($pid, $datastream, $viewer, $version, $open_access);
+function sidora_resource_version_viewer($pid, $datastream, $viewer, $version = '0') {
+  sidora_resource_version_viewer_display($pid, $datastream, $viewer, $version);
   print 'The Administrator has not chosen a viewer for this combination of resource and dataset type.';
   drupal_exit();
 }
@@ -7804,7 +7813,7 @@ function sidora_resource_version_viewer($pid, $datastream, $viewer, $version = '
  * If this returns a value then a viewer was NOT found.  
  * All viewers will immediately print and exit.
  */
-function sidora_resource_version_viewer_display($pid, $dsid, $viewer, $version = '0', $open_access = FALSE){
+function sidora_resource_version_viewer_display($pid, $dsid, $viewer, $version = '0'){
   /*
   $resource_viewer_dsid_prefix = 'resource_viewer_dsid_';
   $resource_viewer_view_prefix = 'resource_viewer_viewer_';
