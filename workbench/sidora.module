@@ -1331,10 +1331,18 @@ function sidora_get_parent_table($pid){
 });</script>';
   return $output;
 }
-function sidora_get_html_pdfjs($pid,$dsid = 'OBJ'){
+/*
+ * If we want the user to be able to directly access the content, use this URL
+ */
+function sidora_get_direct_download_url($pid, $dsid, $version = '0'){
  global $base_url; 
- drupal_goto($base_url.'/sites/all/modules/sidora/workbench/jslibs/pdfjs/web/viewer.html?file='.$base_url.'/sidora/info/'.$pid.'/meta/'.$dsid.'/download');
+  return $base_url . '/sidora/version_info/' . $pid . '/' . $dsid . '/' . $version . '/download';
 }
+
+function sidora_get_html_pdfjs($pid, $dsid = 'OBJ', $version = '0'){
+ drupal_goto(variable_get('sidora_pdf_js_location','').'?file='.sidora_get_direct_download_url($pid, $dsid, $version));
+}
+
 /**
  * returns an entite html page that loads the javascript for flexpaper and a OBJ.swf from a fedora object
  */
@@ -7459,7 +7467,7 @@ function sidora_datastream_version_view($pid, $datastream) {
 			  if ((($version_view_link['viewer'] == 'JW Audio Player') || ($version_view_link['viewer'] == 'JW Video Player')) && (strtoupper($datastream) == 'OBJ')){
 				  $version_view_link['data'] = l(
             $datastream_version->createdDate->format(DATE_RFC850), 
-            $GLOBALS['base_url'] . '/sidora/version_info/' . $parent->id . '/' . $datastream . '/' . $version . '/download'
+            sidora_get_direct_download_url($parent->id, $datastream, $version)
           );
 				}else{
 				  $version_view_link['data'] = l(
@@ -7564,7 +7572,7 @@ function sidora_resource_version_viewer_display($pid, $dsid, $viewer, $version =
         }
         break;
       case 'pdfjs':
-        drupal_goto($base_url.'/sites/all/modules/sidora/workbench/jslibs/pdfjs/web/viewer.html?file='.$base_url.'/sidora/version_info/'.$pid.'/'.$dsid.'/'.$version.'/download');
+        sidora_get_html_pdfjs($pid, $dsid, $version);
         drupal_exit();
         break;
       case 'JW Audio Player':

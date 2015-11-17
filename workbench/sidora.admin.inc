@@ -443,7 +443,16 @@ tr.removed.odd {
       '#description' => t('The Fedora Commons pid will be directly appended to the above, end with / if needed.'),
     );
 */
-  $form['OpenSeaDragonInfo'] = array(
+  $form['Viewer Configurations'] = array(
+    'fieldset' => array(
+      '#type' => 'fieldset',
+      '#title' => 'Viewer Configurations',
+      '#description' => t(''),
+      '#collapsible' => TRUE,
+      '#collapsed' => TRUE,
+    ),
+  ); 
+  $form['Viewer Configurations']['fieldset']['OpenSeaDragonInfo'] = array(
     'fieldset' => array(
       '#type' => 'fieldset',
       '#title' => 'OpenSeaDragon Info',
@@ -467,8 +476,27 @@ tr.removed.odd {
         '#title' => t('The base URL for the resolver'),
         '#default_value' => variable_get('osd_proxy_resolver_url', ''),
         '#description' => t('The resolver is the location of the image resizer itself. (ex: http://server.net/adore-djatoka/resolver )'),
-  ),
-	),
+      ),
+    ),
+	);
+  global $base_url;
+  $form['Viewer Configurations']['fieldset']['PDFJS'] = array(
+    'fieldset' => array(
+      '#type' => 'fieldset',
+      '#title' => 'PDF.js',
+      '#description' => t(''),
+      '#collapsible' => TRUE,
+      '#collapsed' => TRUE,
+      'sidora_pdf_js_location' => array(
+        '#type' => 'textfield',
+        '#title' => t('Location of the viewer.html file'),
+        '#default_value' => variable_get(
+          'sidora_pdf_js_location', 
+          $base_url.'/sites/all/modules/sidora/workbench/jslibs/pdfjs/web/viewer.html'
+        ),
+        '#attributes' => array('size' => 120),
+      ),
+    ),
 	);
 	$form['account_request'] = array(
      'fieldset' => array(
