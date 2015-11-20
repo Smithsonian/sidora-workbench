@@ -4407,6 +4407,7 @@ function sidora_ajax_lock($pid, $operation = 'obtain'){
     }
     if ($clear_lock || $obtain_lock){
       $who_has_lock = sidora_pid_is_locked($pid);
+      if (empty($who_has_lock)) $who_has_lock = '';
       $username = $user->name;
       //If a lock exists and the current user doesn't have the lock, they can't do any of these operations
       if (!empty($who_has_lock) && strtolower($who_has_lock) != strtolower($username)){
@@ -5348,6 +5349,7 @@ function sidora_obtain_lock($pid){
 }
 /*
  * Convenience method to release a lock on the pid for the logged in user
+ * ALWAYS returns FALSE if the locking mechanic is turned off
  */
 function sidora_release_lock($pid){
   sidora_pid_set_locked($pid, '', false, true);
@@ -5357,7 +5359,7 @@ function sidora_release_lock($pid){
  * returns FALSE if item is not locked
  * ALWAYS returns FALSE if the locking mechanic is turned off
  * 
- * convenience method for readability, simply calls sidora_pid_set_locked
+ * convenience method for readability, simply calls sidora_pid_set_locked, returns "" if locking is turned off
  */
 function sidora_pid_is_locked($pid){
   if (variable_get('sidora_disable_locking_by_pid', '') == 1) return FALSE;
