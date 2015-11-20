@@ -84,16 +84,16 @@ window.ifhRemove = function(){
 	jQuery("#ifh").remove();
 }
 /**
- * Called by the codebook creation iframe to update the form with the new codebook that was just created
+ * Called by the codebook creation iframe to update the form with the new codebook that was just created or edited
  */
 window.updateCodebookComplete = function(formName, ajaxCall, data){
 	if (window != window.parent && window.parent.updateCodebookComplete){
 		window.parent.updateCodebookComplete(formName, ajaxCall, data);
 	}else{
-		console.log(data);
 		newPid = window.successfulCreationPid(data);
+    if (newPid == "") newPid = window.editedMetadataPid(data);
 		jQuery("#user_supplied_codebook_pid").val(newPid);
-		jQuery("#continue").click();
+		jQuery("#edit-continue").click();
 	}
 }
 /*
@@ -195,13 +195,23 @@ window.successfulCreationPid = function(data){
 	return data.substring(0,data.indexOf(")"+" has been ingested")).substring(data.substring(0,data.indexOf(")"+" has been ingested")).lastIndexOf("si:"))
 }
 /*
+ * Pulls the pid from a metadata edit Islandora success page
+ */
+window.editedMetadataPid = function(data){
+  var re = new RegExp('<dt property="dcterms:identifier" content="(.*)" class="dc-identifier">');
+  var foundInfo = re.exec(data);
+  if (!Array.isArray(foundInfo)) return "";
+  if (foundInfo.length < 2) return "";
+  return foundInfo[1];
+}
+/*
  * Attempts to close the window if it's in a child frame
  */
 window.closeMyself = function(newPid){
 	if (window.parent.sidora && window.parent.sidora.CloseIFrame){
 		window.parent.sidora.CloseIFrame(newPid, 'simple close');
 	}else{
-		console.log("This is not in the expected IFrame");
+    //Codebook creation process has no parent.sidora, put any necessary processing for it here.
 	}
 }
 /*
@@ -305,6 +315,16 @@ window.prepIslandoraFormForSubmit = function(formName, onSuccessfulFormSubmit, o
  * Creates an iframe to handle the codebook creation
  */
 window.createCodebook = function(){
+  
+	jQuery("html").css("height","100%");
+	jQuery("body").css("height","100%");
+	var iframeUrl = Drupal.settings.basePath+"sidora/edit_metadata/"+jQuery("#codebook-pid").val();
+	jQuery("body").append("<div id='ifh' style='width:100%;height:100%;position:absolute;top:0;left:0;opacity:0.5;background:black;'><iframe width='100%' height='99%' id='myiframe' src='"+iframeUrl+"'iframe></div>");
+	setTimeout(function(){
+		jQuery("#ifh").css("opacity","");
+	},1000);
+}
+window.reference_createCodebook = function(){
 	jQuery("html").css("height","100%");
 	jQuery("body").css("height","100%");
 	var iframeUrl = Drupal.settings.basePath+"sidora/create_resource/"+window.currentInfo.parentPid+"/si%3AcodebookCModel/Codebook/";

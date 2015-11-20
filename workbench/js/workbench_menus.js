@@ -4,7 +4,7 @@ jQuery(document).ready(function(){
 });
 var resetMenu = function(menuId){
   jQuery("#"+menuId).addClass("jMenu");
-  jQuery("#"+menuId+" li a").unbind("click.openMenu").bind("click.openMenu",function(event){
+  jQuery("#"+menuId+" li a").unbind("click.openMenu mouseenter").bind("click.openMenu mouseenter",function(event){
     var openItems = jQuery(".jMenu ul li:visible").parent();
     for(var i = 0; i < openItems.length; i++){
       if (!isInParentList(jQuery(this),openItems[i])){
@@ -61,3 +61,4 @@ var closeJMenus = function(){
 }
 jQuery("html").unbind("click",closeJMenus);
 jQuery("html").bind("click",closeJMenus);
+jQuery(".jMenu li").unbind("mouseleave").bind("mouseleave",closeJMenus);

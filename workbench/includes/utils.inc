@@ -1,18 +1,12 @@
 <?php
-
-/**
- * @file
- * Helper functions.
+/*
+ * Copyright 2015 Smithsonian Institution.
  *
- * ©2012 Smithsonian Institution.  Permission is granted to use, copy, modify,
- * and distribute this software and its documentation for educational, research
- * and non-profit purposes, without fee and without a signed licensing
- * agreement, provided that this notice, including the following two paragraphs,
- * appear in all copies, modifications and distributions.  For commercial
- * licensing, contact the Office of the Chief Information Officer, Smithsonian
- * Institution, 380 Herndon Parkway, MRC 1010, Herndon, VA. 20170, 202-633-5256.
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License.You may obtain a copy of
+ * the License at: http://www.apache.org/licenses/
  *
- * This software and accompanying documentation is supplied “as is” without
+ * This software and accompanying documentation is supplied without
  * warranty of any kind. The copyright holder and the Smithsonian Institution:
  * (1) expressly disclaim any warranties, express or implied, including but not
  * limited to any implied warranties of merchantability, fitness for a
@@ -26,6 +20,17 @@
  * profits or loss of data, on any basis arising from contract, tort or
  * otherwise, even if any of the parties has been warned of the possibility of
  * such loss or damage.
+ *
+ *
+ * This distribution includes several third-party libraries, each with their own
+ * license terms. For a complete copy of all copyright and license terms, including
+ * those of third-party libraries, please see the product release notes.
+ */
+
+/**
+ * @file
+ * Helper functions.
+ *
  */
 
 /**
@@ -534,6 +539,36 @@ function sidora_get_number_of_children(AbstractObject $object) {
 }
 
 /**
+ * Gets the items that the codebook is used on
+ *
+ * @param AbstractObject $object
+ *   The child object.
+ *
+ * @return array
+ *   An associative array describing the parent concepts.
+ */
+function sidora_get_where_codebook_used(AbstractObject $object) {
+  $out = array();
+  $query = "SELECT ?pid ?label ?model FROM <#ri> WHERE {
+      {
+        ?pid  <fedora-rels-ext:hasCodebook> <info:fedora/{$object->id}>;
+          <fedora-model:state> <fedora-model:Active>;
+          <fedora-model:label> ?label;
+          <fedora-model:hasModel> ?model.
+        FILTER(!sameTerm(?model, <info:fedora/fedora-system:FedoraObject-3.0>) &&
+               !sameTerm(?model, <info:fedora/si:conceptCModel>))
+      }
+    } ORDER BY ?label";
+  $results = $object->repository->ri->query($query, 'sparql');
+  foreach ($results as $result) {
+    $pid = $result['pid']['value'];
+    $out[$pid]['pid'] = $pid;
+    $out[$pid]['label'] = $result['label']['value'];
+    $out[$pid]['models'][] = $result['model']['value'];
+  }
+  return $out;
+}
+/**
  * Gets the parent concepts the given object belongs to.
  *
  * @param AbstractObject $object
@@ -697,8 +732,13 @@ function sidora_update_datastream(AbstractObject $object, $file, $dsid, $label =
   $ds = isset($object[$dsid]) ? $object[$dsid] : $object->constructDatastream($dsid, $control_group);
   $is_file = file_exists($file);
   $ds->label = isset($label) ? $label : $dsid;
-  $ds->mimetype = isset($mimetype) ? $mimetype :
-    $is_file ? $mime_detector->getMimeType($file) : 'text/xml';
+  if (isset($mimetype)){
+	  $ds->mimetype = $mimetype;
+	}elseif ($is_file){
+	  $ds->mimetype = $mime_detector->getMimeType($file);
+	}else{
+	  $ds->mimetype = 'text/xml';
+	}			
   if ($is_file) {
     $ds->setContentFromFile($file, $copy);
   }
@@ -707,6 +747,7 @@ function sidora_update_datastream(AbstractObject $object, $file, $dsid, $label =
   }
   if (empty($object[$dsid])) {
     $object->ingestDatastream($ds);
+
   }
   return TRUE;
 }
@@ -1013,154 +1054,40 @@ function sidora_create_default_person_eaccpf(AbstractObject $object, $account) {
 </eac-cpf>
 EOT;
 }
-function sidora_get_file_extension_from_mime($file_mime_type){
+function sidora_get_file_extension_from_mime($file_mime_type, $get_mime = FALSE){
       $file_extensions_for_mime_types_map = array(
-        'application/x-authorware-bin' => '.aab',
-        'application/x-authorware-map' => '.aam',
-        'application/x-authorware-seg' => '.aas',
-        'text/vnd.abc' => '.abc',
-        'video/animaflex' => '.afl',
-        'application/x-aim' => '.aim',
-        'text/x-audiosoft-intra' => '.aip',
-        'application/x-navi-animation' => '.ani',
-        'application/x-nokia-9000-communicator-add-on-software' => '.aos',
-        'application/mime' => '.aps',
-        'application/arj' => '.arj',
         'image/x-jg' => '.art',
         'text/asp' => '.asp',
         'application/x-mplayer2' => '.asx',
         'video/x-ms-asf-plugin' => '.asx',
         'audio/x-au' => '.au',
-        'application/x-troff-msvideo' => '.avi',
         'video/avi' => '.avi',
-        'video/msvideo' => '.avi',
-        'video/x-msvideo' => '.avi',
         'video/avs-video' => '.avs',
-        'application/x-bcpio' => '.bcpio',
-        'application/mac-binary' => '.bin',
-        'application/macbinary' => '.bin',
-        'application/x-binary' => '.bin',
-        'application/x-macbinary' => '.bin',
         'image/x-windows-bmp' => '.bmp',
 				'image/bmp' => '.bmp',
 				'application/xml-dtd' => '.dtd',
 				'text/html' => '.html',
         'application/x-bzip' => '.bz',
-        'application/vnd.ms-pki.seccat' => '.cat',
-        'application/clariscad' => '.ccad',
-        'application/x-cocoa' => '.cco',
-        'application/cdf' => '.cdf',
-        'application/x-cdf' => '.cdf',
         'application/java' => '.class',
         'application/java-byte-code' => '.class',
         'application/x-java-class' => '.class',
-        'application/x-cpio' => '.cpio',
-        'application/mac-compactpro' => '.cpt',
-        'application/x-compactpro' => '.cpt',
-        'application/x-cpt' => '.cpt',
-        'application/pkcs-crl' => '.crl',
-        'application/pkix-crl' => '.crl',
-        'application/x-x509-user-cert' => '.crt',
-        'application/x-csh' => '.csh',
-        'text/x-script.csh' => '.csh',
-        'application/x-pointplus' => '.css',
         'text/css' => '.css',
-        'application/x-deepv' => '.deepv',
-        'video/dl' => '.dl',
-        'video/x-dl' => '.dl',
-        'application/commonground' => '.dp',
-        'application/drafting' => '.drw',
-        'application/x-dvi' => '.dvi',
-        'drawing/x-dwf (old)' => '.dwf',
-        'model/vnd.dwf' => '.dwf',
-        'application/acad' => '.dwg',
-        'application/dxf' => '.dxf',
-        'text/x-script.elisp' => '.el',
-        'application/x-bytecode.elisp (compiled elisp)' => '.elc',
-        'application/x-elc' => '.elc',
-        'application/x-esrehber' => '.es',
-        'text/x-setext' => '.etx',
-        'application/envoy' => '.evy',
-        'application/vnd.fdf' => '.fdf',
-        'application/fractals' => '.fif',
-        'image/fif' => '.fif',
         'video/fli' => '.fli',
         'video/x-fli' => '.fli',
-        'text/vnd.fmi.flexstor' => '.flx',
-        'video/x-atomic3d-feature' => '.fmf',
-        'image/vnd.fpx' => '.fpx',
-        'image/vnd.net-fpx' => '.fpx',
-        'application/freeloader' => '.frl',
         'image/g3fax' => '.g3',
         'image/gif' => '.gif',
         'video/gl' => '.gl',
         'video/x-gl' => '.gl',
-        'application/x-gsp' => '.gsp',
-        'application/x-gss' => '.gss',
-        'application/x-gtar' => '.gtar',
-        'multipart/x-gzip' => '.gzip',
-        'application/x-hdf' => '.hdf',
-        'text/x-script' => '.hlb',
-        'application/hlp' => '.hlp',
-        'application/x-winhelp' => '.hlp',
-        'application/binhex' => '.hqx',
-        'application/binhex4' => '.hqx',
-        'application/mac-binhex' => '.hqx',
-        'application/mac-binhex40' => '.hqx',
-        'application/x-binhex40' => '.hqx',
-        'application/x-mac-binhex40' => '.hqx',
-        'application/hta' => '.hta',
         'text/x-component' => '.htc',
         'text/webviewhtml' => '.htt',
-        'x-conference/x-cooltalk' => '.ice ',
         'image/x-icon' => '.ico',
-        'application/x-ima' => '.ima',
-        'application/x-httpd-imap' => '.imap',
-        'application/inf' => '.inf ',
-        'application/x-internett-signup' => '.ins',
-        'application/x-ip2' => '.ip ',
-        'video/x-isvideo' => '.isu',
-        'audio/it' => '.it',
-        'application/x-inventor' => '.iv',
-        'i-world/i-vrml' => '.ivr',
-        'application/x-livescreen' => '.ivy',
-        'audio/x-jam' => '.jam ',
-        'application/x-java-commerce' => '.jcm ',
         'image/x-jps' => '.jps',
         'application/x-javascript' => '.js ',
-        'image/jutvision' => '.jut',
-        'music/x-karaoke' => '.kar',
-        'application/x-ksh' => '.ksh',
-        'text/x-script.ksh' => '.ksh',
         'audio/x-liveaudio' => '.lam',
-        'application/lha' => '.lha',
-        'application/x-lha' => '.lha',
-        'application/x-lisp' => '.lsp ',
-        'text/x-script.lisp' => '.lsp ',
-        'text/x-la-asf' => '.lsx',
-        'application/x-lzh' => '.lzh',
-        'application/lzx' => '.lzx',
-        'application/x-lzx' => '.lzx',
-        'text/x-m' => '.m',
-        'audio/x-mpequrl' => '.m3u ',
-        'application/x-troff-man' => '.man',
-        'application/x-navimap' => '.map',
-        'application/mbedlet' => '.mbd',
-        'application/x-magic-cap-package-1.0' => '.mc$',
-        'application/mcad' => '.mcd',
-        'application/x-mathcad' => '.mcd',
-        'image/vasa' => '.mcf',
-        'text/mcf' => '.mcf',
-        'application/netmc' => '.mcp',
-        'application/x-troff-me' => '.me ',
-        'application/x-frame' => '.mif',
-        'application/x-mif' => '.mif',
         'www/mime' => '.mime ',
-        'audio/x-vnd.audioexplosion.mjuicemediafile' => '.mjf',
         'video/x-motion-jpeg' => '.mjpg ',
 				'image/jpeg' => '.jpg',
 				'image/jp2' => '.jp2',
-        'application/x-meme' => '.mm',
         'audio/mod' => '.mod',
         'audio/x-mod' => '.mod',
         'audio/x-mpeg' => '.mp2',
@@ -1170,34 +1097,12 @@ function sidora_get_file_extension_from_mime($file_mime_type){
 				'audio/x-midi' => '.midi',
 				'audio/mpeg' => '.mp3',
 				'application/vnd.openxmlformats-officedocument.presentationml.template' => '.potx',
-        'application/vnd.ms-project' => '.mpp',
-        'application/marc' => '.mrc',
-        'application/x-troff-ms' => '.ms',
-        'application/x-vnd.audioexplosion.mzz' => '.mzz',
-        'application/vnd.nokia.configuration-message' => '.ncm',
-        'application/x-mix-transfer' => '.nix',
-        'application/x-conference' => '.nsc',
-        'application/x-navidoc' => '.nvd',
 				'application/msword' => '.doc',
 				'application/vnd.openxmlformats-officedocument.wordprocessingml.document' => '.docx',
 				'video/mpeg' => '.mpeg',
 				'application/vnd.openxmlformats-officedocument.presentationml.slideshow' => '.ppsx',
-        'application/oda' => '.oda',
-        'application/x-omc' => '.omc',
-        'application/x-omcdatamaker' => '.omcd',
-        'application/x-omcregerator' => '.omcr',
-        'text/x-pascal' => '.p',
-        'application/pkcs10' => '.p10',
-        'application/x-pkcs10' => '.p10',
-        'application/pkcs-12' => '.p12',
-        'application/x-pkcs12' => '.p12',
-        'application/x-pkcs7-signature' => '.p7a',
-        'application/x-pkcs7-certreqresp' => '.p7r',
-        'application/pkcs7-signature' => '.p7s',
-        'text/pascal' => '.pas',
         'image/x-portable-bitmap' => '.pbm ',
         'application/vnd.hp-pcl' => '.pcl',
-        'application/x-pcl' => '.pcl',
         'image/x-pict' => '.pct',
         'image/x-pcx' => '.pcx',
         'application/pdf' => '.pdf',
@@ -1215,14 +1120,6 @@ function sidora_get_file_extension_from_mime($file_mime_type){
         'audio/make.my.funk' => '.pfunk',
         'image/x-portable-graymap' => '.pgm',
         'image/x-portable-greymap' => '.pgm',
-        'application/x-newton-compatible-pkg' => '.pkg',
-        'application/vnd.ms-pki.pko' => '.pko',
-        'text/x-script.perl' => '.pl',
-        'application/x-pixclscript' => '.plx',
-        'text/x-script.perl-module' => '.pm',
-        'application/x-portable-anymap' => '.pnm',
-        'image/x-portable-anymap' => '.pnm',
-        'model/x-pov' => '.pov',
         'image/x-portable-pixmap' => '.ppm',
         'application/powerpoint' => '.ppt',
         'application/x-mspowerpoint' => '.ppt',
@@ -1244,18 +1141,7 @@ function sidora_get_file_extension_from_mime($file_mime_type){
 				'application/vnd.openxmlformats-officedocument.presentationml.slide' => '.sldx',
 				'image/svg+xml' => '.svg',
 				'application/vnd.ms-excel.addin.macroEnabled.12' => '.xlam',
-        'application/x-cmu-raster' => '.ras',
-        'image/x-cmu-raster' => '.ras',
-        'text/x-script.rexx' => '.rexx ',
-        'image/vnd.rn-realflash' => '.rf',
-        'image/x-rgb' => '.rgb ',
-        'application/vnd.rn-realmedia' => '.rm',
         'audio/mid' => '.rmi',
-        'application/ringing-tones' => '.rng',
-        'application/vnd.nokia.ringing-tone' => '.rng',
-        'application/vnd.rn-realplayer' => '.rnx ',
-        'image/vnd.rn-realpix' => '.rp ',
-        'text/vnd.rn-realtext' => '.rt',
         'application/x-rtf' => '.rtf',
 				'application/rdf' => '.rdf',
 				'application/rdf+xml' => '.rdf',
@@ -1265,109 +1151,55 @@ function sidora_get_file_extension_from_mime($file_mime_type){
 				'application/vnd.openxmlformats-officedocument.spreadsheetml.template' => '.xltx',
         'video/vnd.rn-realvideo' => '.rv',
         'audio/s3m' => '.s3m ',
-        'application/x-lotusscreencam' => '.scm',
-        'text/x-script.guile' => '.scm',
-        'text/x-script.scheme' => '.scm',
-        'video/x-scm' => '.scm',
-        'application/sdp' => '.sdp ',
-        'application/x-sdp' => '.sdp ',
-        'application/sounder' => '.sdr',
-        'application/sea' => '.sea',
-        'application/x-sea' => '.sea',
-        'application/set' => '.set',
-        'application/x-sh' => '.sh',
-        'text/x-script.sh' => '.sh',
-        'audio/x-psid' => '.sid',
-        'audio/x-adpcm' => '.snd',
-        'application/solids' => '.sol',
-        'application/x-pkcs7-certificates' => '.spc ',
-        'application/futuresplash' => '.spl',
-        'application/streamingmedia' => '.ssm ',
-        'application/vnd.ms-pki.certstore' => '.sst',
-        'application/sla' => '.stl',
-        'application/vnd.ms-pki.stl' => '.stl',
-        'application/x-navistyle' => '.stl',
-        'application/x-sv4cpio' => '.sv4cpio',
-        'application/x-sv4crc' => '.sv4crc',
-        'x-world/x-svr' => '.svr',
         'application/x-shockwave-flash' => '.swf',
         'application/x-tar' => '.tar',
-        'application/toolbook' => '.tbk',
-        'application/x-tcl' => '.tcl',
-        'text/x-script.tcl' => '.tcl',
-        'text/x-script.tcsh' => '.tcsh',
-        'application/x-tex' => '.tex',
         'application/plain' => '.text',
         'application/gnutar' => '.tgz',
-        'audio/tsp-audio' => '.tsi',
-        'application/dsptype' => '.tsp',
-        'audio/tsplayer' => '.tsp',
         'text/tab-separated-values' => '.tsv',
 				'image/tiff' => '.tiff',
-        'text/x-uil' => '.uil',
-        'application/i-deas' => '.unv',
-        'application/x-ustar' => '.ustar',
-        'multipart/x-ustar' => '.ustar',
-        'application/x-cdlink' => '.vcd',
-        'text/x-vcalendar' => '.vcs',
-        'application/vda' => '.vda',
-        'video/vdo' => '.vdo',
-        'application/groupwise' => '.vew ',
-        'application/vocaltec-media-desc' => '.vmd ',
-        'application/vocaltec-media-file' => '.vmf',
-        'audio/voc' => '.voc',
-        'audio/x-voc' => '.voc',
-        'video/vosaic' => '.vos',
         'audio/voxware' => '.vox',
-        'audio/x-twinvq' => '.vqf',
-        'application/x-vrml' => '.vrml',
-        'x-world/x-vrt' => '.vrt',
         'application/wordperfect6.1' => '.w61',
         'audio/wav' => '.wav',
         'audio/x-wav' => '.wav',
         'application/x-qpro' => '.wb1',
         'image/vnd.wap.wbmp' => '.wbmp',
         'application/vnd.xara' => '.web',
-        'application/x-123' => '.wk1',
         'windows/metafile' => '.wmf',
-        'text/vnd.wap.wml' => '.wml',
-        'application/vnd.wap.wmlc' => '.wmlc ',
-        'text/vnd.wap.wmlscript' => '.wmls',
-        'application/vnd.wap.wmlscriptc' => '.wmlsc ',
-        'application/x-wpwin' => '.wpd',
-        'application/x-lotus' => '.wq1',
-        'application/mswrite' => '.wri',
-        'application/x-wri' => '.wri',
-        'text/scriplet' => '.wsc',
-        'application/x-wintalk' => '.wtk ',
         'image/x-xbitmap' => '.xbm',
-        'image/x-xbm' => '.xbm',
-        'image/xbm' => '.xbm',
-        'video/x-amt-demorun' => '.xdr',
-        'xgl/drawing' => '.xgz',
         'image/vnd.xiff' => '.xif',
         'audio/xm' => '.xm',
         'application/xml' => '.xml',
         'text/xml' => '.xml',
-        'xgl/movie' => '.xmz',
-        'application/x-vnd.ls-xpix' => '.xpix',
-        'image/xpm' => '.xpm',
-        'video/x-amt-showrun' => '.xsr',
-        'image/x-xwd' => '.xwd',
-        'image/x-xwindowdump' => '.xwd',
-        'application/x-compress' => '.z',
         'application/x-zip-compressed' => '.zip',
         'application/zip' => '.zip',
         'multipart/x-zip' => '.zip',
-        'text/x-script.zsh' => '.zsh',
-				
-      );
-      if (isset($file_extensions_for_mime_types_map[$file_mime_type]))
-      {
+				'audio/aiff' => '.aiff',
+				'audio/x-aiff' => '.aiff',
+				'video/quicktime' => '.mov',
+				'video/mp4' => '.mp4',
+				'audio/ogg' => 'ogg',
+				'video/mp4' => '.m4v',
+				'audio/mp4' => '.m4a',
+				'video/x-matroska' => '.mkv',
+				'audio/aac' => '.aac',
+				'audio/x-ms-wma' => '.wma',
+				);
+      if (!$get_mime) {
+        if (isset($file_extensions_for_mime_types_map[$file_mime_type]))
+        {
           return $file_extensions_for_mime_types_map[$file_mime_type];
-      }
-      $pieces = explode('/', $file_mime_type);
-      return '.' . array_pop($pieces);
+        }
+        $pieces = explode('/', $file_mime_type);
+        return '.' . array_pop($pieces);
+			}else{
+			  $mime_type_for_extension_map = array_flip($file_extensions_for_mime_types_map);
+				$file_extension = '.' . $file_mime_type;
+				if (isset($mime_type_for_extension_map[$file_extension]))
+				{
+				  return $mime_type_for_extension_map[$file_extension];
+				}
+				return FALSE;
+			}		
 }
 /* This function takes the ontology id from the sidora datastream of a pid and 
  * retrieves the corresponding concept type from the sidora_ontology_json string
@@ -1395,7 +1227,7 @@ function sidora_mail($from = 'default_from', $to, $subject, $message) {
   $my_module = '';
   $my_mail_token = '';
   if ($from == 'default_from') {
-    $from = variable_get('system_mail', '***REMOVED***');
+    $from = variable_get('system_mail', '');
   }
 	$message = array(
     'id' => $my_module . $my_mail_token,

@@ -1,4 +1,32 @@
 <?php
+/*
+ * Copyright 2015 Smithsonian Institution.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License.You may obtain a copy of
+ * the License at: http://www.apache.org/licenses/
+ *
+ * This software and accompanying documentation is supplied without
+ * warranty of any kind. The copyright holder and the Smithsonian Institution:
+ * (1) expressly disclaim any warranties, express or implied, including but not
+ * limited to any implied warranties of merchantability, fitness for a
+ * particular purpose, title or non-infringement; (2) do not assume any legal
+ * liability or responsibility for the accuracy, completeness, or usefulness of
+ * the software; (3) do not represent that use of the software would not
+ * infringe privately owned rights; (4) do not warrant that the software
+ * is error-free or will be maintained, supported, updated or enhanced;
+ * (5) will not be liable for any indirect, incidental, consequential special
+ * or punitive damages of any kind or nature, including but not limited to lost
+ * profits or loss of data, on any basis arising from contract, tort or
+ * otherwise, even if any of the parties has been warned of the possibility of
+ * such loss or damage.
+ *
+ *
+ * This distribution includes several third-party libraries, each with their own
+ * license terms. For a complete copy of all copyright and license terms, including
+ * those of third-party libraries, please see the product release notes.
+ */
+
 /**
  * @file
  *
@@ -22,7 +50,7 @@ function sidora_admin_settings() {
     'si_exhibition_data_url' => array(
       '#type' => 'textfield',
       '#title' => t('Where to obtain the website configuration for the page (not where to obtain the Fedora data itself)'),
-      '#default_value' => variable_get('si_exhibition_data_url', 'http://***REMOVED***.dev1.my***REMOVED***.net/exhibition_config/info/'),
+      '#default_value' => variable_get('si_exhibition_data_url', 'http://server.net/exhibition_config/info/'),
       '#description' => t('The Fedora Commons pid will be directly appended to the above, end with / if needed.'),
     ),
 */
@@ -45,9 +73,33 @@ function sidora_admin_settings() {
       '#type' => 'textarea',
       '#title' => t('JSON determining the layout and form choices presented for add new concept'),
       '#default_value' => variable_get('sidora_ontology_json',sidora_ontology_json_default()),
+      '#suffix' => '<script>
+jQuery("#edit-sidora-ontology-json").on(\'change keyup paste\', function() {
+  jQuery("#ontology_json_check").remove();
+  try {
+    var c = jQuery.parseJSON(jQuery("#edit-sidora-ontology-json").val());
+    jQuery("#edit-sidora-ontology-json").after("<div id=\'ontology_json_check\' class=\'status messages\'>Valid</div>");
+  }catch (err) {
+    jQuery("#edit-sidora-ontology-json").after("<div id=\'ontology_json_check\' class=\'error messages\'>Invalid</div>");
+  }
+});</script>',
+    ),
+    'sidora_resource_ontology_json' => array(
+      '#type' => 'textarea',
+      '#title' => t('JSON determining the layout and form choices presented for add new resource'),
+      '#default_value' => variable_get('sidora_resource_ontology_json',sidora_ontology_json_default()),
+      '#suffix' => '<script>
+jQuery("#edit-sidora-resource-ontology-json").on(\'change keyup paste\', function() {
+  jQuery("#resource_ontology_json_check").remove();
+  try {
+    var c = jQuery.parseJSON(jQuery("#edit-sidora-resource-ontology-json").val());
+    jQuery("#edit-sidora-resource-ontology-json").after("<div id=\'resource_ontology_json_check\' class=\'status messages\'>Valid</div>");
+  }catch (err) {
+    jQuery("#edit-sidora-resource-ontology-json").after("<div id=\'resource_ontology_json_check\' class=\'error messages\'>Invalid</div>");
+  }
+});</script>',
     ),
   );
-  //$form['#submit'][]= 'sidora_admin_settings_save';
 
   module_load_include('inc', 'xml_form_builder', 'XMLFormRepository');
   $names = XMLFormRepository::GetNames();
@@ -288,9 +340,11 @@ tr.removed.odd {
         //remember to change this and the one below it when adding a new type
 				'direct' => t('Direct stream to browser (actual image / binary / text)'),
 				'web_view' => t('Direct stream to browser for web viewable items, download message for others'),
+        'pdfjs' => t('PDF to HTML5 via Javascript (pdf.js)'),
         'flexpaper_pdf' => t('Flexpaper / Convert to flexpaper / direct stream to browser'),
 				'IDS' => t('Smithsonian IDS Viewer'),
         'OpenSeaDragon' => t('OpenSeaDragon'),
+        'PHPExcel' => t('PHPExcel'),
 				'none' => t('None - no display available'),
 				'never' => t('Never set'),
 			),
@@ -314,11 +368,14 @@ tr.removed.odd {
         '#options' => array(
           'direct' => t('Direct stream to browser (actual image / binary / text)'),
 				  'web_view' => t('Direct stream to browser for web viewable items, download message for others'),
+					'JW Audio Player' => t('JW Player for audio'),
+          'pdfjs' => t('PDF to HTML5 via Javascript (pdf.js)'),
           'flexpaper_pdf' => t('Flexpaper / Convert to flexpaper / direct stream to browser'),
-          'JW Audio Player' => t('JW Player for audio'),
+					'JW Video Player' => t('JW Player for video'),
 					'IDS' => t('Smithsonian IDS Viewer'),
           'OpenSeaDragon' => t('OpenSeaDragon'),
-          'none' => t('None - no display available'),
+          'PHPExcel' => t('PHPExcel'),
+					'none' => t('None - no display available'),
           'never' => t('Never set'),
         ),
 				'#default_value' => variable_get('resource_viewer_viewer_'.$model,'never'),
@@ -382,7 +439,7 @@ tr.removed.odd {
   $form['one']['si_exhibition_data_urli3'] = array(
       '#type' => 'textfield',
       '#title' => t('Where to obtain the website configuration for the page (not where to obtain the Fedora data itself)'),
-      '#default_value' => variable_get('si_exhibition_data_url', 'http://***REMOVED***.dev1.my***REMOVED***.net/exhibition_config/info/'),
+      '#default_value' => variable_get('si_exhibition_data_url', 'http://<server>/exhibition_config/info/'),
       '#description' => t('The Fedora Commons pid will be directly appended to the above, end with / if needed.'),
     );
 */
@@ -397,7 +454,7 @@ tr.removed.odd {
         '#type' => 'textfield',
         '#title' => t('Prefix the URL before the pid for the base image'),
         '#default_value' => variable_get('osd_proxy_pid_prefix', ''),
-        '#description' => t('The URL for the base image is made up of this prefix, then the pid, then the post-fix. (ex: http://***REMOVED***.my***REMOVED***.net:8080/fedora/objects/ )'),
+        '#description' => t('The URL for the base image is made up of this prefix, then the pid, then the post-fix. (ex: http://server.net:8080/fedora/objects/ )'),
       ),
       'osd_proxy_pid_postfix' => array(
         '#type' => 'textfield',
@@ -409,7 +466,7 @@ tr.removed.odd {
         '#type' => 'textfield',
         '#title' => t('The base URL for the resolver'),
         '#default_value' => variable_get('osd_proxy_resolver_url', ''),
-        '#description' => t('The resolver is the location of the image resizer itself. (ex: http://***REMOVED***.my***REMOVED***.net/adore-djatoka/resolver )'),
+        '#description' => t('The resolver is the location of the image resizer itself. (ex: http://server.net/adore-djatoka/resolver )'),
   ),
 	),
 	);
@@ -434,6 +491,27 @@ tr.removed.odd {
 			),	
     ),
   );
+	$form['codebook_parser'] = array(
+     'fieldset' => array(
+      '#type' => 'fieldset',
+      '#title' => 'Codebook Parser',
+      '#description' => t(''),
+      '#collapsible' => TRUE,
+      '#collapsed' => TRUE,
+			'sidora_codebook_parser_url' => array(
+			  '#type' => 'textfield',
+				'#title' => t('Codebook Parser URL'),
+				'#default_value' => variable_get('sidora_codebook_parser_url', ''),
+				'#description' => t('The location of codebook parser. Valid entry looks like this: http://&lt;server&gt;:&lt;port&gt;/codebook/?'),
+			),	
+    ),
+  );
+  $form['sidora_allow_all_to_debug'] = array(
+     '#type' => 'textfield',
+     '#title' => t('Allow all users access to debug'),
+     '#default_value' => variable_get('sidora_allow_all_to_debug',''),
+     '#description' => t('If set to "ALL" then all users have access to built-in sidora debug information.  Otherwise only administrators have access.'), //This was not stored as a "role" because we want to be able to give it to any user at the time the debugging happens then turn it off completely.  "ALL" here will give access to the sidora_testing functionality. In the future there may be different strings which give additional granularity
+  );
   $form['sidora_disable_locking_by_pid'] = array(
     '#type' => 'checkbox',
     '#title' => 'Disable locking',
@@ -443,10 +521,3 @@ tr.removed.odd {
   $form['#attributes'] = array('OnSubmit' => 'formPreSubmit();');
   return system_settings_form($form);
 }
-
-/*
-function sidora_admin_settings_save(){
-  dsm("Form saving");
-}
-*/
-
