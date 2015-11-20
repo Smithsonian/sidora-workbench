@@ -1,26 +1,29 @@
 <?php
 
 function sidora_view_openseadragon($pid, $dsid, $version='0'){
+  $osd_js_path = variable_get('osd_library_location', $GLOBALS['base_url'].'/'.drupal_get_path('module','sidora').'/jslibs/openseadragon-djatoka/');
+  $local_resolver = variable_get('osd_local_resolver_service', $GLOBALS['base_url'].'/'.'sidora/osd/');
+  $jquery = variable_get('osd_jquery_library_location', $GLOBALS['base_url'].'/'.drupal_get_path('module','sidora').'/jslibs/openseadragon-djatoka/jquery/jquery-2.1.4.min.js');
   print "\r\n".'<html>                                                                                                      ';
   print "\r\n".'  <head>                                                                                                    ';
-  print "\r\n".'    <script src="'.$GLOBALS['base_url'].'/'.drupal_get_path('module','sidora').'/jslibs/openseadragon-djatoka/jquery/jquery-2.1.4.min.js"></script>';
-  print "\r\n".'    <script src="'.$GLOBALS['base_url'].'/'.drupal_get_path('module','sidora').'/jslibs/openseadragon-djatoka/openseadragon/openseadragon.min.js"></script>';
-  print "\r\n".'    <script src="'.$GLOBALS['base_url'].'/'.drupal_get_path('module','sidora').'/jslibs/openseadragon-djatoka/js/djtilesource.js"></script>';
+  print "\r\n".'    <script src="'.$jquery.'"></script>';
+  print "\r\n".'    <script src="'.$osd_js_path.'openseadragon/openseadragon.min.js"></script>';
+  print "\r\n".'    <script src="'.$osd_js_path.'js/djtilesource.js"></script>';
   print "\r\n".'  </head>                                                                                                   ';
   print "\r\n".'  <body>                                                                                                    ';
   print "\r\n".'    <div id="container">                                                                                    ';
   print "\r\n".'      <div id="page-image" style="width: 100%; height: 100%;">                                            ';
   print "\r\n".'        <script>                                                                                            ';
   print "\r\n".'          <!-- create the tile source -->                                                                   ';
-  print "\r\n".'          var service = "'.$GLOBALS['base_url'].'/'.'sidora/osd/'.$pid.'/'.$dsid.'/'.$version.'";';
 //  print "\r\n".'          var service = "/adore-djatoka/resolver";';
+  print "\r\n".'          var service = "'.$local_resolver.$pid.'/'.$dsid.'/'.$version.'";';
   print "\r\n".'          var id = "{replacer}";';  //replacer is a value that is hard-coded to be replaced with the proper id in the osd_proxy function
   print "\r\n".'          var settings = {tileSize: 256, tileOverlap: 0};                                                   ';
   print "\r\n".'          var tileSource = new OpenSeadragon.DjatokaTileSource(service, id, settings);                      ';
   print "\r\n".'          <!-- create the OpenSeadragon Viewer with the TileSource -->                                      ';
   print "\r\n".'          OpenSeadragon({                                                                                   ';
   print "\r\n".'            id: "page-image",                                                                               ';
-  print "\r\n".'            prefixUrl: "'.$GLOBALS['base_url'].'/'.drupal_get_path('module','sidora').'/jslibs/openseadragon-djatoka/openseadragon/images/",';
+  print "\r\n".'            prefixUrl: "'.$osd_js_path.'openseadragon/images/",';
   print "\r\n".'            showNavigator: true,                                                                            ';
   print "\r\n".'            debugMode: false,                                                                                ';
   print "\r\n".'            tileSources: [tileSource],                                                                      ';
@@ -56,11 +59,13 @@ function sidora_tabular_view_phpexcelreader($pid,$dsid = 'OBJ'){
   file_unmanaged_save_data($datastream_content, file_directory_temp() . '/'.$filename, FILE_EXISTS_REPLACE); 
   $temp = file_directory_temp();
   $rels = $object->relationships->get(FEDORA_RELS_EXT_URI, 'hasCodebook');
+  global $base_url;
+  $data_tables_lib_location = variable_get('sidora_dataTables_location',$base_url.'/'.drupal_get_path('module','sidora').'/jslibs/dataTables/');
   echo '<html>
 <head>
-  <link rel="stylesheet" href="'.$GLOBALS['base_url'].'/'.drupal_get_path('module','sidora').'/jslibs/dataTables/css/jquery.dataTables.css"></link>
-  <script src="'.$GLOBALS['base_url'].'/'.drupal_get_path('module','sidora').'/jslibs/dataTables/js/jquery.js"></script>
-  <script src="'.$GLOBALS['base_url'].'/'.drupal_get_path('module','sidora').'/jslibs/dataTables/js/jquery.dataTables.min.js"></script>
+  <link rel="stylesheet" href="'.$data_tables_lib_location.'css/jquery.dataTables.css"></link>
+  <script src="'.$data_tables_lib_location.'js/jquery.js"></script>
+  <script src="'.$data_tables_lib_location.'js/jquery.dataTables.min.js"></script>
   <style>
      #hasHeader { display:none }
      #noHeader { display:none }

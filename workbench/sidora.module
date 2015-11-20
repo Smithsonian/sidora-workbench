@@ -1331,16 +1331,16 @@ function sidora_get_parent_table($pid){
 });</script>';
   return $output;
 }
+function sidora_get_html_pdfjs($pid, $dsid = 'OBJ', $version = '0'){
+ drupal_goto(variable_get('sidora_pdf_js_location','').'?file='.sidora_get_direct_download_url($pid, $dsid, $version));
+}
+
 /*
  * If we want the user to be able to directly access the content, use this URL
  */
 function sidora_get_direct_download_url($pid, $dsid, $version = '0'){
  global $base_url; 
   return $base_url . '/sidora/version_info/' . $pid . '/' . $dsid . '/' . $version . '/download';
-}
-
-function sidora_get_html_pdfjs($pid, $dsid = 'OBJ', $version = '0'){
- drupal_goto(variable_get('sidora_pdf_js_location','').'?file='.sidora_get_direct_download_url($pid, $dsid, $version));
 }
 
 /**
@@ -3422,6 +3422,10 @@ function sidora_open_access($info_type, $pid){
         $return_when_encoded = sidora_get_viewer_config($pid);
         print json_encode($return_when_encoded);
         break;
+      case 'osd':
+        sidora_osd_proxy_version($pid);
+        break;
+        
     }
 	}
   drupal_exit();
