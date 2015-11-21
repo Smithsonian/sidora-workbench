@@ -3555,39 +3555,32 @@ function sidora_generate_parent_concept_query($pid) {
  *
  */
 function sidora_open_access($info_type, $pid){
-  if ($info_type == 'file_extension'){
-	  module_load_include('inc', 'sidora', 'includes/utils');
-    $object = sidora_obj($pid);
-    if (empty($object)){
-      drupal_not_found();
-      drupal_exit();
-    }
-		$mime_type = $object['OBJ']->mimeType;
-		if ($mime_type != ''){
-      $file_extension = sidora_get_file_extension_from_mime($mime_type);
-      print (json_encode($file_extension));
-		} 
-	}
-	else {
-	  $pids_checked = Array();
-	  $pid_with_exhibition =	sidora_exhibition_exists_in_tree($pid, $pids_checked);
-    if ($pid_with_exhibition == FALSE){
-		  drupal_not_found();
-		  drupal_exit();
-	  }else{
-	    switch($info_type) {
-        case 'xsl':
-          $file = sidora_get_xsl_file_for_object($pid);
-          $directory_for_xsl = DRUPAL_ROOT.'/'.drupal_get_path('module','sidora').'/XSL';
-          $full_file = ($directory_for_xsl . '/' . $file);
-          if ($file) $output_info = readfile($full_file);
-          break;
-        case 'xsl_config':
-          sidora_xsl_information($pid, $info_type == 'xsl');
-          break;  
-	    }
-	  }
-	}
+  $pids_checked = Array();
+  $pid_with_exhibition =	sidora_exhibition_exists_in_tree($pid, $pids_checked);
+  if ($pid_with_exhibition == FALSE){
+    drupal_not_found();
+    drupal_exit();
+  }
+  switch($info_type) {
+    case 'file_extension':
+      module_load_include('inc', 'sidora', 'includes/utils');
+      $object = sidora_obj($pid);
+      $mime_type = $object['OBJ']->mimeType;
+      if ($mime_type != ''){
+        $file_extension = sidora_get_file_extension_from_mime($mime_type);
+        print (json_encode($file_extension));
+      } 
+      break;
+    case 'xsl':
+      $file = sidora_get_xsl_file_for_object($pid);
+      $directory_for_xsl = DRUPAL_ROOT.'/'.drupal_get_path('module','sidora').'/XSL';
+      $full_file = ($directory_for_xsl . '/' . $file);
+      if ($file) $output_info = readfile($full_file);
+      break;
+    case 'xsl_config':
+      sidora_xsl_information($pid, $info_type == 'xsl');
+      break;  
+  }
   drupal_exit();
 }
 /*
