@@ -44,6 +44,7 @@
  */
 function sidora_admin_settings() {
   module_load_include('inc', 'islandora', 'includes/content_model.autocomplete');
+  module_load_include('inc', 'sidora', 'includes/workbench_viewers.admin');
   $form = array(
 /*
 
@@ -443,33 +444,7 @@ tr.removed.odd {
       '#description' => t('The Fedora Commons pid will be directly appended to the above, end with / if needed.'),
     );
 */
-  $form['OpenSeaDragonInfo'] = array(
-    'fieldset' => array(
-      '#type' => 'fieldset',
-      '#title' => 'OpenSeaDragon Info',
-      '#description' => t(''),
-      '#collapsible' => TRUE,
-      '#collapsed' => TRUE,
-      'osd_proxy_pid_prefix' => array(
-        '#type' => 'textfield',
-        '#title' => t('Prefix the URL before the pid for the base image'),
-        '#default_value' => variable_get('osd_proxy_pid_prefix', ''),
-        '#description' => t('The URL for the base image is made up of this prefix, then the pid, then the post-fix. (ex: http://server.net:8080/fedora/objects/ )'),
-      ),
-      'osd_proxy_pid_postfix' => array(
-        '#type' => 'textfield',
-        '#title' => t('Post-fix for the URL after the pid for the base image'),
-        '#default_value' => variable_get('osd_proxy_pid_postfix', ''),
-        '#description' => t('The URL for the base image is made up of the prefix, then the pid, then this post-fix. (ex: /datastreams/OBJ/content )'),
-      ),
-      'osd_proxy_resolver_url' => array(
-        '#type' => 'textfield',
-        '#title' => t('The base URL for the resolver'),
-        '#default_value' => variable_get('osd_proxy_resolver_url', ''),
-        '#description' => t('The resolver is the location of the image resizer itself. (ex: http://server.net/adore-djatoka/resolver )'),
-  ),
-	),
-	);
+  _sidora_admin_settings_add_viewer_configs($form);
 	$form['account_request'] = array(
      'fieldset' => array(
       '#type' => 'fieldset',
