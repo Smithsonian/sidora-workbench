@@ -4918,8 +4918,9 @@ function sidora_html_string_tree($root_pid = '', $root = NULL){
      $root_label = t('Invalid object set as root');
      $description = t('Invalid object set as root: %root_pid for user: %user_name %uid', 
        array('%root_pid' => $root_pid, '%user_name' => $user->name, '%uid' => $user->uid));
-     sidora_add_fedora_assumption_problem_other($description)
-  }else{
+     sidora_add_fedora_assumption_problem_other($description);
+  }
+  else{
      $root_label = $root->label;
   }
   $results = _sidora_get_child_results_cache($root_pid);
