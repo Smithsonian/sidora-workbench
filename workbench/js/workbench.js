@@ -884,7 +884,7 @@ sidora.InitiatePage = function(){
   jQuery(document).tooltip(
   { position: { my: "left-7 bottom", at: "right center" } }
   );
-  jQuery("#branding").append("<div class='branding-user-info' style='float:right'> <a href='"+Drupal.settings.basePath+"user'>Profile</a> <a href='"+Drupal.settings.basePath+"user/logout'>Logout</a></div>");
+  jQuery("#branding").append("<div class='branding-user-info' style='float:right'> <a href='"+Drupal.settings.basePath+"user' class='button'>Profile</a> <a href='"+Drupal.settings.basePath+"user/logout' class='button'>Logout</a></div>");
 };
 /*
  * Return thumbnail if resource has a unique thumbnail that is showing, otherwise return false
