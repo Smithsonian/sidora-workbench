@@ -646,7 +646,8 @@ function sidora_get_model(AbstractObject $object, array $ignore_models = NULL) {
 }
 
 /**
- * Checks if the given object is a resource.
+ * Checks if the given object is a resource.  If we have a content model that is not a concept or codebook,
+ * then it must be a resource.
  *
  * @param AbstractObject $object
  *   The object to get the content model from.
@@ -655,14 +656,13 @@ function sidora_get_model(AbstractObject $object, array $ignore_models = NULL) {
  *   TRUE if the given object is a resource, FALSE otherwise.
  */
 function sidora_is_resource(AbstractObject $object) {
-  $resource_models =array(
-      'si:imageCModel',
-      'si:generalImageCModel',
-      'si:datasetCModel',
-      'si:fieldbookCModel',
-  );
+  $names = islandora_get_content_model_names();
+  $all_models = array();
+  foreach($names as $model => $name){ $all_models[] = $model; }
+  if (sidora_is_concept($object)) return FALSE;
+  if (sidora_is_codebook($object)) return FALSE;
   return in_array('si:resourceCModel', $object->models) ||
-    array_intersect($resource_models, $object->models);
+    array_intersect($all_models, $object->models);
 }
 
 /**

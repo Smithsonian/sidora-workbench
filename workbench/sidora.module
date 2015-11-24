@@ -226,6 +226,13 @@ function sidora_menu() {
       'access callback' => TRUE,
       'type' => MENU_CALLBACK,
    ),
+   'admin/sidora/fedora_object_issues' => array(
+      'title' => 'SIdora Fedora Object Issues',
+      'description' => 'List the current issues found with Fedora Objects',
+      'page callback' => 'sidora_fedora_object_issues',
+      'access arguments' => array('administer site configuration'),
+      'type' => MENU_CALLBACK,
+   ),
    'admin/sidora/config_transfer' => array(
       'title' => 'SIdora configuration transfer',
       'description' => 'Save, export, and import SIdora configurations',
@@ -602,8 +609,7 @@ function sidora_islandora_object_ingested(AbstractObject $object){
   }
 
   if ($parent_pid){
-    $tuque = islandora_get_tuque_connection();
-    $parent = $tuque->repository->getObject($parent_pid);
+    $parent = sidora_obj($parent_pid);
     //link to parent with Sidora nomenclature
     $is_concept = sidora_is_concept($object);
     $is_codebook = sidora_is_codebook($object);
@@ -615,7 +621,7 @@ function sidora_islandora_object_ingested(AbstractObject $object){
     }else if ($is_codebook){
       //add codebook to user object (not the intended parent)
       $user_projects_pid = sidora_get_user_object();
-      $user_projects = $tuque->repository->getObject($user_projects_pid);
+      $user_projects = sidora_obj($user_projects_pid);
       $user_projects->relationships->add(FEDORA_RELS_EXT_URI, 'managesCodebook', $object->id);
       //set the user's recent codebook to this new codebook
       $edit['data']['recent_codebook_id'] = $object->id;
@@ -1095,8 +1101,7 @@ function sidora_edit_metadata($object_id_string = '', $dsid = '', $form_name = '
   $sidora_data = sidora_get_form_and_dsid($object_id);
   $dsid = $sidora_data['dsid'];
   $form_name = $sidora_data['form_name'];
-  $tuque = islandora_get_tuque_connection();
-  $object = $tuque->repository->getObject($object_id);
+  $object = sidora_obj($object_id);
   $form_state = array();
   $associations = xml_form_builder_datastream_form_get_associations($form_state,$object->models, $dsid);  //first param goes unused
   $association = null;
@@ -1601,6 +1606,132 @@ function sidora_settings_import($object, $ignore_settings = array(), $only_apply
   }
 }
 /*
+ * Downloads the current SIdora Fedora object issues or shows a form to view the issues
+ */
+function sidora_fedora_object_issues($direct_download = ""){
+  $download_filename = 'object_issues.json';
+  if ($direct_download == $download_filename){
+    header("Content-type: application/json");
+    header("Content-Disposition: attachment; filename=\"$download_filename\"");
+    $assumption_problems = variable_get('sidora_assumption_problems',t('Problems list is empty'));
+    module_load_include('php', 'sidora', 'includes/json_readable_encode');
+    print json_readable_encode($assumption_problems, 0);
+    drupal_exit();
+  }else{
+    $form = drupal_get_form('sidora_fedora_object_issues_form');
+    $download_link = '<a href="fedora_object_issues/'.$download_filename.'">Download current issues</a>';
+    return $download_link.drupal_render($form);
+  }
+}
+/*
+ * Form for displaying SIdora Fedora object issues
+ */
+function sidora_fedora_object_issues_form($form, &$form_state){
+  $assumption_problems = variable_get('sidora_assumption_problems',array(
+    'object_issues' => array(),
+    'relationship_issues' => array(),
+    'other_issues' => array(),
+  ));
+  $output = '';
+  $issue_pids = $assumption_problems['object_issues'];
+  $header = array();
+  $header[] = array('data' => t('Pid'));
+  $header[] = array('data' => t('Description'));
+  $header[] = array('data' => t('Time'));
+  $rows = array();
+  foreach ($issue_pids as $pid => $pid_issues) {
+    foreach($pid_issues as $issue){
+      $rows[] = array(
+        array('data' => $pid),
+        array('data' => $issue['description']),
+        array('data' => $issue['time']),
+      );
+    }
+  }
+  $table_attributes = array('id' => 'sidora_object_issues');
+  $output .= theme('table', array('header'=>$header, 'rows'=>$rows, 'attributes'=>$table_attributes));
+    
+  $issue_pids = $assumption_problems['relationship_issues'];
+  $header = array();
+  $header[] = array('data' => t('Pid'));
+  $header[] = array('data' => t('Description'));
+  $header[] = array('data' => t('DSID'));
+  $header[] = array('data' => t('Predicate'));
+  $header[] = array('data' => t('Time'));
+  $rows = array();
+  foreach ($issue_pids as $pid => $pid_issues) {
+    foreach($pid_issues as $issue){
+      $rows[] = array(
+        array('data' => $pid),
+        array('data' => $issue['description']),
+        array('data' => $issue['dsid']),
+        array('data' => $issue['predicate_object']),
+        array('data' => $issue['time']),
+      );
+    }
+  }
+  $table_attributes = array('id' => 'sidora_relationship_issues');
+  $output .= theme('table', array('header'=>$header, 'rows'=>$rows, 'attributes'=>$table_attributes));
+
+  $issues = $assumption_problems['other_issues'];
+  $header = array();
+  $header[] = array('data' => t('Number'));
+  $header[] = array('data' => t('Description'));
+  $header[] = array('data' => t('Pids Involved'));
+  $header[] = array('data' => t('Time'));
+  $rows = array();
+  foreach($issues as $num => $issue){
+    $rows[] = array(
+      array('data' => $num),
+      array('data' => $issue['description']),
+      array('data' => implode(', ',$issue['pids_involved'])),
+      array('data' => $issue['time']),
+    );
+  }
+  $table_attributes = array('id' => 'sidora_other_issues');
+  $output .= theme('table', array('header'=>$header, 'rows'=>$rows, 'attributes'=>$table_attributes));
+
+
+  $form['clear_pids'] = array(
+    '#type' => 'textarea',
+    '#title' => t('List of pids to clear from the issues'),
+    '#description' => t('Put in pids to clear, one pid per line. Put the word ALL without quotes to clear the entire list. Items in the "Other Issues" table can only be cleared by the ALL clear.'),
+    '#prefix' => $output,
+  );
+  $form['submit'] = array(  //ensure this aligns with information in the validator on the #id check
+    '#type' => 'submit',
+    '#value' => t('Clear the listed Pids'),
+  );
+  return $form;
+}
+/*
+ * Clears specific or all entries in the object issues list
+ */
+function sidora_fedora_object_issues_form_submit($form, &$form_state){
+  global $user;
+  $empty_problems = array(
+    'object_issues' => array(),
+    'relationship_issues' => array(),
+    'other_issues' => array(),
+  );
+  if ($form_state['values']['clear_pids'] == 'ALL') {
+    variable_set('sidora_assumption_problems',$empty_problems);
+    drupal_set_message(t('The Fedora object issues list has been emptied'));
+  }else{
+    $assumption_problems = variable_get('sidora_assumption_problems',$empty_problems);
+    $pids = array_map('trim', explode("\n",$form_state['values']['clear_pids'])); //Explode it and trim any whitespace
+    foreach($pids as $pid) {
+      if (!empty($pid)) {
+        unset($assumption_problems['object_issues'][$pid]);
+        unset($assumption_problems['relationship_issues'][$pid]);
+        drupal_set_message(t('The Fedora object issues list has removed items under Pid:%pid',array('%pid' => $pid)));
+      }
+    }
+    variable_set('sidora_assumption_problems',$assumption_problems);
+  }
+}
+
+/*
  * Downloads the current SIdora configuration or shows a form to allow importing a configuration
  */
 function sidora_config_transfer($direct_download = ""){
@@ -1770,6 +1901,22 @@ function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $ex
   }
   if (!sidora_is_admin()) print t("Remember that nonadmins will NOT see output from dsm!");
 
+  if ($one == 'problem_tester'){
+    $description = 'test_desc';
+    $dsid = 'test_dsid';
+    $predicate_pid = 'test_pp';
+    $pids = array('other1','other2','other3');
+    if ($two == 'add'){
+      sidora_add_fedora_assumption_problem_object($parent_pid, $description);
+      sidora_add_fedora_assumption_problem_relationship($parent_pid, $description, $dsid, $predicate_pid);
+      sidora_add_fedora_assumption_problem_other($description, $pids);
+    }
+    
+    $assumption_problems = variable_get('sidora_assumption_problems','Nothing');
+    module_load_include('php', 'sidora', 'includes/json_readable_encode');
+    print json_readable_encode($assumption_problems, 0);
+    drupal_exit();
+  }
   global $user;
   if ($one == 'tabular_parse'){
     print 'tabular_parse';
@@ -2207,11 +2354,10 @@ function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $ex
     module_load_include('inc', 'islandora', 'includes/utilities');
     module_load_include('inc', 'islandora', 'includes/ingest.form');
     module_load_include('inc', 'sidora', 'includes/utils');
-    $tuque = islandora_get_tuque_connection();
     $parent_pid = 'si-user:105'; 
     $object_pid = 'si:141451';
-    $parent = $tuque->repository->getObject($parent_pid);
-    $object = $tuque->repository->getObject($object_pid);
+    $parent = sidora_obj($parent_pid);
+    $object = sidora_obj($object_pid);
     //link to parent with Sidora nomenclature
     $is_concept = sidora_is_concept($object);
     if ($is_concept){
@@ -3430,6 +3576,9 @@ function sidora_open_access($info_type, $pid){
       $return_when_encoded = sidora_get_viewer_config($pid);
       print json_encode($return_when_encoded);
       break;
+    case 'osd':
+      sidora_osd_proxy_version($pid);
+      break;
   }
   drupal_exit();
 }
@@ -3820,6 +3969,16 @@ function sidora_obj($pid){
   if ($tuque) {
     $object = islandora_object_load($pid);
   }
+  
+  $is_concept = sidora_is_concept($object);
+  $is_codebook = sidora_is_codebook($object);
+  $is_resource = sidora_is_resource($object);
+  if (!($is_concept || $is_codebook || $is_resource)){
+    sidora_add_fedora_assumption_problem_object(
+      $pid, 
+      t('This object does not contain an object model consistent with a concept, codebook, or resource')
+    );
+  }
   return $object;
 }
 function sidora_concept_resource_listing_count($pid, $resource_types_list, $resource_type = 'all', $title_search = ''){
@@ -3844,7 +4003,7 @@ function sidora_concept_resource_listing($pid, $resource_types, $limit, $offset,
     $ri = $tuque->repository->ri;
     $results = $ri->sparqlQuery($query);
     foreach($results as $resindex=>$result){
-      $tobj = $tuque->repository->getObject($result['object']['value']);
+      $tobj = sidora_obj($result['object']['value']);
       //$results[$resindex]['object'] = $tobj;
       $original_metadata = 'FALSE';
       foreach($tobj as $dsid=>$datastream){
@@ -4484,9 +4643,8 @@ function sidora_unassociate_delete_if_orphaned($remove_from_pid, $pid_to_remove,
       return $unassociated;
     }
   }
-  $tuque = islandora_get_tuque_connection();
   try{
-    $object = $tuque->repository->getObject($pid_to_remove);
+    $object = sidora_obj($pid_to_remove);
   }catch(Exception $exc){
     sidora_release_lock($pid_to_remove);
     $to_output['error'] = TRUE;
@@ -4567,11 +4725,10 @@ function sidora_copy($copy_to_id, $pid, $show_output = TRUE){
   }
   module_load_include('inc', 'sidora', 'includes/utils');
   //determine if this is a resource or a concept
-  $tuque = islandora_get_tuque_connection();
   $to_output = array();
   try{
-    $copy_to = $tuque->repository->getObject($copy_to_id);
-    $object = $tuque->repository->getObject($pid);
+    $copy_to = sidora_obj($copy_to_id);
+    $object = sidora_obj($pid);
   }catch(Exception $exc){
     sidora_release_lock($copy_to_id);
     $to_output['error'] = TRUE;
@@ -4696,8 +4853,7 @@ function sidora_json_for_delete($pid, $show_output = TRUE){
 
   $parents = sidora_get_parent_concepts($object);
   foreach($parents as $parent_pid => $parent){
-    $tuque = islandora_get_tuque_connection(); 
-    $parent_obj = $tuque->repository->getObject($parent_pid);
+    $parent_obj = sidora_obj($parent_pid);
     if ($is_concept){
       $removal_return = $parent_obj->relationships->remove(FEDORA_RELS_EXT_URI,'hasConcept',$object);
     }else if ($is_codebook){
@@ -7677,4 +7833,95 @@ function sidora_video_view_object($pid) {
   $output = theme('islandora_video', $variables);
   $output = drupal_get_css() . drupal_get_js() . $output;
   return $output;
+}
+/*
+ * The assumption problems holds information on fedora objects that don't seem
+ * to fit properly into the SIdora workbench.  The workbench is made up of resources,
+ * concepts, codebooks, users and relationships between them. If the relationships
+ * don't make sense or the Fedora object does not fall into one of those categories
+ * then store that information.
+ * The array will look like this:
+ * array (
+ *   'object_issues' => array(
+ *       '<pid>' => array( //standard array of object problems encountered by this pid (2 probs)
+ *         array('description' => 'description of problem', 'time' => '<time>'),
+ *         array('description' => 'description of problem', 'time' => '<time>'),
+         ),
+ *       '<pid>' => array( //array of object problems encountered by this pid (1 prob)
+           array('description' => 'description of problem', 'time' => '<time>')),
+         ),
+ *       ...
+ *   ),
+ *   'relationship_issues' => array(
+ *       '<pid containing rel>' => array( //standard array of relationship problems encountered by pid
+ *         array(
+ *           'description' => 'description of problem', 
+ *           'dsid' => '<datastream containing problem relationship, usually RELS-EXT>',
+ *           'predicate_object' => '<string of the predicate, usually the pid of the related obj>'
+ *           'time' => '<time>',
+ *         ),
+ *       ),
+ *       '<pid containing rel>' => array(
+ *         array(
+ *           'dsid' => '<datastream containing problem relationship, usually RELS-EXT>',
+ *           'predicate_object' => '<string of the predicate, usually the pid of the related obj>'
+ *           'description' => 'description of problem', 
+ *           'time' => '<time>',
+ *         ),
+ *       ),
+ *    ),
+ *    'other_issues' => array( //These do not have associative array nature, just basic array
+ *      //other_issues will also "accept" any type of information and store it
+ *      array (
+ *        'description' => 'description of problem',
+ *        'pids_involved' => array('<pid 1>','<pid 2>'), //Can be empty if a generic error
+ *        'time' => '<time>',
+ *      ), 
+ *      ...
+ *    )
+ *    
+ * Recap: 'object_issues','relationship_issues','other_issues' each with own structure
+ */
+function sidora_add_fedora_assumption_problem($type, $problem, $pid = '') {
+  $assumption_problems = variable_get('sidora_assumption_problems',array(
+    'object_issues' => array(),
+    'relationship_issues' => array(),
+    'other_issues' => array(),
+  ));
+  switch ($type) {
+    case 'object_issues':
+    case 'relationship_issues':
+      if (empty($assumption_problems[$type][$pid])) {
+        $assumption_problems[$type][$pid] = array();
+      }
+      $assumption_problems[$type][$pid][] = $problem;
+      break;
+    default:
+      $assumption_problems['other_issues'][] = $problem;
+  }
+  variable_set('sidora_assumption_problems', $assumption_problems);
+}
+function sidora_add_fedora_assumption_problem_object($pid, $description) {
+  $problem = array (
+    'description' => $description,
+    'time' => date('Y-m-d H:i:s'),
+  );
+  sidora_add_fedora_assumption_problem('object_issues', $problem, $pid);
+}
+function sidora_add_fedora_assumption_problem_relationship($pid, $description, $dsid, $predicate_pid) {
+  $problem = array (
+    'description' => $description,
+    'time' => date('Y-m-d H:i:s'),
+    'dsid' => $dsid,
+    'predicate_object' => $predicate_pid,
+  );
+  sidora_add_fedora_assumption_problem('relationship_issues', $problem, $pid);
+}
+function sidora_add_fedora_assumption_problem_other($description, $pids = array()) {
+  $problem = array (
+    'description' => $description,
+    'time' => date('Y-m-d H:i:s'),
+    'pids_involved' => $pids,
+  );
+  sidora_add_fedora_assumption_problem('other_issues', $problem);
 }
