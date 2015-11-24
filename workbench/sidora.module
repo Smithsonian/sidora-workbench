@@ -284,6 +284,7 @@ function sidora_menu() {
 
 function sidora_management_ingest($pid, $dsid, $label = NULL, $mimeType = NULL){
   $object = sidora_obj($pid);
+  if (empty($obj)){ return; }
   $datastream = isset($object[$dsid]) ? $object[$dsid] : $object->constructDatastream($dsid);
   if ($label !== NULL) $datastream->label = $label; //don't use empty() since we want to set it to empty string '' if user wants to
   if ($mimeType !== NULL) $datastream->mimeType = $mimeType;
@@ -403,6 +404,7 @@ jQuery(document).ready(function(){
     }
     if (!empty($dsid_to_remove)){
       $object = sidora_obj($pid);
+      if (empty($object)){ drupal_not_found(); }
       $object->purgeDatastream($dsid_to_remove);
     }
     return 'DS purge complete';
@@ -412,6 +414,7 @@ jQuery(document).ready(function(){
     $label = filter_input(INPUT_POST, 'label', FILTER_SANITIZE_STRING);
     $owner = filter_input(INPUT_POST, 'owner', FILTER_SANITIZE_URL);
     $object = sidora_obj($pid);
+    if (empty($object)){ drupal_not_found(); }
     if ($label != $object->label){
       sidora_clear_tree_cache($pid);
       $object->label = $label;
@@ -424,6 +427,7 @@ jQuery(document).ready(function(){
   if (!sidora_allow($user,$pid,'view')) drupal_not_found();
 
   $object = sidora_obj($pid);
+  if (empty($object)){ drupal_not_found(); }
   print '
 <style>
 .object-properties {
@@ -519,6 +523,7 @@ function sidora_resource_viewer($pid) {
 function sidora_codebook_autocomplete($s1){
   module_load_include('inc', 'sidora', 'includes/utils');
   $user_projects = sidora_obj(sidora_get_user_object());
+  if (empty($user_projects)){ return array(); }
   $matches = array();
   if (!empty($user_projects)){
     $rels = $user_projects->relationships->get(FEDORA_RELS_EXT_URI, 'managesCodebook');
@@ -3446,6 +3451,7 @@ function sidora_get_xsl_file_config_for_object($pid){
   //determine the current form and model
   $sidora_data = sidora_get_form_and_dsid($pid);
   $object = sidora_obj($pid);
+  if (empty($object)) { return NULL; }
   $preferred_dsid = $sidora_data['dsid'];
   $form_name = $sidora_data['form_name'];
   $models = $object->models;
@@ -3979,6 +3985,7 @@ function sidora_obj($pid){
       $pid, 
       t('This object does not contain an object model consistent with a concept, codebook, or resource')
     );
+    return NULL;
   }
   return $object;
 }
@@ -4005,35 +4012,43 @@ function sidora_concept_resource_listing($pid, $resource_types, $limit, $offset,
     $results = $ri->sparqlQuery($query);
     foreach($results as $resindex=>$result){
       $tobj = sidora_obj($result['object']['value']);
-      //$results[$resindex]['object'] = $tobj;
-      $original_metadata = 'FALSE';
-      foreach($tobj as $dsid=>$datastream){
-        if ($dsid == 'TN'){
-          $results[$resindex]['thumbnail_exists'] = TRUE;
-        }
-        if ($dsid == 'OBJ'){
-          $results[$resindex]['MainMimeType'] = $datastream->mimetype;
-        }
-        if ($dsid == 'RELS-EXT'){
-          //Why is this stored in RELS-EXT? Who knows! It's not a relationship, but thats where it sits
-          $doc = new DOMDocument();
-          $doc->loadXML($datastream->content);
-          $original_metadata_elements = $doc->getElementsByTagName('orginal_metadata'); //YES IT IS SPELLED ORGINAL - NOT original
-          foreach($original_metadata_elements as $ome){
-            $original_metadata = $ome->nodeValue;
+      if (empty($tobj)) {
+        $description = 'Relationship to invalid object';
+        $dsid = 'RELS-EXT';
+        $predicate_pid = $result['object']['value'];
+        sidora_add_fedora_assumption_problem_relationship($pid, $description, $dsid, $predicate_pid);
+      }
+      else {
+        //$results[$resindex]['object'] = $tobj;
+        $original_metadata = 'FALSE';
+        foreach($tobj as $dsid=>$datastream){
+          if ($dsid == 'TN'){
+            $results[$resindex]['thumbnail_exists'] = TRUE;
+          }
+          if ($dsid == 'OBJ'){
+            $results[$resindex]['MainMimeType'] = $datastream->mimetype;
+          }
+          if ($dsid == 'RELS-EXT'){
+            //Why is this stored in RELS-EXT? Who knows! It's not a relationship, but thats where it sits
+            $doc = new DOMDocument();
+            $doc->loadXML($datastream->content);
+            $original_metadata_elements = $doc->getElementsByTagName('orginal_metadata'); //YES IT IS SPELLED ORGINAL - NOT original
+            foreach($original_metadata_elements as $ome){
+              $original_metadata = $ome->nodeValue;
+            }
           }
         }
+        //Override the orginal_metadata from RELS-EXT with the new check for metadata entry in the SIDORA dataset
+        if (!empty($tobj['SIDORA'])){
+            $doc = new DOMDocument();
+            $doc->loadXML($tobj['SIDORA']->content);
+            $original_metadata_elements = $doc->getElementsByTagName('meta_requirements_fulfilled');
+            foreach($original_metadata_elements as $ome){
+              $original_metadata = ($ome->nodeValue !== 'TRUE')?'TRUE':'FALSE';
+            }
+        }
+        $results[$resindex]['original_metadata'] = $original_metadata;
       }
-      //Override the orginal_metadata from RELS-EXT with the new check for metadata entry in the SIDORA dataset
-      if (!empty($tobj['SIDORA'])){
-          $doc = new DOMDocument();
-          $doc->loadXML($tobj['SIDORA']->content);
-          $original_metadata_elements = $doc->getElementsByTagName('meta_requirements_fulfilled');
-          foreach($original_metadata_elements as $ome){
-            $original_metadata = ($ome->nodeValue !== 'TRUE')?'TRUE':'FALSE';
-          }
-      }
-      $results[$resindex]['original_metadata'] = $original_metadata;
     }
     /*
     print "\n<pre>\n";
@@ -4895,16 +4910,25 @@ function sidora_html_string_tree($root_pid = '', $root = NULL){
     $root_pid = sidora_get_user_root_object();
   }
   
-  if (empty($root)){
-    $root= sidora_obj($root_pid);
+  if (empty($root)) {
+    $root = sidora_obj($root_pid);
+  }
+  $root_label = '';
+  if (empty($root)) {
+     $root_label = t('Invalid object set as root');
+     $description = t('Invalid object set as root: %root_pid for user: %user_name %uid', 
+       array('%root_pid' => $root_pid, '%user_name' => $user->name, '%uid' => $user->uid));
+     sidora_add_fedora_assumption_problem_other($description)
+  }else{
+     $root_label = $root->label;
   }
   $results = _sidora_get_child_results_cache($root_pid);
   $filled = sidora_fill_concepts_children($results); 
   $html_tree_from_query_result = sidora_html_tree($filled);
   $to_return = '';
   $to_return .= '<ul>';
-  $to_return .= '<li><a href="'.base_path().'sidora/workbench/#'.$root_pid.'" pid="'.$root_pid.'" fullname="'.$root->label.'">';
-  $to_return .= $root->label;
+  $to_return .= '<li><a href="'.base_path().'sidora/workbench/#'.$root_pid.'" pid="'.$root_pid.'" fullname="'.$root_label.'">';
+  $to_return .= $root_label;
   $to_return .= '</a>';
   $to_return .= '<ul>';
   $to_return .= $html_tree_from_query_result;
@@ -4917,7 +4941,6 @@ function sidora_block_content_navigation(){
   $results = _sidora_get_child_results_cache($root_pid);
   $filled = sidora_fill_concepts_children($results); 
   $html_tree_from_query_result = sidora_html_tree($filled);
-  $root = sidora_obj($root_pid);
   $to_return = '<div style="float:left;width:200px;">';
   $to_return .= '<div id="concept-create-menu">';
   $to_return .= '</div>';
@@ -7542,6 +7565,7 @@ function sidora_get_viewer_id($pid) {
  */
 function sidora_get_viewer_config($pid) {
   $obj = sidora_obj($pid);
+  if (empty($obj)) return NULL;
   $models = $obj->models;
   $viewers = array();
   foreach($models as $model){
@@ -7583,6 +7607,7 @@ function sidora_datastream_version_view($pid, $datastream) {
   module_load_include('inc', 'islandora', 'includes/utilities');
   module_load_include('inc', 'sidora', 'includes/utils');
   $parent = sidora_obj($pid);
+  if (empty($parent)) { return ''; }
   $ds = $parent[$datastream];
   drupal_set_title(t("@dsid Previous Versions", array('@dsid' => $datastream)));
   $audit_values = islandora_get_audit_trail($pid, $datastream);
@@ -7806,12 +7831,12 @@ function sidora_delete_datastream_form_submit(array $form, array &$form_state) {
   $form_state['redirect'] = "sidora/version_history/" . $form_state['datastream']->parent->id . "/" . $form_state['datastream']->id;
 } 
 function sidora_osd_proxy_version($pid, $datastream='OBJ', $version='0'){
- module_load_include('inc', 'sidora', 'includes/utils');
- global $user;
- $obj = sidora_obj($pid);
- $ds = $obj[$datastream];
- $datastream_content = $ds[$version];
- if (!sidora_allow($user,$pid,'view')) drupal_not_found();
+  module_load_include('inc', 'sidora', 'includes/utils');
+  global $user;
+  if (!sidora_allow($user,$pid,'view')) drupal_not_found();
+  $obj = sidora_obj($pid);
+  $ds = $obj[$datastream];
+  $datastream_content = $ds[$version];
   $qs = $_SERVER['QUERY_STRING'];
   $qs = str_replace(
           urlencode("{replacer}"),
@@ -7820,16 +7845,18 @@ function sidora_osd_proxy_version($pid, $datastream='OBJ', $version='0'){
           urlencode(variable_get('osd_proxy_pid_postfix', '')).
           '?asOfDateTime=' . 
           urlencode($datastream_content->createdDate),
-        $qs);
+          $qs
+  );
   $url = variable_get('osd_proxy_resolver_url', '').'?'.$qs;
   print file_get_contents($url);
-  exit();
+  drupal_exit();
 }
 function sidora_islandora_sp_videoCModel_islandora_ingest_steps_alter(array &$steps, array &$form_state) {
-   unset($steps['islandora_video_upload']);
+ unset($steps['islandora_video_upload']);
 }
 function sidora_video_view_object($pid) {
   $object = sidora_obj($pid);
+  if (empty($obj)){ return ''; }
   $variables = array('object' => $object);
   $output = theme('islandora_video', $variables);
   $output = drupal_get_css() . drupal_get_js() . $output;
