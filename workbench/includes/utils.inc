@@ -656,6 +656,7 @@ function sidora_get_model(AbstractObject $object, array $ignore_models = NULL) {
  *   TRUE if the given object is a resource, FALSE otherwise.
  */
 function sidora_is_resource(AbstractObject $object) {
+  module_load_include('inc', 'islandora', 'includes/content_model.autocomplete');
   $names = islandora_get_content_model_names();
   $all_models = array();
   foreach($names as $model => $name){ $all_models[] = $model; }

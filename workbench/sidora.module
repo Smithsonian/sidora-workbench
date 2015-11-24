@@ -3971,6 +3971,7 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
  */
 
 function sidora_obj($pid){
+  module_load_include('inc', 'sidora', 'includes/utils');
   $object = array();
   $tuque = islandora_get_tuque_connection();
   if ($tuque) {
