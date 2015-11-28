@@ -3447,7 +3447,7 @@ function sidora_user_view($account, $view_mode, $langcode){
   $account->content['workbench'] = array();
   $account->content['workbench']['link'] = array(
       '#title' => '',
-      '#markup' => '<a href="'.base_path().'sidora/workbench/">Open Workbench</a><div style="float:right"><a href="'.base_path().'user/logout">Logout</a><div>',
+      '#markup' => '<a href="'.base_path().'sidora/workbench/" class="button">Open Workbench</a><div style="float:right"><a href="'.base_path().'user/logout" class="button">Logout</a><div>',
       '#type' => 'user_profile_item',
   );
   if ($is_logged_in_as_admin){
@@ -7709,6 +7709,8 @@ function sidora_menu_alter(&$items) {
     $items['islandora/object/%islandora_object/datastream/%islandora_datastream/version']['page callback'] = 'sidora_datastream_version_view';
     $items['islandora/object/%islandora_object/datastream/%islandora_datastream/version']['page arguments'] = array(2,4);
   }
+	$items['user/%user/edit']['title'] = t('Account Management');
+	$items['user/%user/view']['title'] = t('Workspace');
 }
 /*
  * Return the short id for the viewer for this pid
