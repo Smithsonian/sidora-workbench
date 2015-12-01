@@ -4032,7 +4032,7 @@ function sidora_obj($pid){
   if ($tuque) {
     $object = islandora_object_load($pid);
   }
-  
+  if (empty($object)) return NULL; 
   $is_concept = sidora_is_concept($object);
   $is_codebook = sidora_is_codebook($object);
   $is_resource = sidora_is_resource($object);
