@@ -7543,7 +7543,8 @@ function sidora_tabular_view_phpexcelreader($pid,$dsid = 'OBJ'){
   <script>
     jQuery(document).ready(function(){
       jQuery("table").DataTable({
-        "lengthMenu": [ [-1,5,10,25,100],["All",5,10,25,100] ]
+        "lengthMenu": [ [-1,5,10,25,100],["All",5,10,25,100] ],
+        "order":[]
       });
       jQuery("table").show();
       jQuery("#noHeader_wrapper").show();
@@ -7649,13 +7650,13 @@ function sidora_tabular_view_phpexcelreader_html($filename, $first_line_header =
     foreach ($cellIterator as $cell) {
       if ($is_first){
         if ($first_line_header){
-          $table_header .= '<th>' . $cell->getValue() . '</th>';
+          $table_header .= '<th>' . $cell->getFormattedValue() . '</th>';
         }else{
           $table_header .= '<th></th>'; 
         }
       }
       if (!is_null($cell) && !($is_first && $first_line_header)) {
-        $table_data .= '<td>' . $cell->getValue() . '</td>';
+        $table_data .= '<td>' . $cell->getFormattedValue() . '</td>';
       }
     }
   	if (!$is_first || !$first_line_header){
