@@ -35,15 +35,10 @@ define('SIDORA_NEVER_SET',"Never Set");
  * run on every drupal call, loads items that the rest of the code needs
  */
 function sidora_init(){
-/*
-//Unknown if the next two lines are needed.  If no problems arise in next release, please remove
-$islandora_module_path = drupal_get_path('module', 'islandora');
-@include_once 'sites/all/libraries/tuque/FedoraRelationships.php';
-*/
   //The ahah call on the edit metadata form cannot find the function for the form
-  //because it assumes that islandora has already loaded it.  Since we are not using
+  //because it assumes that Islandora has already loaded it.  Since we are not using
   //the Islandora interface, the form has not been loaded. The ahah call would
-  //throw an error on call, disallowing the addition or deletion of items with the add.png (green plus)
+  //throw an error, disallowing the addition or deletion of items with the add.png (green plus)
   // -- the tags / tag element from the xml_form_builder
   //This is related to SID-305
   if (request_path() == 'system/ajax'){
@@ -1937,6 +1932,19 @@ function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $ex
     return t("You must be an administrator or have an administrator set sidora_allow_all_to_debug in order to access this information");
   }
   if (!sidora_is_admin()) print t("Remember that nonadmins will NOT see output from dsm!");
+  
+  if ($one == 'server_time'){
+    print 'server_time'.time();
+    drupal_exit();
+  }
+
+  if ($one == 'num_resource_children'){
+    module_load_include('inc', 'sidora', 'includes/utils');
+    print $two;
+    var_dump(sidora_get_children($two));
+    print 'BBB';
+    drupal_exit();
+  }
 
   if ($one == 'problem_tester'){
     $description = 'test_desc';
