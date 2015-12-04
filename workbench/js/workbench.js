@@ -968,35 +968,19 @@ sidora.resources.performCopyOrMove = function(copyOrMove, toLocationId){
   var newParentExistingChildResourcesCount = parseInt(jQuery("#"+toLocationId).find("a").attr("resourcechildren")); // the original number of resources in the target pid
   var jst = jQuery("#forjstree").jstree(true);
   var onSuccessfulCopy = function(ajaxRequest,ajaxReturn){
-     var newParentExistingChildResourceNumber = parseInt(jQuery("#"+toLocationId).find("a").attr("resourcechildren"));
-     var newParentNewChildResourceNumber = newParentExistingChildResourceNumber+1;
-     var newParentName = jQuery("#"+toLocationId+" a").attr("fullname");
-     jst.rename_node("#"+toLocationId, newParentName + " (" + newParentNewChildResourceNumber + ")");
-     jQuery("#"+toLocationId).find("a").attr("resourcechildren",""+newParentNewChildResourceNumber);
-     if (newParentNewChildResourceNumber == (pids.length + newParentExistingChildResourcesCount)){
-       sidora.util.RefreshTree();
-    }  
-   }   
+    var newParentExistingChildResourceNumber = parseInt(jQuery("#"+toLocationId).find("a").attr("resourcechildren"));
+    var newParentNewChildResourceNumber = newParentExistingChildResourceNumber+1;
+    sidora.util.refreshConceptChildrenNumberDirectByTreeId(locationId, newParentNewChildResourceNumber);
+  }   
   var onSuccessfulMove = function(ajaxRequest,ajaxReturn){
-     var newParentExistingChildResourceNumber = parseInt(jQuery("#"+toLocationId).find("a").attr("resourcechildren"));
-     var newParentNewChildResourceNumber = newParentExistingChildResourceNumber+1;
-     var newParentName = jQuery("#"+toLocationId+" a").attr("fullname");
-     jst.rename_node("#"+toLocationId, newParentName + " (" + newParentNewChildResourceNumber + ")");
-     jQuery("#"+toLocationId).find("a").attr("resourcechildren",""+newParentNewChildResourceNumber);
-     var fromSource = jq(fromParent).substring(1);
-     var oldParentExistingChildResourceNumber = parseInt(jQuery("[pid=" + fromSource + "]").attr("resourcechildren"));
-     var oldParentNewChildResourceNumber = oldParentExistingChildResourceNumber - 1;
-     var oldParentNode = jst.get_node(jQuery("[pid='" + fromSource + "']").closest("li").attr("id"));
-     var oldParentName = jQuery("#"+oldParentNode.id+" a").attr("fullname");
-     if (oldParentNewChildResourceNumber == 0){
-        jst.rename_node(oldParentNode,oldParentName);
-      }else{
-        jst.rename_node(oldParentNode,oldParentName+" ("+oldParentNewChildResourceNumber+")");
-      }
-      jQuery("[pid=" + fromSource + "]").attr("resourcechildren",""+oldParentNewChildResourceNumber);
-      if (newParentNewChildResourceNumber == (pids.length + newParentExistingChildResourcesCount)){
-        sidora.util.RefreshTree();
-      }  
+    var newParentExistingChildResourceNumber = parseInt(jQuery("#"+toLocationId).find("a").attr("resourcechildren"));
+    var newParentNewChildResourceNumber = newParentExistingChildResourceNumber+1;
+    sidora.util.refreshConceptChildrenNumberDirectByTreeId(toLocationId, newParentNewChildResourceNumber);
+    var fromSource = jq(fromParent).substring(1);
+    var oldParentExistingChildResourceNumber = parseInt(jQuery("[pid=" + fromSource + "]").attr("resourcechildren"));
+    var oldParentNewChildResourceNumber = oldParentExistingChildResourceNumber - 1;
+    var oldParentNode = jst.get_node(jQuery("[pid='" + fromSource + "']").closest("li").attr("id"));
+    sidora.util.refreshConceptChildrenNumberDirect(fromSource, newParentNewChildResourceNumber);
   }  
   for(var i=0;i<pids.length;i++){
     droppedPid = pids[i];
@@ -1175,9 +1159,94 @@ sidora.CloseIFrame = function(newlyCreatedConceptId, typeOfClosure){
   }
   sidora.util.RefreshTree();
 }
+/*
+ * Keep checking for 100 minutes.  
+ *
+ * Normal users have 90 minute log out so this should not affect them
+ * but admins have no log out period.  The "left a window open over the weekend" problem that could
+ * affect those users, making it look like there is website activity and using up lots of the user's
+ * memory if they have a development console open that stores the XHR requests.
+ *
+ * Todo: Only check server if there has been mouse movement in the past minute
+ */
 sidora.util.constantCheck = function(){
-  setTimeout(sidora.util.constantCheck, 30000);
+  var d = new Date();
+  if (typeof(sidora.util.init_time) == 'undefined') {
+    sidora.util.init_time = {};
+    sidora.util.init_time.local = Math.floor(d.getTime() / 60000);
+    jQuery.ajax({
+      url: '../ajax_parts/server_minute'
+    }).done(function(server_minute){
+      sidora.util.init_time.server = parseInt(server_minute);
+    }).fail(function(failure_obj){
+      sidora.util.init_time.server = 0;
+      sidora.recentAjaxFailure(failure_obj);
+    });
+  }
+
+  var current_local_minute = Math.floor(d.getTime() / 60000);
+  if (current_local_minute < sidora.util.init_time.local + 100) {
+    setTimeout(sidora.util.constantCheck, 30000);
+  }
+
   sidora.resources.updateThumbnails();
+  sidora.util.checkRecentChanges();
+}
+/*
+ * Gets the pids for recent concept changes. Currently used to update resource numbers on concepts
+ * if multiple users are changing the number of resources
+ */
+sidora.util.checkRecentChanges = function(){
+    if (typeof(sidora.util.init_time.server) != 'undefined') {
+      if (typeof(sidora.util.lastUpdateTime) == 'undefined') sidora.util.lastUpdateTime = 0;
+      jQuery.ajax({
+        url: '../ajax_parts/recent_changes/'+sidora.util.lastUpdateTime,
+      }).done(function(pids_csv){
+        var d = new Date();
+        var offsetBetweenLocalAndServer = sidora.util.init_time.server - sidora.util.init_time.local;
+        var current_local_minute = Math.floor(d.getTime() / 60000);
+        sidora.util.lastUpdateTime = current_local_minute + offsetBetweenLocalAndServer;
+        var pids = pids_csv.split(", ");
+        for (var pindex = 0; pindex < pids.length; pindex++) {
+          sidora.util.refreshConceptChildrenNumber(pids[pindex]); 
+        }
+      }).fail(function(failure_obj){
+        sidora.recentAjaxFailure(failure_obj);
+    });
+  }
+}
+/*
+ * 
+ */
+sidora.util.refreshConceptChildrenNumber = function(pid){
+    jQuery.ajax({
+      url: '../ajax_parts/get_num_resource_children/'+pid,
+    }).done(function(num_children){
+      sidora.util.refreshConceptChildrenNumberDirect(pid, num_children);
+    }).fail(function(failure_obj){
+      sidora.recentAjaxFailure(failure_obj);
+    });
+}
+sidora.util.refreshConceptChildrenNumberDirect = function(pid, number_of_children){
+  var treeIdsToUpdate = jQuery("a").filter(
+    function(){ return jQuery(this).attr("pid") == pid; }
+  ).closest("li").map(
+    function(){ return this.id; }
+  ).get();
+  var jst = jQuery("#forjstree").jstree(true);
+  for(var tii = 0; tii < treeIdsToUpdate.length; tii++){
+    var toUpdateId = treeIdsToUpdate[tii];
+    var existingChildResourceNumber = parseInt(jQuery("#"+toUpdateId).find("a").attr("resourcechildren"));
+    var parentName = jQuery("#"+toUpdateId+" a").attr("fullname");
+    var newFullName =  parentName + " (" + number_of_children + ")";
+    if (number_of_children == 0) newFullName = parentName;
+    jst.rename_node("#"+toUpdateId, newFullName);
+    jQuery("#"+toUpdateId).find("a").attr("resourcechildren",""+number_of_children);
+  }
+}
+sidora.util.refreshConceptChildrenNumberDirectByTreeId = function(treeId, number_of_children){
+  var pid = jQuery("#"+treeId+" a").attr("pid");
+  sidora.util.refreshConceptChildrenNumberDirect(pid, number_of_children);
 }
 /*
  * Goes to get the tree from the server and replaces exsiting tree

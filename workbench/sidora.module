@@ -1937,12 +1937,13 @@ function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $ex
     print 'server_time'.time();
     drupal_exit();
   }
-
+  if ($one == 'recent_changes'){
+    sidora_recently_updated_since($two);
+  }
   if ($one == 'num_resource_children'){
     module_load_include('inc', 'sidora', 'includes/utils');
     print $two;
     var_dump(sidora_get_children($two));
-    print 'BBB';
     drupal_exit();
   }
 
@@ -4464,6 +4465,15 @@ function sidora_ajax_parts($call_type, $param1 = '', $param2 = '', $param3 = '')
       drupal_exit();
     }
   }
+  if ($call_type == 'recent_changes') {
+    $pids = sidora_recently_updated_since($param1);
+    print implode($pids,', ');
+    drupal_exit();
+  }
+  if ($call_type == 'server_minute') {
+    print intval(time() / 60);
+    drupal_exit();
+  }
   drupal_not_found();
 }
 /**
@@ -5460,7 +5470,68 @@ function sidora_clear_entire_tree_cache(){
 function sidora_clear_tree_cache($pid = ''){
   if (!empty($pid)){
     cache_clear_all('sidora:children_results:'.$pid, 'cache', TRUE);
+    sidora_recently_updated($pid);
   }
+}
+/*
+ * For any object that has been updated, keep an indicator of changed
+ * THIS WILL NEED TO BE PER USER WHEN VIEW PERMISSIONS become involved
+ */
+function sidora_recently_updated($pid) {
+  sidora_recently_updated_clear_old();
+  $cache_name = "sidora:recent_updates";
+  $recent_updates_cache = cache_get($cache_name);
+  $recent_updates = $recent_updates_cache->data;
+  $current_minute_as_seconds = time();
+  $current_minute_as_min = intval($current_minute_as_seconds / 60);
+  if (empty($recent_updates[$current_minute_as_min])) {
+    $recent_updates[$current_minute_as_min] = array();
+  }
+  if (!in_array($pid, $recent_updates[$current_minute_as_min])) {
+    $recent_updates[$current_minute_as_min][] = $pid;
+  }
+  cache_set($cache_name,$recent_updates,'cache',CACHE_TEMPORARY);
+}
+/*
+ * Returns all of the pids that have been updated since the specified minute 
+ * (server minutes since epoch)
+ */
+function sidora_recently_updated_since($server_minute) {
+  sidora_recently_updated_clear_old();
+  $cache_name = "sidora:recent_updates";
+  $recent_updates_cache = cache_get($cache_name);
+  $recent_updates = $recent_updates_cache->data;
+  $pids = array();
+  foreach($recent_updates as $minute => $updated_pids) {
+    if ($server_minute <= $minute) {
+      foreach($updated_pids as $pid) {
+        if (!in_array($pid,$pids)) $pids[] = $pid;
+      }
+    }
+  }
+  return $pids;
+}
+/*
+ * Keeps the recently updated list to 100 minutes
+ */
+function sidora_recently_updated_clear_old() {
+  $cache_name = "sidora:recent_updates";
+  $recent_updates_cache = cache_get($cache_name);
+  $recent_updates = array();
+  if (!empty($recent_updates_cache)) {
+    $recent_updates = $recent_updates_cache->data;
+  }
+  //recent_updates is an array with the past 100 minutes
+  //with the pids that have been updated in that minute listed
+  //First, let's clear out whatever is too old
+  $first_minute_as_seconds = time() - 100 * 60;
+  $first_minute_as_min = intval($first_minute_as_seconds / 60);
+  foreach($recent_updates as $minute => $updated_pids) {
+    if ($minute < $first_minute_as_min) {
+      unset($recent_updates[$minute]);
+    }
+  }
+  cache_set($cache_name,$recent_updates,'cache',CACHE_TEMPORARY);
 }
 /*
  * Very simply attempts to obtain a lock on the pid
