@@ -281,7 +281,10 @@ function sidora_menu() {
  );
 }
 
-
+/*
+ * Function which ingests an uploaded file directly to a named datastream.  This is originally designed for use with the 
+ * management UI
+ */
 function sidora_management_ingest($pid, $dsid, $label = NULL, $mimeType = NULL){
   $object = sidora_obj($pid);
   if (empty($obj)){ return; }
@@ -292,6 +295,11 @@ function sidora_management_ingest($pid, $dsid, $label = NULL, $mimeType = NULL){
   $datastream->setContentFromFile($current_uploads[0]->filepath);
   $object->ingestDatastream($datastream);
 }
+/*
+ * Set Drupal to be ready to upload a file using the multiple uploader plupload and 
+ * returns the html / js necessary to show the uploader.  This is designed to be placed
+ * into a page that is being loaded and does not print or echo on its own.
+ */
 function sidora_generic_upload($configure = array()){
   global $user;
   $button_text = (empty($configure['button_text']))?'Upload File':$configure['button_text'];
@@ -339,6 +347,19 @@ jQuery(document).ready(function(){
   return $to_return;
 }
 
+/*
+ * Prints the management panel UI, prints an upload screen for the management UI, or saves a change from the management panel
+ * based on the input settings
+ * $pid - The PID of the object of interest
+ * $show_or_save - one of the following:
+ *               'new_dsid' - creates a new datastream based on the uploaded file with information in the POST
+ *               'upload' - print the uploader html / js
+ *               'remove' - does a purgeDatastream on a datastream
+ *               'save' - saves the owner and label to the ones input on the management panel
+ *               'show' or anything else - shows the management panel
+ * $dsid_to_remove - lists the datastream id to use when doing a remove
+ * $confirm_action - if empty then returns that a confirmation must be done, !empty will actually perform the purgeDatastream
+ */
 function sidora_management_panel($pid, $show_or_save = 'show', $dsid_to_remove = '', $confirm_action = FALSE){
   global $user;
   if ($show_or_save == 'new_dsid'){
@@ -499,17 +520,20 @@ function sidora_direct_jpg_output($content, $output_to_browser = TRUE){
   drupal_exit();
 }
 /**
- * returns what is set in the admin for the viewer of this object
+ * Returns what is set in the admin for the viewer of this object or a message that none was set
  */
 function sidora_resource_viewer($pid) {
   $obj = sidora_obj($pid);
   if (empty($obj)){ return; }
   $viewer_config = sidora_get_viewer_config($pid);
   if (empty($viewer_config)){
-    print 'The Administrator has not chosen a viewer for this combination of resource and dataset type.  You can still download the object through the View > Download option.';
-    print '<br/>The possible models that this resource uses:';
+    print t('The Administrator has not chosen a viewer for this combination of resource and dataset type.  You can still download the object through the View > Download option.');
+    print t('<br/>The possible models that this resource uses:');
     print '<br/>'.implode('<br/>',$models);
+    //Next line is for on-the-fly checking and should be left in for when problems happen in production.
+    //Do an "inspect element" or just view source to see this data
     print '<br/><div style="display:none">Possible viewers:<br/>'.implode('<br/>',$viewers).'</div>';
+    
   }
   else {
     sidora_resource_version_viewer_display($pid,$viewer_config['dsid'],$viewer_config['viewer_id'],'0');
@@ -540,6 +564,9 @@ function sidora_codebook_autocomplete($s1){
   }
   drupal_json_output($matches);
 }
+/*
+ * Standard hook_title_callback
+ */
 function sidora_title_callback(){
   return 'SIdora Workbench';
 }
@@ -1268,7 +1295,8 @@ jQuery(document).ready(function(){
   return $output;
 }
 /*
- * Returns HTML that is a table containing the parents with removal links (if more than one parent) or HTML indicating it is an orphan.
+ * Returns HTML that is a table containing the parents with removal links (if more than one parent) or 
+ * HTML indicating it is an orphan.
  */
 function sidora_get_parent_table($pid){
   module_load_include('inc', 'sidora', 'includes/utils');
@@ -1342,6 +1370,9 @@ function sidora_get_parent_table($pid){
 });</script>';
   return $output;
 }
+/*
+ * Viewer for pdfjs (reroute to file that houses the html & js with the proper download link
+ */
 function sidora_get_html_pdfjs($pid, $dsid = 'OBJ', $version = '0'){
  drupal_goto(variable_get('sidora_pdf_js_location','').'?file='.sidora_get_direct_download_url($pid, $dsid, $version));
 }
@@ -2510,7 +2541,6 @@ function sidora_create_concept($parent_pid = 'si:root', $model = 'si:collectionC
  * TBD / TODO: Create a system that will track if users entered info in the field
  *
  * Add a link to tell Admin there is a request for an account
-  
  */
 function sidora_form_alter(&$form, &$form_state, $form_id){
   sidora_login_form_alter($form, $form_state, $form_id);
@@ -2615,7 +2645,9 @@ function remove_validation_for_this_and_children(&$item, $current_location = '')
   }
   return $item;
 }
-
+/*
+ * Place holder to output information for debugging, standard hook_form_submit_alter
+ */
 function sidora_form_submit_alter($form, &$form_state){
   //('sidora_form_submit_alter');
 }
@@ -2716,6 +2748,9 @@ function sidora_create_resource_get_upload_form_html($model, $upload_button_text
 function sidora_is_create_resource_codebook_choice_required($model){
   return ($model == 'si:datasetCModel');
 }
+/*
+ * Resets the information for whether a user has selected a codebook in this session and information tied to that codebook
+ */
 function sidora_reset_codebook_choice($codebook_pid = NULL){
   $_SESSION['codebook_choice'] = array();
   $_SESSION['codebook_choice']['sample_uploaded'] = FALSE;
@@ -2969,8 +3004,9 @@ function sidora_codebook_upload_form($form, &$form_state){
   );
   return $form;
 }
-function sidora_codebook_upload_form_pick_codebook_submit($form, &$form_state) {
-}
+/*
+ * hook_form_validate for the sidora_codebook_upload, also moves file if validation was successful
+ */
 function sidora_codebook_upload_form_validate($form, &$form_state) {
   if ($form_state['triggering_element']['#id'] == 'edit-upload-codebook-submit'){
     $file = file_save_upload('file', array(
@@ -3035,6 +3071,10 @@ function sidora_codebook_upload_form_submit($form, &$form_state) {
   $_SESSION['codebook_choice']['codebook_id'] = $codebook->id; //Choice for this session
   $_SESSION['codebook_choice']['filepath'] = $file_info->filepath;
 }
+/*
+ * Form that is not visible to user but moves the workflow forward in a predictable way.
+ * With this form, the codebook based on upload and a chosen codebook workflows meet.
+ */
 function sidora_codebook_hidden_step_form($form, &$form_state){
   global $user;
   $codebook_pid = "unset";
@@ -3230,6 +3270,9 @@ jQuery(document).ready(function(){
   sidora_clear_tree_cache($parent_pid);
   return $to_return;
 }
+/*
+ * Returns the image name that should be used as a thumbnail for basic mime-type (those PIDs with no TN datastream)
+ */
 function sidora_get_thumbnail_image_for_mime_type($mime_type){
   $mimeTypeFileName = str_replace('/','-',$mime_type);
   //Security concern - give list of appropriate mime types...
@@ -3243,11 +3286,13 @@ function sidora_get_thumbnail_image_for_mime_type($mime_type){
 }
 /**
  * Implements hook_user_insert when a user is created
- * Create a Projects folder for the user and put information about it into the Drupal db
  */
 function sidora_user_login(&$edit, $account){
   sidora_user_initialize($account);
 }
+/*
+ * Create a Projects folder for the user and put information about it into the Drupal db
+ */
 function sidora_user_initialize($account){
   try{
     if (!$account->data || !array_key_exists("islandora_user_pid",$account->data)){
@@ -3277,7 +3322,7 @@ function sidora_is_admin($drupal_user = ''){
   return (is_array($drupal_user->roles) && in_array('administrator', $drupal_user->roles));
 }
 /*
- * returns a drupal user from an abiguous source, or current drupal user
+ * returns a drupal user from an ambiguous source, or current drupal user
  */
 function sidora_get_drupal_user($user_pid_or_drupal_user = ''){
   global $user;
@@ -3293,7 +3338,7 @@ function sidora_get_drupal_user($user_pid_or_drupal_user = ''){
 /**
  * The main permissions function
  * There are 5 types of operation
- * C R U D
+ * C R U D and permission
  * translates into
  * create - create a resource on the specified concept (therefore modifiying the RELS-EXT but only a specific way)
  * (read) view - allow reading of ALL data
@@ -3325,6 +3370,9 @@ function sidora_allow($user_pid_or_drupal_user, $pid_or_fedora_object, $type_of_
   
   return FALSE;
 }
+/*
+ * hook_user_view shows user info for codebooks and exhibitions
+ */
 function sidora_user_view($account, $view_mode, $langcode){
   global $user;
   $is_logged_in_as_admin = FALSE;
@@ -3444,6 +3492,14 @@ function sidora_user_table($members, $user_pid) {
 
   return $output;
 }
+/*
+ * Returns the xsl_file_config object for this pid or NULL.  The object returned will have
+ * attributes:
+ *  ->model - The model that matched between configs and the object models
+ *  ->form  - The form that matched between configs and the object models
+ *  ->file  - The xsl file set
+ * These are the items set in the SIdora configuration
+ */
 function sidora_get_xsl_file_config_for_object($pid){
   $xsl_file = '';
   $existing_json_sidora_form_config = variable_get('xsl_form_config', '');
@@ -3464,17 +3520,14 @@ function sidora_get_xsl_file_config_for_object($pid){
     $curr_check = $sfc->xsl_config[$sfci];
     $model_match = in_array($curr_check->model,$models);
     $form_match = $curr_check->form == $form_name;
-    if ($model_match && $form_match){
-      $perfect_match = TRUE;
-      $dsid_to_use = $curr_check->dsid;
-    }
-    if ($model_match && $form_match){
-      $xsl_file = $curr_check->file;
-    }
+    $perfect_match = ($model_match && $form_match);
   }
   if ($perfect_match) return $curr_check;
   return NULL;
 }
+/*
+ * Returns the XSL file filename to use for this pid
+ */
 function sidora_get_xsl_file_for_object($pid){
   $curr_check = sidora_get_xsl_file_config_for_object($pid);
   if (empty($curr_check)) return NULL;
@@ -3968,8 +4021,10 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
 }
 /**
  * This will return a php object with fedora object information or a blank array
+ * All objects obtained by SIdora code should use this
+ * Checks that proper models are used.  If no model listed SIdora WILL NOT use the
+ *   object in any way
  */
-
 function sidora_obj($pid){
   module_load_include('inc', 'sidora', 'includes/utils');
   $object = array();
@@ -3990,6 +4045,9 @@ function sidora_obj($pid){
   }
   return $object;
 }
+/*
+ * Returns the number of resources on this object or -1 if no communication with Fedora
+ */
 function sidora_concept_resource_listing_count($pid, $resource_types_list, $resource_type = 'all', $title_search = ''){
   $to_return = array();
   $tuque = islandora_get_tuque_connection();
@@ -4003,6 +4061,15 @@ function sidora_concept_resource_listing_count($pid, $resource_types_list, $reso
   }
   return -1;
 }
+/*
+ * Returns an array of resources that are children of the concept
+ * $pid - the concept's pid
+ * $resource_types
+ * $limit - how many items should be returned
+ * $offset - where the list should start out of a full listing
+ * $specific_resource_type - 
+ * $title_search - if only specific labels are being looked for, uses a %contains% type search
+ */
 function sidora_concept_resource_listing($pid, $resource_types, $limit, $offset, $specific_resource_type = 'all', $title_search = '', $sort_on = 'created', $sort_order = 'DESC'){
   $to_return = array();
   $tuque = islandora_get_tuque_connection();
@@ -4060,6 +4127,9 @@ function sidora_concept_resource_listing($pid, $resource_types, $limit, $offset,
   }
   return $to_return;
 }
+/*
+ * Loads the jQuery UI for the main page
+ */
 function sidora_main_non_block_content(){
   drupal_add_library('system','ui.tabs');
   drupal_add_library('system','ui.menu');
@@ -4261,12 +4331,17 @@ function sidora_block_content_concept_info(){
 function sidora_block_content_individual_resource_info(){
   return 'sidora_individual_resource_info';
 }
+/*
+ * Prints the sidora_ontology_json set in the SIdora configuration or the default.  Used by ajax calls to make the menu
+ */
 function sidora_ontology_object(){
-  //header('Content-Type: text/html; charset=UTF-8');
   print variable_get('sidora_ontology_json',sidora_ontology_json_default());
   drupal_exit();
 }
-  function sidora_ontology_json_default(){
+/*
+ * Returns a hard-coded default for the resource ontology
+ */
+function sidora_ontology_json_default(){
     return '
    {
     "Project":{"description":"This concept is used to represent a project as a whole or some major subdivision of a project. In both cases it is where you can give a project a title, talk about who is involved, describe the work of the project in a general way, etc.","children":{},"model":"si:projectCModel","form":"Research Project"},
@@ -4334,14 +4409,14 @@ function sidora_ontology_object(){
   }
   ';
   
-  }
-  /*
-   * Catch all for ajax
-   */
-  function sidora_ajax_parts($call_type, $param1 = '', $param2 = '', $param3 = ''){
-    global $user;
-    if ($call_type == 'ontology'){
-      return sidora_ontology_object();
+}
+/*
+ * Catch all for ajax
+ */
+function sidora_ajax_parts($call_type, $param1 = '', $param2 = '', $param3 = ''){
+  global $user;
+  if ($call_type == 'ontology'){
+    return sidora_ontology_object();
   }
   if ($call_type == 'tree'){
     return sidora_html_tree_for_ajax($param1);
@@ -4371,23 +4446,23 @@ function sidora_ontology_object(){
      return sidora_generate_resource_list($param1);
   } 
   if ($call_type == 'remove_file_from_upload_queue'){
-      $current_instances_found = 0;
-      $which_instance_to_remove = (empty($param2)) ? 0 : intval($param2);
-      //There can be multiple files with the same name, if so, which instance is stored in the second param 
-      //(0 represents first instance)
-      if ((array_key_exists('file_uploads', $_SESSION)) && (!empty($_SESSION['file_uploads']))){
-        foreach($_SESSION['file_uploads'][$user->uid] as $index => $file_obj){
-            if (urldecode($file_obj->filename) == urldecode($param1)){
-              if ($which_instance_to_remove == $current_instances_found){
-                unset($_SESSION['file_uploads'][$user->uid][$index]);
-                $_SESSION['file_uploads'][$user->uid] = array_values($_SESSION['file_uploads'][$user->uid]);
-                print (json_encode($_SESSION));
-                drupal_exit();
-              }
-              $current_instances_found++;
-            }
-          } 
-      }
+    $current_instances_found = 0;
+    $which_instance_to_remove = (empty($param2)) ? 0 : intval($param2);
+    //There can be multiple files with the same name, if so, which instance is stored in the second param 
+    //(0 represents first instance)
+    if ((array_key_exists('file_uploads', $_SESSION)) && (!empty($_SESSION['file_uploads']))){
+      foreach($_SESSION['file_uploads'][$user->uid] as $index => $file_obj){
+        if (urldecode($file_obj->filename) == urldecode($param1)){
+          if ($which_instance_to_remove == $current_instances_found){
+            unset($_SESSION['file_uploads'][$user->uid][$index]);
+            $_SESSION['file_uploads'][$user->uid] = array_values($_SESSION['file_uploads'][$user->uid]);
+            print (json_encode($_SESSION));
+            drupal_exit();
+          }
+          $current_instances_found++;
+        }
+      } 
+    }
   }    
   drupal_not_found();
 }
@@ -4814,7 +4889,11 @@ function sidora_copy($copy_to_id, $pid, $show_output = TRUE){
   }
 }
 /**
- * returns an array of this type:   $to_output = array('error'=>TRUE,'description'=>t('Unknown Error'));
+ * Attempts to mark a pid for deletion
+ * $pid - the pid to mark
+ * $show_output - whether to print (TRUE) the object as JSON or to return the object from this call
+ * returns either an array of this type:   $to_output = array('error'=>TRUE,'description'=>t('Unknown Error'));
+ *   or drupal_exit if $show_output == TRUE
  **/
 function sidora_json_for_delete($pid, $show_output = TRUE){
   global $user;
@@ -4892,7 +4971,7 @@ function sidora_json_for_delete($pid, $show_output = TRUE){
 }
 
 /*
- * returns a html tree for replacing the existing tree
+ * Prints a html tree for replacing the existing tree
  * Currently assumes everyone has full read access
  */
 function sidora_html_tree_for_ajax($root_pid = ''){
@@ -4901,6 +4980,9 @@ function sidora_html_tree_for_ajax($root_pid = ''){
   print sidora_html_string_tree($root_pid);
   drupal_exit();
 }
+/*
+ * Returns a html_string for the concept tree
+ */
 function sidora_html_string_tree($root_pid = '', $root = NULL){
   global $user;
   module_load_include('inc', 'sidora', 'includes/utils');
@@ -4937,6 +5019,9 @@ function sidora_html_string_tree($root_pid = '', $root = NULL){
   $to_return .= '</ul></li></ul>';
   return $to_return;
 }
+/*
+ * The content for the navigation block
+ */
 function sidora_block_content_navigation(){
   module_load_include('inc', 'sidora', 'includes/utils');
   $root_pid = sidora_get_user_root_object();
@@ -4972,6 +5057,15 @@ function sidora_block_content_navigation(){
   drupal_add_js(drupal_get_path('module','sidora').'/js/paging.js'); // adds paging capability to resources
   return $to_return;
 }
+/*
+ * Attempts to find associations for the object being created to store in the step list for islandora
+ * This is the function that allows us to skip the "Choose Form" step that existed in the workbench 0.3
+ * This is needed when a model has multiple forms associated with it.  Islandora on its own will have
+ * the user choose one of the associated forms.  
+ * In SIdora that is already chosen for them:
+ *   When they select the resource in the "Add new resource" the form is already in the menu
+ *   When they Edit Metadata, the original form name is stored in the SIDORA datastream
+ */
 function sidora_find_association(array &$form_state, $form_build_id = ''){
   module_load_include('inc', 'xml_form_builder', 'includes/associations');
   $shared_storage = islandora_ingest_form_get_shared_storage($form_state);
@@ -5000,7 +5094,10 @@ function sidora_find_association(array &$form_state, $form_build_id = ''){
   }
   return $association;
 }
-// For Ingestion
+/*
+ * This is the hook_islandoira_ingest_steps_alter that performs the bypass mentioned in the comment of 
+ * sidora_find_association
+ */
 function sidora_islandora_ingest_steps_alter(array &$steps, array &$form_state) {
   $association = sidora_find_association($form_state);
   if (!empty($association)){
@@ -5014,6 +5111,9 @@ function sidora_islandora_ingest_steps_alter(array &$steps, array &$form_state) 
     }
   }
 }
+/*
+ * Print the html & js for plupload
+ */
 function sidora_get_plupload_html($elements, $button_text = 'Browse'){
   global $user;
   drupal_add_js(drupal_get_path('module', 'sidora') . '/plupload-2.1.2/js/plupload.full.min.js');
@@ -5182,6 +5282,9 @@ print  '
   return $result;
 
 }
+/*
+ * To be used by the pluploader itself, not to be called directly from a user
+ */
 function sidora_upload($form_id){
   global $user;
 
@@ -5503,6 +5606,9 @@ function sidora_fill_concepts_children($query_result, $current_path = array()){
   }
   return $query_result;
 }
+/*
+ * Pulls information from the cache or if missing from cache populates it and returns that data
+ */
 function _sidora_get_child_results_cache($child_pid){
   if (cache_get("sidora:children_results:".$child_pid) === FALSE){
     $tuque = islandora_get_tuque_connection();
@@ -5515,6 +5621,10 @@ function _sidora_get_child_results_cache($child_pid){
   }
   return $results;
 }
+/*
+ * XML to HTML transform based on the SIdora XSL file config.  
+ * Automatically "even" and "odd" rows that are basic ("<tr>") in tables after transform
+ */
 function sidora_metadata_to_html_table_transform($xml, $xsl_file){
   $doc = new DOMDocument();
   $xsl = new XSLTProcessor();
@@ -5541,6 +5651,9 @@ function sidora_metadata_to_html_table_transform($xml, $xsl_file){
   return $properOutput;
 
 }
+/*
+ * Returns a XSL file from the file system or the basic one if no filename used
+ */
 function sidora_xsl_string($xsl_file){
   if (empty($xsl_file)){
     return variable_get('sidora_metadata_xsl',sidora_xsl_string_default());
@@ -5551,10 +5664,15 @@ function sidora_xsl_string($xsl_file){
   return $content;
  
 }
+/*
+ * Returns the default XSL for SIdora objects
+ */
 function sidora_xsl_string_default(){
   return sidora_xsl_string_default_as_definition_list();
 }
-
+/*
+ * Returns a hard-coded XSL with dt / dd HTML for basic SIdora objects
+ */
 function sidora_xsl_string_default_as_definition_list(){
   return '<?xml version="1.0" encoding="UTF-8"?>
 
@@ -7286,15 +7404,24 @@ function sidora_contains($haystacks, $needles, $ignoreCase = false) {
   }
   return false;
 }
-
+/*
+ * Helper function to do basic string startsWith (makes code easier to write and understand)
+ */
 function sidora_startsWith($haystack, $needle) {
-    // search backwards starting from haystack length characters from the end
-    return $needle === "" || strrpos($haystack, $needle, -strlen($haystack)) !== FALSE;
+  // search backwards starting from haystack length characters from the end
+  return $needle === "" || strrpos($haystack, $needle, -strlen($haystack)) !== FALSE;
 }
+/*
+ * Helper function to do basic string endsWith (makes code easier to write and understand)
+ */
 function sidora_endsWith($haystack, $needle) {
-    // search forward starting from end minus needle length characters
-    return $needle === "" || strpos($haystack, $needle, strlen($haystack) - strlen($needle)) !== FALSE;
+  // search forward starting from end minus needle length characters
+  return $needle === "" || strpos($haystack, $needle, strlen($haystack) - strlen($needle)) !== FALSE;
 }
+/*
+ * Moves a file from the XSL directory to the backup directory while renaming based on time.
+ * This is to remove it from the dropdown list when doing SIdora configuration
+ */
 function sidora_remove_xsl($param1, $param2, $param3){
     $curr_item = array();
     if (sidora_endsWith(strtolower($param1),'.xsl')){
@@ -7447,9 +7574,15 @@ function sidora_form_user_login_alter(&$form, &$form_state) {
   $form['name']['#description'] = t('');
   $form['pass']['#description'] = t('');
 }
+/*
+ *  Remove login form autocomplete (security)
+ */
 function sidora_form_user_login_block_alter(&$form, &$form_state) {
   $form['pass']['#attributes']['autocomplete'] = 'off';  //Autocomplete off for password
 }
+/*
+ * Account request form
+ */
 function sidora_account_request_form(){
   $form['name'] = array(
     '#type' => 'textfield',
@@ -7473,12 +7606,18 @@ function sidora_account_request_form(){
   );
   return $form;
 }
+/*
+ * Validate for account request form, only checks email address for email address syntax
+ */
 function sidora_account_request_form_validate($form, &$form_state) {
     $email_address = $form_state['values']['mail'];
     if (!valid_email_address($email_address)) {
         form_set_error('mail', 'Enter a valid email address.');
     }
 }
+/*
+ * Send out the mail that an account is requested
+ */
 function sidora_account_request_form_submit($form, &$form_state) {
   module_load_include('inc', 'sidora', 'includes/utils');
   $default_to = variable_get('system_mail', '');
@@ -7487,9 +7626,15 @@ function sidora_account_request_form_submit($form, &$form_state) {
     drupal_set_message(t('Form submitted successfully'));
   } 
 }
+/*
+ * Remove the Islandora step to upload the audio file because SIdora already has performed that action
+ */
 function sidora_islandora_sp_audioCModel_islandora_ingest_steps_alter(array &$steps, array &$form_state) {
    unset($steps['islandora_audio_upload']);
 }
+/*
+ * Audio viewer piggy-back on the islandora viewer
+ */
 function sidora_audio_view_object($pid) {
   $object = sidora_obj($pid);
   $variables = array('islandora_object' => $object);
@@ -7497,6 +7642,9 @@ function sidora_audio_view_object($pid) {
   $output = drupal_get_css() . drupal_get_js() . $output;
   return $output;
 }
+/*
+ * Contact form
+ */
 function sidora_contact_us_form(){
   global $user;
   $form['mail'] = array(
@@ -7517,6 +7665,9 @@ function sidora_contact_us_form(){
   );
   return $form;
 }
+/*
+ * Check the contact form has info
+ */
 function sidora_contact_us_form_validate($form, &$form_state) {
   $error_check = 'false';
   $email_address = $form_state['values']['mail'];
@@ -7533,6 +7684,9 @@ function sidora_contact_us_form_validate($form, &$form_state) {
     } 
   } 
 }
+/*
+ * Mail out the information from the contact form
+ */
 function sidora_contact_us_form_submit($form, &$form_state) {
   module_load_include('inc', 'sidora', 'includes/utils');
   $default_to = variable_get('system_mail', '');
@@ -7541,6 +7695,9 @@ function sidora_contact_us_form_submit($form, &$form_state) {
     drupal_set_message(t('Form submitted successfully'));
   } 
 }
+/*
+ * Hi-jack the islandora call for versions to our own handler
+ */
 function sidora_menu_alter(&$items) {
   if (isset($items['islandora/object/%islandora_object/datastream/%islandora_datastream/version'])) {
     unset($items['islandora/object/%islandora_object/datastream/%islandora_datastream/version']['file']);
@@ -7550,6 +7707,9 @@ function sidora_menu_alter(&$items) {
 	$items['user/%user/edit']['title'] = t('Account Management');
 	$items['user/%user/view']['title'] = t('Workspace');
 }
+/*
+ * Return the short id for the viewer for this pid
+ */
 function sidora_get_viewer_id($pid) {
   $config = sidora_get_viewer_config($pid);
   if (empty($config)) return NULL;
@@ -7822,13 +7982,23 @@ function sidora_info_version($pid, $datastream, $version='0', $download='browser
     print file_get_contents($direct_url_to_content);
   }
   drupal_exit();
-} 
+}
+/*
+ * Redirect form submit to a new URL which will redisplay the data
+ */
 function sidora_revert_datastream_form_submit(array $form, array &$form_state){
   $form_state['redirect'] = "sidora/version_history/" . $form_state['object_id'] . "/" . $form_state['dsid']; 
 } 
+/*
+ * Redirect form submit to a new URL which will redisplay the data
+ */
 function sidora_delete_datastream_form_submit(array $form, array &$form_state) {
   $form_state['redirect'] = "sidora/version_history/" . $form_state['datastream']->parent->id . "/" . $form_state['datastream']->id;
-} 
+}
+/*
+ * Basic proxy to talk with the openseadragon backend without showing the user the server names and ensuring that
+ * the drupal user has access to this pid
+ */
 function sidora_osd_proxy_version($pid, $datastream='OBJ', $version='0'){
   module_load_include('inc', 'sidora', 'includes/utils');
   global $user;
@@ -7850,9 +8020,15 @@ function sidora_osd_proxy_version($pid, $datastream='OBJ', $version='0'){
   print file_get_contents($url);
   drupal_exit();
 }
+/*
+ * hook_<model>_islandora_ingest_steps_alter to remove the upload as SIdora is already used for that
+ */
 function sidora_islandora_sp_videoCModel_islandora_ingest_steps_alter(array &$steps, array &$form_state) {
  unset($steps['islandora_video_upload']);
 }
+/*
+ * Video viewer piggy-back on the islandora viewer
+ */
 function sidora_video_view_object($pid) {
   $object = sidora_obj($pid);
   if (empty($obj)){ return ''; }
@@ -7928,6 +8104,11 @@ function sidora_add_fedora_assumption_problem($type, $problem, $pid = '') {
   }
   variable_set('sidora_assumption_problems', $assumption_problems);
 }
+/*
+ * Adds an assumption problem to the assumption problem list
+ * $pid - the pid where the assumption is violated
+ * $description - information on what happened to violate the assumption
+ */
 function sidora_add_fedora_assumption_problem_object($pid, $description) {
   $problem = array (
     'description' => $description,
@@ -7935,6 +8116,13 @@ function sidora_add_fedora_assumption_problem_object($pid, $description) {
   );
   sidora_add_fedora_assumption_problem('object_issues', $problem, $pid);
 }
+/*
+ * Adds an assumption problem to the assumption problem list
+ * $pid - the pid where the assumption is violated
+ * $dsid - where the relationship assumption violation occurred (usually RELS-EXT)
+ * $predicate_pid - the target of the relationship
+ * $description - information on what happened to violate the assumption
+ */
 function sidora_add_fedora_assumption_problem_relationship($pid, $description, $dsid, $predicate_pid) {
   $problem = array (
     'description' => $description,
@@ -7944,6 +8132,11 @@ function sidora_add_fedora_assumption_problem_relationship($pid, $description, $
   );
   sidora_add_fedora_assumption_problem('relationship_issues', $problem, $pid);
 }
+/*
+ * Adds an assumption problem to the assumption problem list
+ * $description - information on what happened to violate the assumption
+ * $pids - a simple array of pids that were involved in the assumption (can be empty)
+ */
 function sidora_add_fedora_assumption_problem_other($description, $pids = array()) {
   $problem = array (
     'description' => $description,
