@@ -527,7 +527,8 @@ sidora.InitiateJSTree = function(){
       var moveToPid = jQuery("#"+data.parent+" a").attr('pid');
       var moveFromPid = jQuery("#"+data.old_parent+" a").attr('pid');
       console.log("Move:"+toMovePid+" from:"+moveFromPid+" to:"+moveToPid);
-      if (moveFromPid == moveToPid){ console.log('move to itself, ignoring...'); return; }
+      console.log("In move_node function");
+			if (moveFromPid == moveToPid){ console.log('move to itself, ignoring...'); return; }
       var actionUrl = '../ajax_parts/move/'+moveFromPid+'/'+moveToPid+'/'+toMovePid;
 
       var jst = jQuery("#forjstree").jstree(true);
@@ -576,30 +577,77 @@ sidora.InitiateJSTree = function(){
                 //is a copy
                 var showText = "Copy the following resources to "+jQuery("#"+mouseOverObject.id).children("a").attr("fullname")+" ("+jQuery("#"+mouseOverObject.id).children("a").attr("pid")+"):";
                 showText += "<ul>";
-                for (var i = 0; i < sidora.util.dragResources.length; i++){
-                  showText += "<li>"+jQuery(jq(sidora.util.dragResources[i])).find(".resource-list-label").text();
-                  showText += " ("+sidora.util.dragResources[i]+")</li>";
-                }
-                showText += "</ul>";
-                sidora.util.Confirm("Copy resource",showText,
-                  function(){
-                    sidora.resources.performCopyOrMove("copy",mouseOverObject.id);
-                  }
-                );
+                jQuery.ajax({
+                  url: "../ajax_parts/generate_resource_list/"+jQuery("#"+mouseOverObject.id).children("a").attr("pid"),
+                  success: function(resourceList){
+                    var currentChildrenPids = JSON.parse(resourceList);;
+                    var resourcesToCopyOver = [];
+										for (var i = 0; i < sidora.util.dragResources.length; i++){
+                       showText += "<li>"+jQuery(jq(sidora.util.dragResources[i])).find(".resource-list-label").text();
+                       showText += " ("+sidora.util.dragResources[i]+")";
+                      if (jQuery.inArray(sidora.util.dragResources[i], currentChildrenPids) > -1){ 
+                         showText += " - Already exists on target, will not copy</li>";
+                      }else{
+                         showText += "</li>";
+												 resourcesToCopyOver.push(sidora.util.dragResources[i]);
+											}	 
+                    }
+                    showText += "</ul>";
+                    if (resourcesToCopyOver.length > 0){
+                       sidora.util.Confirm("Copy resource",showText,
+                         function(){
+                           sidora.resources.performCopyOrMove("copy",mouseOverObject.id);
+                         }
+                      );
+                    }else{
+                      sidora.util.Confirm("Copy item","All items selected for copy already exist on the target.");
+                   }
+									} 
+								});	 
               }else{
                 //is a move
                 var showText = "Move the following resources to "+jQuery("#"+mouseOverObject.id).children("a").attr("fullname")+" ("+jQuery("#"+mouseOverObject.id).children("a").attr("pid")+"):";
                 showText += "<ul>";
-                for (var i = 0; i < sidora.util.dragResources.length; i++){
-                  showText += "<li>"+jQuery(jq(sidora.util.dragResources[i])).find(".resource-list-label").text();
-                  showText += " ("+sidora.util.dragResources[i]+")</li>";
-                }
-                showText += "</ul>";
-                sidora.util.Confirm("Move resource",showText,
-                function(){
-                  sidora.resources.performCopyOrMove("move",mouseOverObject.id);
-                }
-                );
+                var showTextForUnassociate = "The resources listed below existed on the target already and will not be overwritten. They will be removed from the concepts that they were dragged from:<ul>";
+                jQuery.ajax({
+                  url: "../ajax_parts/generate_resource_list/"+jQuery("#"+mouseOverObject.id).children("a").attr("pid"),
+                  success: function(resourceList){
+                    var currentChildrenPids = JSON.parse(resourceList);;
+                    var resourcesToMoveOver = [];
+										var resourcesToUnassociate = [];
+										for (var i = 0; i < sidora.util.dragResources.length; i++){
+                      if (jQuery.inArray(sidora.util.dragResources[i], currentChildrenPids) > -1){ 
+                        showTextForUnassociate += "<li>"+jQuery(jq(sidora.util.dragResources[i])).find(".resource-list-label").text();
+                        showTextForUnassociate += " ("+sidora.util.dragResources[i]+")</li>";
+												resourcesToUnassociate.push(sidora.util.dragResources[i]);
+                      }else{
+                        showText += "<li>"+jQuery(jq(sidora.util.dragResources[i])).find(".resource-list-label").text();
+                        showText += " ("+sidora.util.dragResources[i]+")";
+												resourcesToMoveOver.push(sidora.util.dragResources[i]);
+											}	 
+                    }
+                    showText += "</ul>";
+                    showTextForUnassociate += "</ul>";
+                    if (resourcesToMoveOver.length > 0){
+                      if (!sidora.util.isConfirmShowing()){
+                        if (resourcesToUnassociate.length > 0) showText += showTextForUnassociate;
+                        sidora.util.Confirm("Move resource",showText,
+                          function(){
+                           sidora.resources.performCopyOrMove("move",mouseOverObject.id);
+                          }
+                        );
+											}			
+                    }else{
+                      if (!sidora.util.isConfirmShowing()){
+                        sidora.util.Confirm("Move Resources","<h4>All items selected for move already exist on the target.</h4>"+showTextForUnassociate,
+                          function(){
+                           sidora.resources.performCopyOrMove("move",mouseOverObject.id);
+                          }
+                        );
+                      }
+                    }
+									} 
+								});	 
               } 
               return false; //Dont immediately perform the copy
             }
@@ -1021,28 +1069,6 @@ sidora.resources.performCopyOrMove = function(copyOrMove, toLocationId){
     console.log(userFriendlyName);
   }
   sidora.queue.Next();
-}
-/* This function was created by RAmlani on 4/10/15. This function is currently not being used anywhere.
-When moving resources this function can check if any of those resources already exist on the target PID. 
-This function can possibly be used in future to generate a message alerting the user of duplicate resources
-and also possibly providing the user with some custom actions like move & replace, ignore move etc.
-*/
-sidora.resources.checkForDuplicateResourcesRA = function(copyOrMove, toLocationId){
-  // get the pid of the target 
-  var targetPid = jQuery("#"+toLocationId).children("a").attr("pid");
-  // ajax call to generate a list of the resources currently on the target
- jQuery.ajax({
-      url: "../ajax_parts/generate_resource_list/"+targetPid,
-      success: function(resourceList){
-          var currentChildrenPids = JSON.parse(resourceList);;
-          for (var i = 0; i < sidora.util.dragResources.length; i++){
-            if (jQuery.inArray(sidora.util.dragResources[i],currentChildrenPids) > -1)
-           { 
-           //alert('we found a duplicate');
-           }
-          }
-      }
- });
 }
 /*
  * Gets the current concept json object and creates a menu from it

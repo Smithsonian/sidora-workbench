@@ -7316,11 +7316,6 @@ function sidora_remove_xsl($param1, $param2, $param3){
     print json_encode($return_when_encoded);
     drupal_exit();
 }
-/* The following 2 functions - sidora_generate_resource_list and  sidora_generate_child_resource_pid_only_sparql_query
-were created by RAmlani on 4/10/15. They are currently not being used anywhere.
-These functions will generate a list of resources for a given PID. 
-These functions are used by checkForDuplicateResourcesRA function in workbench.js for the move resources functionality
-*/
 function sidora_generate_resource_list($pid){
   $to_return = array();
   $tuque = islandora_get_tuque_connection();
