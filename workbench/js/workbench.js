@@ -192,28 +192,28 @@ sidora.concept.LoadContentHelp.Resources.TableActionsSetup = function(){
       '<div id="jstree-dnd" class="jstree-default"><i class="jstree-icon jstree-er"></i>' + jQuery(this).text() + '<span class="fakejstree-copy" style="'+displayPlusToIndicateCopy+'">+</span></div>'
     );
   });
-	jQuery('#res_table_filter').after('<select id=\"sidora-resource-type-dropdown\" class="form-select" name=\"search\"><option value=\"\">All</option><option value=\"images\">Image</option><option value=\"pdf\">Digitized Text</option><option value=\"csv\">Tabular Dataset</option><option value=\"audio\">Audio</option><option value=\"video\">Video</option></select><input type="text" name="titleFilter" id="titleFilter" style="border: solid 1px lightblue;">');
-	if (readCookie('Drupal.dtFilter') != ''){
+  jQuery('#res_table_filter').after('<select id=\"sidora-resource-type-dropdown\" class="form-select" name=\"search\"><option value=\"\">All</option><option value=\"images\">Image</option><option value=\"pdf\">Digitized Text</option><option value=\"csv\">Tabular Dataset</option><option value=\"audio\">Audio</option><option value=\"video\">Video</option></select><input type="text" name="titleFilter" id="titleFilter" style="border: solid 1px lightblue;">');
+  if (readCookie('Drupal.dtFilter') != ''){
     jQuery("#sidora-resource-type-dropdown").val(readCookie('Drupal.dtFilter'));
   }   
   jQuery('#titleFilter').after(' <div id="sidora-resource-sort">  Sort: '+'<select id=\"sidora-resource-sort-dropdown\" class="form-select" name=\"sort\"><option value=\"title\">Title</option><option value=\"model\">Model</option><option value=\"created\" selected=\"selected\">Created</option></select></div>');
   jQuery('#sidora-resource-sort-dropdown').after('  <select id=\"sidora-resource-sortorder-dropdown\" class="form-select" name=\"sortorder\"><option value=\"ASC\">Ascending</option><option value=\"DESC\" selected=\"selected\">Descending</option></select>');
   if (readCookie('Drupal.sortOn') != ''){
-	  jQuery('#sidora-resource-sort-dropdown').val(readCookie('Drupal.sortOn'));
-	}
-	if (readCookie('Drupal.sortOrder') != ''){
-	  jQuery("#sidora-resource-sortorder-dropdown").val(readCookie('Drupal.sortOrder'));
-	}		  
-	jQuery("#res_table_length select").addClass("form-select");
+    jQuery('#sidora-resource-sort-dropdown').val(readCookie('Drupal.sortOn'));
+  }
+  if (readCookie('Drupal.sortOrder') != ''){
+    jQuery("#sidora-resource-sortorder-dropdown").val(readCookie('Drupal.sortOrder'));
+  }     
+  jQuery("#res_table_length select").addClass("form-select");
   sidora.resources.reloadDatatableBasedOnCurrentFilters = function(){
     var changeTo = jQuery('#sidora-resource-type-dropdown').val();
     jQuery('#res_table_filter input').val(changeTo);
     var recentSearchVal = jQuery("#titleFilter").val();
     changeTo += "\n"+recentSearchVal;
     var sortOn = (readCookie('Drupal.sortOn') != '')?readCookie('Drupal.sortOn'):jQuery('#sidora-resource-sort-dropdown').val();
-		var sortOrder = (readCookie('Drupal.sortOrder') != '')?readCookie('Drupal.sortOrder'):jQuery('#sidora-resource-sortorder-dropdown').val();
-		changeTo += "\n"+sortOn+"\n"+sortOrder;
-		window.sidora.resources.dataTable.DataTable().search(changeTo).draw();
+    var sortOrder = (readCookie('Drupal.sortOrder') != '')?readCookie('Drupal.sortOrder'):jQuery('#sidora-resource-sortorder-dropdown').val();
+    changeTo += "\n"+sortOn+"\n"+sortOrder;
+    window.sidora.resources.dataTable.DataTable().search(changeTo).draw();
     window.sidora.util.resourceSearchLastSearchVal = recentSearchVal;
   }
   jQuery("#titleFilter").keyup(function(){
@@ -231,14 +231,14 @@ sidora.concept.LoadContentHelp.Resources.TableActionsSetup = function(){
     writeCookie('Drupal.dtFilter',jQuery('#sidora-resource-type-dropdown').val(),'30')
     sidora.resources.reloadDatatableBasedOnCurrentFilters();
   });
-	jQuery('#sidora-resource-sort-dropdown').change(function(){
+  jQuery('#sidora-resource-sort-dropdown').change(function(){
    writeCookie('Drupal.sortOn',jQuery('#sidora-resource-sort-dropdown').val(),'30')
-	 sidora.resources.reloadDatatableBasedOnCurrentFilters();
-	 });
-	jQuery('#sidora-resource-sortorder-dropdown').change(function(){
+   sidora.resources.reloadDatatableBasedOnCurrentFilters();
+   });
+  jQuery('#sidora-resource-sortorder-dropdown').change(function(){
    writeCookie('Drupal.sortOrder',jQuery('#sidora-resource-sortorder-dropdown').val(),'30')
-	 sidora.resources.reloadDatatableBasedOnCurrentFilters();
-	 });
+   sidora.resources.reloadDatatableBasedOnCurrentFilters();
+   });
 }
 /*
  * Sets the visiblility of menu items on the concept menu.  Remember, this is UI only and is not to be used for security
@@ -343,7 +343,7 @@ sidora.concept.LoadContentHelp.CreateResourceMenu = function(conceptOfInterest){
     success: function (json_obj){
     var menu_html = window.sidora.ontology._createSubmenu(json_obj);
     var availableResourcesToCreateForConceptHtml = menu_html;
-		jQuery("#resource-create").remove();
+    jQuery("#resource-create").remove();
     if (menu_html.length > 0){
       jQuery("#resource-files-menu").append('<li id="resource-create"><a id="resource-create-link" href="#" onclick="return false;"><input type="image" src="'+Drupal.settings.basePath+'sites/all/modules/islandora_xml_forms-7.x/elements/images/add.png" title="Create a new resource as a child of the highlighted concept."> Add&nbsp;resource</a><ul>'+availableResourcesToCreateForConceptHtml+'</ul></li>');
       jQuery("#resource-create a").attr("onclick","return false;");
@@ -527,8 +527,7 @@ sidora.InitiateJSTree = function(){
       var moveToPid = jQuery("#"+data.parent+" a").attr('pid');
       var moveFromPid = jQuery("#"+data.old_parent+" a").attr('pid');
       console.log("Move:"+toMovePid+" from:"+moveFromPid+" to:"+moveToPid);
-      console.log("In move_node function");
-			if (moveFromPid == moveToPid){ console.log('move to itself, ignoring...'); return; }
+      if (moveFromPid == moveToPid){ console.log('move to itself, ignoring...'); return; }
       var actionUrl = '../ajax_parts/move/'+moveFromPid+'/'+moveToPid+'/'+toMovePid;
 
       var jst = jQuery("#forjstree").jstree(true);
@@ -584,15 +583,15 @@ sidora.InitiateJSTree = function(){
                   success: function(resourceList){
                     var currentChildrenPids = JSON.parse(resourceList);;
                     var resourcesToCopyOver = [];
-										for (var i = 0; i < sidora.util.dragResources.length; i++){
+                    for (var i = 0; i < sidora.util.dragResources.length; i++){
                        showText += "<li>"+jQuery(jq(sidora.util.dragResources[i])).find(".resource-list-label").text();
                        showText += " ("+sidora.util.dragResources[i]+")";
                       if (jQuery.inArray(sidora.util.dragResources[i], currentChildrenPids) > -1){ 
                          showText += " - Already exists on target, will not copy</li>";
                       }else{
                          showText += "</li>";
-												 resourcesToCopyOver.push(sidora.util.dragResources[i]);
-											}	 
+                         resourcesToCopyOver.push(sidora.util.dragResources[i]);
+                      }  
                     }
                     showText += "</ul>";
                     if (resourcesToCopyOver.length > 0){
@@ -604,8 +603,8 @@ sidora.InitiateJSTree = function(){
                     }else{
                       sidora.util.Confirm("Copy item","All items selected for copy already exist on the target.");
                    }
-									} 
-								});	 
+                  } 
+                });  
               }else{
                 //is a move
                 var showText = "Move the following resources to "+jQuery("#"+mouseOverObject.id).children("a").attr("fullname")+" ("+jQuery("#"+mouseOverObject.id).children("a").attr("pid")+"):";
@@ -616,17 +615,17 @@ sidora.InitiateJSTree = function(){
                   success: function(resourceList){
                     var currentChildrenPids = JSON.parse(resourceList);;
                     var resourcesToMoveOver = [];
-										var resourcesToUnassociate = [];
-										for (var i = 0; i < sidora.util.dragResources.length; i++){
+                    var resourcesToUnassociate = [];
+                    for (var i = 0; i < sidora.util.dragResources.length; i++){
                       if (jQuery.inArray(sidora.util.dragResources[i], currentChildrenPids) > -1){ 
                         showTextForUnassociate += "<li>"+jQuery(jq(sidora.util.dragResources[i])).find(".resource-list-label").text();
                         showTextForUnassociate += " ("+sidora.util.dragResources[i]+")</li>";
-												resourcesToUnassociate.push(sidora.util.dragResources[i]);
+                        resourcesToUnassociate.push(sidora.util.dragResources[i]);
                       }else{
                         showText += "<li>"+jQuery(jq(sidora.util.dragResources[i])).find(".resource-list-label").text();
                         showText += " ("+sidora.util.dragResources[i]+")";
-												resourcesToMoveOver.push(sidora.util.dragResources[i]);
-											}	 
+                        resourcesToMoveOver.push(sidora.util.dragResources[i]);
+                      }  
                     }
                     showText += "</ul>";
                     showTextForUnassociate += "</ul>";
@@ -638,7 +637,7 @@ sidora.InitiateJSTree = function(){
                            sidora.resources.performCopyOrMove("move",mouseOverObject.id);
                           }
                         );
-											}			
+                      }     
                     }else{
                       if (!sidora.util.isConfirmShowing()){
                         sidora.util.Confirm("Move Resources","<h4>All items selected for move already exist on the target.</h4>"+showTextForUnassociate,
@@ -648,8 +647,8 @@ sidora.InitiateJSTree = function(){
                         );
                       }
                     }
-									} 
-								});	 
+                  } 
+                });  
               } 
               return false; //Dont immediately perform the copy
             }
@@ -1117,17 +1116,17 @@ sidora.ontology._createSubmenu = function(ontologyChildren){
       var classDisabled = "";//" disabled";
       var ontologyId = "";
       var classIcon = " ";
-			if (typeof(obj.model) != 'undefined') model = ' model="'+obj.model+'"';
+      if (typeof(obj.model) != 'undefined') model = ' model="'+obj.model+'"';
       if (typeof(obj.form) != 'undefined') formName = ' formname="'+obj.form+'"';
       if (typeof(obj['ontology-id']) != 'undefined') ontologyId = ' ontology-id="'+obj['ontology-id']+'"';
       if (typeof(obj.disabled) != 'undefined' && obj.disabled) classDisabled = " ui-state-disabled";
       if (childrenHtml.length > 0) {
-			 classIcon = ' <input type="image" style="position:absolute; right:0px; padding-right:2px;" src="'+Drupal.settings.pathToTheme+'/images/list-item.png" />';
-			}
-			else {
-			 classIcon = '&nbsp;&nbsp;';
-			}  
-			toReturn += ("<li title='"+obj.description+"' class=''><a onclick='return false;' href='#'"+model+formName+ontologyId+" class="+classDisabled+">"+key.replace(/ /g, '&nbsp;')+classIcon+"</a>"+childrenHtml+"</li>\n");
+       classIcon = ' <input type="image" style="position:absolute; right:0px; padding-right:2px;" src="'+Drupal.settings.pathToTheme+'/images/list-item.png" />';
+      }
+      else {
+       classIcon = '&nbsp;&nbsp;';
+      }  
+      toReturn += ("<li title='"+obj.description+"' class=''><a onclick='return false;' href='#'"+model+formName+ontologyId+" class="+classDisabled+">"+key.replace(/ /g, '&nbsp;')+classIcon+"</a>"+childrenHtml+"</li>\n");
     }
   }
   return toReturn;
@@ -1602,9 +1601,9 @@ sidora.resources.individualPanel.Create = function() {
   jQuery('#edit-resource-metadata-menu').unbind('click');
   jQuery('#edit-resource-metadata-menu').click(function(){
   var pids = sidora.resources.getHighlighted();
-	var pids_array = sidora.resources.getHighlighted();
+  var pids_array = sidora.resources.getHighlighted();
   pids = pids_array.join("&");
-	  Shadowbox.open({
+    Shadowbox.open({
       content:    "../edit_metadata/"+pids+"",
       player:     "iframe",
       title:      "Edit Metadata",
@@ -1663,7 +1662,7 @@ sidora.resources.individualPanel.LoadContent = function(suppressResourceViewerRe
   if (!suppressResourceViewerReload){
     var viewerUrl = sidora.resources.createViewerUrl(sidora.resources.individualPanel.resourceOfInterest.pid);
     var resourceViewerHtml = '<iframe id="iFrame" frameborder="0" height="100%" width="100%" allowfullscreen="true" webkitallowfullscreen="true" mozallowfullscreen="true" oallowfullscreen="true" msallowfullscreen="true" src="'+viewerUrl+'"></iframe> ';
-		//console.log("in individual panel : "+resourceViewerHtml);
+    //console.log("in individual panel : "+resourceViewerHtml);
     jQuery('#resourceIframeHolder').children().remove();
     jQuery('#resourceIframeHolder').append(resourceViewerHtml);
   }
@@ -1925,11 +1924,11 @@ sidora.manage.OpenCurrentConfig = function(){
               jQuery("#addDatastreamDialog").css("overflow", "hidden");
               jQuery("#addDatastreamDialog").closest(".ui-dialog").css("z-index", 1000); //shadowbox is 998
             });
-						jQuery(".versionHistory").click(function(){
+            jQuery(".versionHistory").click(function(){
               var pid = jQuery(this).attr('pid');
-							var datastreamTitle = jQuery(this).attr('datastream');
-							jQuery('#versionHistoryDialog').remove();
-							jQuery("body").append("<div id='versionHistoryDialog' style='display:none;' title='"+datastreamTitle+" Version History'><iframe height='1000%' width='100%' style='height:100%;width:100%' src='"+Drupal.settings.basePath+"sidora/version_history/"+pid+"/"+datastreamTitle+"' frameborder='0' marginwidth='0' marginheight='0' allowfullscreen></iframe></div>");
+              var datastreamTitle = jQuery(this).attr('datastream');
+              jQuery('#versionHistoryDialog').remove();
+              jQuery("body").append("<div id='versionHistoryDialog' style='display:none;' title='"+datastreamTitle+" Version History'><iframe height='1000%' width='100%' style='height:100%;width:100%' src='"+Drupal.settings.basePath+"sidora/version_history/"+pid+"/"+datastreamTitle+"' frameborder='0' marginwidth='0' marginheight='0' allowfullscreen></iframe></div>");
               jQuery("#versionHistoryDialog").dialog({
                 resizable: true,
                 height: jQuery("#objectManagement").height()+50,
@@ -1938,7 +1937,7 @@ sidora.manage.OpenCurrentConfig = function(){
               });
               jQuery("#versionHistoryDialog").css("overflow", "hidden");
               jQuery("#versionHistoryDialog").closest(".ui-dialog").css("z-index", 1000); //shadowbox is 998
-						});	
+            }); 
            }
           }
     });
