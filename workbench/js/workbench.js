@@ -1024,7 +1024,7 @@ sidora.resources.performCopyOrMove = function(copyOrMove, toLocationId){
   var onSuccessfulCopy = function(ajaxRequest,ajaxReturn){
     var newParentExistingChildResourceNumber = parseInt(jQuery("#"+toLocationId).find("a").attr("resourcechildren"));
     var newParentNewChildResourceNumber = newParentExistingChildResourceNumber+1;
-    sidora.util.refreshConceptChildrenNumberDirectByTreeId(locationId, newParentNewChildResourceNumber);
+    sidora.util.refreshConceptChildrenNumberDirectByTreeId(toLocationId, newParentNewChildResourceNumber);
   }   
   var onSuccessfulMove = function(ajaxRequest,ajaxReturn){
     var newParentExistingChildResourceNumber = parseInt(jQuery("#"+toLocationId).find("a").attr("resourcechildren"));
