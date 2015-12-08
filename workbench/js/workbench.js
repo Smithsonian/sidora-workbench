@@ -569,12 +569,14 @@ sidora.InitiateJSTree = function(){
       "check_callback": function(callbackType,draggedObjects,mouseOverObject,someNum,dragStatus){
         if (callbackType == "copy_node"){
           //Note that all resource moves are also considered "copy_node"
-          if (typeof(draggedObjects.instance) == 'undefined'){ //instance only exists if it is being dragged from a tree, resources do not exist in a jstree
+          if (typeof(draggedObjects.instance) == 'undefined'){ 
+            //instance only exists if it is being dragged from a tree, resources do not exist in a jstree
             if (dragStatus.core){
               //Resource
               if ((jQuery('.jstree-copy:visible').length > 0) || (jQuery('.fakejstree-copy:visible').length > 0)){
                 //is a copy
-                var showText = "Copy the following resources to "+jQuery("#"+mouseOverObject.id).children("a").attr("fullname")+" ("+jQuery("#"+mouseOverObject.id).children("a").attr("pid")+"):";
+                var showText = "Copy the following resources to "+jQuery("#"+mouseOverObject.id).children("a").attr("fullname");
+                showText += " ("+jQuery("#"+mouseOverObject.id).children("a").attr("pid")+"):";
                 showText += "<ul>";
                 for (var i = 0; i < sidora.util.dragResources.length; i++){
                   showText += "<li>"+jQuery(jq(sidora.util.dragResources[i])).find(".resource-list-label").text();
@@ -630,6 +632,9 @@ sidora.InitiateJSTree = function(){
                 showText += jQuery("#"+mouseOverObject.id).children("a").attr("fullname");
                 showText += " ("+jQuery("#"+mouseOverObject.id).children("a").attr("pid")+"):<ul>";
                 var selected = jQuery("#forjstree").jstree(true).get_selected();
+                //If they dragged something that is not selected only copy that item (next 2 lines)
+                var indexInArray = jQuery.inArray(draggedObjects.id,selected);
+                if (indexInArray == -1) selected = [draggedObjects.id];
                 var objectsToCopyOver = [];
                 for(i=0; i<selected.length; i++){
                   var currSel = jQuery(jq(selected[i])).children("a");
@@ -696,9 +701,11 @@ sidora.InitiateJSTree = function(){
               var showText = "Move the following concepts to ";
               showText += jQuery("#"+mouseOverObject.id).children("a").attr("fullname");
               showText += " ("+jQuery("#"+mouseOverObject.id).children("a").attr("pid")+"):<ul>";
-              
               var showTextForUnassociate = "The concepts listed below existed on the target already and will not be overwritten. They will be removed from the concepts that they were dragged from:<ul>";
               var selected = jQuery("#forjstree").jstree(true).get_selected();
+              //If they dragged something that is not selected only copy that item (next 2 lines)
+              var indexInArray = jQuery.inArray(draggedObjects.id,selected);
+              if (indexInArray == -1) selected = [draggedObjects.id];
               var objectsToCopyOver = [];
               var objectsToUnassociate = [];
               for(i=0; i<selected.length; i++){
@@ -1162,8 +1169,7 @@ sidora.CloseIFrame = function(newlyCreatedConceptId, typeOfClosure){
 /*
  * Keep checking for 100 minutes.  
  *
- * Normal users have 90 minute log out so this should not affect them
- * but admins have no log out period.  The "left a window open over the weekend" problem that could
+ * Admins have no log out period.  The "left a window open over the weekend" problem that could
  * affect those users, making it look like there is website activity and using up lots of the user's
  * memory if they have a development console open that stores the XHR requests.
  *
