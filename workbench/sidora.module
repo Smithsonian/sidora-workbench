@@ -5047,15 +5047,18 @@ function sidora_block_content_navigation(){
   //jQuery UI L&F
   drupal_add_css(drupal_get_path('module','sidora').'/css/themes/smoothness/jquery-ui.min.css');
   //jMenu lib
-  drupal_add_css(drupal_get_path('module','sidora').'/jslibs/jMenu/css/jmenu.css');
-  drupal_add_js(drupal_get_path('module','sidora').'/jslibs/jMenu/js/jMenu.jquery.js');
+  $jmenu_loc = variable_get('sidora_js_lib_location_jmenu', '');
+  drupal_add_css($jmenu_loc . 'css/jmenu.css', array('type' => 'external'));
+  drupal_add_js($jmenu_loc . 'js/jMenu.jquery.js');
   //jsTree lib
-  drupal_add_css(drupal_get_path('module','sidora').'/jslibs/jstree/dist/themes/default/style.min.css');
-  drupal_add_js(drupal_get_path('module','sidora').'/jslibs/jstree/dist/jstree.js');
+  $jstree_loc = variable_get('sidora_js_lib_location_jstree', '');
+  drupal_add_css($jstree_loc . 'dist/themes/default/style.min.css', array('type' => 'external'));
+  drupal_add_js($jstree_loc . 'dist/jstree.js');
   //dataTables lib
-  drupal_add_js(drupal_get_path('module','sidora').'/jslibs/dataTables/js/jquery.dataTables.min.js');
-  drupal_add_js(drupal_get_path('module','sidora').'/jslibs/dataTables/js/pipeline.js');
-  drupal_add_css(drupal_get_path('module','sidora').'/jslibs/dataTables/css/jquery.dataTables.css');
+  $datatables_loc =  variable_get('sidora_dataTables_location','');
+  drupal_add_js($datatables_loc . 'js/jquery.dataTables.min.js');
+  drupal_add_css($datatables_loc . 'css/jquery.dataTables.css', array('type' => 'external'));
+  drupal_add_js(drupal_get_path('module','sidora') . '/js/pipeline.js');  //Pipeline is non-standard
 
   //Sidora specific
   drupal_add_css(drupal_get_path('module','sidora').'/css/workbench.css', array('weight' => 10000, 'group' => CSS_THEME));
@@ -5126,9 +5129,10 @@ function sidora_islandora_ingest_steps_alter(array &$steps, array &$form_state) 
  */
 function sidora_get_plupload_html($elements, $button_text = 'Browse'){
   global $user;
-  drupal_add_js(drupal_get_path('module', 'sidora') . '/plupload-2.1.2/js/plupload.full.min.js');
-  drupal_add_js(drupal_get_path('module', 'sidora') . '/plupload-2.1.2/js/jquery.ui.plupload/jquery.ui.plupload.js');
-  drupal_add_css(drupal_get_path('module', 'sidora') . '/plupload-2.1.2/js/jquery.ui.plupload/css/jquery.ui.plupload.css');
+  $plupload_loc = variable_get('sidora_js_lib_location_plupload', '');
+  drupal_add_js($plupload_loc . 'plupload.full.min.js');
+  drupal_add_js($plupload_loc . 'jquery.ui.plupload/jquery.ui.plupload.js');
+  drupal_add_css($plupload_loc . 'jquery.ui.plupload/css/jquery.ui.plupload.css', array('type' => 'external'));
   drupal_add_css(drupal_get_path('module', 'sidora') . '/css/themes/smoothness/jquery-ui.min.css',array('weight' => '1000000', 'group' => CSS_THEME));
   $path_for_remove_icon = base_path() . drupal_get_path('module', 'xml_forms') . '/elements/images/';
   ob_start();

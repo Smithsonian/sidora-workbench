@@ -445,6 +445,39 @@ tr.removed.odd {
     );
 */
   _sidora_admin_settings_add_viewer_configs($form);
+	$form['sidora_js_libs'] = array(
+     'fieldset' => array(
+      '#type' => 'fieldset',
+      '#title' => 'Javascript Libraries (Non-viewer related)',
+      '#description' => t(''),
+      '#collapsible' => TRUE,
+      '#collapsed' => TRUE,
+			'sidora_js_lib_location_jstree' => array(
+			  '#type' => 'textfield',
+				'#title' => t('jstree'),
+				'#default_value' => variable_get('sidora_js_lib_location_jstree', ''),
+				'#description' => t(''),
+        '#attributes' => array('size' => 120),
+        '#maxlength' => 1024,
+			),	
+			'sidora_js_lib_location_jmenu' => array(
+			  '#type' => 'textfield',
+				'#title' => t('jMenu'),
+				'#default_value' => variable_get('sidora_js_lib_location_jmenu', ''),
+				'#description' => t(''),
+        '#attributes' => array('size' => 120),
+        '#maxlength' => 1024,
+			),	
+			'sidora_js_lib_location_plupload' => array(
+			  '#type' => 'textfield',
+				'#title' => t('PL Upload'),
+				'#default_value' => variable_get('sidora_js_lib_location_plupload', ''),
+				'#description' => t(''),
+        '#attributes' => array('size' => 120),
+        '#maxlength' => 1024,
+			),	
+    ),
+  );
 	$form['account_request'] = array(
      'fieldset' => array(
       '#type' => 'fieldset',
