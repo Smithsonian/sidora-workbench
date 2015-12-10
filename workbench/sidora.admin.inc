@@ -456,7 +456,7 @@ tr.removed.odd {
 			  '#type' => 'textfield',
 				'#title' => t('jstree'),
 				'#default_value' => variable_get('sidora_js_lib_location_jstree', ''),
-				'#description' => t(''),
+				'#description' => t('This should be an http / https location containing jstree.js and themes/default/style.min.css.  jsTree can be downloaded from https://github.com/vakata/jstree or http://jstree.com'),
         '#attributes' => array('size' => 120),
         '#maxlength' => 1024,
 			),	

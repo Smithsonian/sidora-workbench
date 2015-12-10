@@ -5048,8 +5048,8 @@ function sidora_block_content_navigation(){
   drupal_add_css(drupal_get_path('module','sidora').'/css/themes/smoothness/jquery-ui.min.css');
   //jsTree lib
   $jstree_loc = variable_get('sidora_js_lib_location_jstree', '');
-  drupal_add_css($jstree_loc . 'dist/themes/default/style.min.css', array('type' => 'external'));
-  drupal_add_js($jstree_loc . 'dist/jstree.js');
+  drupal_add_css($jstree_loc . 'themes/default/style.min.css', array('type' => 'external'));
+  drupal_add_js($jstree_loc . 'jstree.js');
   //dataTables lib
   $datatables_loc =  variable_get('sidora_dataTables_location','');
   drupal_add_js($datatables_loc . 'js/jquery.dataTables.min.js');
