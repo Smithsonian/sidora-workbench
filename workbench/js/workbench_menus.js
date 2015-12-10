@@ -3,9 +3,9 @@ jQuery(document).ready(function(){
   resetMenu("resource-menu");
 });
 var resetMenu = function(menuId){
-  jQuery("#"+menuId).addClass("jMenu");
+  jQuery("#"+menuId).addClass("sidoraMenu");
   jQuery("#"+menuId+" li a").unbind("click.openMenu mouseenter").bind("click.openMenu mouseenter",function(event){
-    var openItems = jQuery(".jMenu ul li:visible").parent();
+    var openItems = jQuery(".sidoraMenu ul li:visible").parent();
     for(var i = 0; i < openItems.length; i++){
       if (!isInParentList(jQuery(this),openItems[i])){
         jQuery(openItems[i]).hide();
@@ -56,9 +56,9 @@ var isInParentList = function(child, possibleParent){
   }
   return false;
 }
-var closeJMenus = function(){
-  jQuery(".jMenu ul").hide();
+var closeSidoraMenus = function(){
+  jQuery(".sidoraMenu ul").hide();
 }
-jQuery("html").unbind("click",closeJMenus);
-jQuery("html").bind("click",closeJMenus);
-jQuery(".jMenu li").unbind("mouseleave").bind("mouseleave",closeJMenus);
+jQuery("html").unbind("click",closeSidoraMenus);
+jQuery("html").bind("click",closeSidoraMenus);
+jQuery(".sidoraMenu li").unbind("mouseleave").bind("mouseleave",closeSidoraMenus);

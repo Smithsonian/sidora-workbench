@@ -5046,10 +5046,6 @@ function sidora_block_content_navigation(){
   $to_return .= '</div></div>';
   //jQuery UI L&F
   drupal_add_css(drupal_get_path('module','sidora').'/css/themes/smoothness/jquery-ui.min.css');
-  //jMenu lib
-  $jmenu_loc = variable_get('sidora_js_lib_location_jmenu', '');
-  drupal_add_css($jmenu_loc . 'css/jmenu.css', array('type' => 'external'));
-  drupal_add_js($jmenu_loc . 'js/jMenu.jquery.js');
   //jsTree lib
   $jstree_loc = variable_get('sidora_js_lib_location_jstree', '');
   drupal_add_css($jstree_loc . 'dist/themes/default/style.min.css', array('type' => 'external'));
@@ -5061,13 +5057,13 @@ function sidora_block_content_navigation(){
   drupal_add_js(drupal_get_path('module','sidora') . '/js/pipeline.js');  //Pipeline is non-standard
 
   //Sidora specific
-  drupal_add_css(drupal_get_path('module','sidora').'/css/workbench.css', array('weight' => 10000, 'group' => CSS_THEME));
-  drupal_add_js(drupal_get_path('module','sidora').'/js/workbench_sidora_queue.js');
-  drupal_add_js(drupal_get_path('module','sidora').'/js/workbench.js');
-  drupal_add_js(drupal_get_path('module','sidora').'/js/workbench_util.js');
-  drupal_add_js(drupal_get_path('module','sidora').'/js/workbench_menus.js');
-  drupal_add_js(drupal_get_path('module','sidora').'/js/workbench_sidora_request.js');
-  drupal_add_js(drupal_get_path('module','sidora').'/js/paging.js'); // adds paging capability to resources
+  drupal_add_css(drupal_get_path('module','sidora') . '/css/workbench.css', array('weight' => 10000, 'group' => CSS_THEME));
+  drupal_add_js(drupal_get_path('module','sidora') . '/js/workbench_sidora_queue.js');
+  drupal_add_js(drupal_get_path('module','sidora') . '/js/workbench.js');
+  drupal_add_js(drupal_get_path('module','sidora') . '/js/workbench_util.js');
+  drupal_add_js(drupal_get_path('module','sidora') . '/js/workbench_menus.js');
+  drupal_add_js(drupal_get_path('module','sidora') . '/js/workbench_sidora_request.js');
+  drupal_add_js(drupal_get_path('module','sidora') . '/js/paging.js'); // adds paging capability to resources
   return $to_return;
 }
 /*
