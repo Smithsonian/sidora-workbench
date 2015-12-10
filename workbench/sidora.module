@@ -5190,11 +5190,11 @@ function sidora_get_plupload_html($elements, $button_text = 'Browse'){
   //print '+jQuery("#content-model-viewer-ingest-resource-metadata-form").find("input[name=form_build_id]").val()';
   print ',
     flash_swf_url : "';
-  print base_path();
-  print 'sites/all/modules/sidora/workbench/plupload-2.1.2/js/Moxie.swf",
+  print $plupload_loc;
+  print 'Moxie.swf",
     silverlight_xap_url : "';
-  print base_path();
-  print 'sites/all/modules/sidora/workbench/plupload-2.1.2/js/Moxie.xap",
+  print $plupload_loc;
+  print 'Moxie.xap",
     
     filters : {
       max_file_size : "1000mb",
