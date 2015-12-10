@@ -75,7 +75,8 @@ function sidora_tabular_view_phpexcelreader($pid,$dsid = 'OBJ'){
   <script>
     jQuery(document).ready(function(){
       jQuery("table").DataTable({
-        "lengthMenu": [ [-1,5,10,25,100],["All",5,10,25,100] ]
+        "lengthMenu": [ [-1,5,10,25,100],["All",5,10,25,100] ],
+        "order": []
       });
       jQuery("table").show();
       jQuery("#noHeader_wrapper").show();
@@ -161,13 +162,47 @@ function sidora_tabular_view_phpexcelreader($pid,$dsid = 'OBJ'){
 </html>';
   drupal_exit();
 }
+/*
+ * Returns the cell value properly formatted as a string
+ * This will allow use to control the date format if needed
+ */
+function sidora_tabular_view_phpexcelreader_html_string($objPHPExcel, $cell) {
+  if(PHPExcel_Shared_Date::isDateTime($cell)) {
+    $code = $objPHPExcel->getActiveSheet()->getStyle($cell->getCoordinate())->getNumberFormat()->getFormatCode();
+    if ($code == 'mm-dd-yy'){
+       //So, getting into this a bit here's the problem
+       //Excel saves "general" dates as format mm-dd-yy
+       //but it shows them in program as MM/DD/YYYY
+       //AND it also stores text with the standard mm-dd-yy format
+       //PHPExcel still considers this text to return true from isDateTime, but knows when
+       //it is formatting not to try to use it as a date.
+       $our_output_format = 'n/j/Y';
+       $their_output_format = 'm-d-y';
+       //The cell value coming back as a date is 00:00:00 and then when
+       //formatting happens will take it to the previous day
+       //so bump up a day when we are dealing with pure date and no time
+       $date_number = PHPExcel_Shared_Date::ExcelToPHP($cell->getValue()+1);
+       $their_output = date($their_output_format, $date_number);
+       $our_output = date($our_output_format, $date_number);
+       $their_formatted = $cell->getFormattedValue();
+       $to_return = $their_formatted;
+       if ($their_formatted == $their_output) {
+         $to_return = $our_output;
+       }
+       return $to_return;
 
+    }
+    return $cell->getFormattedValue();
+  }
+  return $cell->getFormattedValue();
+}
 /*
  * Returns the pure HTML table based on the given filename
  */
 function sidora_tabular_view_phpexcelreader_html($filename, $first_line_header = TRUE, $table_id = ''){
   require_once(libraries_get_path('PHPExcel') . '/Classes/PHPExcel/IOFactory.php');
-  $objPHPExcel = PHPExcel_IOFactory::load($filename);
+  $objReader = PHPExcel_IOFactory::createReaderForFile($filename);
+  $objPHPExcel = $objReader->load($filename);
   $worksheet = $objPHPExcel->getActiveSheet();
   $table_header = '<thead><tr>';
   $table_data = '<tbody>';
@@ -175,20 +210,20 @@ function sidora_tabular_view_phpexcelreader_html($filename, $first_line_header =
   $count = 0;
   foreach ($worksheet->getRowIterator() as $row) {
   	if (!$is_first || !$first_line_header){
-      $table_data .= '<tr>';// class="'.(count%2==0)?'odd':'even'.'">';
+      $table_data .= '<tr>';
     }
     $cellIterator = $row->getCellIterator();
   	$cellIterator->setIterateOnlyExistingCells(false); // Loop all cells, even if it is not set
     foreach ($cellIterator as $cell) {
       if ($is_first){
         if ($first_line_header){
-          $table_header .= '<th>' . $cell->getValue() . '</th>';
+          $table_header .= '<th>' . sidora_tabular_view_phpexcelreader_html_string($objPHPExcel, $cell) . '</th>';
         }else{
           $table_header .= '<th></th>'; 
         }
       }
       if (!is_null($cell) && !($is_first && $first_line_header)) {
-        $table_data .= '<td>' . $cell->getValue() . '</td>';
+        $table_data .= '<td>' . sidora_tabular_view_phpexcelreader_html_string($objPHPExcel, $cell) . '</td>';
       }
     }
   	if (!$is_first || !$first_line_header){

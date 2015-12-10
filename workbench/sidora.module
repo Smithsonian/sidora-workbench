@@ -35,15 +35,10 @@ define('SIDORA_NEVER_SET',"Never Set");
  * run on every drupal call, loads items that the rest of the code needs
  */
 function sidora_init(){
-/*
-//Unknown if the next two lines are needed.  If no problems arise in next release, please remove
-$islandora_module_path = drupal_get_path('module', 'islandora');
-@include_once 'sites/all/libraries/tuque/FedoraRelationships.php';
-*/
   //The ahah call on the edit metadata form cannot find the function for the form
-  //because it assumes that islandora has already loaded it.  Since we are not using
+  //because it assumes that Islandora has already loaded it.  Since we are not using
   //the Islandora interface, the form has not been loaded. The ahah call would
-  //throw an error on call, disallowing the addition or deletion of items with the add.png (green plus)
+  //throw an error, disallowing the addition or deletion of items with the add.png (green plus)
   // -- the tags / tag element from the xml_form_builder
   //This is related to SID-305
   if (request_path() == 'system/ajax'){
@@ -1937,6 +1932,20 @@ function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $ex
     return t("You must be an administrator or have an administrator set sidora_allow_all_to_debug in order to access this information");
   }
   if (!sidora_is_admin()) print t("Remember that nonadmins will NOT see output from dsm!");
+  
+  if ($one == 'server_time'){
+    print 'server_time'.time();
+    drupal_exit();
+  }
+  if ($one == 'recent_changes'){
+    sidora_recently_updated_since($two);
+  }
+  if ($one == 'num_resource_children'){
+    module_load_include('inc', 'sidora', 'includes/utils');
+    print $two;
+    var_dump(sidora_get_children($two));
+    drupal_exit();
+  }
 
   if ($one == 'problem_tester'){
     $description = 'test_desc';
@@ -2308,33 +2317,14 @@ function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $ex
   }
   if ($one == 'queries'){
     print 'ok';
-  $tuque = islandora_get_tuque_connection();
-  if ($tuque) {
-    /* $query = "select ?object ?title ?model ?created from <#ri> 
-     where {
-          <info:fedora/si-user:124> <fedora-rels-ext:hasResource> ?object . 
-          ?object <fedora-model:state> <fedora-model:Active>;
-          ?object <fedora-model:label> ?title;
-          ?object <fedora-model:hasModel> ?model;
-          ?object <fedora-model:createdDate> ?created;
-          FILTER(
-          !sameTerm(?model, <info:fedora/fedora-system:FedoraObject-3.0>) &&
-          !sameTerm(?model, <info:fedora/si:resourceCModel>))
-        }
-        ORDER BY (?created)
-        OFFSET 0 LIMIT 1000000";*/
-    $query = sidora_generate_child_resource_sparql_query($two, Array(),'' , '', 'created');
-    var_dump($query);
-    $ri = $tuque->repository->ri;
-    $results = $ri->sparqlQuery($query);
-    /*foreach ($results as $key => $row){
-       $dates[$key] = strtotime($row['created']['value']);
-       
-    }  
-    array_multisort($dates, SORT_DESC, $results);*/
-    var_dump($results);
-    //print sidora_generate_child_resource_sparql_query('si:387917', Array());
-  } 
+    $tuque = islandora_get_tuque_connection();
+    if ($tuque) {
+      $query = sidora_generate_child_resource_sparql_query($two, Array(),'' , '', 'created');
+      var_dump($query);
+      $ri = $tuque->repository->ri;
+      $results = $ri->sparqlQuery($query);
+      var_dump($results);
+    } 
   }
   if ($one == 'permissions'){
     if (sidora_allow($two, $parent_pid, $extra)){
@@ -4032,7 +4022,7 @@ function sidora_obj($pid){
   if ($tuque) {
     $object = islandora_object_load($pid);
   }
-  
+  if (empty($object)) return NULL; 
   $is_concept = sidora_is_concept($object);
   $is_codebook = sidora_is_codebook($object);
   $is_resource = sidora_is_resource($object);
@@ -4463,7 +4453,27 @@ function sidora_ajax_parts($call_type, $param1 = '', $param2 = '', $param3 = '')
         }
       } 
     }
-  }    
+  }
+  if ($call_type == 'get_num_resource_children') {
+    $tuque = islandora_get_tuque_connection();
+    $pid = $param1;
+    if ($tuque) {
+      $query = sidora_generate_child_resource_pid_only_sparql_query($pid, array());
+      $ri = $tuque->repository->ri;
+      $results = $ri->sparqlQuery($query);
+      print sizeof($results);
+      drupal_exit();
+    }
+  }
+  if ($call_type == 'recent_changes') {
+    $pids = sidora_recently_updated_since($param1);
+    print implode($pids,', ');
+    drupal_exit();
+  }
+  if ($call_type == 'server_minute') {
+    print intval(time() / 60);
+    drupal_exit();
+  }
   drupal_not_found();
 }
 /**
@@ -5460,7 +5470,68 @@ function sidora_clear_entire_tree_cache(){
 function sidora_clear_tree_cache($pid = ''){
   if (!empty($pid)){
     cache_clear_all('sidora:children_results:'.$pid, 'cache', TRUE);
+    sidora_recently_updated($pid);
   }
+}
+/*
+ * For any object that has been updated, keep an indicator of changed
+ * THIS WILL NEED TO BE PER USER WHEN VIEW PERMISSIONS become involved
+ */
+function sidora_recently_updated($pid) {
+  sidora_recently_updated_clear_old();
+  $cache_name = "sidora:recent_updates";
+  $recent_updates_cache = cache_get($cache_name);
+  $recent_updates = $recent_updates_cache->data;
+  $current_minute_as_seconds = time();
+  $current_minute_as_min = intval($current_minute_as_seconds / 60);
+  if (empty($recent_updates[$current_minute_as_min])) {
+    $recent_updates[$current_minute_as_min] = array();
+  }
+  if (!in_array($pid, $recent_updates[$current_minute_as_min])) {
+    $recent_updates[$current_minute_as_min][] = $pid;
+  }
+  cache_set($cache_name,$recent_updates,'cache',CACHE_TEMPORARY);
+}
+/*
+ * Returns all of the pids that have been updated since the specified minute 
+ * (server minutes since epoch)
+ */
+function sidora_recently_updated_since($server_minute) {
+  sidora_recently_updated_clear_old();
+  $cache_name = "sidora:recent_updates";
+  $recent_updates_cache = cache_get($cache_name);
+  $recent_updates = $recent_updates_cache->data;
+  $pids = array();
+  foreach($recent_updates as $minute => $updated_pids) {
+    if ($server_minute <= $minute) {
+      foreach($updated_pids as $pid) {
+        if (!in_array($pid,$pids)) $pids[] = $pid;
+      }
+    }
+  }
+  return $pids;
+}
+/*
+ * Keeps the recently updated list to 100 minutes
+ */
+function sidora_recently_updated_clear_old() {
+  $cache_name = "sidora:recent_updates";
+  $recent_updates_cache = cache_get($cache_name);
+  $recent_updates = array();
+  if (!empty($recent_updates_cache)) {
+    $recent_updates = $recent_updates_cache->data;
+  }
+  //recent_updates is an array with the past 100 minutes
+  //with the pids that have been updated in that minute listed
+  //First, let's clear out whatever is too old
+  $first_minute_as_seconds = time() - 100 * 60;
+  $first_minute_as_min = intval($first_minute_as_seconds / 60);
+  foreach($recent_updates as $minute => $updated_pids) {
+    if ($minute < $first_minute_as_min) {
+      unset($recent_updates[$minute]);
+    }
+  }
+  cache_set($cache_name,$recent_updates,'cache',CACHE_TEMPORARY);
 }
 /*
  * Very simply attempts to obtain a lock on the pid
@@ -7460,13 +7531,13 @@ function sidora_generate_resource_list($pid){
     print json_encode("Error connecting to the repository");
   }     
   drupal_exit();
-}     
+}
 function sidora_generate_child_resource_pid_only_sparql_query($pid) {
-       $query = "select ?object ?title from <#ri> where {
-          <info:fedora/{$pid}> <fedora-rels-ext:hasResource> ?object .
-          ?object <fedora-model:state> <fedora-model:Active>;
-          <fedora-model:label> ?title;
-        }";
+ $query = "select ?object ?title from <#ri> where {
+   <info:fedora/{$pid}> <fedora-rels-ext:hasResource> ?object .
+   ?object <fedora-model:state> <fedora-model:Active>;
+   <fedora-model:label> ?title;
+  }";
   return $query;
 }
 /*

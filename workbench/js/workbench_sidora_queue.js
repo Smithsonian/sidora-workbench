@@ -126,6 +126,10 @@ SidoraQueue.prototype.Done = function(completedItem, ajaxReturn){
       if (sidora.resources.individualPanel.resourceOfInterest != null && sidora.resources.individualPanel.resourceOfInterest.pid == completedItem.pidsBeingProcessed[i]){
         sidora.resources.individualPanel.LoadRelationships();
       }
+      //Update the tree counts if needed
+      sidora.util.refreshConceptChildrenNumber(completedItem.pidsBeingProcessed[i]);
+
+      //If there was an update to the Pid user is currently looking at then anything may have changed.  Reload it.
       if (sidora.concept.GetPid() == completedItem.pidsBeingProcessed[i]){
 			 sidora.concept.LoadContent();
         if (processedResourceArray.length > 1){
