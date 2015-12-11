@@ -1932,7 +1932,38 @@ function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $ex
     return t("You must be an administrator or have an administrator set sidora_allow_all_to_debug in order to access this information");
   }
   if (!sidora_is_admin()) print t("Remember that nonadmins will NOT see output from dsm!");
-  
+ 
+  if ($one == 'file_check'){
+    $temp_dir = file_directory_temp();
+    $dir_content = scandir($temp_dir);
+    //Get just the files and not the hidden ones
+    $files_only = array_filter($dir_content, function($k) {
+      $temp_dir = file_directory_temp();
+      if (is_dir($temp_dir . '/' . $k)) return FALSE;
+      if (sidora_startsWith($k, '.')) return FALSE;
+      return TRUE;
+    });
+    $to_be_removed = array_filter($files_only, function($k) {
+      $curr_time = time();
+      $temp_dir = file_directory_temp();
+      $file_time = filectime($temp_dir . '/' . $k);
+      $time_alive = $curr_time - $file_time;
+      //if > 20000 sec (333 min) then delete
+      if ($time_alive > 20000) return TRUE;
+      return FALSE;
+    });
+    var_dump($to_be_removed);
+    if ($two == 'perform_delete') {
+      foreach($to_be_removed as $to_remove) {
+        $deleted = unlink($temp_dir . '/' . $to_remove);
+        if (!$deleted) {
+          print 'Could not delete:'.$to_remove . "\n";
+        }
+      }
+    }
+    print "DELETED ANY OVER 20,000 seconds old";
+    drupal_exit();
+  } 
   if ($one == 'server_time'){
     print 'server_time'.time();
     drupal_exit();
@@ -5427,6 +5458,14 @@ if ($outputDebugCleanup) {
   print 'upload complete';
 }
 drupal_exit();
+}
+/*
+ * Implements hook_cron
+ * Removes anything in the temp directory that is over an hour old.  These are the old uploads but are not managed
+ * by Drupal.
+ */
+function sidora_cron() {
+  
 }
 /*
  * Creates the html_tree.  
