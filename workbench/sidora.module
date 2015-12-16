@@ -272,7 +272,15 @@ function sidora_menu() {
       'page callback' => 'sidora_info_version',
       'access callback' => 'user_is_logged_in',
       'type' => MENU_CALLBACK,
-    ),  
+    ), 
+		'sidora/import_xml_form/%/import' => array(
+		  'title' => 'Import XML Form',
+			'description' => 'Import an XML Form with association',
+      'page callback' => 'drupal_get_form',
+      'page arguments' => array('sidora_import_xml_form', 2),
+      'access arguments' => array('Create XML Forms'),
+      'type' => MENU_CALLBACK,
+		),	 
  );
 }
 
@@ -2315,6 +2323,7 @@ function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $ex
     dsm($current_uploads);
     return 'current_uploads';
   }
+<<<<<<< HEAD
   if ($one == 'queries'){
     print 'ok';
     $tuque = islandora_get_tuque_connection();
@@ -7768,6 +7777,7 @@ function sidora_contact_us_form_submit($form, &$form_state) {
 }
 /*
  * Hi-jack the islandora call for versions to our own handler
+ * Also, add Sidora callback to Islandora XML Forms callback for Form Builder
  */
 function sidora_menu_alter(&$items) {
   if (isset($items['islandora/object/%islandora_object/datastream/%islandora_datastream/version'])) {
@@ -7775,9 +7785,51 @@ function sidora_menu_alter(&$items) {
     $items['islandora/object/%islandora_object/datastream/%islandora_datastream/version']['page callback'] = 'sidora_datastream_version_view';
     $items['islandora/object/%islandora_object/datastream/%islandora_datastream/version']['page arguments'] = array(2,4);
   }
+	if ((isset($items['admin/islandora/xmlform'])) || (isset($items['admin/islandora/xmlform/forms']))) {
+    $islandora_xml_callback = $items['admin/islandora/xmlform'];
+		unset($items['admin/islandora/xmlform']['file']);
+		unset($items['admin/islandora/xmlform']['page callback']);
+		unset($items['admin/islandora/xmlform']['module']);
+		unset($items['admin/islandora/xmlform/forms']['file']);
+		unset($items['admin/islandora/xmlform/forms']['page callback']);
+		unset($items['admin/islandora/xmlform/forms']['module']);
+		$items['admin/islandora/xmlform']['page callback'] = 'sidora_xml_form_builder_callback';
+		$items['admin/islandora/xmlform']['page arguments'] = array($islandora_xml_callback);
+		$items['admin/islandora/xmlform/forms']['page callback'] = 'sidora_xml_form_builder_callback';
+		$items['admin/islandora/xmlform/forms']['page arguments'] = array($islandora_xml_callback);
+	}	
 	$items['user/%user/edit']['title'] = t('Account Management');
 	$items['user/%user/view']['title'] = t('Workspace');
 }
+/*
+ * Add to the html returned by islandora xml form builder callback
+ * Add an import link to each form
+ */ 
+function sidora_xml_form_builder_callback($islandora_xml_callback) {
+	module_load_include(pathinfo($islandora_xml_callback['file'], PATHINFO_EXTENSION), $islandora_xml_callback['module'], pathinfo($islandora_xml_callback['file'], PATHINFO_FILENAME)); 
+  $html_return = call_user_func($islandora_xml_callback['page callback']);
+  $doc = new DOMDocument();
+  $doc->loadHTML($html_return);
+  $th_elements = $doc->getElementsByTagName("th");
+	foreach($th_elements as $th) { 
+    if ($th->hasAttribute('colspan')) {
+		  $th->removeAttribute('colspan');
+			$th->setAttribute('colspan', '7');
+		}
+	}		
+ $elements = $doc->getElementsByTagName('tr');
+foreach($elements as $node){
+ $tds = $node->getElementsByTagName('td'); // get the columns in this row
+ if($tds->length == 0)
+   continue; // then skip it
+ $td = $doc->createElement('td');
+ $e = $doc->createElement('a', 'Import');
+ $e->setAttribute('href', $GLOBALS['base_url'].'/sidora/import_xml_form/'.$tds->item(0)->nodeValue.'/import');
+ $td->appendChild($e);
+ $node->appendChild($td);
+ }
+ return $doc->saveHTML();
+}	
 /*
  * Return the short id for the viewer for this pid
  */
@@ -8215,4 +8267,70 @@ function sidora_add_fedora_assumption_problem_other($description, $pids = array(
     'pids_involved' => $pids,
   );
   sidora_add_fedora_assumption_problem('other_issues', $problem);
+}
+/*
+ * This creates an Import XML for an existing form
+ * while retaining any associations
+ * copied from the import xml functionality in XML Form Builder Module
+ */ 
+function sidora_import_xml_form($form, array &$form_state, $form_name) {
+  module_load_include('inc', 'xml_form_builder', 'Create');
+  if (isset($_POST['cancel'])) {
+    drupal_goto('admin/islandora/xmlform');
+  }
+  $return = array();
+  $return['#attributes'] = array(
+    'enctype' => "multipart/form-data",
+  );
+  $return['form_name'] = array(
+    '#type' => 'hidden',
+    '#required' => TRUE,
+    '#maxlength' => 128,
+    '#value' => $form_name,
+  );
+	$return['header'] = array(
+	  '#markup' => t('Importing XML template for ' . $form_name),
+	);	
+  $return['file'] = array(
+      '#type' => 'file',
+      '#title' => t('Form Definition'),
+      '#size' => 64,
+      '#description' => t('XML form definition template.'),
+      '#element_validate' => array('xml_form_builder_create_validate'),
+    );
+  $return['create'] = array(
+    '#type' => 'submit',
+    '#value' => t('Create'),
+    '#name' => 'create',
+  );
+
+  $return['cancel'] = array(
+    '#type' => 'submit',
+    '#value' => t('Cancel'),
+    '#name' => 'cancel',
+  );
+
+  return $return;
+}	
+function sidora_import_xml_form_submit(array $form, array &$form_state) {
+  $form_name = $form_state['values']['form_name'];
+  if ($form_state['clicked_button']['#name'] == 'create') {
+    $file_uploaded = isset($_FILES['files']['error']['file']) && ($_FILES['files']['error']['file'] == 0);
+    if ($file_uploaded) {
+      $filename = $_FILES['files']['tmp_name']['file'];
+      $definition = new DOMDocument();
+			$xml_definition = xml_form_builder_create_get_uploaded_file();
+      $xml_definition = isset($xml_definition) ? $xml_definition : xml_form_api_get_empty_form_definition();
+      $xml_definition = XMLFormDefinition::upgradeToLatestVersion($xml_definition);
+      $object = new stdClass();
+      $object->name = $form_name;
+      $object->form = $xml_definition->saveXML();
+      if (drupal_write_record('xml_forms', $object, 'name') !== FALSE) {
+			  drupal_set_message(t('XML imported successfully into ' . $form_name),'status');
+			}	
+		}else{
+		  drupal_set_message(t('Valid XML template not uploaded'), 'warning');
+		}		
+  }
+  $form_state['redirect'] = "admin/islandora/xmlform";
 }
