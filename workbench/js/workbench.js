@@ -435,7 +435,6 @@ sidora.concept.LoadContent = function(leaveContentIfAlreadyLoaded){
 sidora.util.hasElement = function(data){
   return /<[a-z][\s\S]*>/i.test(data);
 }
-sidora.util.jMenuConfig =  {ulWidth:250, openClick:false, TimeBeforeClosing:8000};
 sidora.queue = new SidoraQueue();
 sidora.InitiateJSTree = function(){
   jQuery('#forjstree').bind('loaded.jstree', function(e,data){setTimeout(function(){

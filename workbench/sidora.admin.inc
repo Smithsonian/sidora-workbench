@@ -445,6 +445,31 @@ tr.removed.odd {
     );
 */
   _sidora_admin_settings_add_viewer_configs($form);
+	$form['sidora_js_libs'] = array(
+     'fieldset' => array(
+      '#type' => 'fieldset',
+      '#title' => 'Javascript Libraries (Non-viewer related)',
+      '#description' => t(''),
+      '#collapsible' => TRUE,
+      '#collapsed' => TRUE,
+			'sidora_js_lib_location_jstree' => array(
+			  '#type' => 'textfield',
+				'#title' => t('jstree'),
+				'#default_value' => variable_get('sidora_js_lib_location_jstree', ''),
+				'#description' => t('This should be an http / https location containing jstree.js and themes/default/style.min.css.  jsTree can be downloaded from https://github.com/vakata/jstree or http://jstree.com'),
+        '#attributes' => array('size' => 120),
+        '#maxlength' => 1024,
+			),	
+			'sidora_js_lib_location_plupload' => array(
+			  '#type' => 'textfield',
+				'#title' => t('PL Upload'),
+				'#default_value' => variable_get('sidora_js_lib_location_plupload', ''),
+				'#description' => t('This should be an http / https location containing plupload.full.min.js, jqueryui.plupload/jquery.ui.plupload.js, and jquery.ui.plupload/css/jquery.ui.plupload.css.  Pluplup can be downloaded from http://www.pulupload.com'),
+        '#attributes' => array('size' => 120),
+        '#maxlength' => 1024,
+			),	
+    ),
+  );
 	$form['account_request'] = array(
      'fieldset' => array(
       '#type' => 'fieldset',
