@@ -2323,7 +2323,6 @@ function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $ex
     dsm($current_uploads);
     return 'current_uploads';
   }
-<<<<<<< HEAD
   if ($one == 'queries'){
     print 'ok';
     $tuque = islandora_get_tuque_connection();
