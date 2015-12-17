@@ -70,7 +70,7 @@ sidora.concept.LoadContentHelp.Resources.TableLoad = function(conceptOfInterest)
      'serverSide': true,
      'ordering': false,
      'ajax': jQuery.fn.dataTable.pipeline({
-       url: '../info/'+conceptOfInterest+'/resources/all/browser/dataTableServerSideProcessing',
+       url: Drupal.settings.basePath+'sidora/info/'+conceptOfInterest+'/resources/all/browser/dataTableServerSideProcessing',
        pages: 2
      })
   });
@@ -246,7 +246,7 @@ sidora.concept.LoadContentHelp.Resources.TableActionsSetup = function(){
 sidora.concept.LoadContentHelp.Permissions = function(conceptOfInterest){
   jQuery.ajax({
     dataType: "json",
-    url: '../info/'+conceptOfInterest+'/permission',
+    url: Drupal.settings.basePath+'sidora/info/'+conceptOfInterest+'/permission',
     success: function(permissions){
       jQuery("#concept-create").toggle(permissions.create);
       jQuery("#deleteConcept").toggle(permissions.delete);
@@ -262,7 +262,7 @@ sidora.concept.LoadContentHelp.Permissions = function(conceptOfInterest){
 sidora.concept.LoadContentHelp.Exhibition_view = function(conceptOfInterest){
   jQuery.ajax({
     dataType: "json",
-    url: '../info/'+conceptOfInterest+'/exhibition',
+    url: Drupal.settings.basePath+'sidora/info/'+conceptOfInterest+'/exhibition',
     success: function(exhibitions){
       jQuery("#exhibitConcept").attr('onclick', '');
       jQuery("#exhibitConcept").children('a').attr('onclick',exhibitions.action);
@@ -277,7 +277,7 @@ sidora.concept.LoadContentHelp.Relationships = function(conceptOfInterest, place
   if (typeof(conceptOfInterest) == 'undefined' || conceptOfInterest == null) conceptOfInterest = sidora.concept.GetPid();
   if (typeof(placementLocation) == 'undefined' || placementLocation == null) placementLocation = '#concept-relationships';
   jQuery.ajax({
-    url: '../info/'+conceptOfInterest+"/relationships"
+    url: Drupal.settings.basePath+'sidora/info/'+conceptOfInterest+"/relationships"
   }).done(function(relationship_html){
     jQuery(placementLocation).html(relationship_html);
   }).fail(function(meta_html){
@@ -292,7 +292,7 @@ sidora.concept.LoadContentHelp.Relationships = function(conceptOfInterest, place
  */
 sidora.concept.LoadContentHelp.Metadata = function(conceptOfInterest){
   jQuery.ajax({
-    url: '../info/'+conceptOfInterest+'/meta/sidora_xsl_config_variable/browser/html',
+    url: Drupal.settings.basePath+'sidora/info/'+conceptOfInterest+'/meta/sidora_xsl_config_variable/browser/html',
   }).done(function(meta_html){
     //if the data is direct text, put it into a error message
     if (!sidora.util.hasElement(meta_html)){
@@ -303,7 +303,7 @@ sidora.concept.LoadContentHelp.Metadata = function(conceptOfInterest){
     jQuery('#concept-meta').append(myDiv);
     jQuery('#edit-concept-metadata-menu').click(function(){
       Shadowbox.open({
-        content:    "../edit_metadata/"+window.sidora.concept.GetPid()+"",
+        content:    Drupal.settings.basePath+"sidora/edit_metadata/"+window.sidora.concept.GetPid()+"",
         player:     "iframe",
         title:      "Edit Metadata",
         options: {
@@ -352,7 +352,7 @@ sidora.concept.LoadContentHelp.CreateResourceMenu = function(conceptOfInterest){
         var form = jQuery(this).attr("formname");
         var ontologyId = jQuery(this).attr("ontology-id");
         if (typeof(model) != 'undefined' && "" != model){
-          var url = "../create_resource/"+window.sidora.concept.GetPid()+"/"+model+"/";
+          var url = Drupal.settings.basePath+"sidora/create_resource/"+window.sidora.concept.GetPid()+"/"+model+"/";
           if (typeof(form) != 'undefined') {
             url += form + "/" + ontologyId + "/fresh";
           }
@@ -381,7 +381,7 @@ sidora.concept.LoadContentHelp.CreateResourceMenu = function(conceptOfInterest){
  */
 sidora.concept.LoadContentHelp.FullTableReload = function(conceptOfInterest){
   jQuery.ajax({
-    url: '../info/'+conceptOfInterest+'/resources/all/browser/html_placeholder'
+    url: Drupal.settings.basePath+'sidora/info/'+conceptOfInterest+'/resources/all/browser/html_placeholder'
   }).done(function(resources_table){
     myDiv = jQuery(resources_table);
     jQuery('#concept-resource-list-internal').children().not('.workbench-nav').remove();
@@ -962,7 +962,7 @@ sidora.resources.updateThumbnails = function(){
       var imgChild = me.children("td").children("div").children("img");
       var currentSrc = imgChild.attr("src");
       if (currentSrc.indexOf(currPid) == -1){  //If the current thumbnail is not unique to this item
-        var pidThumbnail = "../info/"+currPid+"/meta/TN/browser";
+        var pidThumbnail = Drupal.settings.basePath+"sidora/info/"+currPid+"/meta/TN/browser";
         jQuery.ajax(pidThumbnail,{
           complete:function(res){
             var currType = res.getResponseHeader("content-type");
@@ -1080,7 +1080,7 @@ sidora.ontology.CreateConceptMenu = function(){
         var form = jQuery(this).attr("formname");
         var ontologyId = jQuery(this).attr("ontology-id");
         if (typeof(model) != 'undefined'){
-          var url = "../create_concept/"+window.sidora.concept.GetPid()+"/"+model+"/";
+          var url = Drupal.settings.basePath+"sidora/create_concept/"+window.sidora.concept.GetPid()+"/"+model+"/";
           if (typeof(form) != 'undefined') url += form;
           url += "/"+ontologyId;
           Shadowbox.close();
@@ -1603,7 +1603,7 @@ sidora.resources.individualPanel.Create = function() {
   var pids_array = sidora.resources.getHighlighted();
   pids = pids_array.join("&");
     Shadowbox.open({
-      content:    "../edit_metadata/"+pids+"",
+      content:    Drupal.settings.basePath+"sidora/edit_metadata/"+pids+"",
       player:     "iframe",
       title:      "Edit Metadata",
       options: {
@@ -1667,7 +1667,7 @@ sidora.resources.individualPanel.LoadContent = function(suppressResourceViewerRe
   }
   jQuery('#resource-meta .error-message').remove();
   jQuery.ajax({
-    url: '../info/'+roipid+'/meta/sidora_xsl_config_variable/browser/html',
+    url: Drupal.settings.basePath+'sidora/info/'+roipid+'/meta/sidora_xsl_config_variable/browser/html',
   }).done(function(meta_html){
     myDiv = jQuery(meta_html);
     jQuery('#resource-meta .metadata-table').remove();
@@ -1790,7 +1790,7 @@ sidora.util.FriendlyNamesPromise = function(pidsInput){
         }
       };
       ajaxTasks.push(
-        jQuery.ajax({ url: '../info/'+pid+'/meta/all' }).done(updateArray(toReturn,pid))
+        jQuery.ajax({ url: Drupal.settings.basePath+'sidora/info/'+pid+'/meta/all' }).done(updateArray(toReturn,pid))
       );
     }else{
       toReturn[pid] = pidName;
