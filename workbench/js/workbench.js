@@ -475,7 +475,7 @@ sidora.InitiateJSTree = function(){
       //Copy node
       var toMovePid = data.node.a_attr.pid;
       var moveToPid = jQuery("#"+data.parent+" a").attr('pid');
-      var actionUrl = '../ajax_parts/copy/'+moveToPid+'/'+toMovePid
+      var actionUrl = Drupal.settings.basePath+'sidora/ajax_parts/copy/'+moveToPid+'/'+toMovePid
       if (typeof(toMovePid) == 'undefined'){
         //Both types of resource drags are interpreted as "copy_node"
         //regardless of whether control is held down
@@ -501,7 +501,7 @@ sidora.InitiateJSTree = function(){
     jQuery('#forjstree').bind('delete_node.jstree',function(event,data){
       var toMovePid = data.node.a_attr.pid;
       var moveFromPid = jQuery("#"+data.parent+" a").attr('pid');
-      var actionUrl = '../ajax_parts/unassociate/'+moveFromPid+'/'+toMovePid;
+      var actionUrl = Drupal.settings.basePath+'sidora/ajax_parts/unassociate/'+moveFromPid+'/'+toMovePid;
       var jst = jQuery("#forjstree").jstree(true);
       var poi = data.parent;
       //Old Parent renumber
@@ -527,7 +527,7 @@ sidora.InitiateJSTree = function(){
       var moveFromPid = jQuery("#"+data.old_parent+" a").attr('pid');
       console.log("Move:"+toMovePid+" from:"+moveFromPid+" to:"+moveToPid);
       if (moveFromPid == moveToPid){ console.log('move to itself, ignoring...'); return; }
-      var actionUrl = '../ajax_parts/move/'+moveFromPid+'/'+moveToPid+'/'+toMovePid;
+      var actionUrl = Drupal.settings.basePath+'sidora/ajax_parts/move/'+moveFromPid+'/'+moveToPid+'/'+toMovePid;
 
       var jst = jQuery("#forjstree").jstree(true);
       //New Parent renumber
@@ -578,7 +578,7 @@ sidora.InitiateJSTree = function(){
                 showText += " ("+jQuery("#"+mouseOverObject.id).children("a").attr("pid")+"):";
                 showText += "<ul>";
                 jQuery.ajax({
-                  url: "../ajax_parts/generate_resource_list/"+jQuery("#"+mouseOverObject.id).children("a").attr("pid"),
+                  url: Drupal.settings.basePath+"sidora/ajax_parts/generate_resource_list/"+jQuery("#"+mouseOverObject.id).children("a").attr("pid"),
                   success: function(resourceList){
                     var currentChildrenPids = JSON.parse(resourceList);;
                     var resourcesToCopyOver = [];
@@ -610,7 +610,7 @@ sidora.InitiateJSTree = function(){
                 showText += "<ul>";
                 var showTextForUnassociate = "The resources listed below existed on the target already and will not be overwritten. They will be removed from the concepts that they were dragged from:<ul>";
                 jQuery.ajax({
-                  url: "../ajax_parts/generate_resource_list/"+jQuery("#"+mouseOverObject.id).children("a").attr("pid"),
+                  url: Drupal.settings.basePath+"sidora/ajax_parts/generate_resource_list/"+jQuery("#"+mouseOverObject.id).children("a").attr("pid"),
                   success: function(resourceList){
                     var currentChildrenPids = JSON.parse(resourceList);;
                     var resourcesToMoveOver = [];
@@ -1053,7 +1053,7 @@ sidora.resources.performCopyOrMove = function(copyOrMove, toLocationId){
     userFriendlyName += "<em>"+sidora.util.FriendlyNameDirect(droppedPid)+"</em>";
     userFriendlyName += " from <em>"+sidora.util.FriendlyNameDirect(fromParent)+"</em>";
     userFriendlyName += " to <em>"+sidora.util.FriendlyNameDirect(droppedOn)+"</em>";
-    var requestUrl = '../ajax_parts/'+action+'/'+droppedOn+'/'+droppedPid;
+    var requestUrl = Drupal.settings.basePath+'sidora/ajax_parts/'+action+'/'+droppedOn+'/'+droppedPid;
     sidora.queue.Request(userFriendlyName, requestUrl, onSuccess, null, pidListForRequest);
     console.log(userFriendlyName);
   }
@@ -1205,7 +1205,7 @@ sidora.util.constantCheck = function(){
     sidora.util.init_time = {};
     sidora.util.init_time.local = Math.floor(d.getTime() / 60000);
     jQuery.ajax({
-      url: '../ajax_parts/server_minute'
+      url: Drupal.settings.basePath+'sidora/ajax_parts/server_minute'
     }).done(function(server_minute){
       sidora.util.init_time.server = parseInt(server_minute);
     }).fail(function(failure_obj){
@@ -1230,7 +1230,7 @@ sidora.util.checkRecentChanges = function(){
     if (typeof(sidora.util.init_time.server) != 'undefined') {
       if (typeof(sidora.util.lastUpdateTime) == 'undefined') sidora.util.lastUpdateTime = 0;
       jQuery.ajax({
-        url: '../ajax_parts/recent_changes/'+sidora.util.lastUpdateTime,
+        url: Drupal.settings.basePath+'sidora/ajax_parts/recent_changes/'+sidora.util.lastUpdateTime,
       }).done(function(pids_csv){
         var d = new Date();
         var offsetBetweenLocalAndServer = sidora.util.init_time.server - sidora.util.init_time.local;
@@ -1250,7 +1250,7 @@ sidora.util.checkRecentChanges = function(){
  */
 sidora.util.refreshConceptChildrenNumber = function(pid){
     jQuery.ajax({
-      url: '../ajax_parts/get_num_resource_children/'+pid,
+      url: Drupal.settings.basePath+'sidora/ajax_parts/get_num_resource_children/'+pid,
     }).done(function(num_children){
       sidora.util.refreshConceptChildrenNumberDirect(pid, num_children);
     }).fail(function(failure_obj){
@@ -1288,7 +1288,7 @@ sidora.util.RefreshTreeIfNew = function(secondsOfWait){
   if (typeof(secondsOfWait) == 'undefined') secondsOfWait = .01;
   setTimeout(function(){
     jQuery.ajax({
-      url: '../ajax_parts/tree',
+      url: Drupal.settings.basePath+'sidora/ajax_parts/tree',
     }).done(function(tree_html){
       if (tree_html == '') window.location = Drupal.settings.basePath+'user';  //No tree indicates a user problem
       if (tree_html == sidora.util.latestTreeGrab){
@@ -1309,7 +1309,7 @@ sidora.util.RefreshTree = function(singleTripWaitMilliseconds){
   sidora.util.refreshTreeRequestInProgress = true;
   setTimeout(function(){
     jQuery.ajax({
-      url: '../ajax_parts/tree',
+      url: Drupal.settings.basePath+'sidora/ajax_parts/tree',
     }).done(function(tree_html){
       if (tree_html == '') window.location = Drupal.settings.basePath+'user';  //No tree indicates a user problem
       sidora.util.latestTreeGrab = tree_html;
@@ -1715,7 +1715,7 @@ sidora.util.deletePid = function(pidOfInterest, onSuccess, onFailure){
       }
     }
   }
-  var url = '../ajax_parts/unassociate_delete_orphan/'+unassociateFrom+'/'+pidOfInterest;
+  var url = Drupal.settings.basePath+'sidora/ajax_parts/unassociate_delete_orphan/'+unassociateFrom+'/'+pidOfInterest;
   var userFriendlyToastName = "Remove <em>"+sidora.util.FriendlyNameDirect(pidOfInterest);
   userFriendlyToastName += "</em> from <em>"+sidora.util.FriendlyNameDirect(unassociateFrom)+"</em>";
   sidora.queue.RequestPost(userFriendlyToastName,url,"",onSuccess,onFailure,[pidOfInterest,unassociateFrom]);
