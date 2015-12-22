@@ -471,38 +471,34 @@ sidora.InitiateJSTree = function(){
       sidora.UpdateTitleBasedOnNameInTree(jQuery(jQuery('#'+data.selected[0]).find("a")[0]).text());
       sidora.concept.LoadContent();
     });
-    jQuery('#forjstree').bind('copy_node.jstree', function (e, data) {
-      //Copy node
-      var toMovePid = data.node.a_attr.pid;
-      var moveToPid = jQuery("#"+data.parent+" a").attr('pid');
-      var actionUrl = Drupal.settings.basePath+'sidora/ajax_parts/copy/'+moveToPid+'/'+toMovePid
-      if (typeof(toMovePid) == 'undefined'){
-        //Both types of resource drags are interpreted as "copy_node"
-        //regardless of whether control is held down
-        //console.log("resource copy/move");
-        jQuery("#forjstree").jstree("delete_node",data.node);
-        return; //resource actions are handled by the 'dnd_stop.vakata' event
-      }
+    jQuery('#forjstree').bind('open_node.jstree', function (e, data) {
       var jst = jQuery("#forjstree").jstree(true);
-      var newParentExistingChildConceptsNumber = parseInt(jQuery("#"+data.parent).children("a").attr("conceptchildren"));
-      var npReplacer = newParentExistingChildConceptsNumber+1;
-      jQuery("#"+data.parent).children("a").attr("conceptchildren",""+npReplacer);
-      jst.get_node(data.parent).a_attr.conceptchildren = ""+npReplacer;
-      sidora.queue.incomingRequestsAreSilent = true;
-      sidora.queue.Request('Copy Concept', actionUrl, function(){
-        sidora.concept.LoadContentHelp.Relationships();
-      }, function(){
-        sidora.util.RefreshTree();
-      }, [moveToPid,toMovePid]);
-      sidora.queue.incomingRequestsAreSilent = false;
-      sidora.queue.Next();
+      var openingPid = data.node.a_attr.pid;
+      var currentChildrenPids = sidora.util.childrenPidsListedInUIByNode(data.node);
+      var childPidsCsv = currentChildrenPids.join();
+      if (childPidsCsv.length > 0) {
+        sidora.util.checkUIForInvalidPids(openingPid, childPidsCsv);
+        //Go down next step as well
+        for(var i=0; i<currentChildrenPids.length; i++){
+          var childPid = currentChildrenPids[i];
+          var nodes = sidora.util.getViewableJstreeNodesByPid(childPid);
+          for (var nii = 0; nii < nodes.length; nii++){
+            var currentGrandchildPids = sidora.util.childrenPidsListedInUIByNode(nodes[nii]);
+            var grandchildPidsCsv = currentGrandchildPids.join();
+            if (grandchildPidsCsv.length > 0) {
+              sidora.util.checkUIForInvalidPids(childPid, grandchildPidsCsv);
+            }
+          }
+        }
+      }
     });
 
     jQuery('#forjstree').bind('delete_node.jstree',function(event,data){
+      var jst = jQuery("#forjstree").jstree(true);
+      if (typeof(jst.pureUIChange) != 'undefined' && jst.pureUIChange) return; //don't want a Fedora change
       var toMovePid = data.node.a_attr.pid;
       var moveFromPid = jQuery("#"+data.parent+" a").attr('pid');
       var actionUrl = Drupal.settings.basePath+'sidora/ajax_parts/unassociate/'+moveFromPid+'/'+toMovePid;
-      var jst = jQuery("#forjstree").jstree(true);
       var poi = data.parent;
       //Old Parent renumber
       var oldParentExistingChildConceptsNumber = parseInt(jQuery("#"+poi).children("a").attr("conceptchildren"));
@@ -518,7 +514,6 @@ sidora.InitiateJSTree = function(){
       }, [toMovePid,moveFromPid]);
       sidora.queue.incomingRequestsAreSilent = false;
       sidora.queue.Next();
-
     });
 
     jQuery('#forjstree').bind('move_node.jstree',function(event,data){
@@ -669,7 +664,7 @@ sidora.InitiateJSTree = function(){
                 var parentNode = jst.get_node(mouseOverObject.id);
                 var currentChildren = parentNode.children;
                 var currentChildrenPids = [];
-                for(i=0; i<currentChildren.length; i++){
+                for(var i=0; i<currentChildren.length; i++){
                   currentChildrenPids.push(jst.get_node(currentChildren[i]).a_attr.pid);
                   //console.log("ccp:"+i+":"+currentChildrenPids[i]);
                 }
@@ -682,7 +677,7 @@ sidora.InitiateJSTree = function(){
                 var indexInArray = jQuery.inArray(draggedObjects.id,selected);
                 if (indexInArray == -1) selected = [draggedObjects.id];
                 var objectsToCopyOver = [];
-                for(i=0; i<selected.length; i++){
+                for(var i=0; i<selected.length; i++){
                   var currSel = jQuery(jq(selected[i])).children("a");
                   if (jQuery.inArray(currSel.attr("pid"),currentChildrenPids) > -1){
                     showText += "<li>"+currSel.attr("fullname")+" ("+currSel.attr("pid")+") - Already exists on target, will not copy</li>";
@@ -739,7 +734,7 @@ sidora.InitiateJSTree = function(){
               var parentNode = jst.get_node(mouseOverObject.id);
               var currentChildren = parentNode.children;
               var currentChildrenPids = [];
-              for(i=0; i<currentChildren.length; i++){
+              for(var i=0; i<currentChildren.length; i++){
                 currentChildrenPids.push(jst.get_node(currentChildren[i]).a_attr.pid);
                 //console.log("ccp:"+i+":"+currentChildrenPids[i]);
               }
@@ -754,7 +749,7 @@ sidora.InitiateJSTree = function(){
               if (indexInArray == -1) selected = [draggedObjects.id];
               var objectsToCopyOver = [];
               var objectsToUnassociate = [];
-              for(i=0; i<selected.length; i++){
+              for(var i=0; i<selected.length; i++){
                 var currSel = jQuery(jq(selected[i])).children("a");
                 if (jQuery.inArray(currSel.attr("pid"),currentChildrenPids) > -1){
                   showTextForUnassociate += "<li>"+currSel.attr("fullname")+" ("+currSel.attr("pid")+")</li>";
@@ -1244,6 +1239,49 @@ sidora.util.checkRecentChanges = function(){
         sidora.recentAjaxFailure(failure_obj);
     });
   }
+}
+sidora.util.getViewableJstreeNodesByPid = function(pid) {
+  var jst = jQuery("#forjstree").jstree(true);
+  var toReturn = [];
+  jQuery("[pid='" + pid + "']").closest("li").each(function(){
+    toReturn.push(jst.get_node(this.id));
+  });
+  return toReturn; 
+}
+sidora.util.childrenPidsListedInUIByNode = function(node) {
+  var jst = jQuery("#forjstree").jstree(true);
+  var currentChildren = node.children;
+  var currentChildrenPids = [];
+  for(var i=0; i<currentChildren.length; i++){
+    currentChildrenPids.push(jst.get_node(currentChildren[i]).a_attr.pid);
+  }
+  return currentChildrenPids;
+}
+
+sidora.util.checkUIForInvalidPids = function(openingPid, childPidsCsv) {
+  var jst = jQuery("#forjstree").jstree(true);
+  jQuery.ajax({
+    "dataType":"json",
+    "url": Drupal.settings.basePath+"sidora/ajax_parts/check_valid_pids/"+openingPid+"/"+childPidsCsv,
+    "success": function(pidsValidationInfo){
+      if (pidsValidationInfo.invalid.length > 0) {
+        for (var pii = 0; pii < pidsValidationInfo.invalid.length; pii++) {
+          var currInvalidPid = pidsValidationInfo.invalid[pii];
+          console.log("Removal from UI of invalid or malformed object with pid: "+currInvalidPid);
+          //Get all the node ids for this pid
+          var nodeIds = [];
+          jQuery("[pid='" + currInvalidPid + "']").closest("li").each(function(){ nodeIds.push(this.id); });
+          for (var nii = 0; nii < nodeIds.length; nii++) { 
+            var currToUnassociateId = nodeIds[nii];
+            var currToUnassociateNode = jst.get_node(currToUnassociateId);
+            jst.pureUIChange = true;
+            jst.delete_node(currToUnassociateNode);
+            delete jst.pureUIChange;
+          }
+        }
+      }
+    } 
+  });
 }
 /*
  * 
@@ -2025,7 +2063,7 @@ function writeCookie(name,value,days) {
 function readCookie(name) {
     var i, c, ca, nameEQ = name + "=";
     ca = document.cookie.split(';');
-    for(i=0;i < ca.length;i++) {
+    for(var i=0;i < ca.length;i++) {
         c = ca[i];
         while (c.charAt(0)==' ') {
             c = c.substring(1,c.length);

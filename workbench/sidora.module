@@ -3380,12 +3380,12 @@ function sidora_get_drupal_user($user_pid_or_drupal_user = ''){
  * If the user does not have delete access and it belongs to them, it will be placed in a special "orphan" concept TBD / TODO
  */
 function sidora_allow($user_pid_or_drupal_user, $pid_or_fedora_object, $type_of_operation = 'create'){
-  if ($type_of_operation == 'view') return TRUE;
   $drupal_user = sidora_get_drupal_user($user_pid_or_drupal_user);
   $object = $pid_or_fedora_object;
   if (empty($pid_or_fedora_object)) return FALSE; //can't do operations on blank pid
   if (is_string($pid_or_fedora_object)) $object = sidora_obj($pid_or_fedora_object);
   if (empty($object)) return FALSE; //can't do operations on bad pid
+  if ($type_of_operation == 'view') return TRUE;
   //hopefully this is a valid fedora object now
   //if the user is an administrator, they always have the rights
   if (sidora_is_admin($drupal_user)){
@@ -4513,7 +4513,50 @@ function sidora_ajax_parts($call_type, $param1 = '', $param2 = '', $param3 = '')
     print intval(time() / 60);
     drupal_exit();
   }
+  if ($call_type == 'check_valid_pids') {
+    global $user;
+    //param1 is the parent pid which will need its cache cleared if any of the listed pids turn out bad
+    //param2 is a comma separated pid list that the browser has listed as the children.
+    //Any of these that the person does not have view access to should be considered invalid
+    //If they have view access to it that means it exists and is valid
+    //When permissions changes happen: only update the cache if it exists but they dont have view access
+    $pids = explode(",",$param2);
+    $view_permissions = sidora_allow_batch($user, $pids,'view');
+    $clear_parent = count($view_permissions['invalid']) > 0;
+    if ($clear_parent) {
+      sidora_clear_tree_cache($param1);
+    }
+    print json_encode($view_permissions);
+    drupal_exit();
+  }
   drupal_not_found();
+}
+/*
+ * Determine if this batch of pids is valid or invalid for a specified permission for the specified user
+ * Returns an array of the following information:
+ * array (
+ *  'valid' => array of pids that the user can perform that operation
+ *  'invalid' => array of pids that the user cannot perform that operation
+ * )
+ */
+function sidora_allow_batch($user, $pids = array(), $type_of_operation = 'view') {
+  $to_return = array(
+    'valid' => array(),
+    'invalid' => array(),
+  );
+  if (!is_array($pids)) {
+    return $to_return;
+  }
+  foreach ($pids as $pid) {
+    if (sidora_allow($user, $pid, $type_of_operation)) {
+      $to_return['valid'][] = $pid;
+    }
+    else
+    {
+      $to_return['invalid'][] = $pid;
+    } 
+  }
+  return $to_return;
 }
 /**
  * obtain/release/renew a lock on a pid
@@ -6561,6 +6604,7 @@ function wb_si_exhibition_generate_child_concept_query($pid) {
     $o <fedora-rels-ext:hasConcept> $c and
     $c <fedora-model:state> <fedora-model:Active>)';
   return 'select $o $t ' . $count_concept . $count_resource . ' from <#ri> where
+     $o <fedora-model:hasModel> <info:fedora/si:conceptCModel> and
      $o <fedora-model:state> <fedora-model:Active> and
      $o <fedora-model:label> $t and
      <info:fedora/' . $pid . '> <fedora-rels-ext:hasConcept> $o
@@ -8225,7 +8269,7 @@ function sidora_islandora_sp_videoCModel_islandora_ingest_steps_alter(array &$st
  */
 function sidora_video_view_object($pid) {
   $object = sidora_obj($pid);
-  if (empty($obj)){ return ''; }
+  if (empty($object)){ return ''; }
   $variables = array('object' => $object);
   $output = theme('islandora_video', $variables);
   $output = drupal_get_css() . drupal_get_js() . $output;
