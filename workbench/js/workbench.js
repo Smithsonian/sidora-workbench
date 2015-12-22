@@ -470,6 +470,12 @@ sidora.InitiateJSTree = function(){
       window.location = jQuery('#'+data.selected[0]).children('a').attr('href');
       sidora.UpdateTitleBasedOnNameInTree(jQuery(jQuery('#'+data.selected[0]).find("a")[0]).text());
       sidora.concept.LoadContent();
+      var openingPid = data.node.a_attr.pid;
+      var currentChildrenPids = sidora.util.childrenPidsListedInUIByNode(data.node);
+      var childPidsCsv = currentChildrenPids.join();
+      if (childPidsCsv.length > 0) {
+        sidora.util.checkUIForInvalidPids(openingPid, childPidsCsv);
+      }
     });
     jQuery('#forjstree').bind('open_node.jstree', function (e, data) {
       var jst = jQuery("#forjstree").jstree(true);
