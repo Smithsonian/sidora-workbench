@@ -1266,40 +1266,53 @@ sidora.util.childrenPidsListedInUIByNode = function(node) {
 
 sidora.util.checkUIForInvalidPids = function(openingPid, childPidsCsv) {
   var jst = jQuery("#forjstree").jstree(true);
-  jQuery.ajax({
-    "dataType":"json",
-    "url": Drupal.settings.basePath+"sidora/ajax_parts/check_valid_pids/"+openingPid+"/"+childPidsCsv,
-    "success": function(pidsValidationInfo){
-      if (pidsValidationInfo.invalid.length > 0) {
-        for (var pii = 0; pii < pidsValidationInfo.invalid.length; pii++) {
-          var currInvalidPid = pidsValidationInfo.invalid[pii];
-          console.log("Removal from UI of invalid or malformed object with pid: "+currInvalidPid);
-          //Get all the node ids for this pid
-          var nodeIds = [];
-          jQuery("[pid='" + currInvalidPid + "']").closest("li").each(function(){ nodeIds.push(this.id); });
-          for (var nii = 0; nii < nodeIds.length; nii++) { 
-            var currToUnassociateId = nodeIds[nii];
-            var currToUnassociateNode = jst.get_node(currToUnassociateId);
-            jst.pureUIChange = true;
-            jst.delete_node(currToUnassociateNode);
-            delete jst.pureUIChange;
-          }
+  var pidRemoval = function(pidsValidationInfo){
+    if (pidsValidationInfo.invalid.length > 0) {
+      for (var pii = 0; pii < pidsValidationInfo.invalid.length; pii++) {
+        var currInvalidPid = pidsValidationInfo.invalid[pii];
+        console.log("Removal from UI of invalid or malformed object with pid: "+currInvalidPid);
+        //Get all the node ids for this pid
+        var nodeIds = [];
+        jQuery("[pid='" + currInvalidPid + "']").closest("li").each(function(){ nodeIds.push(this.id); });
+        for (var nii = 0; nii < nodeIds.length; nii++) {
+          var currToUnassociateId = nodeIds[nii];
+          var currToUnassociateNode = jst.get_node(currToUnassociateId);
+          jst.pureUIChange = true;
+          jst.delete_node(currToUnassociateNode);
+          delete jst.pureUIChange;
         }
       }
-    } 
-  });
+    }
+  }
+  if (childPidsCsv.length > 200) {
+    jQuery.ajax({
+      "dataType":"json",
+      "method":"POST",
+      "url": Drupal.settings.basePath+"sidora/ajax_parts/check_valid_pids/"+openingPid,
+      "data": {"csv_pids":childPidsCsv},
+      "success": pidRemoval
+    });
+  } 
+  else {
+    jQuery.ajax({
+      "dataType":"json",
+      "url": Drupal.settings.basePath+"sidora/ajax_parts/check_valid_pids/"+openingPid+"/"+childPidsCsv,
+      "success": pidRemoval
+    });
+  }
 }
 /*
  * 
  */
 sidora.util.refreshConceptChildrenNumber = function(pid){
-    jQuery.ajax({
-      url: Drupal.settings.basePath+'sidora/ajax_parts/get_num_resource_children/'+pid,
-    }).done(function(num_children){
-      sidora.util.refreshConceptChildrenNumberDirect(pid, num_children);
-    }).fail(function(failure_obj){
-      sidora.recentAjaxFailure(failure_obj);
-    });
+  if (pid == "") return;
+  jQuery.ajax({
+    url: Drupal.settings.basePath+'sidora/ajax_parts/get_num_resource_children/'+pid,
+  }).done(function(num_children){
+    sidora.util.refreshConceptChildrenNumberDirect(pid, num_children);
+  }).fail(function(failure_obj){
+    sidora.recentAjaxFailure(failure_obj);
+  });
 }
 sidora.util.refreshConceptChildrenNumberDirect = function(pid, number_of_children){
   var treeIdsToUpdate = jQuery("a").filter(
@@ -2034,7 +2047,7 @@ jQuery(window).resize(function() {
  * If the browser doesn't have a console, give it something so we're not creating JS errors
  */
 if (typeof(window.console) == 'undefined'||typeof(window.console.log)=='undefined'){window.console = {log:function(){}};}
-sidora.util.constantCheck(); //All polling links in to this function
+setTimeout(sidora.util.constantCheck,4000); //All polling links in to this function, give 4 seconds for Drupal javascripts to set up
 
 
 /**

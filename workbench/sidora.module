@@ -4520,7 +4520,13 @@ function sidora_ajax_parts($call_type, $param1 = '', $param2 = '', $param3 = '')
     //Any of these that the person does not have view access to should be considered invalid
     //If they have view access to it that means it exists and is valid
     //When permissions changes happen: only update the cache if it exists but they dont have view access
-    $pids = explode(",",$param2);
+    $pids = array();
+    if (isset($_POST['csv_pids'])){
+      $pids = explode(",",$_POST['csv_pids']);
+    }
+    else {
+      $pids = explode(",",$param2);
+    }
     $view_permissions = sidora_allow_batch($user, $pids,'view');
     $clear_parent = count($view_permissions['invalid']) > 0;
     if ($clear_parent) {
@@ -6604,7 +6610,10 @@ function wb_si_exhibition_generate_child_concept_query($pid) {
     $o <fedora-rels-ext:hasConcept> $c and
     $c <fedora-model:state> <fedora-model:Active>)';
   return 'select $o $t ' . $count_concept . $count_resource . ' from <#ri> where
-     $o <fedora-model:hasModel> <info:fedora/si:conceptCModel> and
+     ( 
+       $o <fedora-model:hasModel> <info:fedora/si:conceptCModel> or
+       $o <fedora-model:hasModel> <info:fedora/si:collectionCModel>
+     ) and
      $o <fedora-model:state> <fedora-model:Active> and
      $o <fedora-model:label> $t and
      <info:fedora/' . $pid . '> <fedora-rels-ext:hasConcept> $o
