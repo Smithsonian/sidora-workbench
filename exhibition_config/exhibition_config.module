@@ -482,7 +482,7 @@ function exhibition_config_form_submit($form, &$form_state) {
         drupal_set_message(t('Configuration saved.'));
       }
       else {
-        drupal_set_message(t('Configuration saved. Exhibition not set to show publicly.'),'warning');
+				drupal_set_message(t('Configuration saved. Exhibition not set to show publicly.'),'warning');
       }
     }
     else {
@@ -605,6 +605,7 @@ function exhibition_config_form($form, $form_state){
   $object = _exhibition_config_get_object($pid);
   $row = exhibition_config_get_config_data($pid);
   drupal_add_library('system', 'ui.resizable');
+  drupal_add_library('system','ui.dialog');
   if (empty($row)) {
     $row = array();
     $row['css_script'] = '';
@@ -989,10 +990,38 @@ $GLOBALS['base_url'].'/'.drupal_get_path('module','exhibition_config').'/images/
 </div>
 <script type="text/javascript">
 (function( $ ){
-
-
 $(function(){
-  $("input.form-text").blur(function(){
+  submit = false;
+  $("body").css("padding-top","0px");
+  $("#confirm-save").click(function(e){
+			if ($("input[name=\'is_available\']:checked").length == 0) {
+        e.preventDefault();
+        $("#saveExhibitionConfirm").remove();
+        $("body").append("<div id=\'saveExhibitionConfirm\' style=\'display:none;\' title=\'Exhibition not set to show publicly.\'><p>Are you sure you wish to save this configuration?</p></div>");
+        $("#saveExhibitionConfirm").dialog({
+         height: 300,
+         width: 350,
+         modal: true,
+         resizable: false,
+         buttons: {
+          "Confirm": function() {
+           $( this ).dialog("close");
+           submit = true;
+					 $("#exhibition-config-form").submit();
+				  },
+          Cancel: function() {
+          $( this ).dialog( "close" );
+          }
+         }
+        });
+      }
+	});
+  $("#exhibition-config-form").submit(function() {
+    if (submit) {
+      return true;
+    } 
+  });
+	$("input.form-text").blur(function(){
     $("#preview-title").children().first().text($("#edit-title").val());
     $("#actualLogoImage").attr("src",$("#edit-logo").val());
   });
@@ -1780,6 +1809,7 @@ Color Set:
   $form['submit'] = array(
     '#type' => 'submit',
     '#value' => 'Submit',
+    '#attributes' => array("id" => "confirm-save"),
   );
   return $form;
 }
