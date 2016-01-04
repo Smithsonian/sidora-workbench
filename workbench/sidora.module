@@ -1634,11 +1634,11 @@ function sidora_settings_import($object, $ignore_settings = array(), $only_apply
       (empty($only_apply_settings) || sidora_contains($setting_name,$only_apply_settings,TRUE))
     ){
       $original_value = variable_get($setting_name);
-      if ($original_value === $setting_value){
-        drupal_set_message($dry_run_prefix . t('Administrative setting "%name" was already set to the content specified in this configuration.',array('%name' => $setting_name)));
+      if (json_encode($original_value) === json_encode($setting_value)){
+        drupal_set_message($dry_run_prefix . t('Administrative setting "%name" was already set to the content specified in this configuration.',array('%name' => json_encode($setting_name))));
       }else{
         if (!$dry_run) variable_set($setting_name,$setting_value);
-        drupal_set_message($dry_run_prefix . t('Administrative setting "%name" set from <br/>"%original" <br/>to <br/>"%newval".',array('%name' => $setting_name,'%original'=>$original_value,'%newval'=>$setting_value)));
+        drupal_set_message($dry_run_prefix . t('Administrative setting "%name" set from <br/>"%original" <br/>to <br/>"%newval".',array('%name' => $setting_name,'%original'=>json_encode($original_value),'%newval'=>json_encode($setting_value))));
       }
     }else{
       drupal_set_message($dry_run_prefix . t('Ignored administrative setting "%name".',array('%name' => $setting_name)),$ignore_message_type);
@@ -1776,17 +1776,50 @@ function sidora_fedora_object_issues_form_submit($form, &$form_state){
  */
 function sidora_config_transfer($direct_download = ""){
   $download_filename = 'site_config.json';
-  if ($direct_download == $download_filename){
+  if ($direct_download == $download_filename) {
     $sidora_settings_object = sidora_settings_object();
     header("Content-type: application/json");
     header("Content-Disposition: attachment; filename=\"$download_filename\"");
-    print json_encode($sidora_settings_object);
+    $sso_json = json_encode($sidora_settings_object);
+    print sidora_pretty_json($sso_json);
     drupal_exit();
-  }else{
+  }
+  else if (array_key_exists('useLastDryRunAsConfigSource', $_GET) && $_GET['useLastDryRunAsConfigSource'] === 'true') {
+      $object = $_SESSION['sidora_uploaded_json_config']['object'];
+      $ignore_settings = $_SESSION['sidora_uploaded_json_config']['ignore_settings'];
+      $only_apply_settings = $_SESSION['sidora_uploaded_json_config']['only_apply_settings'];
+      $show_ignores_as_warnings = $_SESSION['sidora_uploaded_json_config']['show_ignores_as_warnings'];
+      sidora_settings_import($object,$ignore_settings,$only_apply_settings,FALSE,$show_ignores_as_warnings);
+      drupal_goto('admin/sidora/config_transfer');
+  }
+  else {
     $form = drupal_get_form('sidora_config_form');
     $download_link = '<a href="config_transfer/'.$download_filename.'">Download current config</a>';
-    return $download_link.drupal_render($form);
+    $sidora_settings_object = sidora_settings_object();
+    $servers_table = '<h3>Servers listing (These setting names should probably be in the "Ignore these settings if in the import file" text area above.)</h3><table id="sidora-server-table"><tr><th>Setting Name</th><th>Setting Value</th></tr>';
+    foreach($sidora_settings_object['admin_settings'] as $setting_name => $value) {
+      if (is_string($value) && sidora_startsWith($value, 'http')){
+        $servers_table .= '<tr><td>' . $setting_name . '</td><td>' . $value . '</td></tr>';
+      }
+    }
+    $servers_table .= '</table>';
+  $all_setting_indexes = '<h3>All Drupal Settings names</h3><table>';
+  global $conf;
+  foreach($conf as $drupal_setting_index=>$drupal_setting){
+    $all_setting_indexes .= '<tr><td>' . $drupal_setting_index . '</td></tr>';
   }
+  $all_setting_indexes .= '</table>';
+    $current_settings_info = '<h2>Current Settings Information</h2>';
+    $current_settings_info .= $servers_table;
+    if (array_key_exists('showAllDrupalSettings', $_GET) && $_GET['showAllDrupalSettings'] === 'true') {
+      $current_settings_info .= $all_setting_indexes;
+    }
+    else {
+      $current_settings_info .= '<br/><a href="?showAllDrupalSettings=true"> Show all the Drupal settings names </a>';
+    }
+    $to_return = $download_link.drupal_render($form).$current_settings_info;
+  }
+  return $to_return;
 }
 /*
  * Form for uploading a configuration file to import settings from a previously saved SIdora configuration or saved from 
@@ -1805,7 +1838,7 @@ function sidora_config_form($form, &$form_state){
   );
   $form['dry_run'] = array(
     '#type' =>'checkbox',
-    '#title'=>t('Dry Run (no not actually make changes)'),
+    '#title'=>t('Dry Run (do not actually make changes)'),
     '#default_value' =>TRUE, // for default checked and false is not checked
   );
   $form['only_apply_settings'] = array(
@@ -1844,16 +1877,26 @@ function sidora_config_form_submit($form, &$form_state) {
     $file_contents = file_get_contents($filepath);
     $object = json_decode($file_contents);
     sidora_settings_import($object,$ignore_settings,$only_apply_settings,$dry_run,$show_ignores_as_warnings);
+    $_SESSION['sidora_uploaded_json_config'] = array();
+    $_SESSION['sidora_uploaded_json_config']['object'] = $object;
+    $_SESSION['sidora_uploaded_json_config']['ignore_settings'] = $ignore_settings;
+    $_SESSION['sidora_uploaded_json_config']['only_apply_settings'] = $only_apply_settings;
+    $_SESSION['sidora_uploaded_json_config']['dry_run'] = $dry_run;
+    $_SESSION['sidora_uploaded_json_config']['show_ignores_as_warnings'] = $show_ignores_as_warnings;
+
+    if ($dry_run) drupal_set_message('Update the configuration of server with the configuration used in the dry run by clicking this link: <a href="?useLastDryRunAsConfigSource=true">Use the Dry Run config</a>','whitebox');
   }
 }
 /*
  * Returns an object for moving settings between SIdora instances
  */
-function sidora_settings_object($ignore_list = array('si_exhibition_website_location','osd_proxy_resolver_url')){
+//function sidora_settings_object($ignore_list = array('si_exhibition_website_location','osd_proxy_resolver_url')){
+function sidora_settings_object($ignore_list = array()){
   global $conf;
   $starts_with = array();
   $starts_with[] = 'resource_viewer_dsid_';
   $starts_with[] = 'resource_viewer_viewer_';
+  $starts_with[] = 'islandora_';
   $exact_match = array();
   $exact_match[] = 'si_exhibition_website_location';
   $exact_match[] = 'sidora_ontology_json';
@@ -7621,6 +7664,60 @@ function sidora_startsWith($haystack, $needle) {
 function sidora_endsWith($haystack, $needle) {
   // search forward starting from end minus needle length characters
   return $needle === "" || strpos($haystack, $needle, strlen($haystack) - strlen($needle)) !== FALSE;
+}
+/*
+ * Helper function to pretty print json if PHP < 5.3 (like on our local dev servers)
+ * Originally from http://snipplr.com/view/60559/prettyjson/
+ */
+function sidora_pretty_json($json) {
+ 
+    $result      = '';
+    $pos         = 0;
+    $strLen      = strlen($json);
+    $indentStr   = '  ';
+    $newLine     = "\n";
+    $prevChar    = '';
+    $outOfQuotes = true;
+ 
+    for ($i=0; $i<=$strLen; $i++) {
+ 
+        // Grab the next character in the string.
+        $char = substr($json, $i, 1);
+ 
+        // Are we inside a quoted string?
+        if ($char == '"' && $prevChar != '\\') {
+            $outOfQuotes = !$outOfQuotes;
+ 
+        // If this character is the end of an element, 
+        // output a new line and indent the next line.
+        } else if(($char == '}' || $char == ']') && $outOfQuotes) {
+            $result .= $newLine;
+            $pos --;
+            for ($j=0; $j<$pos; $j++) {
+                $result .= $indentStr;
+            }
+        }
+ 
+        // Add the character to the result string.
+        $result .= $char;
+ 
+        // If the last character was the beginning of an element, 
+        // output a new line and indent the next line.
+        if (($char == ',' || $char == '{' || $char == '[') && $outOfQuotes) {
+            $result .= $newLine;
+            if ($char == '{' || $char == '[') {
+                $pos ++;
+            }
+ 
+            for ($j = 0; $j < $pos; $j++) {
+                $result .= $indentStr;
+            }
+        }
+ 
+        $prevChar = $char;
+    }
+ 
+    return $result;
 }
 /*
  * Moves a file from the XSL directory to the backup directory while renaming based on time.
