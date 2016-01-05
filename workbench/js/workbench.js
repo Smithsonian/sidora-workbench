@@ -918,6 +918,7 @@ sidora.InitiateConfirmAccess = function(){
     },
     "error":function(){
        console.log("Problem getting basic data, redirecting to the user profile");
+       //This can also happen if the .htaccess file is incorrect
        window.location = Drupal.settings.basePath+"user";
     }
   }
