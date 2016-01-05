@@ -2526,11 +2526,6 @@ function sidora_create_concept($parent_pid = 'si:root', $model = 'si:collectionC
   $creation_info['ontology_id'] = $ontology_id;
   $id_to_creation_info[$form['#build_id']] = $creation_info;
   cache_set("sidora:form_id_to_creation_info",$id_to_creation_info);
-	//error_log("\nIn sidora_create_concept, original form :".print_r($form,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
-  $value = 'xml_form_elements_ajax_callback';
-	$replacement = 'sidora_xml_form_elements_ajax_callback';
-	$form = json_decode(str_replace($value, $replacement,  json_encode($form)), true);
-	error_log("\nIn sidora_create_concept, changed form -rendering next","3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
 	$to_return = drupal_render($form);
   drupal_add_css(drupal_get_path('module','sidora').'/css/workbench_metadata_screens.css',array('weight' => '1000000', 'group' => CSS_THEME));
   drupal_add_js(drupal_get_path('module','sidora').'/js/workbench_metadata_screens.js',array('weight' => '1000000', 'group' => JS_THEME));
@@ -2589,7 +2584,6 @@ function sidora_form_alter(&$form, &$form_state, $form_id){
   array_unshift($form['#submit'], 'sidora_form_submit_alter');
   $association = NULL;
   if ($form_id == 'xml_form_builder_ingest_form' || $form_id == 'islandora_ingest_form' || $form_id == 'xml_form_builder_datastream_form_metadata_form'){
-    error_log("\nIn sidora_form_alter, ".print_r($form_id,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
 		if (array_key_exists('form_build_id', $_POST)){
       $submitted_form_id = $_POST['form_build_id'];
       $association = sidora_find_association($form_state, $submitted_form_id);
@@ -8337,17 +8331,4 @@ function sidora_import_xml_form_submit(array $form, array &$form_state) {
 		}		
   }
   $form_state['redirect'] = "admin/islandora/xmlform";
-}
-function sidora_xml_form_elements_ajax_callback($form, $form_state) {
-  //error_log("\nIn sidora_xml_form_elements_ajax_callback ".print_r($form_state['triggering_element']['#ajax']['params']['render'],true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
-	//return find_element($form, $form_state['triggering_element']['#ajax']['params']['render']);
-  die("in sidora callback");
-}
-function sidora_ajax_render_alter(&$commands) {
-  $commands[] = ajax_command_alert('Winning!');
-  $value = 'xml_form_elements_ajax_callback';
-	$replacement = 'sidora_xml_form_elements_ajax_callback';
-	$commands = json_decode(str_replace($value, $replacement,  json_encode($commands)), true);
-	error_log("\nIn sidora_ajax_render_alter, commands :".print_r($commands,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
-
 }
