@@ -997,7 +997,7 @@ $(function(){
 			if ($("input[name=\'is_available\']:checked").length == 0) {
         e.preventDefault();
         $("#saveExhibitionConfirm").remove();
-        $("body").append("<div id=\'saveExhibitionConfirm\' style=\'display:none;\' title=\'Exhibition not set to show publicly.\'><p>Are you sure you wish to save this configuration?</p></div>");
+        $("body").append("<div id=\'saveExhibitionConfirm\' style=\'display:none;\' title=\'Exhibition not set to show publicly.\'><p>To save this configuration without enabling the public to view click \"Confirm\".<br/><br/>To set the exhibition to be publicly viewable, click \"Cancel\" and check the box \"Show publicly\" then click \"Submit\".</p></div>");
         $("#saveExhibitionConfirm").dialog({
          height: 300,
          width: 350,
