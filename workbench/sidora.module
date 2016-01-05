@@ -1940,7 +1940,38 @@ function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $ex
     return t("You must be an administrator or have an administrator set sidora_allow_all_to_debug in order to access this information");
   }
   if (!sidora_is_admin()) print t("Remember that nonadmins will NOT see output from dsm!");
-  
+ 
+  if ($one == 'file_check'){
+    $temp_dir = file_directory_temp();
+    $dir_content = scandir($temp_dir);
+    //Get just the files and not the hidden ones
+    $files_only = array_filter($dir_content, function($k) {
+      $temp_dir = file_directory_temp();
+      if (is_dir($temp_dir . '/' . $k)) return FALSE;
+      if (sidora_startsWith($k, '.')) return FALSE;
+      return TRUE;
+    });
+    $to_be_removed = array_filter($files_only, function($k) {
+      $curr_time = time();
+      $temp_dir = file_directory_temp();
+      $file_time = filectime($temp_dir . '/' . $k);
+      $time_alive = $curr_time - $file_time;
+      //if > 20000 sec (333 min) then delete
+      if ($time_alive > 20000) return TRUE;
+      return FALSE;
+    });
+    var_dump($to_be_removed);
+    if ($two == 'perform_delete') {
+      foreach($to_be_removed as $to_remove) {
+        $deleted = unlink($temp_dir . '/' . $to_remove);
+        if (!$deleted) {
+          print 'Could not delete:'.$to_remove . "\n";
+        }
+      }
+    }
+    print "DELETED ANY OVER 20,000 seconds old";
+    drupal_exit();
+  } 
   if ($one == 'server_time'){
     print 'server_time'.time();
     drupal_exit();
@@ -3348,12 +3379,12 @@ function sidora_get_drupal_user($user_pid_or_drupal_user = ''){
  * If the user does not have delete access and it belongs to them, it will be placed in a special "orphan" concept TBD / TODO
  */
 function sidora_allow($user_pid_or_drupal_user, $pid_or_fedora_object, $type_of_operation = 'create'){
-  if ($type_of_operation == 'view') return TRUE;
   $drupal_user = sidora_get_drupal_user($user_pid_or_drupal_user);
   $object = $pid_or_fedora_object;
   if (empty($pid_or_fedora_object)) return FALSE; //can't do operations on blank pid
   if (is_string($pid_or_fedora_object)) $object = sidora_obj($pid_or_fedora_object);
   if (empty($object)) return FALSE; //can't do operations on bad pid
+  if ($type_of_operation == 'view') return TRUE;
   //hopefully this is a valid fedora object now
   //if the user is an administrator, they always have the rights
   if (sidora_is_admin($drupal_user)){
@@ -4481,7 +4512,56 @@ function sidora_ajax_parts($call_type, $param1 = '', $param2 = '', $param3 = '')
     print intval(time() / 60);
     drupal_exit();
   }
+  if ($call_type == 'check_valid_pids') {
+    global $user;
+    //param1 is the parent pid which will need its cache cleared if any of the listed pids turn out bad
+    //param2 is a comma separated pid list that the browser has listed as the children.
+    //Any of these that the person does not have view access to should be considered invalid
+    //If they have view access to it that means it exists and is valid
+    //When permissions changes happen: only update the cache if it exists but they dont have view access
+    $pids = array();
+    if (isset($_POST['csv_pids'])){
+      $pids = explode(",",$_POST['csv_pids']);
+    }
+    else {
+      $pids = explode(",",$param2);
+    }
+    $view_permissions = sidora_allow_batch($user, $pids,'view');
+    $clear_parent = count($view_permissions['invalid']) > 0;
+    if ($clear_parent) {
+      sidora_clear_tree_cache($param1);
+    }
+    print json_encode($view_permissions);
+    drupal_exit();
+  }
   drupal_not_found();
+}
+/*
+ * Determine if this batch of pids is valid or invalid for a specified permission for the specified user
+ * Returns an array of the following information:
+ * array (
+ *  'valid' => array of pids that the user can perform that operation
+ *  'invalid' => array of pids that the user cannot perform that operation
+ * )
+ */
+function sidora_allow_batch($user, $pids = array(), $type_of_operation = 'view') {
+  $to_return = array(
+    'valid' => array(),
+    'invalid' => array(),
+  );
+  if (!is_array($pids)) {
+    return $to_return;
+  }
+  foreach ($pids as $pid) {
+    if (sidora_allow($user, $pid, $type_of_operation)) {
+      $to_return['valid'][] = $pid;
+    }
+    else
+    {
+      $to_return['invalid'][] = $pid;
+    } 
+  }
+  return $to_return;
 }
 /**
  * obtain/release/renew a lock on a pid
@@ -5434,6 +5514,47 @@ if ($outputDebugCleanup) {
   print 'upload complete';
 }
 drupal_exit();
+}
+/*
+ * Implements hook_cron
+ * Removes anything in the temp directory that is over an hour old.  These are the old uploads but are not managed
+ * by Drupal.
+ */
+function sidora_cron() {
+  $temp_dir = file_directory_temp();
+  $dir_content = scandir($temp_dir);
+  //Get just the files and not the hidden ones
+  $files_only = array_filter($dir_content, function($k) {
+    $temp_dir = file_directory_temp();
+    if (is_dir($temp_dir . '/' . $k)) return FALSE;
+    if (sidora_startsWith($k, '.')) return FALSE;
+    return TRUE;
+  });
+  $to_be_removed = array_filter($files_only, function($k) {
+    $curr_time = time();
+    $temp_dir = file_directory_temp();
+    $file_time = filectime($temp_dir . '/' . $k);
+    $time_alive = $curr_time - $file_time;
+    //if > 20000 sec (333 min) then delete
+    if ($time_alive > 20000 && fileowner($temp_dir . '/' . $k) == 'apache') return TRUE;
+    return FALSE;
+  });
+  $deleted_files = array();
+  foreach($to_be_removed as $to_remove) {
+    if (is_writable($temp_dir . '/' . $to_remove)) {
+      $deleted = unlink($temp_dir . '/' . $to_remove);
+      if ($deleted) $deleted_files[] = $to_remove;
+    }
+  }
+  watchdog(
+    'sidora_workbench',
+    t('Cleared directory %d: %f files, %t flagged for removal, could not remove %n files.',array(
+      '%d' => $temp_dir,
+      '%f' => (sizeof($files_only)),
+      '%n' => (sizeof($to_be_removed) - sizeof($deleted_files)),
+      '%t' => (sizeof($to_be_removed)),
+    ))
+  );
 }
 /*
  * Creates the html_tree.  
@@ -6488,6 +6609,10 @@ function wb_si_exhibition_generate_child_concept_query($pid) {
     $o <fedora-rels-ext:hasConcept> $c and
     $c <fedora-model:state> <fedora-model:Active>)';
   return 'select $o $t ' . $count_concept . $count_resource . ' from <#ri> where
+     ( 
+       $o <fedora-model:hasModel> <info:fedora/si:conceptCModel> or
+       $o <fedora-model:hasModel> <info:fedora/si:collectionCModel>
+     ) and
      $o <fedora-model:state> <fedora-model:Active> and
      $o <fedora-model:label> $t and
      <info:fedora/' . $pid . '> <fedora-rels-ext:hasConcept> $o
@@ -8152,7 +8277,7 @@ function sidora_islandora_sp_videoCModel_islandora_ingest_steps_alter(array &$st
  */
 function sidora_video_view_object($pid) {
   $object = sidora_obj($pid);
-  if (empty($obj)){ return ''; }
+  if (empty($object)){ return ''; }
   $variables = array('object' => $object);
   $output = theme('islandora_video', $variables);
   $output = drupal_get_css() . drupal_get_js() . $output;
