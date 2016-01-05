@@ -512,7 +512,7 @@ tr.removed.odd {
   );
   $form['sidora_disable_locking_by_pid'] = array(
     '#type' => 'checkbox',
-    '#title' => 'Disable lockingerr',
+    '#title' => 'Disable locking',
     '#description' => t('Usually pids have locks to eliminate multiple users attempting to access it at one.  Checking this box turns off that feature.'),
     '#default_value' => variable_get('sidora_disable_locking_by_pid', ''),
   );
