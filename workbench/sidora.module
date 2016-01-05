@@ -1789,10 +1789,12 @@ function sidora_config_transfer($direct_download = ""){
     drupal_exit();
   }
   else if (array_key_exists('useLastDryRunAsConfigSource', $_GET) && $_GET['useLastDryRunAsConfigSource'] === 'true') {
-      $object = $_SESSION['sidora_uploaded_json_config']['object'];
+      $filepath = $_SESSION['sidora_uploaded_json_config']['object_filepath'];
       $ignore_settings = $_SESSION['sidora_uploaded_json_config']['ignore_settings'];
       $only_apply_settings = $_SESSION['sidora_uploaded_json_config']['only_apply_settings'];
       $show_ignores_as_warnings = $_SESSION['sidora_uploaded_json_config']['show_ignores_as_warnings'];
+      $file_contents = file_get_contents($filepath);
+      $object = json_decode($file_contents);
       sidora_settings_import($object,$ignore_settings,$only_apply_settings,FALSE,$show_ignores_as_warnings);
       drupal_goto('admin/sidora/config_transfer');
   }
@@ -1882,7 +1884,7 @@ function sidora_config_form_submit($form, &$form_state) {
     $object = json_decode($file_contents);
     sidora_settings_import($object,$ignore_settings,$only_apply_settings,$dry_run,$show_ignores_as_warnings);
     $_SESSION['sidora_uploaded_json_config'] = array();
-    $_SESSION['sidora_uploaded_json_config']['object'] = $object;
+    $_SESSION['sidora_uploaded_json_config']['object_filepath'] = $filepath;
     $_SESSION['sidora_uploaded_json_config']['ignore_settings'] = $ignore_settings;
     $_SESSION['sidora_uploaded_json_config']['only_apply_settings'] = $only_apply_settings;
     $_SESSION['sidora_uploaded_json_config']['dry_run'] = $dry_run;
