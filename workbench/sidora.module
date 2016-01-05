@@ -1775,7 +1775,11 @@ function sidora_fedora_object_issues_form_submit($form, &$form_state){
  * Downloads the current SIdora configuration or shows a form to allow importing a configuration
  */
 function sidora_config_transfer($direct_download = ""){
-  $download_filename = 'site_config.json';
+  global $base_url;
+  $download_filename = 'site_config_from_';
+  $alpha_base_url = preg_replace('/[^a-zA-z0-9]/', '-', $base_url);
+  $alpha_base_url = preg_replace('/-+/', '-', $alpha_base_url);
+  $download_filename .= $alpha_base_url . '.json';
   if ($direct_download == $download_filename) {
     $sidora_settings_object = sidora_settings_object();
     header("Content-type: application/json");
