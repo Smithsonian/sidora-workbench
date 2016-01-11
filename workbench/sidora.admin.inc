@@ -160,12 +160,11 @@ jQuery("#edit-sidora-resource-ontology-json").on(\'change keyup paste\', functio
   $form_names_dd .= '<option value="sidora_all">All forms that are not specifically called out</option>';
   foreach($names as $form_info){ $name = $form_info['name']; $form_names_dd .= '<option value="'.$name.'">'.$name.'</option>'; }
   $form_names_dd .= '</select>';
-
-  $names = islandora_get_content_model_names();
+  $model_names = islandora_get_content_model_names();
 
   $model_names_dd = '<select class="model-names-dd form-select">';
   $model_names_dd .= '<option value="sidora_all">All models that are not specifically called out</option>';
-  foreach($names as $model => $name){ $model_names_dd .= '<option value="'.$model.'">'.$name.'</option>'; }
+  foreach($model_names as $model => $name){ $model_names_dd .= '<option value="'.$model.'">'.$name.'</option>'; }
   $model_names_dd .= '</select>';
   
   $directory_to_list_for_xsl = DRUPAL_ROOT.'/'.drupal_get_path('module','sidora').'/XSL';
@@ -352,7 +351,7 @@ tr.removed.odd {
     //TODO: make both this and the looped additions to use the same code instead of copy/paste
 	);
 
-  foreach($names as $model => $name){
+  foreach($model_names as $model => $name){
     $models[] = array(
       '#type' => 'fieldset',
       '#title' => $name,
@@ -504,6 +503,44 @@ tr.removed.odd {
 			),	
     ),
   );
+  $legacy_items = array(
+	  'person' => 'Person',
+		'research_project' => 'Research Project',
+		'expedition' => 'Expedition',
+		'research_site_or_area' => 'Research Site or Area',
+		'camera_trap_deployment' => 'Camera Trap Deployment',
+		'archaeology_site' => 'Archaeology Site',
+		'camera_trap_plot' => 'Camera Trap Plot',
+		'field_book_collection' => 'Field Book Collection',
+		'cultural_heritage_entity_or_object' => 'Cultural Heritage Entity or Object',
+		'camera_trap_image' => 'Camera Trap Image',
+		'general_image' => 'General Image',
+		'pdf' => 'Digitized Text PDF',
+		'tabular_data_set_object' => 'Tabular Data Set Object'
+		);
+  $form_names = array('None' => 'Not Set');
+	foreach($names as $form_info){ 
+	  $form_name = $form_info['name'];
+	  $form_names[$form_name] = $form_name;
+	}
+	foreach($legacy_items as $item => $name){
+		$legacy_item_fieldset[] = array(
+		  '#type' => 'fieldset',
+			'#title' => t($name),
+			'sidora_legacy_' . $item . '_form' => array(
+			  '#type' => 'select',
+			  '#options' => $form_names,
+			  '#default_value' => variable_get('sidora_legacy_'.$item.'_form', ''),
+			),	
+			);
+  }
+    $form['legacy_items_form_config'] = array(
+      '#type' => 'fieldset',
+      '#title' => 'Configure forms used by legacy items',
+      '#collapsible' => TRUE,
+      '#collapsed' => TRUE,
+      'items' => $legacy_item_fieldset,
+ );
   $form['sidora_allow_all_to_debug'] = array(
      '#type' => 'textfield',
      '#title' => t('Allow all users access to debug'),

@@ -820,45 +820,55 @@ PDF metadata:
     if (!empty($object['EAC-CPF'])){
       $to_return['dsid'] = 'EAC-CPF'; 
       if (sidora_startsWith($object->id, 'si-user:')){
-        $to_return['form_name'] = 'Person'; 
+         $to_return['form_name'] = (variable_get('sidora_legacy_person_form','Person') != 'None') ? variable_get('sidora_legacy_person_form','Person') : 'Person';
+			 // $to_return['form_name'] = 'Person'; 
       }else{
 /*
+
   Person
   Expedition
   Research Project
 */
         $EACCPF_content = $object['EAC-CPF']->content;
         if (strpos($EACCPF_content, "<localControl localType=\"Publication Date\">") !== FALSE){
-          $to_return['form_name'] = 'Research Project'; 
+          $to_return['form_name'] = (variable_get('sidora_legacy_research_project_form','Research Project') != 'None') ? variable_get('sidora_legacy_research_project_form','Research Project') : 'Research Project';
+          //$to_return['form_name'] = 'Research Project'; 
         }else{
-          $to_return['form_name'] = 'Expedition'; 
+          $to_return['form_name'] = (variable_get('sidora_legacy_expedition_form','Expedition') != 'None') ? variable_get('sidora_legacy_expedition_form','Expedition') : 'Expedition';
+          //$to_return['form_name'] = 'Expedition'; 
         }
       }
     }else if (!empty($object['FGDC-Research'])){
       $to_return['dsid'] = 'FGDC-Research'; 
-      $to_return['form_name'] = 'Research Site or Area - Full Description'; 
+      $to_return['form_name'] = (variable_get('sidora_legacy_research_site_or_area_form','Research Site or Area - Full Description') != 'None') ? variable_get('sidora_legacy_research_site_or_area_form','Research Site or Area - Full Description') : 'Research Site or Area - Full Description';
+			//$to_return['form_name'] = 'Research Site or Area - Full Description'; 
     }else if (!empty($object['FGDC'])){
 /*
   Camera Trap Deployment
   Archaeology Site
 */
       $to_return['dsid'] = 'FGDC'; 
-      $to_return['form_name'] = 'Archaeology Site'; 
+      $to_return['form_name'] = variable_get('sidora_legacy_archaeology_site_form','Archaeology Site');
+			//$to_return['form_name'] = 'Archaeology Site'; 
       $object_content_models = $object->relationships->get('info:fedora/fedora-system:def/model#', 'hasModel'); 
       foreach($object_content_models as $ocm){
         if ($ocm['object']['value'] == 'si:cameraTrapCModel'){
-          $to_return['form_name'] = 'Camera Trap Deployment';
+          $to_return['form_name'] = (variable_get('sidora_legacy_camera_trap_deployment_form','Camera Trap Deployment') != 'None') ? variable_get('sidora_legacy_camera_trap_deployment_form','Camera Trap Deployment') : 'Camera Trap Deployment';
+					//$to_return['form_name'] = 'Camera Trap Deployment';
         }
       }
     }else if (!empty($object['FGDC-CTPlot'])){
       $to_return['dsid'] = 'FGDC-CTPlot'; 
-      $to_return['form_name'] = 'Camera Trap Plot'; 
+      $to_return['form_name'] = (variable_get('sidora_legacy_camera_trap_plot_form','Camera Trap Plot') != 'None') ? variable_get('sidora_legacy_camera_trap_plot_form','Camera Trap Plot') : 'Camera Trap Plot';
+			//$to_return['form_name'] = 'Camera Trap Plot'; 
     }else if (!empty($object['NCD'])){
       $to_return['dsid'] = 'NCD'; 
-      $to_return['form_name'] = 'Field Book Collection'; 
+      $to_return['form_name'] = (variable_get('sidora_legacy_field_book_collection_form','Field Book Collection') != 'None') ? variable_get('sidora_legacy_field_book_collection_form','Field Book Collection') : 'Field Book Collection';
+			//$to_return['form_name'] = 'Field Book Collection'; 
     }else if (!empty($object['LIDO'])){
       $to_return['dsid'] = 'LIDO'; 
-      $to_return['form_name'] = 'Cultural Heritage Entity or Object'; 
+      $to_return['form_name'] = (variable_get('sidora_legacy_cultural_heritage_entity_or_object_form','Cultural Heritage Entity or Object') != 'None') ? variable_get('sidora_legacy_cultural_heritage_entity_or_object_form','Cultural Heritage Entity or Object') : 'Cultural Heritage Entity or Object';
+			//$to_return['form_name'] = 'Cultural Heritage Entity or Object'; 
     }
     /*
     $object_content_models = $object->relationships->get('info:fedora/fedora-system:def/model#', 'hasModel'); 
@@ -875,19 +885,23 @@ PDF metadata:
         $to_return['dsid'] = 'MODS';
         $MODS_content = $object['MODS']->content;
         if (strpos($MODS_content, "<relatedItem>") !== FALSE){
-          $to_return['form_name'] = 'Camera Trap Image';
+          $to_return['form_name'] = (variable_get('sidora_legacy_camera_trap_image_form','Camera Trap Image') != 'None') ? variable_get('sidora_legacy_camera_trap_image_form','Camera Trap Image') : 'Camera Trap Image';
+					//$to_return['form_name'] = 'Camera Trap Image';
         }else{
-          $to_return['form_name'] = 'General Image Description';
+          $to_return['form_name'] = (variable_get('sidora_legacy_general_image_form','General Image Description') != 'None') ? variable_get('sidora_legacy_general_image_form','General Image Description') : 'General Image Description';
+					//$to_return['form_name'] = 'General Image Description';
         }
       }
       if ($cm == 'si:fieldbookCModel'){
         //Since we won't be editing metadata yet for fieldbooks, assume this is a PDF
         $to_return['dsid'] = 'MODS';
-        $to_return['form_name'] = 'Digitized Text (PDF)';
+        $to_return['form_name'] = (variable_get('sidora_legacy_pdf_form','Digitized Text (PDF)') != 'None') ? variable_get('sidora_legacy_pdf_form','Digitized Text (PDF)') : 'Digitized Text (PDF)';
+				//$to_return['form_name'] = 'Digitized Text (PDF)';
       }
       if ($cm == 'si:datasetCModel'){
         $to_return['dsid'] = 'FGDC';
-        $to_return['form_name'] = 'Tabular Data Set Object';
+        $to_return['form_name'] = (variable_get('sidora_legacy_tabular_data_set_object_form','Tabular Data Set Object') != 'None') ? variable_get('sidora_legacy_tabular_data_set_object_form','Tabular Data Set Object') : 'Tabular Data Set Object';
+				//$to_return['form_name'] = 'Tabular Data Set Object';
       }
     }
   }
@@ -1139,7 +1153,7 @@ function sidora_edit_metadata($object_id_string = '', $dsid = '', $form_name = '
   $form_name = $sidora_data['form_name'];
   $object = sidora_obj($object_id);
   $form_state = array();
-  $associations = xml_form_builder_datastream_form_get_associations($form_state,$object->models, $dsid);  //first param goes unused
+ 	$associations = xml_form_builder_datastream_form_get_associations($form_state,$object->models, $dsid);  //first param goes unused
   $association = null;
   foreach($associations as $curr_association){
     if ($curr_association['form_name'] == $form_name){
