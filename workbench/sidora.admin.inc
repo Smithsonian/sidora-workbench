@@ -554,5 +554,17 @@ tr.removed.odd {
     '#default_value' => variable_get('sidora_disable_locking_by_pid', ''),
   );
   $form['#attributes'] = array('OnSubmit' => 'formPreSubmit();');
+  $form['sidora_links'] = array(
+    '#markup' => '<ul id="sidora-admin-links"><h2>Administrative Links</h2>
+<li><a href="config_transfer">Config Transfer</a> Download or upload a SIdora configuration</li>
+<li><a href="fedora_object_issues">Fedora Object Issues</a> Check to see if any object issues have been found by the workbench (Malformed objects list)</li>
+</ul>
+<script>
+
+jQuery(document).ready(function(){
+  jQuery("#edit-actions").after(jQuery("#sidora-admin-links"));
+});
+</script>',
+  );
   return system_settings_form($form);
 }
