@@ -1162,6 +1162,7 @@ function sidora_edit_metadata($object_id_string = '', $dsid = '', $form_name = '
   }
   if (empty($association)){
     print "The form is not configured correctly.  The form specified is not associated to this model. Error:A2<br/>";
+    print "If this is a legacy item, please ensure there is an association between the form you want to use with one of the models listed here.<br/>";
     print "pid:$object_id_string<br/>";
     print "dsid:$dsid<br/>";
     print "form:$form_name<br/>";
@@ -1917,6 +1918,7 @@ function sidora_settings_object($ignore_list = array()){
   $starts_with[] = 'resource_viewer_dsid_';
   $starts_with[] = 'resource_viewer_viewer_';
   $starts_with[] = 'islandora_';
+  $starts_with[] = 'sidora_';
   $exact_match = array();
   $exact_match[] = 'si_exhibition_website_location';
   $exact_match[] = 'sidora_ontology_json';
