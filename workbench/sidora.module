@@ -1989,7 +1989,7 @@ function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $ex
     return t("You must be an administrator or have an administrator set sidora_allow_all_to_debug in order to access this information");
   }
   if (!sidora_is_admin()) print t("Remember that nonadmins will NOT see output from dsm!");
- 
+
   if ($one == 'file_check'){
     $temp_dir = file_directory_temp();
     $dir_content = scandir($temp_dir);
@@ -2329,10 +2329,6 @@ function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $ex
       }
     }
     return $to_return;;
-  }
-  if ($one == 'php_info'){
-    phpinfo();
-    drupal_exit();
   }
   if ($one == 'imagemagick'){
     $moth = image_load('/var/www/drupal/sites/all/modules/large_image_moth.jp2');
