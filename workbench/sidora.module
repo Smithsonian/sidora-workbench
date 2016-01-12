@@ -478,10 +478,8 @@ jQuery(document).ready(function(){
   foreach($object as $dsid=>$datastream){
     print '<tr><td>'.$datastream->id.'</td><td>'.$datastream->label.'</td><td>'.$datastream->state.'</td><td>'.$datastream->mimetype.'</td><td>'.$datastream->createdDate.'</td><td>';
     if ($datastream->versionable) {
-      //$datastream_url = base_path()."islandora/object/{$datastream->parent->id}/datastream/{$datastream->id}/version";
       print '<a href="#" class="versionHistory" datastream="' . $datastream->id . '" pid="' . $datastream->parent->id . '">'.count($datastream).'</a> ';
-      //print '<a href="#" class = "versionHistory" url="' . $datastream_url . '" datastream="' . $datastream->id . '">' . count($datastream) . '</a>';
-    }
+		}
     print '</td><td>';
     $viewer_filename = $datastream->id.'.';
     if (strpos($datastream->mimetype,'image/') === 0)
@@ -581,6 +579,11 @@ function sidora_title_callback(){
  *   TBD / TODO: Create better implementation for storing which files go with which item
  *   For example, save it in the form's cache / form
  */
+/* SID-453 : Add parent pid to the Sidora datastream of the newly created
+ * object. This info gets added only once after a new object is ingested.
+ * Any subsequent operations on the object like copy or move do not change
+ * this info in Sidora datastream.
+ */
 function sidora_islandora_object_ingested(AbstractObject $object){
   global $user;
   module_load_include('inc', 'islandora', 'includes/utilities');
@@ -628,7 +631,6 @@ function sidora_islandora_object_ingested(AbstractObject $object){
       $creation_info = $id_to_creation_info[$submitted_form_id];
       $dsids = sidora_get_proper_dsid($creation_info['model'],$creation_info['form']);
       $creation_info['dsid'] = (empty($dsids))?'':$dsids[0];
-      
       sidora_update_datastream($object, '<sidora>
 <model>'.$creation_info['model'].'</model>
 <form>'.$creation_info['form'].'</form>
