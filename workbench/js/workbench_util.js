@@ -113,16 +113,108 @@ sidora_util.ParentPid = function(){
 }
 sidora_util.ajaxUrl = function(count){
   var pidsBeingProcessedString = sidora_util.ParentPid();
-	var pidsBeingProcessedArray = pidsBeingProcessedString.split("&");
-	var pidsInUrl = window.location.href.indexOf(pidsBeingProcessedString)
-	var baseUrl = window.location.href.substr(0,pidsInUrl);
-	return baseUrl+pidsBeingProcessedArray[count];
-}	
+  var pidsBeingProcessedArray = pidsBeingProcessedString.split("&");
+  var pidsInUrl = window.location.href.indexOf(pidsBeingProcessedString)
+  var baseUrl = window.location.href.substr(0,pidsInUrl);
+  return baseUrl+pidsBeingProcessedArray[count];
+}
+ 
+fixXmlFormsBehavior = function() {
+  if (!(Drupal && Drupal.behaviors && Drupal.behaviors.xmlFormElementTabs && Drupal.behaviors.xmlFormElementTabs.tabs)){
+    return;
+  }
+  //Add items to fix the xml form to behave the way SI wants
+  Drupal.behaviors.xmlFormElementTabs.tabs.loadPanels = function(collapse, context) {
+    var load = '.xml-form-elements-tabs:not(.processed)';
+    var collapsible = '.xml-form-elements-tabs-collapsible';
+    var collapsed = '.xml-form-elements-tabs-collapsed';
+    this.tabs = jQuery(load);
+    this.collapsibleTabs = this.tabs.filter(collapsible);
+    this.nonCollapsibleTabs = this.tabs.not(collapsible);
+    var expandedTabs = this.collapsibleTabs.not(collapsed);
+    var collapsedTabs = this.collapsibleTabs.filter(collapsed);
+    if (collapsedTabs.length > 0) {
+      collapsedTabs.tabs({
+        collapsible: true,
+        selected: collapse ? -1 : undefined,
+        select: this.setCollapsibleIconOnSelect,
+        create: this.setCollapsibleIconOnCreate
+      });
+    }
+    if (expandedTabs.length > 0) {
+      expandedTabs.tabs({
+        collapsible: true,
+        select: this.setCollapsibleIconOnSelect,
+        create: this.setCollapsibleIconOnCreate
+      });
+    }
+    if (this.nonCollapsibleTabs.length > 0) {
+      this.nonCollapsibleTabs.tabs({});
+    }
+    this.tabs.each(function() {
+      var goToNewestTab = true;
+      jQuery(this).find('li a:not(.sidora-bound)').addClass('sidora-bound').bind('click', function(){
+        var container = jQuery(this).closest(".clear-block").attr('id');
+        tabInformationObject = {};
+        tabInformationObject.container = container;
+        tabInformationObject.tab_selected = jQuery(this).text();
+        tabInformationObject.number_of_tabs = jQuery(this).closest('ul').find('li').size();
+        var alreadySet = false;
+        if (typeof(window.sidora_util) != 'undefined') {
+          for (var ti = 0; ti < window.sidora_util.tabInformationBetweenAjaxCalls.length; ti++){
+            if (window.sidora_util.tabInformationBetweenAjaxCalls[ti].container == container){
+              alreadySet = true;
+              window.sidora_util.tabInformationBetweenAjaxCalls[ti] = tabInformationObject;
+            }
+          }
+          if (!alreadySet) {
+            window.sidora_util.tabInformationBetweenAjaxCalls.push(tabInformationObject);
+          }
+        }
+      });
+
+      var indexToSelect = 0;
+      var container = jQuery(this).closest(".clear-block").attr('id');
+      var tabsOfInterest = jQuery("#"+container).find('ul').first().children('li');
+      if (typeof(window.sidora_util) == 'undefined') {
+        window.sidora_util = {};
+      }
+      if (typeof(window.sidora_util.tabInformationBetweenAjaxCalls) == 'undefined') {
+        window.sidora_util.tabInformationBetweenAjaxCalls = [];
+      }
+      for (var ti = 0; ti < window.sidora_util.tabInformationBetweenAjaxCalls.length; ti++){
+        var tabInformationObject = window.sidora_util.tabInformationBetweenAjaxCalls[ti];
+        if (
+          tabInformationObject.container == container &&
+          tabInformationObject.number_of_tabs == tabsOfInterest.size()
+          ){
+          for (var tabsIndex = 0; tabsIndex < tabsOfInterest.size(); tabsIndex++) {
+            if (jQuery(tabsOfInterest[tabsIndex]).children('a').text() == tabInformationObject.tab_selected) {
+              indexToSelect = tabsIndex;
+              goToNewestTab = false;
+            }
+          }
+        }
+      }
+
+      if (goToNewestTab) {
+        indexToSelect = jQuery(this).find('li').length - 1;
+      }
+      jQuery(this).tabs({
+        selected: indexToSelect,         
+        active: indexToSelect
+      });
+    });
+  }
+}
+
+
 jQuery(document).ready(function(){
   var pp = sidora_util.ParentPid();
   if (pp != ''){
     sidora_util.lock.Obtain(pp);
     sidora_util.lock.KeepAlive();
   }
+  fixXmlFormsBehavior();
 });
-  
+

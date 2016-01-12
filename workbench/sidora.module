@@ -1164,6 +1164,7 @@ function sidora_edit_metadata($object_id_string = '', $dsid = '', $form_name = '
   }
   if (empty($association)){
     print "The form is not configured correctly.  The form specified is not associated to this model. Error:A2<br/>";
+    print "If this is a legacy item, please ensure there is an association between the form you want to use with one of the models listed here.<br/>";
     print "pid:$object_id_string<br/>";
     print "dsid:$dsid<br/>";
     print "form:$form_name<br/>";
@@ -1919,6 +1920,7 @@ function sidora_settings_object($ignore_list = array()){
   $starts_with[] = 'resource_viewer_dsid_';
   $starts_with[] = 'resource_viewer_viewer_';
   $starts_with[] = 'islandora_';
+  $starts_with[] = 'sidora_';
   $exact_match = array();
   $exact_match[] = 'si_exhibition_website_location';
   $exact_match[] = 'sidora_ontology_json';
@@ -2005,7 +2007,7 @@ function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $ex
     return t("You must be an administrator or have an administrator set sidora_allow_all_to_debug in order to access this information");
   }
   if (!sidora_is_admin()) print t("Remember that nonadmins will NOT see output from dsm!");
- 
+
   if ($one == 'file_check'){
     $temp_dir = file_directory_temp();
     $dir_content = scandir($temp_dir);
@@ -2345,10 +2347,6 @@ function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $ex
       }
     }
     return $to_return;;
-  }
-  if ($one == 'php_info'){
-    phpinfo();
-    drupal_exit();
   }
   if ($one == 'imagemagick'){
     $moth = image_load('/var/www/drupal/sites/all/modules/large_image_moth.jp2');
