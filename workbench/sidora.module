@@ -4237,10 +4237,12 @@ function sidora_xml_form_builder_get_self_transforms(){
   //All of the following were NOT correct ways to get to the file system path.  Included for future reference:
   //file_default_scheme(); //file_create_url(file_default_scheme()."://");//file_directory_path();//base_path();//$_SERVER['DOCUMENT_ROOT'].base_path();
   $t_dir = $mp_prefix.'/sites/all/modules/sidora_specific/self_transforms';
-  $files = array_diff(scandir($t_dir),array('..','.'));
   $to_return = array();
-  foreach($files as $file){
-    $to_return[$file] = "$mp_prefix/sites/all/modules/sidora_specific/self_transforms/$file";
+  if (file_exists($t_dir)) {
+    $files = array_diff(scandir($t_dir),array('..','.'));
+    foreach($files as $file){
+      $to_return[$file] = "$mp_prefix/sites/all/modules/sidora_specific/self_transforms/$file";
+    }
   }
   return $to_return;
 }
@@ -4253,10 +4255,12 @@ function sidora_xml_form_builder_get_transforms(){
   //All of the following were NOT correct ways to get to the file system path.  Included for future reference:
   //file_default_scheme(); //file_create_url(file_default_scheme()."://");//file_directory_path();//base_path();//$_SERVER['DOCUMENT_ROOT'].base_path();
   $t_dir = $mp_prefix.'/sites/all/modules/sidora_specific/transforms';
-  $files = array_diff(scandir($t_dir),array('..','.'));
   $to_return = array();
-  foreach($files as $file){
-    $to_return[$file] = "$mp_prefix/sites/all/modules/sidora_specific/transforms/$file";
+  if (file_exists($t_dir)) {
+    $files = array_diff(scandir($t_dir),array('..','.'));
+    foreach($files as $file){
+      $to_return[$file] = "$mp_prefix/sites/all/modules/sidora_specific/transforms/$file";
+    }
   }
   return $to_return;
   /* For reference, how to include items in the returned array
