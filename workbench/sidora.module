@@ -1978,7 +1978,10 @@ function sidora_settings_object($ignore_list = array()){
  *   The watchdog log entry
  */
 function sidora_watchdog_filtering(array $log_entry) {
-  if (strpos($log_entry['message'], "LAME encoding failed for object") === 0){
+  $message = $log_entry['message'];
+  if (strpos($message, "LAME encoding failed for object") === 0){
+    return WATCHDOG_FILTERING_EXCLUDE;
+  }else if (strpos($message, 'Undefined index: callback in <em class="placeholder">securepages_match_form()</em> (line <em class="placeholder">369</em> of') !== FALSE){
     return WATCHDOG_FILTERING_EXCLUDE;
   }
   // Don't affect filtering on other messages.
