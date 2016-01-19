@@ -477,6 +477,32 @@ sidora.InitiateJSTree = function(){
         sidora.util.checkUIForInvalidPids(openingPid, childPidsCsv);
       }
     });
+    jQuery('#forjstree').bind('copy_node.jstree', function (e, data) {
+      //Copy node
+      var toMovePid = data.node.a_attr.pid;
+      var moveToPid = jQuery("#"+data.parent+" a").attr('pid');
+      var actionUrl = Drupal.settings.basePath+'sidora/ajax_parts/copy/'+moveToPid+'/'+toMovePid
+      if (typeof(toMovePid) == 'undefined'){
+        //Both types of resource drags are interpreted as "copy_node"
+        //regardless of whether control is held down
+        //console.log("resource copy/move");
+        jQuery("#forjstree").jstree("delete_node",data.node);
+        return; //resource actions are handled by the 'dnd_stop.vakata' event
+      }
+      var jst = jQuery("#forjstree").jstree(true);
+      var newParentExistingChildConceptsNumber = parseInt(jQuery("#"+data.parent).children("a").attr("conceptchildren"));
+      var npReplacer = newParentExistingChildConceptsNumber+1;
+      jQuery("#"+data.parent).children("a").attr("conceptchildren",""+npReplacer);
+      jst.get_node(data.parent).a_attr.conceptchildren = ""+npReplacer;
+      sidora.queue.incomingRequestsAreSilent = true;
+      sidora.queue.Request('Copy Concept', actionUrl, function(){
+        sidora.concept.LoadContentHelp.Relationships();
+      }, function(){
+        sidora.util.RefreshTree();
+      }, [moveToPid,toMovePid]);
+      sidora.queue.incomingRequestsAreSilent = false;
+      sidora.queue.Next();
+    });
     jQuery('#forjstree').bind('open_node.jstree', function (e, data) {
       var jst = jQuery("#forjstree").jstree(true);
       var openingPid = data.node.a_attr.pid;
