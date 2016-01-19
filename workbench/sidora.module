@@ -378,7 +378,7 @@ function sidora_management_panel($pid, $show_or_save = 'show', $dsid_to_remove =
     return $to_return;
   }
   if ($show_or_save == 'upload'){
-    $to_return =  sidora_create_resource_get_upload_form_html('*','Upload File');
+    $to_return =  sidora_create_resource_get_upload_form_html('*', NULL, NULL, 'Upload File');
     drupal_add_css(drupal_get_path('module','sidora').'/css/workbench_create_resource.css',array('weight' => '1000000', 'group' => CSS_THEME));
     drupal_add_js(drupal_get_path('module','sidora').'/js/workbench_util.js',array('weight' => '1000000', 'group' => JS_THEME));
     drupal_add_js(drupal_get_path('module','sidora').'/js/workbench_uploader.js',array('weight' => '1000000', 'group' => JS_THEME));
@@ -2808,7 +2808,7 @@ function sidora_create_resource_get_current_uploads(){
  * gives the proper upload form for the model selected
  * returns string of HTML
  */
-function sidora_create_resource_get_upload_form_html($model, $upload_button_text = 'Browse', $clear_file_list = TRUE){
+function sidora_create_resource_get_upload_form_html($model, $form_name, $ontology_location, $upload_button_text = 'Browse', $clear_file_list = TRUE){
   global $user;
   $to_return = '';
   $file_extensions = array(
@@ -2820,11 +2820,26 @@ function sidora_create_resource_get_upload_form_html($model, $upload_button_text
     'islandora:sp_videoCModel' => array('ogg','mp4','mov','qt', 'm4a', 'm4v', 'avi', 'mkv'),
     '*' => array('*'),
   );
-  if (array_key_exists($model, $file_extensions)){
-    $extensions_for_model = $file_extensions[$model];
-    $elements = array(
-      '#extensions' => $extensions_for_model
-    );
+  $elements = NULL;
+  if (!empty($ontology_location)) {
+    switch($ontology_location) {
+      case 'DynamicText':
+        $extensions_for_ontology_location = array('doc', 'docx');
+        $elements = array(
+          '#extensions' => $extensions_for_ontology_location
+        );
+      break; 
+    }
+  }
+  if (empty($elements)) { 
+    if (array_key_exists($model, $file_extensions)){
+      $extensions_for_model = $file_extensions[$model];
+      $elements = array(
+        '#extensions' => $extensions_for_model
+      );
+    }
+  }
+  if (!empty($elements)) {
     $to_return .= "<div id='create-resource-upload'>";
     $to_return .= sidora_get_plupload_html($elements, $upload_button_text);
     $to_return .= "<input class=\"form-submit\" id=\"Next\" value=\"Next\" onclick=\"jQuery('#create-resource-upload').hide(); location.reload();\"></input>";
@@ -3338,7 +3353,7 @@ jQuery(document).ready(function(){
         }
       }
       if ($check_for_uploads && $create_upload_form){
-        $form_html = sidora_create_resource_get_upload_form_html($model,'Browse',FALSE);
+        $form_html = sidora_create_resource_get_upload_form_html($model,$form_name, $ontology_location, 'Browse',FALSE);
         if (!empty($form_html)){
           $to_return .= $form_html;
           $show_form = FALSE;
@@ -3348,7 +3363,7 @@ jQuery(document).ready(function(){
     }
   }else{
     if ($check_for_uploads && empty($current_uploads)){
-      $form_html = sidora_create_resource_get_upload_form_html($model);
+      $form_html = sidora_create_resource_get_upload_form_html($model, $form_name, $ontology_location);
       if (!empty($form_html)){
         $to_return .= $form_html;
         $show_form = FALSE;
