@@ -63,6 +63,14 @@ function exhibition_config_menu(){
     'description' => t('JSON data'),
     'type' => MENU_CALLBACK,
   );
+  $items['exhibition_config/visibility'] = array(
+    'title' => t('Exhibition Visibility data'),
+    'page callback' => 'exhibition_config_visibility_data',
+    'page arguments' => array(2),
+    'access callback' => TRUE, 
+    'description' => t('Visibility data'),
+    'type' => MENU_CALLBACK,
+  );
   return $items;
 }
 /*
@@ -178,6 +186,9 @@ function exhibition_config_custom_url($custom_url){
     print($row->pid);
   }
   exit();
+}
+function exhibition_config_visibility_data($pid) {
+  $pid = urldecode($pid);
 }
 /*
  * Returns nothing, does not perform exit, but prints to output

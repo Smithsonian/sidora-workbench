@@ -80,10 +80,26 @@ function exhibition_config_schema(){
       'is_available' => array(
         'type' => 'int',
       ),
+      'visibility' => array(
+        'type' => 'text',
+        'size' => 'big',
+      ),
     ),
   );
   return $schema;
 }
+/**
+ * Update from the original Exhibition config, enable the ability to hold visibility information
+ */
+function exhibition_config_update_7100() {
+  $spec = array(
+    'type' => 'text',
+    'description' => 'Visibility of all items within this exhibition',
+    'size' => 'big',
+  );
+  db_add_field('exhibition_config', 'visibility', $spec);
+}
+    
 /*
 * Implementation of hook_uninstall().
 */
