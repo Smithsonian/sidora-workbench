@@ -1171,6 +1171,18 @@ sidora.ResizeOnWindowResize = function(){
   sidora.resources.individualPanel.ResizeAndStop();
 }
 /*
+ * Attempts to pull the number of child resources from the tree
+ */
+sidora.concept.GetResourceChildrenLength = function(){
+  var itemSelectorForCurrentItemInTree = 'a[href=\"'+window.location.pathname + window.location.search + window.location.hash +'\"]';
+  var directPull = jQuery(itemSelectorForCurrentItemInTree).attr("resourcechildren");
+  if (typeof(directPull) != 'undefined'){
+    return parseInt(directPull);
+  }
+  return null; 
+}
+/*
+/*
  * Attempts to pull the number of child concepts from the tree
  */
 sidora.concept.GetConceptChildrenLength = function(){
@@ -1179,7 +1191,7 @@ sidora.concept.GetConceptChildrenLength = function(){
   if (typeof(directPull) != 'undefined'){
     return parseInt(directPull);
   }
-  return parseInt("-1"); // return -1 if there's any error in retrieving the conceptchildren value.
+  return null; 
 }
 /*
  * Attempts to pull a concept name from the tree or just returns whatever is passed in
@@ -1464,8 +1476,8 @@ sidora.util.Confirm = function(title, questionText, onConfirmation, onCancel, co
  */
 sidora.concept.DeleteConcept = function(){
   jQuery('#deleteConceptDialog').remove();
-  if (sidora.concept.GetConceptChildrenLength() == "-1"){
-    jQuery("body").append("<div id='deleteConceptDialog' style='display:none;' title='Delete Concept'><p>Error getting the child concepts for this concept. Cannot delete this concept</p><p>"+sidora.concept.GetName()+" ("+sidora.concept.GetPid()+")</p></div>");
+  if ((sidora.concept.GetConceptChildrenLength() == null) || (sidora.concept.GetResourceChildrenLength() == null)){
+    jQuery("body").append("<div id='deleteConceptDialog' style='display:none;' title='Delete Concept'><p>Error getting the child concepts or resources for this concept. Cannot delete this concept</p><p>"+sidora.concept.GetName()+" ("+sidora.concept.GetPid()+")</p></div>");
     jQuery("#deleteConceptDialog").dialog({
       resizable: false,
       height:250,
@@ -1479,8 +1491,8 @@ sidora.concept.DeleteConcept = function(){
     });
     return;
   }
-  if (sidora.concept.GetConceptChildrenLength() + sidora.resources.GetLength() > 0){
-    jQuery("body").append("<div id='deleteConceptDialog' style='display:none;' title='Delete Concept'><p>This concept has "+sidora.concept.GetConceptChildrenLength()+" concept(s) and has "+sidora.resources.GetLength()+" resource(s) as children. It cannot be deleted while it has children.</p><p>"+sidora.concept.GetName()+" ("+sidora.concept.GetPid()+")</p></div>");
+  if (sidora.concept.GetConceptChildrenLength() + sidora.concept.GetResourceChildrenLength() > 0){
+    jQuery("body").append("<div id='deleteConceptDialog' style='display:none;' title='Delete Concept'><p>This concept has "+sidora.concept.GetConceptChildrenLength()+" concept(s) and has "+sidora.concept.GetResourceChildrenLength()+" resource(s) as children. It cannot be deleted while it has children.</p><p>"+sidora.concept.GetName()+" ("+sidora.concept.GetPid()+")</p></div>");
     jQuery("#deleteConceptDialog").dialog({
       resizable: false,
       height:250,
