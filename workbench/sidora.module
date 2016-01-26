@@ -5527,6 +5527,8 @@ if (isset($_REQUEST["name"])) {
   $fileName = $_REQUEST["name"];
 } elseif (!empty($_FILES)) {
   $fileName = $_FILES["file"]["name"];
+} else {
+  drupal_exit();
 } 
 
 
