@@ -4631,8 +4631,10 @@ function sidora_ajax_parts($call_type, $param1 = '', $param2 = '', $param3 = '')
     if ($clear_parent) {
       sidora_clear_tree_cache($param1);
     }
-    print json_encode($view_permissions);
-    drupal_exit();
+    
+    //print json_encode($view_permissions);
+    //drupal_exit();
+    return drupal_json_output($view_permissions);
   }
   drupal_not_found();
 }
