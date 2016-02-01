@@ -1322,6 +1322,9 @@ function sidora_get_parent_table($pid){
   module_load_include('inc', 'sidora', 'includes/utils');
   $output = t('Parents');
   $object = sidora_obj($pid);
+  if (empty($object)) {
+    return '';
+  }
   $parents = sidora_get_parent_concepts($object);
     
   $header = array(t('Title'), t('Type'));
@@ -1980,6 +1983,8 @@ function sidora_settings_object($ignore_list = array()){
 function sidora_watchdog_filtering(array $log_entry) {
   $message = $log_entry['message'];
   if (strpos($message, "LAME encoding failed for object") === 0){
+    return WATCHDOG_FILTERING_EXCLUDE;
+  }else if (strpos($message, 'Undefined index: callback in <em class="placeholder">securepages_match_form()</em> (line <em class="placeholder">369</em> of') !== FALSE){
     return WATCHDOG_FILTERING_EXCLUDE;
   }else if (strpos($message, 'Undefined index: callback in <em class="placeholder">securepages_match_form()</em> (line <em class="placeholder">369</em> of') !== FALSE){
     return WATCHDOG_FILTERING_EXCLUDE;
@@ -3710,6 +3715,7 @@ function sidora_generate_parent_concept_query($pid) {
  *
  */
 function sidora_open_access($info_type, $pid){
+  $pid = urldecode($pid);
   $pids_checked = Array();
   $pid_with_exhibition =  sidora_exhibition_exists_in_tree($pid, $pids_checked);
   if ($pid_with_exhibition == FALSE){
@@ -4127,6 +4133,17 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
      break;
   }
   print $to_output;
+}
+function sidora_get_content_model_names(){
+  $cache_name = "sidora:content_model_names";
+  if (cache_get($cache_name) === FALSE){
+    module_load_include('inc', 'islandora', 'includes/content_model.autocomplete');
+    $names = islandora_get_content_model_names();
+    cache_set($cache_name,$names);
+  }else{
+    $names = cache_get($cache_name)->data;
+  }
+  return $names;
 }
 /**
  * This will return a php object with fedora object information or a blank array
@@ -4631,9 +4648,6 @@ function sidora_ajax_parts($call_type, $param1 = '', $param2 = '', $param3 = '')
     if ($clear_parent) {
       sidora_clear_tree_cache($param1);
     }
-    
-    //print json_encode($view_permissions);
-    //drupal_exit();
     return drupal_json_output($view_permissions);
   }
   drupal_not_found();
