@@ -224,16 +224,6 @@ button.ui-button-text-only .ui-button-text {
 #resourceInformationPane {
   min-width: 400px;
 }
-/**
- * jMenu fixes to work with other libs
- */
-.jMenu li a {
-  padding-bottom: 7px;
-  padding-top: 6px;
-}
-.jMenu li ul {
-  z-index:90;
-}
 
 .workbench-nav ul, .workbench-nav .block ul, .workbench-nav .item-list ul {
   margin: 0;
@@ -310,15 +300,36 @@ Table paging
   cursor:pointer;
   opacity:1.0
 }
+.sidoraMenu{display:table;margin:0;padding:0;list-style:none;}
+.sidoraMenu li{display:table-cell;background-color:#322f32;margin:0;list-style:none}
+.sidoraMenu li a{
+  padding: 6px 15px 7px 15px;
+  display:block;
+  background-color:transparent;
+  color:#fff;
+  text-transform:uppercase;
+  cursor:pointer;
+  font-size:12px
+}
+.sidoraMenu li a:hover{background-color:#3a3a3a}
+.sidoraMenu li:hover>a{background-color:#3a3a3a}
+.sidoraMenu li ul{
+  display:none;position:absolute;z-index:9999;padding:0;margin:0;list-style:none
+  z-index:90;
+}
+.sidoraMenu li ul li{background-color:#322f32;display:block;border-bottom:1px solid #484548;padding:0;list-style:none;position:relative}
+.sidoraMenu li ul li a{font-size:11px;text-transform:none;display:block;padding:7px;border-top:1px solid transparent;border-bottom:1px solid transparent}
+.sidoraMenu li ul li a.isParent{background-color:#3a3a3a}
+.sidoraMenu li ul li a:hover{background-color:#514c52;border-top:1px solid #322f32;border-bottom:1px solid #322f32}
+.sidoraMenu li ul li a {
+  padding: 2px 2px 2px 6px;
+}
 .sidora-resources-icon {
   background-image: url('../images/assorted_glass%20buttons.png');
   opacity:0.7;
   display:inline-block;
   height: 36px;
   width: 36px;
-}
-.jMenu li ul li a {
-  padding: 2px 2px 2px 6px;
 }
 #sidora-resource-sort{
   display: inline-block;

@@ -34,30 +34,6 @@
  */
 
 /**
- * Check for a relationship between objects.
- *
- * Before we add a relationhip between objects we want to make sure that,
- * relationship doesn't exist only checks for a relationship between collection
- * and child using isMemberOf or isMemberOfCollection. This query could be more
- * flexible, in future we could also parse the rels-ext to check for more?
- */
-function sidora_check_for_relationship($current_pid, $collection_pid) {
-  $query = 'select $object $title
-    from <#ri>
-    where $object <mulgara:is> <info:fedora/' . $current_pid . '>
-    and $object <info:fedora/fedora-system:def/model#label> $title
-    and ($object <fedora-rels-ext:hasConcept> <info:fedora/' . $collection_pid . '>
-    or $object <fedora-rels-ext:hasResource> <info:fedora/' . $collection_pid . '>)';
-  $results = sidora_query($query);
-  if (empty($results)) {
-    return FALSE;
-  }
-  else {
-    return TRUE;
-  }
-}
-
-/**
  * function to add a relationship child of parent
  *
  * @param string $uri
@@ -127,80 +103,6 @@ function sidora_update_relationship_choose_exit($uri, $predicate, $recipient, $r
 }
 
 /**
- *
- * @param string $pid
- * @return array
- *
- */
-function sidora_get_parents($pid) {
-  $query = 'select $object $title $created
-    from <#ri>
-    where ($object <info:fedora/fedora-system:def/model#label> $title
-    and $object <fedora-model:createdDate> $created
-    and $object <fedora-model:state> <info:fedora/fedora-system:def/model#Active>
-    and ($object <fedora-rels-ext:hasResource> <info:fedora/' . $pid . '>
-    or $object <fedora-rels-ext:hasConcept> <info:fedora/' . $pid . '> ))
-    order by $title';
-  $results = sidora_query($query);
-  return $results;
-}
-
-/**
- *
- * @param string $pid
- * @return array
- *
- */
-function sidora_get_children($pid) {
-  $query =
-    'select $object $title $created
-    from <#ri>
-    where ($object <info:fedora/fedora-system:def/model#label> $title
-    and $object <fedora-model:createdDate> $created
-    and $object <fedora-model:state> <info:fedora/fedora-system:def/model#Active>
-    and (<info:fedora/' .$pid . '> <fedora-rels-ext:hasConcept> $object))
-    order by $title';
-  $results = sidora_query($query);
-  return $results;
-}
-
-
-function sidora_get_cmodels_cmodel($pid) {
-  $query = 'select $object $title $model $parent_model
-    from <#ri>
-    where ($object <info:fedora/fedora-system:def/model#label> $title
-    and $object <mulgara:is> <info:fedora/' . $pid . '>
-    and $object <fedora-model:hasModel> $model
-    and $model <fedora-model:hasModel> $parent_model
-    and $object <fedora-model:state> <info:fedora/fedora-system:def/model#Active>)
-    minus $model <mulgara:is> <info:fedora/fedora-system:FedoraObject-3.0>
-    minus $model <mulgara:is> <info:fedora/fedora-system:ContentModel-3.0>
-    minus $parent_model <mulgara:is> <info:fedora/fedora-system:FedoraObject-3.0>
-    order by $title';
-  module_load_include('inc', 'fedora_repository', 'CollectionClass');
-  $collection = new CollectionClass();
-  $results = $collection->getRelatedObjects(NULL, 1000000, NULL, $query);
-  $ret = array();
-  if ($results != '') {
-    $document = new DOMDocument();
-    $document->loadXML($results);
-    $path = new DOMXPath($document);
-    $path->registerNamespace('sparql', 'http://www.w3.org/2001/sw/DataAccess/rf1/result');
-    $results = $path->query('//sparql:result');
-    $count = $results->length;
-    if ($count > 0) {
-      for ($i = 0; $i < $count; $i++) {
-        $result = $results->item($i);
-        $parent_model_pid = substr($path->query('sparql:parent_model/@uri', $result)->item(0)->value, 12); // 12 characteres in "info:fedora/"
-        $ret[] = $parent_model_pid;
-      }
-    }
-    return $ret;
-  }
-  return $ret;
-}
-
-/**
  * gets a list of concept object pids with their titles by comparing the substring to the objects label
  * used for generating type aheads.
  *
@@ -218,107 +120,6 @@ function sidora_get_concepts(&$concepts, $substring = NULL) {
     }
   }
   return $results;
-}
-
-/**
- * runs and itql query and returns the results in an array, array is formatted for form api select element
- * @param string $query
- * @return array
- */
-function sidora_query($query) {
-  module_load_include('inc', 'fedora_repository', 'CollectionClass');
-  $collection = new CollectionClass();
-  $results = $collection->getRelatedObjects(NULL, 1000000, NULL, $query);
-  $results = trim($results);
-  $ret = array();
-  if ($results != '') {
-    $document = new DOMDocument();
-    $document->loadXML($results);
-    $path = new DOMXPath($document);
-    $path->registerNamespace('sparql', 'http://www.w3.org/2001/sw/DataAccess/rf1/result');
-    $results = $path->query('//sparql:result');
-    $count = $results->length;
-    if ($count > 0) {
-      for ($i = 0; $i < $count; $i++) {
-        $result = $results->item($i);
-        $pid = substr($path->query('sparql:object/@uri', $result)->item(0)->value, 12); // 12 characteres in "info:fedora/"
-        $label = $path->query('sparql:title', $result)->item(0)->textContent;
-        if (strlen($label) > 125) {
-          $label = substr($label, 0, 125); //this text will be shown in a form select so keep it short
-        }
-        if (!empty($label)) {
-          $ret[$pid] = $label;
-        }
-      }
-    }
-    return $ret;
-  }
-  return $ret;
-}
-
-/**
- * Creates a list of recently ingested objects that have a RELS-EXT statement that says this objects metadata has not yet been modified.
- * This list appears on the users account page so they can find objects they have ingested but not yet updated.
- *
- * @global object $user
- *  the drupal user
- *
- * @global <type> $base_url
- *
- * @return string
- *  a themed pager
- */
-function sidora_get_unmodified_objects() {
-  global $user;
-  global $base_url;
-  $name = $user->name;
-  $query = 'select $object $title $model $created $orginalMeta $ownerID from <#ri>
-where ($object <info:fedora/fedora-system:def/model#label> $title
-and $object <fedora-model:hasModel> $model
-and $object <fedora-model:createdDate> $created
-and $object <fedora-model:state> <info:fedora/fedora-system:def/model#Active>
-and $object <info:fedora/fedora-system:def/model#ownerId> $ownerID
-and $ownerID <mulgara:is> \'' . $name . '\'
-and $object <http://islandora.org/ontologies/metadata#orginal_metadata> $orginalMeta
-and $orginalMeta <mulgara:is> \'TRUE\'
-)
-minus $model <mulgara:is> <info:fedora/fedora-system:FedoraObject-3.0>
-minus $model <mulgara:is> <info:fedora/fedora-system:ContentModel-3.0>
-order by $title';
-  module_load_include('inc', 'fedora_repository', 'CollectionClass');
-  $collection = new CollectionClass();
-  $results = $collection->getRelatedObjects(NULL, 1000000, NULL, $query);
-  $results = trim($results);
-  $arr = array();
-  if ($results != '') {
-    $document = new DOMDocument();
-    $document->loadXML($results);
-    $path = new DOMXPath($document);
-    $path->registerNamespace('sparql', 'http://www.w3.org/2001/sw/DataAccess/rf1/result');
-    $results = $path->query('//sparql:result');
-    $count = $results->length;
-    $number_per_page = variable_get('sidora_number_per_page', 10);
-    $page_number = 0;
-    if (isset($_GET['page'])) {
-      $page_number = $_GET['page'];
-    }
-    if ($count > 0) {
-      $ii = $page_number * $number_per_page;
-      for ($i = $ii; $i < $count; $i++) {
-        $result = $results->item($i);
-        $pid = substr($path->query('sparql:object/@uri', $result)->item(0)->value, 12); // 12 characteres in "info:fedora/"
-        $label = $path->query('sparql:title', $result)->item(0)->textContent;
-        $created = $path->query('sparql:created', $result)->item(0)->textContent;
-        $relatedCount = $path->query('sparql:k0', $result)->item(0)->textContent;
-        $arr[] = l($label, $base_url . '/fedora/repository/' . $pid);
-        if ($i >= $ii - 1 + $number_per_page)
-          break;
-      }
-    }
-  }
-  _sidora_pager_init($count, $number_per_page, $element = 0);
-  $pager = theme('pager', NULL, $number_per_page, 0, NULL, 10);
-  return $pager . '<br />' . theme('item_list', $arr, 'Image objects with Original Metadata') . '<br />' . $pager;
 }
 
 /**
@@ -646,7 +447,8 @@ function sidora_get_model(AbstractObject $object, array $ignore_models = NULL) {
 }
 
 /**
- * Checks if the given object is a resource.
+ * Checks if the given object is a resource.  If we have a content model that is not a concept or codebook,
+ * then it must be a resource.
  *
  * @param AbstractObject $object
  *   The object to get the content model from.
@@ -655,14 +457,14 @@ function sidora_get_model(AbstractObject $object, array $ignore_models = NULL) {
  *   TRUE if the given object is a resource, FALSE otherwise.
  */
 function sidora_is_resource(AbstractObject $object) {
-  $resource_models =array(
-      'si:imageCModel',
-      'si:generalImageCModel',
-      'si:datasetCModel',
-      'si:fieldbookCModel',
-  );
+  module_load_include('inc', 'islandora', 'includes/content_model.autocomplete');
+  $names = islandora_get_content_model_names();
+  $all_models = array();
+  foreach($names as $model => $name){ $all_models[] = $model; }
+  if (sidora_is_concept($object)) return FALSE;
+  if (sidora_is_codebook($object)) return FALSE;
   return in_array('si:resourceCModel', $object->models) ||
-    array_intersect($resource_models, $object->models);
+    array_intersect($all_models, $object->models);
 }
 
 /**

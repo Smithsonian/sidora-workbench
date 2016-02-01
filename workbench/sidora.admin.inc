@@ -44,6 +44,7 @@
  */
 function sidora_admin_settings() {
   module_load_include('inc', 'islandora', 'includes/content_model.autocomplete');
+  module_load_include('inc', 'sidora', 'includes/workbench_viewers.admin');
   $form = array(
 /*
 
@@ -159,12 +160,11 @@ jQuery("#edit-sidora-resource-ontology-json").on(\'change keyup paste\', functio
   $form_names_dd .= '<option value="sidora_all">All forms that are not specifically called out</option>';
   foreach($names as $form_info){ $name = $form_info['name']; $form_names_dd .= '<option value="'.$name.'">'.$name.'</option>'; }
   $form_names_dd .= '</select>';
-
-  $names = islandora_get_content_model_names();
+  $model_names = islandora_get_content_model_names();
 
   $model_names_dd = '<select class="model-names-dd form-select">';
   $model_names_dd .= '<option value="sidora_all">All models that are not specifically called out</option>';
-  foreach($names as $model => $name){ $model_names_dd .= '<option value="'.$model.'">'.$name.'</option>'; }
+  foreach($model_names as $model => $name){ $model_names_dd .= '<option value="'.$model.'">'.$name.'</option>'; }
   $model_names_dd .= '</select>';
   
   $directory_to_list_for_xsl = DRUPAL_ROOT.'/'.drupal_get_path('module','sidora').'/XSL';
@@ -226,8 +226,6 @@ window.generateSidoraFormConfig = function(){
 }
 jQuery(document).ready(function(){
   jQuery("#anf-button").click(function(){
-  // var myWin = window.open(Drupal.settings.basePath+"sidora/test/upload2","XSL_UPLOAD","width=550,height=250,0,status=0,");
-	// added by RAmlani on 3/31/15 to stop using sidora/testing for uploading new xsl files in sidora admin on production site.
   var myWin = window.open(Drupal.settings.basePath+"sidora/info/xsl_Upload/upload2","XSL_UPLOAD","width=550,height=250,0,status=0,");
   });
  /* Delete XSL button - Lets user delete XSL files - Functionality added by ***REMOVED*** on 3/18/15 */
@@ -353,7 +351,7 @@ tr.removed.odd {
     //TODO: make both this and the looped additions to use the same code instead of copy/paste
 	);
 
-  foreach($names as $model => $name){
+  foreach($model_names as $model => $name){
     $models[] = array(
       '#type' => 'fieldset',
       '#title' => $name,
@@ -443,33 +441,32 @@ tr.removed.odd {
       '#description' => t('The Fedora Commons pid will be directly appended to the above, end with / if needed.'),
     );
 */
-  $form['OpenSeaDragonInfo'] = array(
-    'fieldset' => array(
+  _sidora_admin_settings_add_viewer_configs($form);
+	$form['sidora_js_libs'] = array(
+     'fieldset' => array(
       '#type' => 'fieldset',
-      '#title' => 'OpenSeaDragon Info',
+      '#title' => 'Javascript Libraries (Non-viewer related)',
       '#description' => t(''),
       '#collapsible' => TRUE,
       '#collapsed' => TRUE,
-      'osd_proxy_pid_prefix' => array(
-        '#type' => 'textfield',
-        '#title' => t('Prefix the URL before the pid for the base image'),
-        '#default_value' => variable_get('osd_proxy_pid_prefix', ''),
-        '#description' => t('The URL for the base image is made up of this prefix, then the pid, then the post-fix. (ex: http://server.net:8080/fedora/objects/ )'),
-      ),
-      'osd_proxy_pid_postfix' => array(
-        '#type' => 'textfield',
-        '#title' => t('Post-fix for the URL after the pid for the base image'),
-        '#default_value' => variable_get('osd_proxy_pid_postfix', ''),
-        '#description' => t('The URL for the base image is made up of the prefix, then the pid, then this post-fix. (ex: /datastreams/OBJ/content )'),
-      ),
-      'osd_proxy_resolver_url' => array(
-        '#type' => 'textfield',
-        '#title' => t('The base URL for the resolver'),
-        '#default_value' => variable_get('osd_proxy_resolver_url', ''),
-        '#description' => t('The resolver is the location of the image resizer itself. (ex: http://server.net/adore-djatoka/resolver )'),
-  ),
-	),
-	);
+			'sidora_js_lib_location_jstree' => array(
+			  '#type' => 'textfield',
+				'#title' => t('jstree'),
+				'#default_value' => variable_get('sidora_js_lib_location_jstree', ''),
+				'#description' => t('This should be an http / https location containing jstree.js and themes/default/style.min.css.  jsTree can be downloaded from https://github.com/vakata/jstree or http://jstree.com'),
+        '#attributes' => array('size' => 120),
+        '#maxlength' => 1024,
+			),	
+			'sidora_js_lib_location_plupload' => array(
+			  '#type' => 'textfield',
+				'#title' => t('PL Upload'),
+				'#default_value' => variable_get('sidora_js_lib_location_plupload', ''),
+				'#description' => t('This should be an http / https location containing plupload.full.min.js, jqueryui.plupload/jquery.ui.plupload.js, and jquery.ui.plupload/css/jquery.ui.plupload.css.  Pluplup can be downloaded from http://www.pulupload.com'),
+        '#attributes' => array('size' => 120),
+        '#maxlength' => 1024,
+			),	
+    ),
+  );
 	$form['account_request'] = array(
      'fieldset' => array(
       '#type' => 'fieldset',
@@ -506,6 +503,44 @@ tr.removed.odd {
 			),	
     ),
   );
+  $legacy_items = array(
+	  'person' => 'Person',
+		'research_project' => 'Research Project',
+		'expedition' => 'Expedition',
+		'research_site_or_area' => 'Research Site or Area',
+		'camera_trap_deployment' => 'Camera Trap Deployment',
+		'archaeology_site' => 'Archaeology Site',
+		'camera_trap_plot' => 'Camera Trap Plot',
+		'field_book_collection' => 'Field Book Collection',
+		'cultural_heritage_entity_or_object' => 'Cultural Heritage Entity or Object',
+		'camera_trap_image' => 'Camera Trap Image',
+		'general_image' => 'General Image',
+		'pdf' => 'Digitized Text PDF',
+		'tabular_data_set_object' => 'Tabular Data Set Object'
+		);
+  $form_names = array('None' => 'Not Set');
+	foreach($names as $form_info){ 
+	  $form_name = $form_info['name'];
+	  $form_names[$form_name] = $form_name;
+	}
+	foreach($legacy_items as $item => $name){
+		$legacy_item_fieldset[] = array(
+		  '#type' => 'fieldset',
+			'#title' => t($name),
+			'sidora_legacy_' . $item . '_form' => array(
+			  '#type' => 'select',
+			  '#options' => $form_names,
+			  '#default_value' => variable_get('sidora_legacy_'.$item.'_form', ''),
+			),	
+			);
+  }
+    $form['legacy_items_form_config'] = array(
+      '#type' => 'fieldset',
+      '#title' => 'Configure forms used by legacy items',
+      '#collapsible' => TRUE,
+      '#collapsed' => TRUE,
+      'items' => $legacy_item_fieldset,
+ );
   $form['sidora_allow_all_to_debug'] = array(
      '#type' => 'textfield',
      '#title' => t('Allow all users access to debug'),
@@ -519,5 +554,17 @@ tr.removed.odd {
     '#default_value' => variable_get('sidora_disable_locking_by_pid', ''),
   );
   $form['#attributes'] = array('OnSubmit' => 'formPreSubmit();');
+  $form['sidora_links'] = array(
+    '#markup' => '<ul id="sidora-admin-links"><h2>Administrative Links</h2>
+<li><a href="config_transfer">Config Transfer</a> Download or upload a SIdora configuration</li>
+<li><a href="fedora_object_issues">Fedora Object Issues</a> Check to see if any object issues have been found by the workbench (Malformed objects list)</li>
+</ul>
+<script>
+
+jQuery(document).ready(function(){
+  jQuery("#edit-actions").after(jQuery("#sidora-admin-links"));
+});
+</script>',
+  );
   return system_settings_form($form);
 }
