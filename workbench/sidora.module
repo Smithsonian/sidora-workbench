@@ -2577,6 +2577,9 @@ if ($one == 'deletexsl'){
   if ($one == 'get_cache'){
     var_dump(cache_get("sidora:children_results:".$two));
   }   
+  if ($one == 'get_tree_by_id'){
+	  var_dump(sidora_html_tree_for_ajax($two));
+	}	
   //This ends the testing function and should also indicate the end of liberal use of the dsm function
 }
 /*
@@ -4565,6 +4568,25 @@ function sidora_ajax_parts($call_type, $param1 = '', $param2 = '', $param3 = '')
       print sizeof($results);
       drupal_exit();
     }
+  }
+  if ($call_type == 'check_concept_tree'){
+    module_load_include('inc', 'sidora', 'includes/utils');
+    $ajax_to_return = '';
+		$object = sidora_obj($param1);
+    if (empty($object)){ 
+		  print 'refreshNode'; 
+		  drupal_exit();
+		}
+		if (!sidora_is_concept($object)){ 
+      print $ajax_to_return;
+			drupal_exit(); 
+		}
+    $parents = sidora_get_parent_concepts($object);
+    if ((sizeof($parents) < 1) || (!in_array($param2, $parents))) {
+			  $ajax_to_return = 'refreshNode';
+		}	
+		print $ajax_to_return;
+		drupal_exit();
   }
   if ($call_type == 'recent_changes') {
     $pids = sidora_recently_updated_since($param1);

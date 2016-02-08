@@ -1229,7 +1229,7 @@ sidora.util.constantCheck = function(){
  * if multiple users are changing the number of resources
  */
 sidora.util.checkRecentChanges = function(){
-    if (typeof(sidora.util.init_time.server) != 'undefined') {
+	  if (typeof(sidora.util.init_time.server) != 'undefined') {
       if (typeof(sidora.util.lastUpdateTime) == 'undefined') sidora.util.lastUpdateTime = 0;
       jQuery.ajax({
         url: Drupal.settings.basePath+'sidora/ajax_parts/recent_changes/'+sidora.util.lastUpdateTime,
@@ -1306,7 +1306,7 @@ sidora.util.checkUIForInvalidPids = function(openingPid, childPidsCsv) {
  * 
  */
 sidora.util.refreshConceptChildrenNumber = function(pid){
-  if (pid == "") return;
+	if (pid == "") return;
   jQuery.ajax({
     url: Drupal.settings.basePath+'sidora/ajax_parts/get_num_resource_children/'+pid,
   }).done(function(num_children){
@@ -1370,7 +1370,7 @@ sidora.util.RefreshTree = function(singleTripWaitMilliseconds){
       url: Drupal.settings.basePath+'sidora/ajax_parts/tree',
     }).done(function(tree_html){
       if (tree_html == '') window.location = Drupal.settings.basePath+'user';  //No tree indicates a user problem
-      sidora.util.latestTreeGrab = tree_html;
+			sidora.util.latestTreeGrab = tree_html;
       //Note that you may want to refresh the tree even if the latest is the same as the previous
       //For example, a concept move has failed.  The concept move shows in the UI, so the tree
       //needs to be reverted back.  If you want to update the tree only on if it's changed see RefreshTreeIfNew
@@ -1391,6 +1391,43 @@ sidora.RefreshTreeHtml = function(tree_html){
     jQuery('#toReplaceForjstree').append(myDiv).attr("id","forjstree");
     sidora.InitiateJSTree();
     jQuery("#oldjstree").remove();
+}
+sidora.util.refreshNodeByID = function(pidsProcessed){
+	if (pidsProcessed.length != 2) return;
+	jQuery.ajax({
+    url: Drupal.settings.basePath+'sidora/ajax_parts/check_concept_tree/'+pidsProcessed[0]+'/'+pidsProcessed[1],
+  }).done(function(refresh_concept){
+	  if (refresh_concept == "refreshNode"){
+			var jst = jQuery("#forjstree").jstree(true);
+			jst.pureUIChange = true;
+			jQuery('[pid="'+pidsProcessed[0]+'"]').closest("li").filter(
+			function(){ return jQuery(this).parent().parent().children("a").attr("pid") == pidsProcessed[1]; }
+			).map(
+			function(){ jst.delete_node(this.id); }
+			);
+		delete jst.pureUIChange;
+		}		
+  }).fail(function(failure_obj){
+    sidora.recentAjaxFailure(failure_obj);
+  });
+}
+sidora.util.refreshConceptTreeUIDirect = function(pid, tree_html){
+  var treeIdsToUpdate = jQuery("a").filter(
+    function(){ return jQuery(this).attr("pid") == pid; }
+  ).closest("li").map(
+    function(){ return this.id; }
+  ).get();
+  var jst = jQuery("#forjstree").jstree(true);
+  jst.refresh_node("node_1")
+  for(var tii = 0; tii < treeIdsToUpdate.length; tii++){
+    var toUpdateId = treeIdsToUpdate[tii];
+    var existingChildResourceNumber = parseInt(jQuery("#"+toUpdateId).find("a").attr("resourcechildren"));
+    var parentName = jQuery("#"+toUpdateId+" a").attr("fullname");
+    var newFullName =  parentName + " (" + number_of_children + ")";
+    if (number_of_children == 0) newFullName = parentName;
+    jst.rename_node("#"+toUpdateId, newFullName);
+    jQuery("#"+toUpdateId).find("a").attr("resourcechildren",""+number_of_children);
+  }
 }
 /*
  * Opens the Manage panel
@@ -1479,12 +1516,7 @@ sidora.concept.DeleteConcept = function(){
           var toClose = this;
           var onDeleteWorked = function(){
             jQuery( toClose ).dialog( "close" );
-            jQuery("#deleteConceptConfirm").remove();
-            jQuery("body").append("<div title='Concept Deleted' id='deleteConceptConfirm'><p>Concept Deleted</p><div>");
-            jQuery("#deleteConceptConfirm").dialog({
-              resizable:false, modal:true
-            });
-            sidora.util.RefreshTree();
+					  sidora.util.RefreshTree();
           }
           var onDeleteFailed = function(data){
             jQuery( toClose ).dialog( "close" );
@@ -2048,7 +2080,7 @@ jQuery(window).resize(function() {
  * If the browser doesn't have a console, give it something so we're not creating JS errors
  */
 if (typeof(window.console) == 'undefined'||typeof(window.console.log)=='undefined'){window.console = {log:function(){}};}
-setTimeout(sidora.util.constantCheck,4000); //All polling links in to this function, give 4 seconds for Drupal javascripts to set up
+//setTimeout(sidora.util.constantCheck,4000); //All polling links in to this function, give 4 seconds for Drupal javascripts to set up
 
 
 /**
