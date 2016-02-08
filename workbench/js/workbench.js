@@ -477,6 +477,32 @@ sidora.InitiateJSTree = function(){
         sidora.util.checkUIForInvalidPids(openingPid, childPidsCsv);
       }
     });
+    jQuery('#forjstree').bind('copy_node.jstree', function (e, data) {
+      //Copy node
+      var toMovePid = data.node.a_attr.pid;
+      var moveToPid = jQuery("#"+data.parent+" a").attr('pid');
+      var actionUrl = Drupal.settings.basePath+'sidora/ajax_parts/copy/'+moveToPid+'/'+toMovePid
+      if (typeof(toMovePid) == 'undefined'){
+        //Both types of resource drags are interpreted as "copy_node"
+        //regardless of whether control is held down
+        //console.log("resource copy/move");
+        jQuery("#forjstree").jstree("delete_node",data.node);
+        return; //resource actions are handled by the 'dnd_stop.vakata' event
+      }
+      var jst = jQuery("#forjstree").jstree(true);
+      var newParentExistingChildConceptsNumber = parseInt(jQuery("#"+data.parent).children("a").attr("conceptchildren"));
+      var npReplacer = newParentExistingChildConceptsNumber+1;
+      jQuery("#"+data.parent).children("a").attr("conceptchildren",""+npReplacer);
+      jst.get_node(data.parent).a_attr.conceptchildren = ""+npReplacer;
+      sidora.queue.incomingRequestsAreSilent = true;
+      sidora.queue.Request('Copy Concept', actionUrl, function(){
+        sidora.concept.LoadContentHelp.Relationships();
+      }, function(){
+        sidora.util.RefreshTree();
+      }, [moveToPid,toMovePid]);
+      sidora.queue.incomingRequestsAreSilent = false;
+      sidora.queue.Next();
+    });
     jQuery('#forjstree').bind('open_node.jstree', function (e, data) {
       var jst = jQuery("#forjstree").jstree(true);
       var openingPid = data.node.a_attr.pid;
@@ -1145,6 +1171,18 @@ sidora.ResizeOnWindowResize = function(){
   sidora.resources.individualPanel.ResizeAndStop();
 }
 /*
+ * Attempts to pull the number of child resources from the tree
+ */
+sidora.concept.GetResourceChildrenLength = function(){
+  var itemSelectorForCurrentItemInTree = 'a[href=\"'+window.location.pathname + window.location.search + window.location.hash +'\"]';
+  var directPull = jQuery(itemSelectorForCurrentItemInTree).attr("resourcechildren");
+  if (typeof(directPull) != 'undefined'){
+    return parseInt(directPull);
+  }
+  return null; 
+}
+/*
+/*
  * Attempts to pull the number of child concepts from the tree
  */
 sidora.concept.GetConceptChildrenLength = function(){
@@ -1153,7 +1191,7 @@ sidora.concept.GetConceptChildrenLength = function(){
   if (typeof(directPull) != 'undefined'){
     return parseInt(directPull);
   }
-  return parseInt("-1"); // return -1 if there's any error in retrieving the conceptchildren value.
+  return null; 
 }
 /*
  * Attempts to pull a concept name from the tree or just returns whatever is passed in
@@ -1475,8 +1513,8 @@ sidora.util.Confirm = function(title, questionText, onConfirmation, onCancel, co
  */
 sidora.concept.DeleteConcept = function(){
   jQuery('#deleteConceptDialog').remove();
-  if (sidora.concept.GetConceptChildrenLength() == "-1"){
-    jQuery("body").append("<div id='deleteConceptDialog' style='display:none;' title='Delete Concept'><p>Error getting the child concepts for this concept. Cannot delete this concept</p><p>"+sidora.concept.GetName()+" ("+sidora.concept.GetPid()+")</p></div>");
+  if ((sidora.concept.GetConceptChildrenLength() == null) || (sidora.concept.GetResourceChildrenLength() == null)){
+    jQuery("body").append("<div id='deleteConceptDialog' style='display:none;' title='Delete Concept'><p>Error getting the child concepts or resources for this concept. Cannot delete this concept</p><p>"+sidora.concept.GetName()+" ("+sidora.concept.GetPid()+")</p></div>");
     jQuery("#deleteConceptDialog").dialog({
       resizable: false,
       height:250,
@@ -1490,8 +1528,8 @@ sidora.concept.DeleteConcept = function(){
     });
     return;
   }
-  if (sidora.concept.GetConceptChildrenLength() + sidora.resources.GetLength() > 0){
-    jQuery("body").append("<div id='deleteConceptDialog' style='display:none;' title='Delete Concept'><p>This concept has "+sidora.concept.GetConceptChildrenLength()+" concept(s) and has "+sidora.resources.GetLength()+" resource(s) as children. It cannot be deleted while it has children.</p><p>"+sidora.concept.GetName()+" ("+sidora.concept.GetPid()+")</p></div>");
+  if (sidora.concept.GetConceptChildrenLength() + sidora.concept.GetResourceChildrenLength() > 0){
+    jQuery("body").append("<div id='deleteConceptDialog' style='display:none;' title='Delete Concept'><p>This concept has "+sidora.concept.GetConceptChildrenLength()+" concept(s) and has "+sidora.concept.GetResourceChildrenLength()+" resource(s) as children. It cannot be deleted while it has children.</p><p>"+sidora.concept.GetName()+" ("+sidora.concept.GetPid()+")</p></div>");
     jQuery("#deleteConceptDialog").dialog({
       resizable: false,
       height:250,
