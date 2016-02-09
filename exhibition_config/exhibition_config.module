@@ -43,7 +43,7 @@ function exhibition_config_menu(){
     'title' => t('Exhibition Configuration for Individual Fedora Concept'),
     'page callback' => 'exhibition_config_main_form',
     'page arguments' => array(2),
-    'access arguments' => array('access content'),
+    'access callback' => 'user_is_logged_in',
     'description' => t('Allows configuration for the exhibition display for the Fedora Concept'),
     'type' => MENU_CALLBACK,
   );
