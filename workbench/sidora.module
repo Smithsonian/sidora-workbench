@@ -3850,10 +3850,13 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
       if (!empty($specific_meta)){
         //If this is to be based on the xsl_form_config
         $xsl_file = '';
+        $dsid_to_use = '';
         if ($specific_meta == 'sidora_xsl_config_variable'){
           $curr_sfc = sidora_get_xsl_file_config_for_object($pid);
-          $xsl_file = $curr_sfc->file;
-          $dsid_to_use = $curr_sfc->dsid;
+          if (!empty($curr_sfc)) {
+            $xsl_file = $curr_sfc->file;
+            $dsid_to_use = $curr_sfc->dsid;
+          }
           if (empty($dsid_to_use)){
             $specific_meta = 'all';
           }else{
