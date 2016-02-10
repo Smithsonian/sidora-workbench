@@ -43,7 +43,7 @@ function exhibition_config_menu(){
     'title' => t('Exhibition Configuration for Individual Fedora Concept'),
     'page callback' => 'exhibition_config_main_form',
     'page arguments' => array(2),
-    'access arguments' => array('access content'),
+    'access callback' => 'user_is_logged_in',
     'description' => t('Allows configuration for the exhibition display for the Fedora Concept'),
     'type' => MENU_CALLBACK,
   );
@@ -88,7 +88,7 @@ function exhibition_config_get_exhibition_pids_for_user($user_id){
         $object = $repo->getObject($pid_to_test); 
         $curr_label = $object->label;
         $to_add = array('pid'=>$pid_to_test, 'label'=>$curr_label, 'custom_url'=>$records->custom_url, 'is_available'=>$records->is_available);
-        if ($user_id == $object->owner || $user_id === '') $exhibition_pids[] = $to_add;
+        if (strtolower($object->owner) == strtolower($user_id) || $user_id === '') $exhibition_pids[] = $to_add;
       }
     }catch(Exception $hce){
       dsm('exception trying to get:'.$pid_to_test);
@@ -571,7 +571,7 @@ function exhibition_config_allowed_to_edit($pid, $user_id = null){
       $exist = si_exhibition_check_object_info_accessible(array('pid' => $pid));
       if ($exist){
         $object = $repo->getObject($pid);
-        return $user_id == $object->owner; 
+        return (strtolower($object->owner) == strtolower($user_id));
       }
     }catch(Exception $hce){
     }
