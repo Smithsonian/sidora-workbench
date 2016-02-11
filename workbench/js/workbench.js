@@ -1553,11 +1553,9 @@ sidora.concept.DeleteConcept = function(){
         "Delete concept": function() {
           var toClose = this;
           var onDeleteWorked = function(){
-            jQuery( toClose ).dialog( "close" );
 					  sidora.util.RefreshTree();
           }
           var onDeleteFailed = function(data){
-            jQuery( toClose ).dialog( "close" );
             jQuery("#deleteConceptConfirm").remove();
             if (typeof(data) != 'undefined' && typeof(data.description) != 'undefined'){
               jQuery("body").append("<div title='Concept Not Deleted' id='deleteConceptConfirm'><p>Concept Not Deleted</p><p>"+data.description+"</p><div>");
@@ -1569,6 +1567,7 @@ sidora.concept.DeleteConcept = function(){
             });
           };
           sidora.concept.DeleteConceptBusinessLogic(onDeleteWorked,onDeleteFailed);
+          jQuery( toClose ).dialog( "close" );
         },
         Cancel: function() {
           jQuery( this ).dialog( "close" );
