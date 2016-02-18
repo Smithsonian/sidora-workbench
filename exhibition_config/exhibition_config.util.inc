@@ -130,7 +130,50 @@ function si_exhibition_generate_child_concept_query($pid) {
      <info:fedora/' . $pid . '> <fedora-rels-ext:hasConcept> $o
      order by $t';
 }
-
+function si_exhibition_map_children($o) { 
+	  $child_array = array();
+		$type  = ($o['o']['value'])? 'Concept':'Resource';
+		$child_array['type'] = $type;
+		if ($type == 'Concept') {
+		  $child_array['pid'] = $o['o']['value'];
+			$child_array['title'] = $o['t']['value'];
+		//	$child_array['count'] = $o['k0']['value'];
+			$child_array['model'] = '';
+		}else{
+		  $child_array['pid'] = $o['res']['value'];
+			$child_array['title'] = $o['title']['value'];
+			$child_array['model'] = $o['model']['value'];
+		//	$child_array['count'] = '0';
+		}	
+	return $child_array;
+}
+function si_exhibition_get_children_info(FedoraObject $object) {
+  $repo = si_exhibition_get_repo();
+  $query = si_exhibition_generate_children_query($object->id);
+  $results = $repo->ri->itqlQuery($query);
+  //var_dump($results);
+	$children = array_map("si_exhibition_map_children", $results);
+	return $children;
+}	 
+/**
+ * Query for generating the children tree for the new exhibition visibility
+ */
+function si_exhibition_generate_children_query($pid) {
+ $count = 'count(select $c from <#ri> where
+   $o <fedora-rels-ext:hasConcept> $c and 
+   $c <fedora-model:state> <fedora-model:Active>)';
+ return 'select $o $t $res $title $model from <#ri> where 
+     ($o <fedora-model:state> <fedora-model:Active> and
+      $o <fedora-model:label> $t and
+      <info:fedora/' . $pid . '> <fedora-rels-ext:hasConcept> $o) or 
+     ($res <fedora-model:state> <fedora-model:Active> and
+      $res <fedora-model:label> $title and
+			<info:fedora/' . $pid . '> <fedora-rels-ext:hasResource> $res and
+			$res <fedora-model:hasModel> $model
+			minus $model <mulgara:is> <info:fedora/si:resourceCModel>
+      minus $model <mulgara:is> <info:fedora/fedora-system:FedoraObject-3.0>
+     ) order by $title $t';
+}		 
 /**
  * Fetchs some information about the given object's child resources.
  *
