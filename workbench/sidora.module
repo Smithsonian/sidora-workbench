@@ -4407,7 +4407,8 @@ function sidora_block_view($delta = ''){
                 <li id="manageConcept"><a href="#" onclick="sidora.concept.Manage(); return false;">Manage&nbsp;Concept</a></li>';
       $block['content'] .='
                 <li id="configureExhibition"><a href="#" onclick="window.open(Drupal.settings.basePath+\'exhibition_config/config/\'+window.sidora.concept.GetPid()); return false;">Configure&nbsp;Exhibition</a></li>
-             </ul>
+                <li id="exhibitionPermissions"><a href="#" onclick="window.open(Drupal.settings.basePath+\'exhibition_config/permission/\'+window.sidora.concept.GetPid()); return false;">Configure&nbsp;Permission</a></li>
+						 </ul>
            </li>
            <li><a href="#" onclick="return false;">View</a>
              <ul>';
