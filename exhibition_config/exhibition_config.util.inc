@@ -150,7 +150,7 @@ function si_exhibition_map_children($o) {
 function si_exhibition_get_children_info(FedoraObject $object) {
   $repo = si_exhibition_get_repo();
   $query = si_exhibition_generate_children_query($object->id);
-  $results = $repo->ri->itqlQuery($query);
+  $results = $repo->ri->sparqlQuery($query);
   //var_dump($results);
 	$children = array_map("si_exhibition_map_children", $results);
 	return $children;
@@ -159,10 +159,21 @@ function si_exhibition_get_children_info(FedoraObject $object) {
  * Query for generating the children tree for the new exhibition visibility
  */
 function si_exhibition_generate_children_query($pid) {
- $count = 'count(select $c from <#ri> where
-   $o <fedora-rels-ext:hasConcept> $c and 
-   $c <fedora-model:state> <fedora-model:Active>)';
- return 'select $o $t $res $title $model from <#ri> where 
+return 'select ?o ?t ?res ?title ?model from <#ri> where {
+    { ?o <fedora-model:state> <fedora-model:Active>;
+         <fedora-model:label> ?t .
+     <info:fedora/' . $pid . '> <fedora-rels-ext:hasConcept> ?o
+   }
+Union {
+     ?res <fedora-model:state> <fedora-model:Active>;
+     <fedora-model:label> ?title .
+<info:fedora/' . $pid . '> <fedora-rels-ext:hasResource> ?res .
+    ?res <fedora-model:hasModel> $model
+FILTER(!sameTerm(?model, <info:fedora/fedora-system:FedoraObject-3.0>) &&
+           !sameTerm(?model, <info:fedora/si:resourceCModel>))
+}
+} order by ?title ?t';
+/* return 'select ?o ?t ?res $title $model from <#ri> where 
      ($o <fedora-model:state> <fedora-model:Active> and
       $o <fedora-model:label> $t and
       <info:fedora/' . $pid . '> <fedora-rels-ext:hasConcept> $o) or 
@@ -173,6 +184,7 @@ function si_exhibition_generate_children_query($pid) {
 			minus $model <mulgara:is> <info:fedora/si:resourceCModel>
       minus $model <mulgara:is> <info:fedora/fedora-system:FedoraObject-3.0>
      ) order by $title $t';
+		 */
 }		 
 /**
  * Fetchs some information about the given object's child resources.

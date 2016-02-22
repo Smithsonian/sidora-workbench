@@ -1,0 +1,6 @@
+.pid_tree {height:500px;overflow-x:auto;width:75%;overflow-y:auto;border:1px solid;}
+#selectable { width:100%; margin: 0; padding: 0; height:100%} 
+.visibility_checkbox {border:1px solid #000000;}
+//#selectable .ui-selecting { background: #FECA40; }
+#selectable .ui-selected { background: #F39814; color: white; }
+#selectable tr { margin: 3px; padding: 0.1em; font-size: 1em; height: 18px; }

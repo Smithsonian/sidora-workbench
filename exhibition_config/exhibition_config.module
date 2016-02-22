@@ -1856,6 +1856,9 @@ function exhibition_config_theme(){
 function exhibition_config_get_pid_tree($pid,&$pid_list = array(),$parent = ''){
   require_once ( dirname(__FILE__) . '/exhibition_config.util.inc');
   $to_return = array();
+	if (in_array($pid, $pid_list)){
+    return $to_return;
+  }
   $to_return['pid'] = $pid;
   $repo = si_exhibition_get_repo();
   $object = $repo->getObject($pid);
@@ -1872,11 +1875,6 @@ function exhibition_config_get_pid_tree($pid,&$pid_list = array(),$parent = ''){
   $to_return['future_children_show_meta'] = 'false'; 
   $to_return['future_children_show_preview'] = 'false';
   $to_return['future_children_allow_download'] = 'false';
-	if (in_array($pid, $pid_list)){
-   // $to_return['object'] = $object;
-		$to_return['already_in_tree'] = TRUE;
-    return $to_return;
-  }
   //$object = $repo->getObject($pid);
   $to_return['children'] = array();
   $pid_list[] = $pid;
@@ -1886,7 +1884,7 @@ function exhibition_config_get_pid_tree($pid,&$pid_list = array(),$parent = ''){
 		if ($child['type'] == 'Concept'){
 		//Build the tree from all the children
     //for each child, get their sub-tree
-    $to_return['children'][] = exhibition_config_get_pid_tree($child['pid'],$pid_list,$object->label);
+    $to_return['children'][] = exhibition_config_get_pid_tree($child['pid'],$pid_list,$relationship);
 		}else{
 		$child['show_meta'] = 'false';
 		$child['show_preview'] = 'false';
@@ -1896,39 +1894,45 @@ function exhibition_config_get_pid_tree($pid,&$pid_list = array(),$parent = ''){
   }
   return $to_return;
 }
+function exhibition_config_display_children($child_array,&$html,$resource_visibility_settings) {
+	if (isset($child_array) && sizeof($child_array)) {
+	$html .= '<tr id="' . $child_array['pid'] . '"><td>'.$child_array['title'].'</td><td>'.$child_array['type'].'</td><td>'.$child_array['relationship'].'</td>';
+	foreach ($resource_visibility_settings as $setting => $name) {
+	  $visibility_field_name = $child_array['pid'].'_' . $setting;
+	  if (!isset($child_array[$setting])) {
+		  $child_array[$setting] = '';
+		}	
+		$visibility_value = ($child_array[$setting] == 'true')?' checked="checked"':'';
+	  if (($child_array['type'] == 'Concept') && (($setting == 'show_preview') || ($setting == 'allow_download'))) {
+		  $html .= '<td class="visibility_checkbox"></td>';
+		}else{
+		  $html .= '<td class="visibility_checkbox"><input type="checkbox" id ="' . $visibility_field_name . '" value ="' . $child_array[$setting] . '"' . $visibility_value . '/></td>';
+	  }
+	}
+	$html .= '</tr>';
+	if ((isset($child_array['children'])) && (sizeof($child_array['children']) > 0)) {
+	  foreach ($child_array['children'] as $child) {
+      exhibition_config_display_children($child,$html,$resource_visibility_settings);
+		}
+	}
+	}
+}		
+
 function exhibition_config_generate_tree($pid) {
 	$pid_tree = array();
-	$pid_tree[] = exhibition_config_get_pid_tree($pid);
-	$html = '<table width="100%" id="selectable"><thead><tr><th>Name</th><th>Type</th><th>Full Path</th><th>Show Name</th><th>Show Metadata</th><th>Show Preview</th><th>Show Download</th></tr></thead>';
-foreach ($pid_tree as $child) {
-  $show_meta_field_name = $child['pid'].'_show_meta';
-	$show_meta_value = ($child['show_meta'] == 'true')?' checked="checked"':'';
-  $future_children_show_field_name = $child['pid'].'_future_children_show';
-	$future_children_show_value = ($child['future_children_show'] == 'true')?' checked="checked"':'';
-  $future_children_show_meta_field_name = $child['pid'].'_future_children_show_meta';
-	$future_children_show_meta_value = ($child['future_children_show_meta'] == 'true')?' checked="checked"':'';
-  $future_children_show_preview_field_name = $child['pid'].'_future_children_show_preview';
-	$future_children_show_preview_value = ($child['future_children_show_preview'] == 'true')?' checked="checked"':'';
-  $future_children_allow_download_field_name = $child['pid'].'_future_children_allow_download';
-	$future_children_allow_download_value = ($child['future_children_allow_download'] == 'true')?' checked="checked"':'';
-	$html .= '<tr><td>'.$child['title'].'</td><td>'.$child['type'].'</td><td>'.$child['relationship'].'</td>';
-	$html .= '<td><input type="checkbox" id ="' . $show_meta_field_name . '" value ="' . $child['show_meta'] . '"' . $show_meta_value . '/></td>';
-	$html .= '<td><input type="checkbox" id ="' . $future_children_show_field_name . '"' . ($child['show_meta'])?' checked=checked':'' . '/></td>';
-	$html .= '<td><input type="checkbox" id ="' . $show_meta_field_name . '"' . ($child['show_meta'])?' checked=checked':'' . '/></td>';
-	$html .= '<td><input type="checkbox" id ="' . $show_meta_field_name . '"' . ($child['show_meta'])?' checked=checked':'' . '/></td>';
-	$html .= '<td><input type="checkbox" id ="' . $show_meta_field_name . '"' . ($child['show_meta'])?' checked=checked':'' . '/></td></tr>';
-	foreach ($child['children'] as $grandchild) {
-  $show_meta_field_name = $grandchild['pid'].'_show_meta';
-	$html .= '<tr><td>'.$grandchild['title'].'</td><td>'.$grandchild['type'].'</td><td>'.$grandchild['relationship'].'</td><td>';
-	$html .= '<td><input type="checkbox" id ="' . $show_meta_field_name . '"' . ($grandchild['show_meta'])?' checked=checked':'' . '/></td>';
-	$html .= '<td><input type="checkbox" id ="' . $show_meta_field_name . '"' . ($grandchild['show_meta'])?' checked=checked':'' . '></td>';
-	$html .= '<td><input type="checkbox" id ="' . $show_meta_field_name . '"' . ($grandchild['show_meta'])?' checked=checked':'' . '></td>';
-	$html .= '<td><input type="checkbox" id ="' . $show_meta_field_name . '"' . ($grandchild['show_meta'])?' checked=checked':'' . '></td>';
-	$html .= '<td><input type="checkbox" id ="' . $show_meta_field_name . '"' . ($grandchild['show_meta'])?' checked=checked':'' . '></td></tr>';
-	}
-}	
-  $html .= '</table>'; 
-  var_dump($html);
+	$concept_visibility_settings = array('show_meta', 'future_children_show', 'future_children_show_meta', 'future_children_show_preview', 'future_children_allow_download');
+	$resource_visibility_settings = array(
+	'show_name' => 'Show Name',
+	'show_meta' => 'Show Meta',
+	'show_preview' => 'Show Preview',
+	'allow_download' => 'Show Download');
+	$pid_tree = exhibition_config_get_pid_tree($pid);
+	$tree_html = '<div class="pid_tree">';
+	$tree_html .= '<table id="selectable"><thead><tr><th width="20%">Name</th><th width="10%">Type</th><th width="30%">Full Path</th><th width="10%">Show Name</th><th width="10%">Show Metadata</th><th width="10%">Show Preview</th><th width="10%">Show Download</th></tr></thead>';
+  $tree_html .= '<tbody>';
+	exhibition_config_display_children($pid_tree,$tree_html,$resource_visibility_settings);
+  $tree_html .= '</tbody></table></div>'; 
+  return $tree_html;
 }
 function exhibition_permission_main_form($pid){
   $pid = urldecode($pid);
@@ -1943,66 +1947,39 @@ function exhibition_permission_form($form, $form_state){
   }
   $object = _exhibition_config_get_object($pid);
 	//$row = exhibition_config_get_visibility_data($pid);
- /*   $form['#attached']['js'] = array(
+    $form['#attached']['js'] = array(
        array(
-       'data' => 'jQuery(function(){ var title = jQuery(".page-title"); jQuery("#edit-actions").parent("div").prepend(title); jQuery("#cancel").click(function(){ window.parent.jQuery("#versionHistoryDialog").dialog("close");});})',
+       'data' => 'jQuery("#selectable").selectable("option", "filter", "tr");',
        'type' => 'inline',
        ),
-     );*/
-	$pid_tree = array();
-	$pid_tree[] = exhibition_config_get_pid_tree($pid);
+     );
 	$modulepath = drupal_get_path('module', 'exhibition_config');
  // drupal_add_library('system', 'ui');
   drupal_add_library('system', 'ui.selectable');
- // drupal_add_js($modulepath . '/js/fancytree-master/fancytree-master/src/jquery.fancytree.js');
- // drupal_add_css($modulepath . '/js/fancytree-master/fancytree-master/src/skin-win7/ui.fancytree.css',array('weight' => '1000000', 'group' => CSS_THEME));
-	$form['#attached']['css'] = array(
-	  array(
-		 'data' => '#feedback { font-size: 1.4em; }
-                #selectable .ui-selecting { background: #FECA40; }
-                #selectable .ui-selected { background: #F39814; color: white; }
-                #selectable { list-style-type: none; margin: 0; padding: 0; width: 60%; }
-                #selectable li { margin: 3px; padding: 0.4em; font-size: 1.4em; height: 18px; }',
-     'type' => 'inline',
-     ),
-    );
+  drupal_add_css($modulepath . '/css/exhibition_visibility.css',array('weight' => '1000000', 'group' => CSS_THEME));
+	$tree_html = exhibition_config_generate_tree($pid);
 	$js_for_form = '<script>
   jQuery(function() {
-    jQuery( "#selectable" ).selectable();
+		var prev = -1;
+    jQuery( "#selectable>tbody" ).selectable({
+		selecting: function(e, ui) {
+        var curr = jQuery(ui.selecting.tagName, e.target).index(ui.selecting);
+        if(e.shiftKey && prev > -1) {
+            console.log(prev, curr, Math.min(prev, curr));
+            jQuery(ui.selecting.tagName, e.target).slice(Math.min(prev, curr), 1 + Math.max(prev, curr)).addClass("ui-selected");
+            prev = -1;
+        } else {
+            prev = curr;
+        }
+    }
   });
+	});
   </script>';
-	/*$js_for_form = '<script>
-  jQuery(function(){
-		var pidTree = jQuery(
-		jQuery("#tree").fancytree({
-      checkbox: false,
-      selectMode: 2,
-			icon: true,
-			source: [{"pid":"si-user:124","type":"Concept",title:"rramlani","expanded":true,key:"1",children:[{"pid":"si:389447","type":"Concept",title:"Testing Parent",key:"2",children:[{"pid":"si:121471","type":"Concept",title:"test project",key:"3",children:[{"type":"Resource","pid":"si:388935",title:"Hydrangeas","model":"si:generalImageCModel","count":"0",key:"3.1"},{"type":"Resource","pid":"si:388936",title:"Tulips","model":"si:generalImageCModel","count":"0",key:"3.2"},{"type":"Resource","pid":"si:389214",title:"sid-302-xlsx","model":"si:datasetCModel","count":"0",key:"3.3"}]},{"type":"Resource","pid":"si:389458",title:"pdf-parent","model":"si:fieldbookCModel","count":"0",key:"2.1"},{"type":"Resource","pid":"si:389426",title:"ogg_vorbis","model":"islandora:sp_videoCModel","count":"0",key:"2.2"},{"type":"Resource","pid":"si:389428",title:"qt -test mime","model":"islandora:sp_videoCModel","count":"0",key:"2.3"}]},{"pid":"si:389602","type":"Concept",title:"test delete 4",key:"4",children:[]},{"type":"Resource","pid":"si:388976",title:"sid-302","model":"si:datasetCModel","count":"0",key:"1.1"},{"type":"Resource","pid":"si:388952",title:"Koala","model":"si:generalImageCModel","count":"0",key:"1.2"},{"type":"Resource","pid":"si:389424",title:"iTunes_test4_AAC-LC_v4_Stereo_VBR_128kbps_44100Hz-m4a","model":"islandora:sp_videoCModel","count":"0",key:"1.3"},{"type":"Resource","pid":"si:388951",title:"Jellyfish","model":"si:generalImageCModel","count":"0",key:"1.4"},{"type":"Resource","pid":"si:389413",title:"mov-1","model":"islandora:sp_videoCModel","count":"0",key:"1.5"},{"type":"Resource","pid":"si:388950",title:"Penguins","model":"si:generalImageCModel","count":"0",key:"1.6"},{"type":"Resource","pid":"si:388858",title:"mayan_calendar","model":"si:generalImageCModel","count":"0",key:"1.7"},{"type":"Resource","pid":"si:389411",title:"avi-4","model":"islandora:sp_videoCModel","count":"0",key:"1.8"},{"type":"Resource","pid":"si:389409",title:"avi-3","model":"islandora:sp_videoCModel","count":"0"},{"type":"Resource","pid":"si:388695",title:"Kalimba","model":"islandora:sp-audioCModel","count":"0"},{"type":"Resource","pid":"si:389035",title:"si-1028_OBJ","model":"si:datasetCModel","count":"0"},{"type":"Resource","pid":"si:388736",title:"Lighthouse","model":"si:generalImageCModel","count":"0"},{"type":"Resource","pid":"si:389417",title:"Maid with the Fla*/
-$html = '<table width="100%" id="selectable"><thead><tr><th>Name</th><th>Type</th><th>Full Path</th><th>Show Name</th><th>Show Metadata</th><th>Show Preview</th><th>Show Download</th></tr></thead>';
-foreach ($pid_tree as $child) {
-  $show_meta_field_name = $child['pid'].'_show_meta';
-	$html .= '<tr><td>'.$child['title'].'</td><td>'.$child['type'].'</td><td>'.$child['relationship'].'</td><td>';
-	$html .= '<input type="checkbox" id ="' . $show_meta_field_name . '"' . ($child['show_meta'])?' checked=checked':'' . '></td>';
-	$html .= '<input type="checkbox" id ="' . $show_meta_field_name . '"' . ($child['show_meta'])?' checked=checked':'' . '></td>';
-	$html .= '<input type="checkbox" id ="' . $show_meta_field_name . '"' . ($child['show_meta'])?' checked=checked':'' . '></td>';
-	$html .= '<input type="checkbox" id ="' . $show_meta_field_name . '"' . ($child['show_meta'])?' checked=checked':'' . '></td>';
-	$html .= '<input type="checkbox" id ="' . $show_meta_field_name . '"' . ($child['show_meta'])?' checked=checked':'' . '></td></tr>';
-	foreach ($child['children'] as $grandchild) {
-  $show_meta_field_name = $grandchild['pid'].'_show_meta';
-	$html .= '<tr><td>'.$grandchild['title'].'</td><td>'.$grandchild['type'].'</td><td>'.$grandchild['relationship'].'</td><td>';
-	$html .= '<input type="checkbox" id ="' . $show_meta_field_name . '"' . ($grandchild['show_meta'])?' checked=checked':'' . '></td>';
-	$html .= '<input type="checkbox" id ="' . $show_meta_field_name . '"' . ($grandchild['show_meta'])?' checked=checked':'' . '></td>';
-	$html .= '<input type="checkbox" id ="' . $show_meta_field_name . '"' . ($grandchild['show_meta'])?' checked=checked':'' . '></td>';
-	$html .= '<input type="checkbox" id ="' . $show_meta_field_name . '"' . ($grandchild['show_meta'])?' checked=checked':'' . '></td>';
-	$html .= '<input type="checkbox" id ="' . $show_meta_field_name . '"' . ($grandchild['show_meta'])?' checked=checked':'' . '></td></tr>';
-	}
-}	
-  $html = '</table>'; 
-$form['test'] = array(
- '#title' => 'JSON Tree',
- '#value' => $html,
- '#suffix' => $js_for_form
- );
+$form['Save'] = array(
+  '#type' => 'button', 
+  '#value' => t('Save'), 
+  '#prefix' => $tree_html,
+	'#suffix' => $js_for_form
+);
  return $form;
  }
