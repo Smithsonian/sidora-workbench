@@ -47,8 +47,8 @@ function exhibition_config_menu(){
     'description' => t('Allows configuration for the exhibition display for the Fedora Concept'),
     'type' => MENU_CALLBACK,
   );
-  $items['exhibition_config/permission'] = array(
-    'title' => t('Exhibition Pemissions for Individual Fedora Concept'),
+  $items['exhibition_config/visibility'] = array(
+    'title' => t('Exhibition Visibility Settings for Individual Fedora Concept'),
     'page callback' => 'exhibition_permission_main_form',
     'page arguments' => array(2),
     'access arguments' => array('access content'),
