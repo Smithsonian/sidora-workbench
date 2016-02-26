@@ -1986,8 +1986,6 @@ function sidora_watchdog_filtering(array $log_entry) {
     return WATCHDOG_FILTERING_EXCLUDE;
   }else if (strpos($message, 'Undefined index: callback in <em class="placeholder">securepages_match_form()</em> (line <em class="placeholder">369</em> of') !== FALSE){
     return WATCHDOG_FILTERING_EXCLUDE;
-  }else if (strpos($message, 'Undefined index: callback in <em class="placeholder">securepages_match_form()</em> (line <em class="placeholder">369</em> of') !== FALSE){
-    return WATCHDOG_FILTERING_EXCLUDE;
   }
   // Don't affect filtering on other messages.
   return WATCHDOG_FILTERING_IGNORE;
@@ -3413,7 +3411,10 @@ function sidora_user_initialize($account){
       sidora_create_and_set_new_user_object($account);
     }
   }catch(Exception $exc){
-    drupal_set_message("Problem during user initialize:".$exc->getMessage()); //BBB don't cause the error to happen in the first place
+    watchdog(
+      'sidora_workbench',
+      "Problem during user initialize:".$exc->getMessage()
+    );
   }
 }
 
