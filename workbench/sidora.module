@@ -3410,15 +3410,26 @@ function sidora_user_login(&$edit, $account){
 function sidora_user_initialize($account){
   try{
     if (!$account->data || !array_key_exists("islandora_user_pid",$account->data)){
-      module_load_include('inc', 'sidora', 'includes/utils');
-      $object = sidora_create_user_object($account);
-      sleep(15); //Arbitrary sleep to allow fedora to create the objects.  Even though the ID comes back it's apparently not available immediately
-      $data['data']['islandora_user_pid'] = $object->id;
-      user_save($account,$data);
+      sidora_create_and_set_new_user_object($account);
     }
   }catch(Exception $exc){
-    //dsm("User ID reused"); //BBB don't cause the error to happen in the first place
+    drupal_set_message("Problem during user initialize:".$exc->getMessage()); //BBB don't cause the error to happen in the first place
   }
+}
+
+function sidora_create_and_set_new_user_object($account, $create_even_if_existing_valid = FALSE) {
+  if (!empty($account->data) && array_key_exists("islandora_user_pid",$account->data)){
+    $existing_obj_check = sidora_obj($account->data['islandora_user_pid']);
+    if (!$create_even_if_existing_valid && !empty($existing_obj_check)){
+      return json_encode('Already has valid user project');
+    }
+  }
+  module_load_include('inc', 'sidora', 'includes/utils');
+  $object = sidora_create_user_object($account);
+  sleep(15); //Arbitrary sleep to allow fedora to create the objects.  Even though the ID comes back it's apparently not available immediately
+  $data['data']['islandora_user_pid'] = $object->id;
+  user_save($account,$data);
+  return json_encode('New user project created');
 }
 /**
  * Set the specified user's root (islandora_user_pid) to the specified pid
@@ -4563,6 +4574,10 @@ function sidora_ontology_json_default(){
  */
 function sidora_ajax_parts($call_type, $param1 = '', $param2 = '', $param3 = ''){
   global $user;
+  if ($call_type == 'create_and_set_new_user_object') {
+    print sidora_create_and_set_new_user_object($user);
+    drupal_exit();
+  }
   if ($call_type == 'ontology'){
     return sidora_ontology_object();
   }
@@ -4671,6 +4686,18 @@ function sidora_ajax_parts($call_type, $param1 = '', $param2 = '', $param3 = '')
       sidora_clear_tree_cache($param1);
     }
     return drupal_json_output($view_permissions);
+  }
+  if ($call_type == 'check_user_setup') {
+    module_load_include('inc', 'sidora', 'includes/utils');
+    $root_pid = sidora_get_user_root_object();
+    $root = sidora_obj($root_pid);
+    if (empty($root)) {
+      print '{ "root_is_valid":false }';
+    }
+    else {
+      print '{ "root_is_valid":true }';
+    }
+    drupal_exit();
   }
   drupal_not_found();
 }
