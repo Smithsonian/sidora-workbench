@@ -63,6 +63,14 @@ function exhibition_config_menu(){
     'description' => t('JSON data'),
     'type' => MENU_CALLBACK,
   );
+  $items['exhibition_config/json_visibility'] = array(
+    'title' => t('JSON data'),
+    'page callback' => 'exhibition_config_json_visibility',
+    'page arguments' => array(2),
+    'access callback' => TRUE, 
+    'description' => t('JSON data'),
+    'type' => MENU_CALLBACK,
+  );
   return $items;
 }
 /*
@@ -1822,4 +1830,20 @@ function exhibition_config_theme(){
       'variables' => array('form' => NULL),
     ),
   );
+}
+/*
+ *
+ */
+function exhibition_config_save_visibility($pid, $visibility_obj_tree) {
+  
+}
+/*
+ *
+ */
+function exhibition_config_load_visibility($pid) {
+
+}
+
+function exhibition_config_json_visibility($pid) {
+  return drupal_json_output($pid);
 }
