@@ -392,6 +392,7 @@ function exhibition_config_form_submit($form, &$form_state) {
 
     $fullLinkSet = array('names'=>$link_names, 'urls'=>$link_urls);  //validate already said these were okay
     $fls_serialized = serialize($fullLinkSet);
+    $existing_visibility_obj = exhibition_config_load_visibility($pid); 
     $delete_result = db_delete("{exhibition_config}")->condition('pid', $pid)->execute();
 
 
@@ -453,6 +454,7 @@ function exhibition_config_form_submit($form, &$form_state) {
       )
     );
     $output = $insert_query->execute();
+    exhibition_config_save_visibility($pid,$existing_visibility_obj);
     /*
     if ($form['use_current_config_for_children']['#value']){
       $full_pid_list = array();
@@ -1832,18 +1834,137 @@ function exhibition_config_theme(){
   );
 }
 /*
- *
+ * Saves the visibility tree in the database
  */
 function exhibition_config_save_visibility($pid, $visibility_obj_tree) {
-  
+  if (!exhibition_config_allowed_to_edit($pid)) {
+    drupal_not_found();
+    drupal_exit();
+  }
+  $query = db_update('exhibition_config')
+    ->fields(array(
+      'visibility' => json_encode($visibility_obj_tree),
+    ))
+    ->condition('pid', $pid, '=');
+  $num_updated = $query->execute();
+  $new_entry = NULL;
+  if ($num_updated === 0){
+    $fields = 
+      array(
+        'pid', 
+        'visibility', 
+      );
+    $insert_query = db_insert('exhibition_config')->fields($fields);
+    $insert_query->values( 
+      array(
+        'pid' => $pid,
+        'visibility' => json_encode($visibility_obj_tree),
+      )
+    );
+    $new_entry = $insert_query->execute();
+    
+  }
+  return (!empty($num_updated) || !empty($new_entry)); 
 }
 /*
- *
+ * Retrieves the visibility tree from the database
  */
 function exhibition_config_load_visibility($pid) {
-
+  $result = db_query("Select ". //SELECT
+"visibility ". 
+"FROM {exhibition_config} where pid = :pid", array(':pid'=>$pid));
+  $row = array();
+  foreach ($result as $input){
+    foreach($input as $name=>$value){
+      if ($name == 'visibility') return json_decode($value, TRUE);
+    }
+  }
+  return array();
 }
 
+/*
+ * Prints the JSON of the visibility tree for exhibition
+ */
 function exhibition_config_json_visibility($pid) {
-  return drupal_json_output($pid);
+  $pid = urldecode($pid);
+  /*
+  $hard_coded = 
+array(
+  "pid" => "si:365717",
+  "label" => "randerson6",
+  "type" => "concept",
+  "show_meta" => TRUE,
+  "children" => array (array(
+    "pid" => "si:386769",
+    "name" => "Image 1",
+    "type" => "concept",
+    "show_meta" => TRUE,
+    "children" => array (array(
+      "pid" => "si:386976",
+      "type" => "concept",
+      "show_meta" => TRUE,
+      "children" => array (array(
+        "pid" => "si:389039",
+        "type" => "resource",
+        "show_meta" => FALSE,
+        "show_preview" => TRUE,
+        "allow_download" => TRUE
+      ),array(
+        "pid" => "si:389041",
+        "type" => "resource",
+        "show_meta" => TRUE,
+        "show_preview" => TRUE,
+        "allow_download" => TRUE
+      ),array(
+        "pid" => "si:389043",
+        "type" => "resource",
+        "show_meta" => TRUE,
+        "show_preview" => TRUE,
+        "allow_download" => TRUE
+      ),array(
+        "pid" => "si:388548",
+        "type" => "resource",
+        "show_meta" => TRUE,
+        "show_preview" => FALSE,
+        "allow_download" => TRUE
+      ),array(
+        "pid" => "si:389037",
+        "type" => "resource",
+        "show_meta" => TRUE,
+        "show_preview" => TRUE,
+        "allow_download" => FALSE
+      ),array(
+        "pid" => "si:388546",
+        "name" => "CSV filled with data",
+        "type" => "resource",
+        "show_meta" => TRUE,
+        "show_preview" => TRUE,
+        "allow_download" => TRUE
+      ))
+    ))
+  ),array(
+    "pid" => "si:386002",
+    "name" => "CSV filled with data",
+    "type" => "resource",
+    "show_meta" => TRUE,
+    "show_preview" => TRUE,
+    "allow_download" => TRUE
+  ),array(
+    "pid" => "si:12346",
+    "name" => "Incomplete folder, will hold more info later",
+    "type" => "concept",
+    "show_meta" => FALSE,
+    "children" => array (array(
+      "pid" => "si:12347",
+      "name" => "CSV filled with data",
+      "type" => "resource",
+      "show_meta" => TRUE,
+      "show_preview" => TRUE,
+      "allow_download" => TRUE
+    ))
+  ))
+);
+  */
+  //exhibition_config_save_visibility($pid,$hard_coded);
+  return drupal_json_output(exhibition_config_load_visibility($pid));
 }
