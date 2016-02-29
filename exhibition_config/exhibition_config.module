@@ -1894,7 +1894,7 @@ array(
   "label" => "randerson6",
   "type" => "concept",
   "show_meta" => TRUE,
-  "show_name" => FALSE,
+  "show_name" => TRUE,
   "children" => array (array(
     "pid" => "si:386769",
     "label" => "Image 1",
@@ -1998,5 +1998,27 @@ array(
 );
   exhibition_config_save_visibility($pid,$hard_coded);
 */
-  return drupal_json_output(exhibition_config_load_visibility($pid));
+  $visibility_obj = exhibition_config_load_visibility($pid);
+  //Anything with show_name as false we do not want the outside world knowing about
+  return drupal_json_output(exhibition_config_filter_visibility_show_name($visibility_obj));
 }
+
+/*
+ * returns a visibility object with only objects that have show_name as TRUE
+ */
+function exhibition_config_filter_visibility_show_name($vis_obj) {
+  $to_return = $vis_obj;
+  if (empty($to_return['show_name'])) return FALSE;
+  $new_children = array();
+  if (!empty($vis_obj['children'])){
+    foreach($vis_obj['children'] as $curr_child) {
+      $check_item = exhibition_config_filter_visibility_show_name($curr_child);
+      if (!empty($check_item)){
+        $new_children[] = $check_item;
+      }
+    }
+    $to_return['children'] = $new_children; 
+  }
+  return $to_return;
+}
+
