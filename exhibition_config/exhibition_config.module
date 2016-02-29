@@ -1894,77 +1894,109 @@ array(
   "label" => "randerson6",
   "type" => "concept",
   "show_meta" => TRUE,
+  "show_name" => FALSE,
   "children" => array (array(
     "pid" => "si:386769",
-    "name" => "Image 1",
+    "label" => "Image 1",
     "type" => "concept",
     "show_meta" => TRUE,
+    "show_name" => TRUE,
     "children" => array (array(
       "pid" => "si:386976",
       "type" => "concept",
       "show_meta" => TRUE,
+      "show_name" => TRUE,
       "children" => array (array(
         "pid" => "si:389039",
+        "label" => "1400 Pachelbel - Canon in D Major",
         "type" => "resource",
         "show_meta" => FALSE,
+        "show_name" => TRUE,
         "show_preview" => TRUE,
-        "allow_download" => TRUE
+        "allow_download" => TRUE,
+        "models" => array(
+          "islandora:sp-audioCModel"
+        )
       ),array(
         "pid" => "si:389041",
         "type" => "resource",
+        "label" => "not shown",
         "show_meta" => TRUE,
+        "show_name" => FALSE,
         "show_preview" => TRUE,
         "allow_download" => TRUE
       ),array(
         "pid" => "si:389043",
+        "label" => "not shown",
         "type" => "resource",
         "show_meta" => TRUE,
+        "show_name" => FALSE,
         "show_preview" => TRUE,
         "allow_download" => TRUE
       ),array(
         "pid" => "si:388548",
+        "label" => "Fake name for Book1.xls",
         "type" => "resource",
         "show_meta" => TRUE,
+        "show_name" => TRUE,
         "show_preview" => FALSE,
-        "allow_download" => TRUE
+        "allow_download" => TRUE,
+        "models" => array(
+          "si:datasetCModel"
+        )
       ),array(
         "pid" => "si:389037",
+        "label" => "Pachelbel - Canon in D Major JSON name",
         "type" => "resource",
         "show_meta" => TRUE,
+        "show_name" => TRUE,
         "show_preview" => TRUE,
-        "allow_download" => FALSE
+        "allow_download" => FALSE,
+        "models" => array(
+          "islandora:sp-audioCModel"
+        )
       ),array(
         "pid" => "si:388546",
-        "name" => "CSV filled with data",
+        "label" => "Talent Skills and Capabilities.xslx JSON name",
         "type" => "resource",
         "show_meta" => TRUE,
+        "show_name" => TRUE,
         "show_preview" => TRUE,
-        "allow_download" => TRUE
+        "allow_download" => TRUE,
+        "models" => array(
+          "si:datasetCModel"
+        )
       ))
     ))
   ),array(
     "pid" => "si:386002",
-    "name" => "CSV filled with data",
+    "label" => "Chrysanthemum.jpg JSON name",
     "type" => "resource",
     "show_meta" => TRUE,
+    "show_name" => TRUE,
     "show_preview" => TRUE,
-    "allow_download" => TRUE
+    "allow_download" => TRUE,
+    "models" => array(
+      "si:generalImageCModel"
+    )
   ),array(
     "pid" => "si:12346",
-    "name" => "Incomplete folder, will hold more info later",
+    "label" => "Incomplete folder, will hold more info later",
     "type" => "concept",
     "show_meta" => FALSE,
+    "show_name" => TRUE,
     "children" => array (array(
       "pid" => "si:12347",
-      "name" => "CSV filled with data",
+      "label" => "CSV filled with data",
       "type" => "resource",
       "show_meta" => TRUE,
+      "show_name" => TRUE,
       "show_preview" => TRUE,
       "allow_download" => TRUE
     ))
   ))
 );
-  */
-  //exhibition_config_save_visibility($pid,$hard_coded);
+  exhibition_config_save_visibility($pid,$hard_coded);
+*/
   return drupal_json_output(exhibition_config_load_visibility($pid));
 }
