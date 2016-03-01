@@ -192,6 +192,7 @@ function exhibition_config_custom_url($custom_url){
  * prints a JSON object of the configuration for this pid
  */
 function exhibition_config_json_data($pid){
+  //if (!empty($_GET['BBB'])) return exhibition_config_json_visibility($pid);
   $pid = urldecode($pid);
   $row = exhibition_config_get_config_data($pid);
   if (!empty($row)) {
@@ -1887,7 +1888,7 @@ function exhibition_config_load_visibility($pid) {
  */
 function exhibition_config_json_visibility($pid) {
   $pid = urldecode($pid);
-  /*
+/*
   $hard_coded = 
 array(
   "pid" => "si:365717",
@@ -1943,6 +1944,17 @@ array(
         "allow_download" => TRUE,
         "models" => array(
           "si:datasetCModel"
+        )
+      ),array(
+        "pid" => "si:389449",
+        "label" => "HAS A PROXY_MP3 Datastream",
+        "type" => "resource",
+        "show_meta" => TRUE,
+        "show_name" => TRUE,
+        "show_preview" => TRUE,
+        "allow_download" => FALSE,
+        "models" => array(
+          "islandora:sp-audioCModel"
         )
       ),array(
         "pid" => "si:389037",
