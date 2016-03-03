@@ -1898,7 +1898,7 @@ function exhibition_config_display_children($child_array,&$html,$resource_visibi
 	if (isset($child_array) && sizeof($child_array)) {
 	$html .= '<tr id="' . $child_array['pid'] . '"><td>';
   for($i =0; $i<$depth; $i++) {
-    $html .= '<span class="tree-indent ui-selectee" style="width:10px;display:inline-block"></span>';
+    $html .= '<span class="tree-indent ui-selectee"></span>';
   }
   $html .= ''.$child_array['title'].'</td><td>'.$child_array['type'].'</td><td>'.$child_array['relationship'].'</td>';
 	foreach ($resource_visibility_settings as $setting => $name) {
@@ -1932,7 +1932,7 @@ function exhibition_config_generate_tree($pid) {
 	'allow_download' => 'Show Download');
 	$pid_tree = exhibition_config_get_pid_tree($pid);
 	$tree_html = '<div class="pid_tree">';
-	$tree_html .= '<table id="selectable"><thead><tr><th width="20%">Name</th><th width="10%">Type</th><th width="30%">Full Path</th><th width="10%">Show Name</th><th width="10%">Show Metadata</th><th width="10%">Show Preview</th><th width="10%">Show Download</th></tr></thead>';
+	$tree_html .= '<table id="selectable"><thead><tr><th width="35%">Name</th><th width="6%">Type</th><th width="35%">Full Path</th><th width="6%">Show Name</th><th width="6%">Show Metadata</th><th width="6%">Show Preview</th><th width="6%">Show Download</th></tr></thead>';
   $tree_html .= '<tbody>';
 	exhibition_config_display_children($pid_tree,$tree_html,$resource_visibility_settings);
   $tree_html .= '</tbody></table></div>'; 
