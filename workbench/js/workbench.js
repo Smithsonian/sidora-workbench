@@ -1008,6 +1008,7 @@ sidora.InitiatePage = function(){
       jQuery("#countdown").countdown(function(){
         jQuery("#countdown").css("width","500px");
         jQuery("#countdown").html("This is taking a little longer than normal but we're still working on it");
+        setTimeout(function(){window.location.reload();},5000);
       }, 30, "s estimated remaining");
 
       jQuery.ajax(
