@@ -1894,9 +1894,13 @@ function exhibition_config_get_pid_tree($pid,&$pid_list = array(),$parent = ''){
   }
   return $to_return;
 }
-function exhibition_config_display_children($child_array,&$html,$resource_visibility_settings) {
+function exhibition_config_display_children($child_array,&$html,$resource_visibility_settings,$depth = 0) {
 	if (isset($child_array) && sizeof($child_array)) {
-	$html .= '<tr id="' . $child_array['pid'] . '"><td>'.$child_array['title'].'</td><td>'.$child_array['type'].'</td><td>'.$child_array['relationship'].'</td>';
+	$html .= '<tr id="' . $child_array['pid'] . '"><td>';
+  for($i =0; $i<$depth; $i++) {
+    $html .= '<span class="tree-indent ui-selectee" style="width:10px;display:inline-block"></span>';
+  }
+  $html .= ''.$child_array['title'].'</td><td>'.$child_array['type'].'</td><td>'.$child_array['relationship'].'</td>';
 	foreach ($resource_visibility_settings as $setting => $name) {
 	  $visibility_field_name = $child_array['pid'].'_' . $setting;
 	  if (!isset($child_array[$setting])) {
@@ -1912,7 +1916,7 @@ function exhibition_config_display_children($child_array,&$html,$resource_visibi
 	$html .= '</tr>';
 	if ((isset($child_array['children'])) && (sizeof($child_array['children']) > 0)) {
 	  foreach ($child_array['children'] as $child) {
-      exhibition_config_display_children($child,$html,$resource_visibility_settings);
+      exhibition_config_display_children($child,$html,$resource_visibility_settings, $depth+1);
 		}
 	}
 	}
@@ -1932,6 +1936,10 @@ function exhibition_config_generate_tree($pid) {
   $tree_html .= '<tbody>';
 	exhibition_config_display_children($pid_tree,$tree_html,$resource_visibility_settings);
   $tree_html .= '</tbody></table></div>'; 
+  //$tree_html .= '<div id="action_buttons"><input type="button" id="advanced" value="Change All Selected">&nbsp;&nbsp;<input type="button" id="future" value="Advanced">&nbsp;&nbsp;<input type="button" id="save" value="Save">&nbsp;&nbsp;<input type="button" id="cancel" value="Cancel"></div>';
+  $tree_html .= '<div id="action-bar"><div class="action-button"><a href="javascript:void(0);" class="button" id="change_all">Change All Selected</a></div><div class="action-button"><a href="javascript:void(0);" class="button" id="open-advanced">Advanced</a></div><div class="action-button">';
+$tree_html .= '</div><div class="action-button"><a href="javascript:void(0);" class="button" id="cancel-button">Cancel</a></div></div>';
+  $tree_html .= '<div id="advanced_hidden"></div></td>'; 
   return $tree_html;
 }
 function exhibition_permission_main_form($pid){
@@ -1959,6 +1967,12 @@ function exhibition_permission_form($form, $form_state){
   drupal_add_css($modulepath . '/css/exhibition_visibility.css',array('weight' => '1000000', 'group' => CSS_THEME));
 	$tree_html = exhibition_config_generate_tree($pid);
 	$js_for_form = '<script>
+
+
+
+
+
+
   jQuery(function() {
 		var prev = -1;
     jQuery( "#selectable>tbody" ).selectable({
@@ -1974,7 +1988,159 @@ function exhibition_permission_form($form, $form_state){
     }
   });
 	});
+
+fillInSidebar = function(){
+
+jQuery("#main_shown .fieldset-wrapper").html("");
+jQuery("[id$=show_name]:checked").each(function(){
+  jQuery("#main_shown .fieldset-wrapper").append("<div>"+jQuery(this).closest("tr").children()[2].innerHTML+"</div>");
+})
+jQuery("#main_hidden .fieldset-wrapper").html("");
+jQuery("[id$=show_name]").not(":checked").each(function(){
+  jQuery("#main_hidden .fieldset-wrapper").append("<div>"+jQuery(this).closest("tr").children()[2].innerHTML+"</div>");
+})
+
+jQuery("#meta_shown .fieldset-wrapper").html("");
+jQuery("[id$=show_meta]:checked").each(function(){
+  jQuery("#meta_shown .fieldset-wrapper").append("<div>"+jQuery(this).closest("tr").children()[2].innerHTML+"</div>");
+})
+jQuery("#meta_hidden .fieldset-wrapper").html("");
+jQuery("[id$=show_meta]").not(":checked").each(function(){
+  if (jQuery(jQuery(this).closest("tr").children()[3]).children(":checked").size() > 0){
+    jQuery("#meta_hidden .fieldset-wrapper").append("<div>"+jQuery(this).closest("tr").children()[2].innerHTML+"</div>");
+  }
+})
+
+
+jQuery("#preview_shown .fieldset-wrapper").html("");
+jQuery("[id$=show_preview]:checked").each(function(){
+  jQuery("#preview_shown .fieldset-wrapper").append("<div>"+jQuery(this).closest("tr").children()[2].innerHTML+"</div>");
+})
+jQuery("#preview_hidden .fieldset-wrapper").html("");
+jQuery("[id$=show_preview]").not(":checked").each(function(){
+  if (jQuery(jQuery(this).closest("tr").children()[3]).children(":checked").size() > 0){
+    jQuery("#preview_hidden .fieldset-wrapper").append("<div>"+jQuery(this).closest("tr").children()[2].innerHTML+"</div>");
+  }
+})
+
+jQuery("#downloads_shown .fieldset-wrapper").html("");
+jQuery("[id$=allow_download]:checked").each(function(){
+  jQuery("#downloads_shown .fieldset-wrapper").append("<div>"+jQuery(this).closest("tr").children()[2].innerHTML+"</div>");
+})
+jQuery("#downloads_hidden .fieldset-wrapper").html("");
+jQuery("[id$=allow_download]").not(":checked").each(function(){
+  if (jQuery(jQuery(this).closest("tr").children()[3]).children(":checked").size() > 0){
+    jQuery("#downloads_hidden .fieldset-wrapper").append("<div>"+jQuery(this).closest("tr").children()[2].innerHTML+"</div>");
+  }
+})
+
+}
+fillInSidebar();
+jQuery( "tr:odd" ).css( "background-color", "#eeeeff" );
+jQuery("input:checkbox").click(fillInSidebar);
+jQuery("#open-advanced").after(jQuery("#edit-save"));
   </script>';
+  
+  $form['holder'] = array(
+    '#prefix' => '<div class="scroller-holder">',
+    '#suffix' => '</div>',
+    'shown' => array(
+      'fieldset' => array(
+        '#id' => 'main_shown',
+        '#type' => 'fieldset',
+        '#title' => 'Shown',
+        '#description' => t(''),
+        '#collapsible' => TRUE,
+        '#collapsed' => FALSE,
+      ),
+    ),
+    'hidden' => array(
+      'fieldset' => array(
+        '#id' => 'main_hidden',
+        '#type' => 'fieldset',
+        '#title' => 'Hidden',
+        '#description' => t(''),
+        '#collapsible' => TRUE,
+        '#collapsed' => TRUE,
+      ),
+    ),
+    'metadata' => array(
+      'fieldset' => array(
+        '#type' => 'fieldset',
+        '#title' => 'Metadata',
+        '#description' => t(''),
+        '#collapsible' => TRUE,
+        '#collapsed' => FALSE,
+        'shown' => array(
+          '#id' => 'meta_shown',
+          '#type' => 'fieldset',
+          '#title' => 'Metadata Shown',
+          '#description' => t(''),
+          '#collapsible' => TRUE,
+          '#collapsed' => FALSE,
+        ),
+        'hidden' => array(
+          '#id' => 'meta_hidden',
+          '#type' => 'fieldset',
+          '#title' => 'Visible items with Metadata Hidden',
+          '#description' => t(''),
+          '#collapsible' => TRUE,
+          '#collapsed' => FALSE,
+        ),
+      ),
+    ),
+    'previews' => array(
+      'fieldset' => array(
+        '#type' => 'fieldset',
+        '#title' => 'Previews',
+        '#description' => t(''),
+        '#collapsible' => TRUE,
+        '#collapsed' => FALSE,
+        'shown' => array(
+          '#id' => 'preview_shown',
+          '#type' => 'fieldset',
+          '#title' => 'Preview Shown',
+          '#description' => t(''),
+          '#collapsible' => TRUE,
+          '#collapsed' => FALSE,
+        ),
+        'hidden' => array(
+          '#id' => 'preview_hidden',
+          '#type' => 'fieldset',
+          '#type' => 'fieldset',
+          '#title' => 'Visible items with no preview',
+          '#description' => t(''),
+          '#collapsible' => TRUE,
+          '#collapsed' => FALSE,
+        ),
+      ),
+    ),
+    'downloads' => array(
+      'fieldset' => array(
+        '#type' => 'fieldset',
+        '#title' => 'Downloads',
+        '#description' => t(''),
+        '#collapsible' => TRUE,
+        '#collapsed' => FALSE,
+        'shown' => array(
+          '#id' => 'downloads_shown',
+          '#type' => 'fieldset',
+          '#title' => 'Download Shown',
+          '#description' => t(''),
+          '#collapsible' => TRUE,
+          '#collapsed' => FALSE,
+        ),
+        'hidden' => array(
+          '#id' => 'downloads_hidden',
+          '#type' => 'fieldset',
+          '#title' => 'Visible items with no download',
+          '#description' => t(''),
+          '#collapsible' => TRUE,
+          '#collapsed' => FALSE,
+        ),
+      ),
+    ),
+  );
 $form['Save'] = array(
   '#type' => 'button', 
   '#value' => t('Save'), 
