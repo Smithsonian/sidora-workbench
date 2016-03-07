@@ -2014,6 +2014,40 @@ array(
   //Anything with show_name as false we do not want the outside world knowing about
   return drupal_json_output(exhibition_config_filter_visibility_show_name($visibility_obj));
 }
+/*
+ * Implements hook_islandora_datastream_modified().
+ *
+ * Updates exhibition visibility based on the new children (if needed)
+ * 
+ * Whenever a child is added or removed the parents' RELS-EXT is modified. Look for these cases
+ * and update the supporting visibility entries
+ */
+function exhibition_config_islandora_datastream_ingested(AbstractObject $object, AbstractDatastream $datastream) {
+}
+/*
+ * Implements hook_islandora_datastream_modified().
+ *
+ * Updates exhibition visibility based on the new children (if needed)
+ * 
+ * Whenever a child is added or removed the parents' RELS-EXT is modified. Look for these cases
+ * and update the supporting visibility entries
+ */
+function exhibition_config_islandora_datastream_modified(AbstractObject $object, AbstractDatastream $datastream) {
+  if ($datastream->id == 'RELS-EXT') {
+    $parent_pid = $object->id;
+    print 'BBB modified RELS-EXT of:'.$parent_pid;
+    $ec_query = db_select('exhibition_config', 'ec')
+      ->fields('ec')
+      ->condition('ec.visibility', '%' . db_like('"pid":"'.$parent_pid.'"') . '%', 'LIKE');
+    $result = $ec_query
+      ->execute()
+      ->fetchAll();
+    foreach ($result as $exhibition_root_line){
+      print 'This is in the visibility for:'.$exhibition_root_line->pid;
+    }
+    exit();
+  }
+}
 
 /*
  * returns a visibility object with only objects that have show_name as TRUE
