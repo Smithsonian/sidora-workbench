@@ -55,13 +55,6 @@ function exhibition_config_menu(){
     'description' => t('Allows visibility configuration for the exhibition display for the Fedora Concept'),
     'type' => MENU_CALLBACK,
   );
-  $items['exhibition_config/tree'] = array(
-	  'title' => t('JSON Tree'),
-		'page callback' => 'exhibition_test',
-	//	'page arguments' => array(2),
-		 'access callback' => TRUE,
-		'type' => MENU_CALLBACK,
-	);	
   $items['exhibition_config/info/custom_url'] = array(
     'title' => t('JSON data'),
     'page callback' => 'exhibition_config_custom_url',
@@ -2070,19 +2063,6 @@ $form['pid_tree'] = array(
 );	
  return $form;
  }
-function exhibition_config_dump_tree($pid) {
-  $pid_tree = exhibition_config_get_pid_tree($pid);
-	/*$rows = array();
-	$resource_visibility_settings = array(
-	'show_name' => 'Show Name',
-	'show_meta' => 'Show Meta',
-	'show_preview' => 'Show Preview',
-	'allow_download' => 'Show Download');
-	exhibition_config_flatten_tree($pid_tree,$rows,$resource_visibility_settings);
-	var_dump($rows);*/
-	var_dump(unserialize(serialize($pid_tree)));
-}
-
 function exhibition_permission_form_submit($form, &$form_state) {
   $root_pid = $form['pid']['#value'];
 	$result = array();
