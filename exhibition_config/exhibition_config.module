@@ -78,6 +78,14 @@ function exhibition_config_menu(){
     'description' => t('JSON data'),
     'type' => MENU_CALLBACK,
   );
+  $items['exhibition_config/json_visibility'] = array(
+    'title' => t('JSON data'),
+    'page callback' => 'exhibition_config_json_visibility',
+    'page arguments' => array(2),
+    'access callback' => TRUE, 
+    'description' => t('JSON Visibility data'),
+    'type' => MENU_CALLBACK,
+  );
   return $items;
 }
 /*
@@ -199,6 +207,7 @@ function exhibition_config_custom_url($custom_url){
  * prints a JSON object of the configuration for this pid
  */
 function exhibition_config_json_data($pid){
+  //if (!empty($_GET['BBB'])) return exhibition_config_json_visibility($pid);
   $pid = urldecode($pid);
   $row = exhibition_config_get_config_data($pid);
   if (!empty($row)) {
@@ -399,6 +408,7 @@ function exhibition_config_form_submit($form, &$form_state) {
 
     $fullLinkSet = array('names'=>$link_names, 'urls'=>$link_urls);  //validate already said these were okay
     $fls_serialized = serialize($fullLinkSet);
+    $existing_visibility_obj = exhibition_config_load_visibility($pid); 
     $delete_result = db_delete("{exhibition_config}")->condition('pid', $pid)->execute();
 
 
@@ -460,6 +470,7 @@ function exhibition_config_form_submit($form, &$form_state) {
       )
     );
     $output = $insert_query->execute();
+    exhibition_config_save_visibility($pid,$existing_visibility_obj);
     /*
     if ($form['use_current_config_for_children']['#value']){
       $full_pid_list = array();
@@ -2299,3 +2310,237 @@ function exhibition_permission_form_submit($form, &$form_state) {
   //if (array_key_exists('children',$pid_tree)){
   //foreach ($      
 } */  
+/*
+ * Saves the visibility tree in the database
+ */
+function exhibition_config_save_visibility($pid, $visibility_obj_tree) {
+  if (!exhibition_config_allowed_to_edit($pid)) {
+    drupal_not_found();
+    drupal_exit();
+  }
+  $query = db_update('exhibition_config')
+    ->fields(array(
+      'visibility' => json_encode($visibility_obj_tree),
+    ))
+    ->condition('pid', $pid, '=');
+  $num_updated = $query->execute();
+  $new_entry = NULL;
+  if ($num_updated === 0){
+    $fields = 
+      array(
+        'pid', 
+        'visibility', 
+      );
+    $insert_query = db_insert('exhibition_config')->fields($fields);
+    $insert_query->values( 
+      array(
+        'pid' => $pid,
+        'visibility' => json_encode($visibility_obj_tree),
+      )
+    );
+    $new_entry = $insert_query->execute();
+    
+  }
+  return (!empty($num_updated) || !empty($new_entry)); 
+}
+/*
+ * Retrieves the visibility tree from the database
+ */
+function exhibition_config_load_visibility($pid) {
+  $result = db_query("Select ". //SELECT
+"visibility ". 
+"FROM {exhibition_config} where pid = :pid", array(':pid'=>$pid));
+  $row = array();
+  foreach ($result as $input){
+    foreach($input as $name=>$value){
+      if ($name == 'visibility') return json_decode($value, TRUE);
+    }
+  }
+  return array();
+}
+
+/*
+ * Prints the JSON of the visibility tree for exhibition
+ */
+function exhibition_config_json_visibility($pid) {
+  $pid = urldecode($pid);
+/*
+  $hard_coded = 
+array(
+  "pid" => "si:365717",
+  "label" => "randerson6",
+  "type" => "concept",
+  "show_meta" => TRUE,
+  "show_name" => TRUE,
+  "children" => array (array(
+    "pid" => "si:386769",
+    "label" => "Image 1",
+    "type" => "concept",
+    "show_meta" => TRUE,
+    "show_name" => TRUE,
+    "children" => array (array(
+      "pid" => "si:386976",
+      "type" => "concept",
+      "show_meta" => TRUE,
+      "show_name" => TRUE,
+      "children" => array (array(
+        "pid" => "si:389039",
+        "label" => "1400 Pachelbel - Canon in D Major",
+        "type" => "resource",
+        "show_meta" => FALSE,
+        "show_name" => TRUE,
+        "show_preview" => TRUE,
+        "allow_download" => TRUE,
+        "models" => array(
+          "islandora:sp-audioCModel"
+        )
+      ),array(
+        "pid" => "si:389041",
+        "type" => "resource",
+        "label" => "not shown",
+        "show_meta" => TRUE,
+        "show_name" => FALSE,
+        "show_preview" => TRUE,
+        "allow_download" => TRUE
+      ),array(
+        "pid" => "si:389043",
+        "label" => "not shown",
+        "type" => "resource",
+        "show_meta" => TRUE,
+        "show_name" => FALSE,
+        "show_preview" => TRUE,
+        "allow_download" => TRUE
+      ),array(
+        "pid" => "si:388548",
+        "label" => "Fake name for Book1.xls",
+        "type" => "resource",
+        "show_meta" => TRUE,
+        "show_name" => TRUE,
+        "show_preview" => FALSE,
+        "allow_download" => TRUE,
+        "models" => array(
+          "si:datasetCModel"
+        )
+      ),array(
+        "pid" => "si:389449",
+        "label" => "HAS A PROXY_MP3 Datastream",
+        "type" => "resource",
+        "show_meta" => TRUE,
+        "show_name" => TRUE,
+        "show_preview" => TRUE,
+        "allow_download" => FALSE,
+        "models" => array(
+          "islandora:sp-audioCModel"
+        )
+      ),array(
+        "pid" => "si:389037",
+        "label" => "Pachelbel - Canon in D Major JSON name",
+        "type" => "resource",
+        "show_meta" => TRUE,
+        "show_name" => TRUE,
+        "show_preview" => TRUE,
+        "allow_download" => FALSE,
+        "models" => array(
+          "islandora:sp-audioCModel"
+        )
+      ),array(
+        "pid" => "si:388546",
+        "label" => "Talent Skills and Capabilities.xslx JSON name",
+        "type" => "resource",
+        "show_meta" => TRUE,
+        "show_name" => TRUE,
+        "show_preview" => TRUE,
+        "allow_download" => TRUE,
+        "models" => array(
+          "si:datasetCModel"
+        )
+      ))
+    ))
+  ),array(
+    "pid" => "si:386002",
+    "label" => "Chrysanthemum.jpg JSON name",
+    "type" => "resource",
+    "show_meta" => TRUE,
+    "show_name" => TRUE,
+    "show_preview" => TRUE,
+    "allow_download" => TRUE,
+    "models" => array(
+      "si:generalImageCModel"
+    )
+  ),array(
+    "pid" => "si:12346",
+    "label" => "Incomplete folder, will hold more info later",
+    "type" => "concept",
+    "show_meta" => FALSE,
+    "show_name" => TRUE,
+    "children" => array (array(
+      "pid" => "si:12347",
+      "label" => "CSV filled with data",
+      "type" => "resource",
+      "show_meta" => TRUE,
+      "show_name" => TRUE,
+      "show_preview" => TRUE,
+      "allow_download" => TRUE
+    ))
+  ))
+);
+  exhibition_config_save_visibility($pid,$hard_coded);
+*/
+  $visibility_obj = exhibition_config_load_visibility($pid);
+  //Anything with show_name as false we do not want the outside world knowing about
+  return drupal_json_output(exhibition_config_filter_visibility_show_name($visibility_obj));
+}
+/*
+ * Implements hook_islandora_datastream_modified().
+ *
+ * Updates exhibition visibility based on the new children (if needed)
+ * 
+ * Whenever a child is added or removed the parents' RELS-EXT is modified. Look for these cases
+ * and update the supporting visibility entries
+ */
+function exhibition_config_islandora_datastream_ingested(AbstractObject $object, AbstractDatastream $datastream) {
+}
+/*
+ * Implements hook_islandora_datastream_modified().
+ *
+ * Updates exhibition visibility based on the new children (if needed)
+ * 
+ * Whenever a child is added or removed the parents' RELS-EXT is modified. Look for these cases
+ * and update the supporting visibility entries
+ */
+function exhibition_config_islandora_datastream_modified(AbstractObject $object, AbstractDatastream $datastream) {
+  if ($datastream->id == 'RELS-EXT') {
+    $parent_pid = $object->id;
+    print 'BBB modified RELS-EXT of:'.$parent_pid;
+    $ec_query = db_select('exhibition_config', 'ec')
+      ->fields('ec')
+      ->condition('ec.visibility', '%' . db_like('"pid":"'.$parent_pid.'"') . '%', 'LIKE');
+    $result = $ec_query
+      ->execute()
+      ->fetchAll();
+    foreach ($result as $exhibition_root_line){
+      print 'This is in the visibility for:'.$exhibition_root_line->pid;
+    }
+    exit();
+  }
+}
+
+/*
+ * returns a visibility object with only objects that have show_name as TRUE
+ */
+function exhibition_config_filter_visibility_show_name($vis_obj) {
+  $to_return = $vis_obj;
+  if (empty($to_return['show_name'])) return FALSE;
+  $new_children = array();
+  if (!empty($vis_obj['children'])){
+    foreach($vis_obj['children'] as $curr_child) {
+      $check_item = exhibition_config_filter_visibility_show_name($curr_child);
+      if (!empty($check_item)){
+        $new_children[] = $check_item;
+      }
+    }
+    $to_return['children'] = $new_children; 
+  }
+  return $to_return;
+}
+

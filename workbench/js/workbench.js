@@ -950,22 +950,85 @@ sidora.InitiateConfirmAccess = function(){
   }
 );
 }
-sidora.InitiatePage = function(){
-  sidora.InitiateConfirmAccess();
-  sidora.InitiateJSTree();
-  sidora.RelocateTreeOnPage();
-  sidora.ReformatPage();
-  jQuery('#concept_tabs').tabs();
-  sidora.concept.LoadContent();
-  jQuery("#page-title").after(jQuery("#workbench-menu"));
-  jQuery("#concept-meta").prepend(jQuery("#concept-meta-menu"));
-  jQuery('#concept-menu ul li').children(':contains("Permissions")').addClass("ui-state-disabled").css("margin",0).css("padding-left","5px").css("border",0);
-  sidora.ontology.CreateConceptMenu();
-  sidora.ResizeOnWindowResize();
-  jQuery(document).tooltip(
-  { position: { my: "left-7 bottom", at: "right center" } }
+sidora.IsUserSetUp = function(callOnCorrectSetup, callOnIncorrectSetup){
+  jQuery.ajax(
+    {
+      "dataType":"json",
+      "url":Drupal.settings.basePath+"sidora/ajax_parts/check_user_setup",
+      "success":function(data){
+        if (typeof(data.root_is_valid) != 'undefined'){
+          if (data.root_is_valid){
+            if (typeof(callOnCorrectSetup) == "function"){
+              callOnCorrectSetup(data, this);
+            }
+          }else{
+            if (typeof(callOnIncorrectSetup) == "function"){
+              callOnIncorrectSetup(data, this);
+            }
+          }
+        }else{
+          console.log("Bad user data, redirecting to user profile");
+          window.location = Drupal.settings.basePath+"user";
+        }
+      },
+      "error":function(){
+         console.log("Problem getting basic user info, redirecting to the user profile");
+         //This can also happen if the .htaccess file is incorrect
+         window.location = Drupal.settings.basePath+"user";
+      }
+    }
   );
-  jQuery("#branding").append("<div class='branding-user-info' style='float:right'> <a href='"+Drupal.settings.basePath+"user' class='button'>Profile</a> <a href='"+Drupal.settings.basePath+"user/logout' class='button'>Logout</a></div>");
+}
+sidora.InitiatePage = function(){
+  jQuery("#page").hide();
+  sidora.InitiateConfirmAccess();
+  var continueInit = function(){
+    sidora.InitiateJSTree();
+    sidora.RelocateTreeOnPage();
+    sidora.ReformatPage();
+    jQuery('#concept_tabs').tabs();
+    sidora.concept.LoadContent();
+    jQuery("#page-title").after(jQuery("#workbench-menu"));
+    jQuery("#concept-meta").prepend(jQuery("#concept-meta-menu"));
+    jQuery('#concept-menu ul li').children(':contains("Permissions")').addClass("ui-state-disabled").css("margin",0).css("padding-left","5px").css("border",0);
+    sidora.ontology.CreateConceptMenu();
+    sidora.ResizeOnWindowResize();
+    jQuery(document).tooltip(
+      { position: { my: "left-7 bottom", at: "right center" } }
+    );
+    jQuery("#branding").append("<div class='branding-user-info' style='float:right'> <a href='"+Drupal.settings.basePath+"user' class='button'>Profile</a> <a href='"+Drupal.settings.basePath+"user/logout' class='button'>Logout</a></div>");
+    jQuery("#page").show();
+  }
+  recreateUser = function() {
+    jQuery("#page").after('<div id="recreateUser" class="" style="max-width: 300px;margin: 0 auto;"><p>It looks like your user hasn\'t been set up yet. To automatically set up your user now, click \'Set Up Now\'. The process will take about 30 seconds and will reload the page when it\'s complete.</p> <div style="margin: 0 20px;"><input id="setupnow" class="form-submit" value="Set Up Now"><p></p><input id="logout" class="form-submit" value="Log Out"></div></div>');
+    jQuery("#setupnow").click(function(){
+      var overlay = jQuery('<div class="full-screen-overlay"><div id="countdown" style="color:white;margin:30px auto;width:200px;">20s estimated remaining</div></div>');
+      overlay.appendTo(document.body);
+      
+      jQuery("#countdown").countdown(function(){
+        jQuery("#countdown").css("width","500px");
+        jQuery("#countdown").html("This is taking a little longer than normal but we're still working on it");
+      }, 30, "s estimated remaining");
+
+      jQuery.ajax(
+        {
+          "dataType":"json",
+          "url":Drupal.settings.basePath+"sidora/ajax_parts/create_and_set_new_user_object",
+          "success":function(data){
+             console.log(data);
+             window.location.reload();
+          },
+          "error":function(){
+             console.log("Problem getting basic user info, redirecting to the user profile");
+          }
+        }
+      );
+    });
+    jQuery("#logout").click(function(){
+      window.location = Drupal.settings.basePath+"user/logout";
+    });
+  }
+  sidora.IsUserSetUp(continueInit, recreateUser);
 };
 /*
  * Return thumbnail if resource has a unique thumbnail that is showing, otherwise return false
