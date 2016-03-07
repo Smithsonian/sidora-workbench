@@ -11,6 +11,7 @@
   vertical-align:top;
   padding-bottom:10px;
 }
+.light-background{background-color:#eeeeff}
 #selectable {width:100%; margin: 0; padding: 0; height:100%} 
 .visibility_checkbox {border:1px solid #000000;}
 //#selectable .ui-selecting { background: #FECA40; }
