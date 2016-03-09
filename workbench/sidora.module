@@ -8475,18 +8475,30 @@ function sidora_osd_proxy_version($pid, $datastream='OBJ', $version='0'){
   $obj = sidora_obj($pid);
   $ds = $obj[$datastream];
   $datastream_content = $ds[$version];
-  $qs = $_SERVER['QUERY_STRING'];
-  $qs = str_replace(
+  if (!empty($datastream_content)) {
+    $qs = $_SERVER['QUERY_STRING'];
+    $qs = str_replace(
           urlencode("{replacer}"),
           urlencode(variable_get('osd_proxy_pid_prefix', '')).
           urlencode($pid).
           urlencode(variable_get('osd_proxy_pid_postfix', '')).
-          '?asOfDateTime=' . 
+          '?asOfDateTime=' .
           urlencode($datastream_content->createdDate),
           $qs
-  );
-  $url = variable_get('osd_proxy_resolver_url', '').'?'.$qs;
-  print file_get_contents($url);
+    );
+    $url = variable_get('osd_proxy_resolver_url', '').'?'.$qs;
+    print file_get_contents($url);
+  }
+  else {
+    watchdog(
+      'sidora_workbench',
+      t('OSD Viewer had empty datastream. PID: %pid DSID: %dsid Version: %version',array(
+        '%pid' => $pid,
+        '%dsid' => $datastream,
+        '%version' => $version
+      ))
+    );
+  }
   drupal_exit();
 }
 /*
