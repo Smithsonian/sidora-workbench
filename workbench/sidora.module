@@ -3428,8 +3428,6 @@ function sidora_create_and_set_new_user_object($account, $create_even_if_existin
   module_load_include('inc', 'sidora', 'includes/utils');
   $object = sidora_create_user_object($account);
   sleep(15); //Arbitrary sleep to allow fedora to create the objects.  Even though the ID comes back it's apparently not available immediately
-  $data = array();
-  $data['data'] = array();
   $data['data']['islandora_user_pid'] = $object->id;
   user_save($account,$data);
   return json_encode('New user project created');
@@ -4481,6 +4479,7 @@ function sidora_block_view($delta = ''){
   }
   return $block;
   }catch(Exception $e){
+    //TODO BBB
     $block['content'] = 'Tuque down for block:'.$delta;
     return $block;
   }
@@ -8475,30 +8474,18 @@ function sidora_osd_proxy_version($pid, $datastream='OBJ', $version='0'){
   $obj = sidora_obj($pid);
   $ds = $obj[$datastream];
   $datastream_content = $ds[$version];
-  if (!empty($datastream_content)) {
-    $qs = $_SERVER['QUERY_STRING'];
-    $qs = str_replace(
+  $qs = $_SERVER['QUERY_STRING'];
+  $qs = str_replace(
           urlencode("{replacer}"),
           urlencode(variable_get('osd_proxy_pid_prefix', '')).
           urlencode($pid).
           urlencode(variable_get('osd_proxy_pid_postfix', '')).
-          '?asOfDateTime=' .
+          '?asOfDateTime=' . 
           urlencode($datastream_content->createdDate),
           $qs
-    );
-    $url = variable_get('osd_proxy_resolver_url', '').'?'.$qs;
-    print file_get_contents($url);
-  }
-  else {
-    watchdog(
-      'sidora_workbench',
-      t('OSD Viewer had empty datastream. PID: %pid DSID: %dsid Version: %version',array(
-        '%pid' => $pid,
-        '%dsid' => $datastream,
-        '%version' => $version
-      ))
-    );
-  }
+  );
+  $url = variable_get('osd_proxy_resolver_url', '').'?'.$qs;
+  print file_get_contents($url);
   drupal_exit();
 }
 /*

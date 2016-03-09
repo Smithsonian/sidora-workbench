@@ -979,10 +979,16 @@ sidora.IsUserSetUp = function(callOnCorrectSetup, callOnIncorrectSetup){
     }
   );
 }
+sidora.doubleCheckUser = function(){
+  jQuery("#page").before("<div id='remove-me' style='width:100%'><div style='margin:auto;width:400px;'>Validating your user...</div></div>");
+  setTimeout(function(){
+    sidora.IsUserSetUp(function(){ jQuery("#remove-me").remove(); sidora.continueInit(); }, function(){ jQuery("#remove-me").remove(); recreateUser(); });
+  },5000);
+}
 sidora.InitiatePage = function(){
   jQuery("#page").hide();
   sidora.InitiateConfirmAccess();
-  var continueInit = function(){
+  sidora.continueInit = function(){
     sidora.InitiateJSTree();
     sidora.RelocateTreeOnPage();
     sidora.ReformatPage();
@@ -1029,7 +1035,7 @@ sidora.InitiatePage = function(){
       window.location = Drupal.settings.basePath+"user/logout";
     });
   }
-  sidora.IsUserSetUp(continueInit, recreateUser);
+  sidora.IsUserSetUp(sidora.continueInit, sidora.doubleCheckUser);
 };
 /*
  * Return thumbnail if resource has a unique thumbnail that is showing, otherwise return false
