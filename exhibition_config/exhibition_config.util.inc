@@ -154,7 +154,7 @@ function si_exhibition_get_children_info(FedoraObject $object) {
 	$children = array_map("si_exhibition_map_children", $results);
   usort($children, function($a, $b){
     if ($a['type'] == $b['type']){
-      return strcmp($a['label'],$b['label']);
+      return strcmp($a['title'],$b['title']);
     } else {
       return strcmp($a['type'],$b['type']);
     }

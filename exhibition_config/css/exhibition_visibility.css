@@ -12,22 +12,30 @@
   padding-bottom:10px;
 }
 .light-background{background-color:#eeeeff}
-#selectable {width:100%; margin: 0; padding: 0; height:100%} 
+#selectable {width:100%; margin: 0; padding: 0; height:100%;} 
+#visibility-list-table {list-style:none; margin:0; padding:0; width:100%;display:table;min-width:975px;}
+#visibility-list-table #header {background-color:#ccc; cursor:default;display:table-header-group;}
+#visibility-list-table #header div {display:table-cell;}
+#visibility-list-table li {display:table-row;min-width:975px;}
+#visibility-list-table li div.visibility-name,div.visibility-type,div.visibility-path,div.visibility-setting,div.empty-visibility-setting {display:block;float:left;padding:3px 5px;display:table-cell;}
+#visibility-list-table li div.visibility-name{width:33%;border-left:1px solid #ccc;display:table-cell;}
+#visibility-list-table li div.visibility-type{width:5%;display:table-cell;}
+#visibility-list-table li div.visibility-path{width:33%;display:table-cell;}
+#visibility-list-table li div.visibility-setting{width:5%;display:table-cell;min-width:47px}
+#visibility-list-table li div.empty-visibility-setting{width:5%;display:table-cell;height:100%;min-width:47px}
+#visibility-list-table li div.form-item{margin:0;}
+#visibility-list-table ul.visibility-sub-list {list-style:none; margin:0;padding:0;}
 .visibility_checkbox {border:1px solid #000000;}
 //#selectable .ui-selecting { background: #FECA40; }
 #selectable .ui-selected { background: #F39814; color: white; }
-#selectable tr { margin: 3px; padding: 0.1em; font-size: 1em; height: 18px; }
-#selectable tr td:last-child { border-right: 1px solid #bebfb9;}
-#selectable td {padding:8px 10px;}
 .visibility_settings {width:100%; border:0px;}
-.visibility_settings td {padding: 2px 5px;}
-//.visibility_settings tr td {border: 0px;}
+.visibility_settings div {padding: 2px 5px;}
 #select-result {width:100%; height:100%; overflow-x:auto; overflow-y:auto;}
 .visibility-result {border:0px;}
 .tree-indent {width:10px; display:inline-block;}
 #left_tree {width:65%; height:100%;}
 /*#advanced_hidden {width:100%; height :100%;}*/
-#action-bar {width:100%; padding:5px 5px;display:inline;position:absolute;}
+#action-bar {width:100%; padding:21px 5px 5px 5px;display:inline;position:absolute;}
 .action-button {width:20%; padding:5px; display:inline; }
 .scroller-holder {position:absolute; top:0; right:0; height:100%;max-height:910px;float:right;width:380px;overflow-y:scroll;}
 /*overwrite default Drupal #page*/

@@ -1873,11 +1873,11 @@ function exhibition_config_get_pid_tree($pid,&$pid_list = array(),$parent = '',$
   foreach($children as $child){
     $child['relationship'] = $relationship . "\\" . $child['title'];
     $child['relationship_pid'] = $relationship_pid . "\\" . $child['pid'];
-    if ($child['type'] == 'Concept'){
-    //Build the tree from all the children
-    //for each child, get their sub-tree
-    $to_return['children'][] = exhibition_config_get_pid_tree($child['pid'],$pid_list,$relationship,$relationship_pid);
-    }else{
+    if ($child['type'] == 'Concept') {
+		  if (!(in_array($child['pid'],$pid_list))){
+        $to_return['children'][] = exhibition_config_get_pid_tree($child['pid'],$pid_list,$relationship,$relationship_pid);
+      }
+		}else{
     $child['show_name'] = 'false';
     $child['show_meta'] = 'false';
     $child['show_preview'] = 'false';
@@ -1888,56 +1888,69 @@ function exhibition_config_get_pid_tree($pid,&$pid_list = array(),$parent = '',$
   }
   return $to_return;
 }
-function exhibition_config_flatten_tree($child_array,&$rows,$visibility_settings) {
-	if (isset($child_array) && sizeof($child_array)) {
-	  $tree_depth = substr_count($child_array['relationship_pid'],'\\');
-	  $indent = '';
-	  for ($ctr=0;$ctr < $tree_depth; $ctr++) {
-	    $indent .= '<span class="tree-indent ui-selectee"></span>';
-	  }	
-	  if ($child_array['type'] == 'Resource') {
-	    $indent .= '<span class="tree-indent ui-selectee"></span>';
-	  }
-	  $html = '<tr id="' . $child_array['pid'] . '" depth="' . $child_array['relationship_pid'] . '"><td>'.$indent.'<span class ="' . $child_array['type'] . ' ui-selectee"></span>' . $child_array['title'].'</td><td>'.$child_array['type'].'</td><td>'.$child_array['relationship'].'</td>';
-  	$checkboxes_array = array();
-	  foreach ($visibility_settings as $setting => $name) {
-		  //$visibility_value = (isset($child_array[$setting]) && ($child_array[$setting] == 'true'))?'1':'';
-		  //$checkboxes_array[$setting] = $visibility_value;
-		  $checkboxes_array[$setting] = '';
-	  }	
-		$rows[] = array(
-		'pid' => $child_array['pid'],
-		'relationship' => $child_array['relationship'],
-		'depth' => $child_array['relationship_pid'],
-		'type' => $child_array['type'],
-		'label' => $child_array['title'],
-		'model' =>  (($child_array['type'] == 'Resource')?$child_array['model']:''),
-		'prefix' => $html,
-		'suffix' => '</tr>',
-		'checkboxes' => $checkboxes_array);
-	  if ((isset($child_array['children'])) && (sizeof($child_array['children']) > 0)) {
-	    foreach ($child_array['children'] as $child) {
-			  exhibition_config_flatten_tree($child,$rows,$visibility_settings);
-		  }
-	  }
-  } 
-}	
-function exhibition_config_flatten_tree_no_html($child_array, &$rows,$visibility_settings) {
-	if (isset($child_array) && sizeof($child_array)) {
-		$rows[$child_array['relationship_pid']] = array(
-		  'pid' => $child_array['pid'],
-		  'depth' => $child_array['relationship_pid'],
-		  'type' => $child_array['type']);
-	  foreach ($visibility_settings as $setting => $name) {
-		  $visibility_value = (isset($child_array[$setting]))?($child_array[$setting]):'';
-		  $rows[$child_array['relationship_pid']][$setting] = $visibility_value;
-	  }	
-	  if ((isset($child_array['children'])) && (sizeof($child_array['children']) > 0)) {
-	    foreach ($child_array['children'] as $child) {
-			  exhibition_config_flatten_tree_no_html($child,$rows,$visibility_settings);
-		  }
-	  }
-} 
+function exhibition_config_generate_checkboxes($branch,&$rows,$visibility_settings,$path){
+	if (isset($branch) && sizeof($branch)) {
+	  foreach ($branch as $child_array) {
+	    $tree_depth = substr_count($path,'\\');
+	    $indent = '';
+	    for ($ctr=0;$ctr < $tree_depth; $ctr++) {
+	      $indent .= '<span class="tree-indent ui-selectee"></span>';
+	    }	
+	    if ($child_array['type'] == 'Resource') {
+	      $indent .= '<span class="tree-indent ui-selectee"></span>';
+	    }
+		  if ($path == '') {
+		    $array_index = $child_array['pid'];
+		  }else{	
+		    $array_index = $path;
+		  }	
+		  if ($tree_depth > 0) $array_index = $path.$child_array['pid'];
+	    $html = '<li class="visibility-row" id="' . $child_array['pid'] . '" depth="' . $array_index . '"><div class="visibility-name">'.$indent.'<span class ="' . $child_array['type'] . ' ui-selectee"></span>' . $child_array['title'].'</div><div class="visibility-type">'.$child_array['type'].'</div><div class="visibility-path">'.$child_array['relationship'].'</div>';
+ 	    $checkboxes_array = array();
+	    foreach ($visibility_settings as $setting => $name) {
+		    $checkboxes_array[$setting] = '';
+	    }	
+		  $rows[$array_index] = array(
+		    'pid' => $child_array['pid'],
+		    'type' => $child_array['type'],
+		    'label' => $child_array['title'],
+		    'model' =>  (($child_array['type'] == 'Resource')?$child_array['model']:''),
+		    'prefix' => $html,
+		    'suffix' => '</li>',
+		    'checkboxes' => $checkboxes_array);
+	    if ((isset($child_array['children'])) && (sizeof($child_array['children']) > 0)) {
+			  $rows[$array_index]['suffix'] .= '<ul class="visibility-sub-list" id="' . $array_index . '">';
+			  exhibition_config_generate_checkboxes($child_array['children'],$rows,$visibility_settings,$array_index.'\\');
+		    $key = end(array_keys($rows));
+			  $rows[$key]['suffix'] .= '</ul>';
+	    }
+    } 
+  }	
+}
+function exhibition_config_flatten_tree($branch, &$rows,$visibility_settings,$path) {
+	if (isset($branch) && sizeof($branch)) {
+	  foreach ($branch as $child_array) {
+	    if (sizeof($child_array)) {
+			  $tree_depth = substr_count($path,'\\');
+		    if ($path == '') {
+		      $array_index = $child_array['pid'];
+		    }else{	
+		      $array_index = $path;
+		    }	
+		    if ($tree_depth > 0) $array_index = $path.$child_array['pid'];
+		    $rows[$array_index] = array(
+		       'pid' => $child_array['pid'],
+		       'type' => $child_array['type']);
+	      foreach ($visibility_settings as $setting => $name) {
+		      $visibility_value = (isset($child_array[$setting]))?($child_array[$setting]):'';
+		      $rows[$array_index][$setting] = $visibility_value;
+				}	
+	    }	
+	    if ((isset($child_array['children'])) && (sizeof($child_array['children']) > 0)) {
+			  exhibition_config_flatten_tree($child_array['children'],$rows,$visibility_settings,$array_index.'\\');
+	    }
+    }
+	}
 }	
 function exhibition_permission_main_form($pid){
   $pid = urldecode($pid);
@@ -1957,10 +1970,10 @@ function exhibition_permission_form($form, $form_state){
 	'allow_download' => 'Show Download');
   $saved_visibility = exhibition_config_load_visibility($pid);
   $existing_visibility = array();
-	exhibition_config_flatten_tree_no_html($saved_visibility,$existing_visibility,$visibility_settings);
+	exhibition_config_flatten_tree($saved_visibility,$existing_visibility,$visibility_settings,$pid);
   $form['#attached']['js'] = array(
      array(
-     'data' => 'jQuery("#selectable").selectable("option", "filter", "tr");',
+     'data' => 'jQuery("#selectable").selectable("option", "filter", "li");',
      'type' => 'inline',
      ),
    );
@@ -1969,35 +1982,36 @@ function exhibition_permission_form($form, $form_state){
   drupal_add_library('system', 'ui.selectable');
   drupal_add_library('system', 'ui.accordion');
   drupal_add_css($modulepath . '/css/exhibition_visibility.css',array('weight' => '1000000', 'group' => CSS_THEME));
-  $pid_tree = exhibition_config_get_pid_tree($pid);
-  $tree_html = '<div id="concept_tree">';
-  $tree_html .= '<table id="selectable"><thead><tr><th width="20%">Name</th><th width="10%">Type</th><th width="30%">Full Path</th><th width="10%">Show Name</th><th width="10%">Show Metadata</th><th width="10%">Show Preview</th><th width="10%">Show Download</th></tr></thead>';
-  $tree_html .= '<tbody>';
+  $pid_tree = array(
+	  '0' => exhibition_config_get_pid_tree($pid)
+	);
+	$tree_html = '<div id="concept_tree">';
+  $tree_html .= '<div id="selectable"><ul id="visibility-list-table"><li id="header"><div class="visibility-name">Name</div><div class="visibility-type">Type</div><div class="visibility-path">Full Path</div><div class="visibility-setting">Show Name</div><div class="visibility-setting">Show Metadata</div><div class="visibility-setting">Show Preview</div><div class="visibility-setting">Show Download</div></li>';
   $checkbox_rows = array();
-	exhibition_config_flatten_tree($pid_tree,$checkbox_rows,$visibility_settings);
+	exhibition_config_generate_checkboxes($pid_tree,$checkbox_rows,$visibility_settings,$pid);
   $form['visibility']['#tree'] = 'TRUE';
-	foreach($checkbox_rows as $row) {
-   $form['visibility'][$row['depth']]['#tree'] = 'TRUE';
-   $depth = $row['depth'];
+	foreach($checkbox_rows as $key => $row) {
+    $form['visibility'][$key]['#tree'] = 'TRUE';
+    $depth = $key;
     $resource_visibility_only = array('show_preview','allow_download');
 		foreach($row['checkboxes'] as $checkbox_id => $checkbox_value) {
 			if (($row['type'] == 'Concept') && (in_array($checkbox_id,$resource_visibility_only))) {
-		    $form['visibility'][$row['depth']][$checkbox_id] = array(
+		    $form['visibility'][$key][$checkbox_id] = array(
 			   '#type' => 'markup',
-		     '#prefix' => $tree_html.$row['prefix'].'<td>',
-			   '#suffix' => '</td>',
+		     '#prefix' => $tree_html.$row['prefix'].'<div class="empty-visibility-setting">',
+			   '#suffix' => '</div>',
 			   '#access' => 'FALSE'
 			  );
 		  }else{				
 		    $form['visibility'][$depth][$checkbox_id] = array(
 			   '#type' => 'checkbox',
-		     '#prefix' => $tree_html.$row['prefix'].'<td>',
+		     '#prefix' => $tree_html.$row['prefix'].'<div class="visibility-setting">',
 			   '#default_value' => (isset($existing_visibility[$depth][$checkbox_id]))?($existing_visibility[$depth][$checkbox_id]):'',
-			   '#suffix' => '</td>',
+			   '#suffix' => '</div>',
 			   '#attributes' => array(
 			     'label' => $row['label'],
 			     'pid' => $row['pid'],
-					 'path' => $row['depth'],
+					 'path' => $depth,
 					 'model' => $row['model'],
 					 'type' => $row['type']
 			    ),
@@ -2006,9 +2020,9 @@ function exhibition_permission_form($form, $form_state){
 			$tree_html = '';
 			$row['prefix'] = '';
 		}
-		$tree_html = '</tr>';
+		$tree_html = '';
 	}		
-  $tree_html = '</tr></tbody></table></div>';
+  $tree_html = '</ul></div>';
   $tree_html .= '<div id="action-bar"><div class="action-button"><a href="javascript:void(0);" class="button" id="change_all">Change All Selected</a></div><div class="action-button"><a href="javascript:void(0);" class="button" id="open-advanced">Advanced</a></div><div class="action-button">';
   $post_html = '</div><div class="action-button"><a href="javascript:void(0);" class="button" id="cancel-button">Cancel</a></div></div>';
   $post_html .= '<div id="advanced_hidden"></div></td>'; 
@@ -2020,17 +2034,11 @@ function exhibition_permission_form($form, $form_state){
     '#suffix' => $post_html,
   );    
   $js_for_form = '<script>
-
-
-
-
-
-
   jQuery(function() {
   jQuery("body").css("padding-top","0px");
   submit = false; 
     var prev = -1;
-    jQuery( "#selectable>tbody" ).selectable({
+    jQuery( "#selectable>ul" ).selectable({
     selecting: function(e, ui) {
         var curr = jQuery(ui.selecting.tagName, e.target).index(ui.selecting);
         if(e.shiftKey && prev > -1) {
@@ -2043,73 +2051,54 @@ function exhibition_permission_form($form, $form_state){
     },
     stop: function(event, ui) {
         var result =[];
-        jQuery( "tr.ui-selected", this ).each(function() {
+        jQuery( "li.ui-selected", this ).each(function() {
           result.push( this.id);
         });
-        //jQuery( "#select-result" ).html(result.join(","));
       }
   });
     jQuery( ".accordion >div" ).accordion({header: "h3", collapsible: true
     });
-  jQuery("#save").click(function(e){
-    alert("save clicked!!");
-    var result = []; 
-    jQuery(".visibility_checkbox :checkbox").each(function(){ 
-       var depth = jQuery(this).attr("depth"); 
-       var id = jQuery(this).attr("id"); 
-       var value = "false"; 
-       if (jQuery(this).is(":checked")) value="true"; 
-       result.push([id,depth,value]);
-    });
-    //jQuery("#exhibition-permission-form").submit();
-  }); 
   });
-
 fillInSidebar = function(){
-
 jQuery("#main_shown .fieldset-wrapper").html("");
 jQuery("[id$=show-name]:checked").each(function(){
-  jQuery("#main_shown .fieldset-wrapper").append("<div>"+jQuery(this).closest("tr").children()[2].innerHTML+"</div>");
+  jQuery("#main_shown .fieldset-wrapper").append("<div>"+jQuery(this).closest("li").children()[2].innerHTML+"</div>");
 })
 jQuery("#main_hidden .fieldset-wrapper").html("");
 jQuery("[id$=show-name]").not(":checked").each(function(){
-  jQuery("#main_hidden .fieldset-wrapper").append("<div>"+jQuery(this).closest("tr").children()[2].innerHTML+"</div>");
+  jQuery("#main_hidden .fieldset-wrapper").append("<div>"+jQuery(this).closest("li").children()[2].innerHTML+"</div>");
 })
 
 jQuery("#meta_shown .fieldset-wrapper").html("");
 jQuery("[id$=show-meta]:checked").each(function(){
-  jQuery("#meta_shown .fieldset-wrapper").append("<div>"+jQuery(this).closest("tr").children()[2].innerHTML+"</div>");
+  jQuery("#meta_shown .fieldset-wrapper").append("<div>"+jQuery(this).closest("li").children()[2].innerHTML+"</div>");
 })
 jQuery("#meta_hidden .fieldset-wrapper").html("");
 jQuery("[id$=show-meta]").not(":checked").each(function(){
-  if (jQuery(jQuery(this).closest("tr").children()[3]).children(":checked").size() > 0){
-    jQuery("#meta_hidden .fieldset-wrapper").append("<div>"+jQuery(this).closest("tr").children()[2].innerHTML+"</div>");
+  if (jQuery(jQuery(this).closest("li").children()[3]).children(":checked").size() > 0){
+    jQuery("#meta_hidden .fieldset-wrapper").append("<div>"+jQuery(this).closest("li").children()[2].innerHTML+"</div>");
   }
 })
-
-
 jQuery("#preview_shown .fieldset-wrapper").html("");
 jQuery("[id$=show-preview]:checked").each(function(){
-  jQuery("#preview_shown .fieldset-wrapper").append("<div>"+jQuery(this).closest("tr").children()[2].innerHTML+"</div>");
+  jQuery("#preview_shown .fieldset-wrapper").append("<div>"+jQuery(this).closest("li").children()[2].innerHTML+"</div>");
 })
 jQuery("#preview_hidden .fieldset-wrapper").html("");
 jQuery("[id$=show-preview]").not(":checked").each(function(){
-  if (jQuery(jQuery(this).closest("tr").children()[3]).children(":checked").size() > 0){
-    jQuery("#preview_hidden .fieldset-wrapper").append("<div>"+jQuery(this).closest("tr").children()[2].innerHTML+"</div>");
+  if (jQuery(jQuery(this).closest("li").children()[3]).children(":checked").size() > 0){
+    jQuery("#preview_hidden .fieldset-wrapper").append("<div>"+jQuery(this).closest("li").children()[2].innerHTML+"</div>");
   }
 })
-
 jQuery("#downloads_shown .fieldset-wrapper").html("");
 jQuery("[id$=allow-download]:checked").each(function(){
-  jQuery("#downloads_shown .fieldset-wrapper").append("<div>"+jQuery(this).closest("tr").children()[2].innerHTML+"</div>");
+  jQuery("#downloads_shown .fieldset-wrapper").append("<div>"+jQuery(this).closest("li").children()[2].innerHTML+"</div>");
 })
 jQuery("#downloads_hidden .fieldset-wrapper").html("");
 jQuery("[id$=allow-download]").not(":checked").each(function(){
-  if (jQuery(jQuery(this).closest("tr").children()[3]).children(":checked").size() > 0){
-    jQuery("#downloads_hidden .fieldset-wrapper").append("<div>"+jQuery(this).closest("tr").children()[2].innerHTML+"</div>");
+  if (jQuery(jQuery(this).closest("li").children()[3]).children(":checked").size() > 0){
+    jQuery("#downloads_hidden .fieldset-wrapper").append("<div>"+jQuery(this).closest("li").children()[2].innerHTML+"</div>");
   }
 })
-
 }
 resizeConceptTreePage = function() {
   jQuery("#concept_tree").parent().height(jQuery(window).innerHeight()-100);
@@ -2141,11 +2130,10 @@ resizeConceptTreePage = function() {
 }
 fillInSidebar();
 resizeConceptTreePage();
-jQuery( "tr:odd" ).addClass("light-background");//css( "background-color", "#eeeeff" );
+jQuery( "#visibility-list-table li:odd" ).addClass("light-background");//css( "background-color", "#eeeeff" );
 jQuery("input:checkbox").click(fillInSidebar);
 jQuery("#open-advanced").after(jQuery("#edit-save"));
 jQuery(window).resize(resizeConceptTreePage);
-
   </script>';
   $form['holder'] = array(
     '#prefix' => '<div class="scroller-holder">',
@@ -2252,10 +2240,6 @@ $form['pid'] = array(
   '#value' => $pid, 
   '#suffix' => $js_for_form
 );
-$form['pid_tree'] = array(
-  '#type' => 'hidden',
-	'#value' => serialize($pid_tree)
-);	
  return $form;
  }
 /*
@@ -2622,64 +2606,56 @@ function exhibition_config_filter_visibility_show_name($vis_obj) {
 
 function exhibition_permission_form_submit($form, &$form_state) {
   $root_pid = $form['pid']['#value'];
-	$result = array();
-	foreach($form['visibility'] as $key => $name) {
-	  if ((is_array($name)) && (array_key_exists('show_name',$name))) {
-			$pid = $name['show_name']['#attributes']['pid'];
-			$depth = $name['show_name']['#attributes']['path'];
+	$post_array = array();
+	foreach($form['visibility'] as $object_key => $object_visibility) {
+	  if ((is_array($object_visibility)) && (array_key_exists('show_name',$object_visibility))) {
+			$pid = $object_visibility['show_name']['#attributes']['pid'];
+			$depth = $object_visibility['show_name']['#attributes']['path'];
 			$pid_result = array(
 				 'pid' => $pid,
-				 'label' => $name['show_name']['#attributes']['label'],
-				 'model' => $name['show_name']['#attributes']['model'],
-				 'type' => $name['show_name']['#attributes']['type'],
+				 'label' => $object_visibility['show_name']['#attributes']['label'],
+				 'model' => $object_visibility['show_name']['#attributes']['model'],
+				 'type' => $object_visibility['show_name']['#attributes']['type'],
 			);
-		  foreach($name as $name_key => $name_value) {
-			  if ((is_array($name_value)) && ((array_key_exists('#type',$name_value)) && ($name_value['#type'] == 'checkbox'))) {
-					$pid_result[$name_key] = $name_value['#value'];
+		  foreach($object_visibility as $visibility_key => $visibility_value) {
+			  if ((is_array($visibility_value)) && ((array_key_exists('#type',$visibility_value)) && ($visibility_value['#type'] == 'checkbox'))) {
+					$pid_result[$visibility_key] = $visibility_value['#value'];
 				}
 			}
-		 $result[$depth] = $pid_result; 
+		 $post_array[$depth] = $pid_result; 
 		}		
 	}
-	$result_array = unserialize($form['pid_tree']['#value']);
-	update_tree($result_array,$result);
-	reset($result_array);
-  exhibition_config_save_visibility($root_pid,$result_array);
-  
-  /*
-  $result = db_query("Select visibility FROM {exhibition_config} where pid = :pid", array(':pid'=>$root_pid));
-	$row = array();
-	if ($result->rowCount()){
-	  $updated_query = db_update('exhibition_config')
-      ->fields(array(
-         'visibility' => serialize($result_array),
-        ))
-      ->condition('pid',$root_pid)
-      ->execute();
-  }else{
-    $insert_query = db_insert('exhibition_config') 
-      ->fields(array(
-         'visibility' => serialize($result_array),
-         'pid' => $root_pid,
-        ))
-      ->execute();	
-  }	
-  */ 
-}	
-function update_tree(&$branch,$post_data) {
-	if ((is_array($branch)) && (array_key_exists('show_name',$branch))) {
-    $path = $branch['relationship_pid'];
-		$branch['show_name'] = $post_data[$path]['show_name'];
-		$branch['show_meta'] = $post_data[$path]['show_meta'];
-		if ($branch['type'] == 'Resource'){
-			$branch['show_preview'] = $post_data[$path]['show_preview'];
-			$branch['allow_download'] = $post_data[$path]['allow_download'];
-		}  
-		if (isset($branch['children'])) {
-		  foreach($branch['children'] as &$subchild){
-				update_tree($subchild,$post_data);
-				unset($subchild);
-			}
-		}
+	$visibility_settings_array = array();
+	foreach($post_array as $key => $value) {
+	  update_visibility_pid($visibility_settings_array,$key,$value);
+	}
+  exhibition_config_save_visibility($root_pid,$visibility_settings_array);
+}
+function update_visibility_pid(&$visibility_array,$object_pid,$visibility_value) {
+  if (substr_count($object_pid,'\\') > 0) {
+	  $key_array = explode('\\',$object_pid,-1);
+	  $object_pid = implode('\\',$key_array);
+	  $children_branch = &return_branch_by_address($visibility_array,$object_pid,'\\');
+	  array_push($children_branch,$visibility_value);
+	}else{
+	  $visibility_value['children'] = array();
+	  $visibility_array[] = $visibility_value;
+	}
+}	 
+function &return_branch_by_address (&$parent_array, $child_address, $addressSeparator = '\\') {
+  $parts = explode($addressSeparator, $child_address);
+  $thisLevel = array_shift($parts);
+  foreach ($parent_array as &$branch) {
+		if ((isset($branch['pid'])) && ($branch['pid'] == $thisLevel)) {
+      if ($parts) {
+        $child_branch_address = &return_branch_by_address($branch['children'], implode($addressSeparator, $parts));
+				return $child_branch_address;
+      } else {
+        if (!(isset($branch['children']))) {
+					$branch['children'] = array();
+				}
+			  return $branch['children'];
+      }
+    }
 	}
 }
