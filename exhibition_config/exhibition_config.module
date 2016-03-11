@@ -2467,7 +2467,6 @@ function exhibition_config_islandora_datastream_ingested(AbstractObject $object,
 function exhibition_config_islandora_datastream_modified(AbstractObject $object, AbstractDatastream $datastream) {
   if ($datastream->id == 'RELS-EXT') {
     $pid_that_changed = $object->id;
-    print 'BBB modified RELS-EXT of:'.$pid_that_changed;
     $ec_query = db_select('exhibition_config', 'ec')
       ->fields('ec');
     $ec_db_or = db_or();
@@ -2485,7 +2484,6 @@ function exhibition_config_islandora_datastream_modified(AbstractObject $object,
       print 'This is in the visibility for:'.$exhibition_root_line->pid;
       $existing_visibility_obj = exhibition_config_load_visibility($exhibition_root_line->pid); 
       $new_visibility = exhibition_config_reset_visibility($existing_visibility_obj, $pid_that_changed);
-      dsm(json_encode($new_visibility));
       exhibition_config_save_visibility($exhibition_root_line->pid,$new_visibility);
     }
   }
@@ -2507,46 +2505,36 @@ function exhibition_config_reset_visibility($vis_obj, $pid_that_requires_update,
   $current_pid = (string)$vis_obj['pid'];
   //Cut out if there is looping
   if (in_array($current_pid, $current_path)){
-    dsm("LOOPING");
     return $vis_obj;
   }
 
   //If it is a resource doesn't need to be checked for children
   if (strtolower($vis_obj['type']) != 'concept'){
-    dsm("No need to look further at resource:".$vis_obj['pid']);
     return $vis_obj;
   }
 
   //If I AM a pid that needs updating
   if ($current_pid == (string)$pid_that_requires_update) {
-    dsm("NEED to update this pid:".$current_pid." because I am searching for:".$pid_that_requires_update);
     require_once ( dirname(__FILE__) . '/exhibition_config.util.inc');
     $repo = si_exhibition_get_repo();
     $object = $repo->getObject($pid_that_requires_update); 
-    dsm("Object $pid_that_requires_update obtained");
     $children_info = si_exhibition_get_children_info($object);
-    dsm("Children info:".json_encode($children_info));
     //There are certainly more optimized ways to produce what we want
     //This circuitous route is for ease of entering debugging code in when needed
     $children_of_object = array();
     foreach($children_info as $child){
       $children_of_object[] = $child['pid'];
     }
-    dsm(array("added"=>$added_child_pids,"deleted"=>$deleted_child_pids,"obj_children"=>$children_of_object,"vis_children"=>$children_of_visibility));
     $children_of_visibility = array();
     foreach($vis_obj['children'] as $child){
       $children_of_visibility[] = $child['pid'];
     }
-    dsm(array("added"=>$added_child_pids,"deleted"=>$deleted_child_pids,"obj_children"=>$children_of_object,"vis_children"=>$children_of_visibility));
     $added_child_pids = array_diff($children_of_object, $children_of_visibility);
-    dsm(array("added"=>$added_child_pids,"deleted"=>$deleted_child_pids,"obj_children"=>$children_of_object,"vis_children"=>$children_of_visibility));
     $deleted_child_pids = array_diff($children_of_visibility, $children_of_object);
-    dsm(array("added"=>$added_child_pids,"deleted"=>$deleted_child_pids,"obj_children"=>$children_of_object,"vis_children"=>$children_of_visibility));
 
     $to_return_children = array();
     //Add each of the current visibility children that is still a child
     foreach($vis_obj['children'] as $vis_obj_child) {
-      dsm("Still has ".$vis_obj_child['pid']." on $current_pid");
       if (!in_array($vis_obj_child['pid'],$deleted_child_pids)) {
         $to_return_children[] = exhibition_config_reset_visibility(
           $vis_obj_child, 
@@ -2558,7 +2546,6 @@ function exhibition_config_reset_visibility($vis_obj, $pid_that_requires_update,
 
     //Add new children to the end of the visibility children array
     foreach($added_child_pids as $curr_child_pid) {
-      dsm("Found that $curr_child_pid was added to $current_pid since last visibility save");
       $curr_child_info = array();
       foreach($children_info as $q_loop_child_info){ 
         if ($curr_child_pid == $q_loop_child_info['pid']) $curr_child_info = $q_loop_child_info;
@@ -2599,7 +2586,6 @@ function exhibition_config_reset_visibility($vis_obj, $pid_that_requires_update,
   }
   //If I AM NOT the pid that changed
   else {
-    dsm("Dont need to update this pid:".$current_pid." because I am searching for:".$pid_that_requires_update);
     $to_return_children = array();
     if (!empty($vis_obj['children'])){
       foreach($vis_obj['children'] as $curr_child) {
