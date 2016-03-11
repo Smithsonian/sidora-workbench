@@ -11,16 +11,24 @@
   vertical-align:top;
   padding-bottom:10px;
 }
-#selectable {width:100%; margin: 0; padding: 0; height:100%} 
+#selectable {width:100%; margin: 0; padding: 0; height:100%;} 
+#visibility-list-table {list-style:none; margin:0; padding:0; width:100%;display:table;}
+#visibility-list-table #header {background-color:#ccc; cursor:default;display:table-header-group;}
+#visibility-list-table #header div {display:table-cell;}
+#visibility-list-table li {display:table-row;}
+#visibility-list-table li div.visibility-name,div.visibility-type,div.visibility-path,div.visibility-setting,div.empty-visibility-setting {display:block;float:left;padding:3px 5px;border-bottom:1px solid #ccc;border-right:1px solid #ccc;display:table-cell;}
+#visibility-list-table li div.visibility-name{width:15%;border-left:1px solid #ccc;display:table-cell;}
+#visibility-list-table li div.visibility-type{width:10%;display:table-cell;}
+#visibility-list-table li div.visibility-path{width:25%;display:table-cell;}
+#visibility-list-table li div.visibility-setting{width:10%;display:table-cell;}
+#visibility-list-table li div.empty-visibility-setting{width:10%;display:table-cell;height:100%;}
+#visibility-list-table li div.form-item{margin:0;}
+#visibility-list-table ul.visibility-sub-list {list-style:none; margin:0;padding:0;}
 .visibility_checkbox {border:1px solid #000000;}
 //#selectable .ui-selecting { background: #FECA40; }
 #selectable .ui-selected { background: #F39814; color: white; }
-#selectable tr { margin: 3px; padding: 0.1em; font-size: 1em; height: 18px; }
-#selectable tr td:last-child { border-right: 1px solid #bebfb9;}
-#selectable td {padding:8px 10px;}
 .visibility_settings {width:100%; border:0px;}
-.visibility_settings td {padding: 2px 5px;}
-//.visibility_settings tr td {border: 0px;}
+.visibility_settings div {padding: 2px 5px;}
 #select-result {width:100%; height:100%; overflow-x:auto; overflow-y:auto;}
 .visibility-result {border:0px;}
 .tree-indent {width:10px; display:inline-block;}
