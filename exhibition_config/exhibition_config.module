@@ -2075,7 +2075,7 @@ jQuery("[id$=show-meta]:checked").each(function(){
 })
 jQuery("#meta_hidden .fieldset-wrapper").html("");
 jQuery("[id$=show-meta]").not(":checked").each(function(){
-  if (jQuery(jQuery(this).closest("li").children()[3]).children(":checked").size() > 0){
+  if (jQuery(jQuery(this).closest("li").children()[3]).find("input:checked").size() > 0){
     jQuery("#meta_hidden .fieldset-wrapper").append("<div>"+jQuery(this).closest("li").children()[2].innerHTML+"</div>");
   }
 })
@@ -2085,7 +2085,7 @@ jQuery("[id$=show-preview]:checked").each(function(){
 })
 jQuery("#preview_hidden .fieldset-wrapper").html("");
 jQuery("[id$=show-preview]").not(":checked").each(function(){
-  if (jQuery(jQuery(this).closest("li").children()[3]).children(":checked").size() > 0){
+  if (jQuery(jQuery(this).closest("li").children()[3]).find("input:checked").size() > 0){
     jQuery("#preview_hidden .fieldset-wrapper").append("<div>"+jQuery(this).closest("li").children()[2].innerHTML+"</div>");
   }
 })
@@ -2095,7 +2095,7 @@ jQuery("[id$=allow-download]:checked").each(function(){
 })
 jQuery("#downloads_hidden .fieldset-wrapper").html("");
 jQuery("[id$=allow-download]").not(":checked").each(function(){
-  if (jQuery(jQuery(this).closest("li").children()[3]).children(":checked").size() > 0){
+  if (jQuery(jQuery(this).closest("li").children()[3]).find("input:checked").size() > 0){
     jQuery("#downloads_hidden .fieldset-wrapper").append("<div>"+jQuery(this).closest("li").children()[2].innerHTML+"</div>");
   }
 })
@@ -2235,13 +2235,13 @@ jQuery(window).resize(resizeConceptTreePage);
       ),
     ),
   );
-$form['pid'] = array(
-  '#type' => 'hidden', 
-  '#value' => $pid, 
-  '#suffix' => $js_for_form
-);
- return $form;
- }
+  $form['pid'] = array(
+    '#type' => 'hidden', 
+    '#value' => $pid, 
+  );
+  drupal_add_js(drupal_get_path('module', 'exhibition_config') . '/js/exhibition_config_visibility.js');
+  return $form;
+}
 /*
  * Saves the visibility tree in the database
  */
