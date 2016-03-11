@@ -151,8 +151,14 @@ function si_exhibition_get_children_info(FedoraObject $object) {
   $repo = si_exhibition_get_repo();
   $query = si_exhibition_generate_children_query($object->id);
   $results = $repo->ri->sparqlQuery($query);
-  //var_dump($results);
 	$children = array_map("si_exhibition_map_children", $results);
+  usort($children, function($a, $b){
+    if ($a['type'] == $b['type']){
+      return strcmp($a['label'],$b['label']);
+    } else {
+      return strcmp($a['type'],$b['type']);
+    }
+  });
 	return $children;
 }	 
 /**
@@ -172,7 +178,7 @@ Union {
 FILTER(!sameTerm(?model, <info:fedora/fedora-system:FedoraObject-3.0>) &&
            !sameTerm(?model, <info:fedora/si:resourceCModel>))
 }
-} order by ?title ?t';
+}';
 /* return 'select ?o ?t ?res $title $model from <#ri> where 
      ($o <fedora-model:state> <fedora-model:Active> and
       $o <fedora-model:label> $t and
