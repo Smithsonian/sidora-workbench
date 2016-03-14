@@ -3428,6 +3428,8 @@ function sidora_create_and_set_new_user_object($account, $create_even_if_existin
   module_load_include('inc', 'sidora', 'includes/utils');
   $object = sidora_create_user_object($account);
   sleep(15); //Arbitrary sleep to allow fedora to create the objects.  Even though the ID comes back it's apparently not available immediately
+  $data = array();
+  $data['data'] = array();
   $data['data']['islandora_user_pid'] = $object->id;
   user_save($account,$data);
   return json_encode('New user project created');

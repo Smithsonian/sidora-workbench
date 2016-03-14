@@ -1845,17 +1845,7 @@ function exhibition_config_theme(){
     ),
   );
 }
-function exhibition_config_get_visibility_data($pid){
-  $result = db_query("Select visibility FROM {exhibition_config} where pid = :pid", array(':pid'=>$pid));
-  $row = array();
-  foreach ($result as $input){
-    foreach($input as $name=>$value){
-      $row[$name] = $value;
-    }
-  }
-  return $row;
-}
-function exhibition_config_get_pid_tree($pid,&$pid_list = array(),$parent = '',$parent_pid = ''){
+function exhibition_config_get_pid_tree($pid,&$pid_list = array(),$parent = '',$parent_pid = '',$initial_settings = array()){
   require_once ( dirname(__FILE__) . '/exhibition_config.util.inc');
   $to_return = array();
   if (in_array($pid, $pid_list)){
@@ -1973,15 +1963,19 @@ function exhibition_permission_form($form, $form_state){
     return;
   }
 	$visibility_settings = array(
-	  'show_name' => 'Show Name',
-	  'show_meta' => 'Show Meta',
-	  'show_preview' => 'Show Preview',
-	  'allow_download' => 'Show Download');
-	$row = exhibition_config_get_visibility_data($pid);
+	'show_name' => 'Show Name',
+	'show_meta' => 'Show Meta',
+	'show_preview' => 'Show Preview',
+	'allow_download' => 'Show Download');
+  $saved_visibility = exhibition_config_load_visibility($pid);
   $existing_visibility = array();
-	if ((!empty($row)) && (isset($row['visibility']))) {
-	  exhibition_config_flatten_tree(unserialize($row['visibility']),$existing_visibility,$visibility_settings,$pid);
-	}	
+	exhibition_config_flatten_tree($saved_visibility,$existing_visibility,$visibility_settings,$pid);
+  $form['#attached']['js'] = array(
+     array(
+     'data' => 'jQuery("#selectable").selectable("option", "filter", "li");',
+     'type' => 'inline',
+     ),
+   );
   $modulepath = drupal_get_path('module', 'exhibition_config');
   $form['#attached']['js'] = array(
     'data' => $modulepath . '/js/visibility.js',
@@ -2042,65 +2036,6 @@ function exhibition_permission_form($form, $form_state){
     '#prefix' => $tree_html,
     '#suffix' => $post_html,
   );    
-  $js_for_form = '<script>
-  jQuery(function() {
-  jQuery("body").css("padding-top","0px");
-  submit = false; 
-    var prev = -1;
-    jQuery( "#selectable>ul" ).selectable({
-    filter: "ul>li",
-		selecting: function(e, ui) {
-        var curr = jQuery(ui.selecting.tagName, e.target).index(ui.selecting);
-        if(e.shiftKey && prev > -1) {
-            console.log(prev, curr, Math.min(prev, curr));
-            jQuery(ui.selecting.tagName, e.target).slice(Math.min(prev, curr), 1 + Math.max(prev, curr)).addClass("ui-selected");
-            prev = -1;
-        } else {
-            prev = curr;
-        }
-    },
-    stop: function(event, ui) {
-        var result =[];
-        jQuery( "li.ui-selected", this ).each(function() {
-          result.push( this.id);
-        });
-      }
-  });
-    jQuery( ".accordion >div" ).accordion({header: "h3", collapsible: true
-    });
-  });
-fillInSidebar();
-resizeConceptTreePage();
-jQuery( ".visibility-list-table li:odd" ).css( "background-color", "#eeeeff" );
-jQuery("input:checkbox").click(fillInSidebar);
-jQuery("input:checkbox").click(function(){
- var message = "<ul>";
- if (jQuery(this).is(":checked")){
-  /* if ((jQuery(this).attr("name")).indexof("show_name") != "-1") {
-	   nameCheckbox = "visibility["+jQuery(this).attr("path")+"][show_name]";
- 	   if (!(jQuery("[name=\'"+nameCheckbox+"\']").is(":checked"))){
-	     message += "<li>This object needs to be visible</li>";
-		 }
-	 }*/
-	 var path = jQuery(this).attr("path").split("/");
-	 pid = "";
-	 for (ctr=0;ctr<path.length;ctr++){
-	   if (pid == "") {
-		   pid = path[ctr];
-		}else{
-		  pid = pid+"/"+path[ctr];
-		}
-		if (!(jQuery("[name=\'visibility["+pid+"][show_name]\']").is(":checked"))) {		  
-	     message +="<li>This object needs to be visible"+pid+"</li>";
-		 }
-	 }
-	 message += "</ul>";
-	 alert(message); 
-	}
-})		
-jQuery("#open-advanced").after(jQuery("#edit-save"));
-jQuery(window).resize(resizeConceptTreePage);
-  </script>';
   $form['holder'] = array(
     '#prefix' => '<div class="scroller-holder">',
     '#suffix' => '</div>',
@@ -2201,13 +2136,13 @@ jQuery(window).resize(resizeConceptTreePage);
       ),
     ),
   );
-$form['pid'] = array(
-  '#type' => 'hidden', 
-  '#value' => $pid, 
-  '#suffix' => $js_for_form
-);
- return $form;
- }
+  $form['pid'] = array(
+    '#type' => 'hidden', 
+    '#value' => $pid, 
+  );
+  drupal_add_js(drupal_get_path('module', 'exhibition_config') . '/js/exhibition_config_visibility.js');
+  return $form;
+}
 /*
  * Saves the visibility tree in the database
  */
@@ -2237,12 +2172,11 @@ function exhibition_config_save_visibility($pid, $visibility_obj_tree) {
       )
     );
     $new_entry = $insert_query->execute();
-    
   }
   return (!empty($num_updated) || !empty($new_entry)); 
 }
 /*
- * Retrieves the visibility tree from the database
+ * Retrieves the visibility tree from the database or the default show nothing visibility
  */
 function exhibition_config_load_visibility($pid) {
   $result = db_query("Select ". //SELECT
@@ -2251,10 +2185,19 @@ function exhibition_config_load_visibility($pid) {
   $row = array();
   foreach ($result as $input){
     foreach($input as $name=>$value){
-      if ($name == 'visibility') return json_decode($value, TRUE);
+      if ($name == 'visibility'){
+        $json_decoded_visibility = json_decode($value, TRUE);
+        if ($json_decoded_visibility !== NULL) return $json_decoded_visibility;
+        $unserialized_visibility = unserialize($value); 
+        return $unserialized_visibility;
+      }
     }
   }
-  return array();
+  return array(
+    "pid" => $pid,
+    "show_name" => FALSE,
+    "show_meta" => FALSE,
+  );
 }
 
 /*
@@ -2408,19 +2351,139 @@ function exhibition_config_islandora_datastream_ingested(AbstractObject $object,
  */
 function exhibition_config_islandora_datastream_modified(AbstractObject $object, AbstractDatastream $datastream) {
   if ($datastream->id == 'RELS-EXT') {
-    $parent_pid = $object->id;
-    print 'BBB modified RELS-EXT of:'.$parent_pid;
+    $pid_that_changed = $object->id;
     $ec_query = db_select('exhibition_config', 'ec')
-      ->fields('ec')
-      ->condition('ec.visibility', '%' . db_like('"pid":"'.$parent_pid.'"') . '%', 'LIKE');
+      ->fields('ec');
+    $ec_db_or = db_or();
+    $ec_db_or->condition('ec.visibility', '%' . db_like('"pid":"'.$pid_that_changed.'"') . '%', 'LIKE'); //json_encoded
+    $ec_db_or->condition('ec.visibility', '%' . db_like('"pid";s:'.strlen($pid_that_changed).':"'.$pid_that_changed.'"') . '%', 'LIKE'); //serialized
+    $ec_query->condition($ec_db_or);
+
     $result = $ec_query
       ->execute()
       ->fetchAll();
     foreach ($result as $exhibition_root_line){
+      //Load this visibility
+      //Go through the entire visibility
+       
       print 'This is in the visibility for:'.$exhibition_root_line->pid;
+      $existing_visibility_obj = exhibition_config_load_visibility($exhibition_root_line->pid); 
+      $new_visibility = exhibition_config_reset_visibility($existing_visibility_obj, $pid_that_changed);
+      exhibition_config_save_visibility($exhibition_root_line->pid,$new_visibility);
     }
-    exit();
   }
+}
+
+/*
+ * returns a visibility object with only objects that have show_name as TRUE
+ */
+function exhibition_config_reset_visibility($vis_obj, $pid_that_requires_update, $current_path = array()) {
+  
+  $incoming = array('vis_obj'=>$vis_obj,'ptru'=>$pid_that_requires_update,'cp'=>$current_path);
+
+  $to_return = $vis_obj;
+  //Basic approach to this function:
+  //For each of my children
+  //  Send in each child for checking, adding their visibility to my child list
+  //Send back the visibility object with the updated children
+
+  $current_pid = (string)$vis_obj['pid'];
+  //Cut out if there is looping
+  if (in_array($current_pid, $current_path)){
+    return $vis_obj;
+  }
+
+  //If it is a resource doesn't need to be checked for children
+  if (strtolower($vis_obj['type']) != 'concept'){
+    return $vis_obj;
+  }
+
+  //If I AM a pid that needs updating
+  if ($current_pid == (string)$pid_that_requires_update) {
+    require_once ( dirname(__FILE__) . '/exhibition_config.util.inc');
+    $repo = si_exhibition_get_repo();
+    $object = $repo->getObject($pid_that_requires_update); 
+    $children_info = si_exhibition_get_children_info($object);
+    //There are certainly more optimized ways to produce what we want
+    //This circuitous route is for ease of entering debugging code in when needed
+    $children_of_object = array();
+    foreach($children_info as $child){
+      $children_of_object[] = $child['pid'];
+    }
+    $children_of_visibility = array();
+    foreach($vis_obj['children'] as $child){
+      $children_of_visibility[] = $child['pid'];
+    }
+    $added_child_pids = array_diff($children_of_object, $children_of_visibility);
+    $deleted_child_pids = array_diff($children_of_visibility, $children_of_object);
+
+    $to_return_children = array();
+    //Add each of the current visibility children that is still a child
+    foreach($vis_obj['children'] as $vis_obj_child) {
+      if (!in_array($vis_obj_child['pid'],$deleted_child_pids)) {
+        $to_return_children[] = exhibition_config_reset_visibility(
+          $vis_obj_child, 
+          $pid_that_requires_update, 
+          array_merge($current_path,(array)$current_pid)
+        );
+      }
+    }
+
+    //Add new children to the end of the visibility children array
+    foreach($added_child_pids as $curr_child_pid) {
+      $curr_child_info = array();
+      foreach($children_info as $q_loop_child_info){ 
+        if ($curr_child_pid == $q_loop_child_info['pid']) $curr_child_info = $q_loop_child_info;
+      }
+      $repo = si_exhibition_get_repo();
+      $curr_child_object = $repo->getObject($curr_child_pid);
+      $models_to_remove = array("fedora-system:FedoraObject-3.0","si:resourceCModel","si:collectionCModel");
+      $new_vis_obj = array(
+        "pid" => $curr_child_info['pid'],
+        "label" => $curr_child_info['title'],
+        "type" => $curr_child_info['type'],
+        "model" => array_pop(array_diff($curr_child_object->models,$models_to_remove)),
+      );
+      if ($curr_child_info['type'] == 'Resource'){
+        $new_vis_obj['show_name'] = !(empty($vis_obj['future_children_show']));
+        $new_vis_obj['show_meta'] = !(empty($vis_obj['future_children_show_meta']));
+        $new_vis_obj['show_preview'] = !(empty($vis_obj['future_children_show_preview']));
+        $new_vis_obj['allow_download'] = !(empty($vis_obj['future_children_allow_download']));
+      }
+      if ($curr_child_info['type'] == 'Concept'){
+        $new_vis_obj['show_name'] = !(empty($vis_obj['future_children_show']));
+        $new_vis_obj['show_meta'] = !(empty($vis_obj['future_children_show_meta']));
+        $new_vis_obj['future_children_show'] = !(empty($vis_obj['future_children_show']));
+        $new_vis_obj['future_children_show_meta'] = !(empty($vis_obj['future_children_show_meta']));
+        $new_vis_obj['future_children_show_preview'] = !(empty($vis_obj['future_children_show_preview']));
+        $new_vis_obj['future_children_allow_download'] = !(empty($vis_obj['future_children_allow_download']));
+        $new_vis_obj['children'] = array();
+      }
+
+      $to_return_children[] = exhibition_config_reset_visibility(
+        $new_vis_obj,
+        $curr_child_pid, //Since it's new it will need to be filled in
+        array_merge($current_path,(array)$current_pid)
+      );
+    }
+    //Set the new children and allow return
+    $to_return['children'] = $to_return_children;
+  }
+  //If I AM NOT the pid that changed
+  else {
+    $to_return_children = array();
+    if (!empty($vis_obj['children'])){
+      foreach($vis_obj['children'] as $curr_child) {
+        $to_return_children[] = exhibition_config_reset_visibility(
+          $curr_child, 
+          $pid_that_requires_update, 
+          array_merge($current_path,(array)$current_pid)
+        );
+      }
+      $to_return['children'] = $to_return_children; 
+    }
+  }
+  return $to_return;
 }
 
 /*
@@ -2466,25 +2529,9 @@ function exhibition_permission_form_submit($form, &$form_state) {
 	$visibility_settings_array = array();
 	foreach($post_array as $key => $value) {
 	  update_visibility_pid($visibility_settings_array,$key,$value);
-	}	
-  $result = db_query("Select visibility FROM {exhibition_config} where pid = :pid", array(':pid'=>$root_pid));
-	$row = array();
-	if ($result->rowCount()){
-	  $updated_query = db_update('exhibition_config')
-      ->fields(array(
-         'visibility' => serialize($visibility_settings_array),
-        ))
-      ->condition('pid',$root_pid)
-      ->execute();
-  }else{
-    $insert_query = db_insert('exhibition_config') 
-      ->fields(array(
-         'visibility' => serialize($visibility_settings_array),
-         'pid' => $root_pid,
-        ))
-      ->execute();	
-  }
-}	
+	}
+  exhibition_config_save_visibility($root_pid,$visibility_settings_array);
+}
 function update_visibility_pid(&$visibility_array,$object_pid,$visibility_value) {
   if (substr_count($object_pid,'\\') > 0) {
 	  $key_array = explode('\\',$object_pid,-1);
