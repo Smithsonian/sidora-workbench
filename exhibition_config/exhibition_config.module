@@ -1871,28 +1871,27 @@ function exhibition_config_get_pid_tree($pid,&$pid_list = array(),$parent = '',$
     $to_return['relationship_pid'] = $to_return['pid'];
   }else{
     $to_return['relationship'] = $parent . "\\" . $object->label;
-    $to_return['relationship_pid'] = $parent_pid . "\\" . $to_return['pid'];
+    $to_return['relationship_pid'] = $parent_pid . "/" . $to_return['pid'];
   } 
   $relationship = $to_return['relationship'];
   $relationship_pid = $to_return['relationship_pid'];
-  $to_return['show_name'] = 'false';
-  $to_return['show_meta'] = 'false';
+  $to_return['show_name'] = False;
+  $to_return['show_meta'] = False;
   $to_return['children'] = array();
   $pid_list[] = $pid;
   $children = si_exhibition_get_children_info($object);
   foreach($children as $child){
     $child['relationship'] = $relationship . "\\" . $child['title'];
-    $child['relationship_pid'] = $relationship_pid . "\\" . $child['pid'];
+    $child['relationship_pid'] = $relationship_pid . "/" . $child['pid'];
     if ($child['type'] == 'Concept') {
 		  if (!(in_array($child['pid'],$pid_list))){
         $to_return['children'][] = exhibition_config_get_pid_tree($child['pid'],$pid_list,$relationship,$relationship_pid);
       }
 		}else{
-    $child['show_name'] = 'false';
-    $child['show_meta'] = 'false';
-    $child['show_preview'] = 'false';
-    $child['show_preview'] = 'false';
-    $child['allow_download'] = 'false';
+    $child['show_name'] = False;
+    $child['show_meta'] = False;
+    $child['show_preview'] = False;
+    $child['allow_download'] = False;
     $to_return['children'][]= $child;
     }
   }
@@ -1901,7 +1900,7 @@ function exhibition_config_get_pid_tree($pid,&$pid_list = array(),$parent = '',$
 function exhibition_config_generate_checkboxes($branch,&$rows,$visibility_settings,$path){
 	if (isset($branch) && sizeof($branch)) {
 	  foreach ($branch as $child_array) {
-	    $tree_depth = substr_count($path,'\\');
+	    $tree_depth = substr_count($path,'/');
 	    $indent = '';
 	    for ($ctr=0;$ctr < $tree_depth; $ctr++) {
 	      $indent .= '<span class="tree-indent ui-selectee"></span>';
@@ -1929,8 +1928,8 @@ function exhibition_config_generate_checkboxes($branch,&$rows,$visibility_settin
 		    'suffix' => '</li>',
 		    'checkboxes' => $checkboxes_array);
 	    if ((isset($child_array['children'])) && (sizeof($child_array['children']) > 0)) {
-			  $rows[$array_index]['suffix'] .= '<ul class="visibility-sub-list" id="' . $array_index . '">';
-			  exhibition_config_generate_checkboxes($child_array['children'],$rows,$visibility_settings,$array_index.'\\');
+			  $rows[$array_index]['suffix'] .= '<ul class="visibility-list-table" id="' . $array_index . '">';
+			  exhibition_config_generate_checkboxes($child_array['children'],$rows,$visibility_settings,$array_index.'/');
 		    $key = end(array_keys($rows));
 			  $rows[$key]['suffix'] .= '</ul>';
 	    }
@@ -1941,7 +1940,7 @@ function exhibition_config_flatten_tree($branch, &$rows,$visibility_settings,$pa
 	if (isset($branch) && sizeof($branch)) {
 	  foreach ($branch as $child_array) {
 	    if (sizeof($child_array)) {
-			  $tree_depth = substr_count($path,'\\');
+			  $tree_depth = substr_count($path,'/');
 		    if ($path == '') {
 		      $array_index = $child_array['pid'];
 		    }else{	
@@ -1957,7 +1956,7 @@ function exhibition_config_flatten_tree($branch, &$rows,$visibility_settings,$pa
 				}	
 	    }	
 	    if ((isset($child_array['children'])) && (sizeof($child_array['children']) > 0)) {
-			  exhibition_config_flatten_tree($child_array['children'],$rows,$visibility_settings,$array_index.'\\');
+			  exhibition_config_flatten_tree($child_array['children'],$rows,$visibility_settings,$array_index.'/');
 	    }
     }
 	}
@@ -1983,23 +1982,21 @@ function exhibition_permission_form($form, $form_state){
 	if ((!empty($row)) && (isset($row['visibility']))) {
 	  exhibition_config_flatten_tree(unserialize($row['visibility']),$existing_visibility,$visibility_settings,$pid);
 	}	
-  $form['#attached']['js'] = array(
-     array(
-     'data' => 'jQuery("#selectable").selectable("option", "filter", "li");',
-     'type' => 'inline',
-     ),
-   );
   $modulepath = drupal_get_path('module', 'exhibition_config');
-  drupal_add_library('system', 'ui.resizable');
+  $form['#attached']['js'] = array(
+    'data' => $modulepath . '/js/visibility.js',
+		'type' => 'file'
+  );
+	drupal_add_library('system', 'ui.resizable');
   drupal_add_library('system', 'ui.selectable');
   drupal_add_library('system', 'ui.accordion');
   drupal_add_css($modulepath . '/css/exhibition_visibility.css',array('weight' => '1000000', 'group' => CSS_THEME));
-  $pid_tree = array(
+	$pid_tree = array(
 	  '0' => exhibition_config_get_pid_tree($pid)
 	);
 	$tree_html = '<div id="concept_tree">';
-  $tree_html .= '<div id="selectable"><ul id="visibility-list-table"><li id="header"><div class="visibility-name">Name</div><div class="visibility-type">Type</div><div class="visibility-path">Full Path</div><div class="visibility-setting">Show Name</div><div class="visibility-setting">Show Metadata</div><div class="visibility-setting">Show Preview</div><div class="visibility-setting">Show Download</div></li>';
-  $checkbox_rows = array();
+  $tree_html .= '<div id="selectable"><ul class="visibility-list-table"><li id="header"><div class="visibility-name">Name</div><div class="visibility-type">Type</div><div class="visibility-path">Full Path</div><div class="visibility-setting">Show Name</div><div class="visibility-setting">Show Metadata</div><div class="visibility-setting">Show Preview</div><div class="visibility-setting">Show Download</div></li>';
+	$checkbox_rows = array();
 	exhibition_config_generate_checkboxes($pid_tree,$checkbox_rows,$visibility_settings,$pid);
   $form['visibility']['#tree'] = 'TRUE';
 	foreach($checkbox_rows as $key => $row) {
@@ -2032,7 +2029,7 @@ function exhibition_permission_form($form, $form_state){
 			$tree_html = '';
 			$row['prefix'] = '';
 		}
-		$tree_html = '';
+		$tree_html = $row['suffix'];
 	}		
   $tree_html = '</ul></div>';
   $tree_html .= '<div id="action-bar"><div class="action-button"><a href="javascript:void(0);" class="button" id="change_all">Change All Selected</a></div><div class="action-button"><a href="javascript:void(0);" class="button" id="open-advanced">Advanced</a></div><div class="action-button">';
@@ -2051,7 +2048,8 @@ function exhibition_permission_form($form, $form_state){
   submit = false; 
     var prev = -1;
     jQuery( "#selectable>ul" ).selectable({
-    selecting: function(e, ui) {
+    filter: "ul>li",
+		selecting: function(e, ui) {
         var curr = jQuery(ui.selecting.tagName, e.target).index(ui.selecting);
         if(e.shiftKey && prev > -1) {
             console.log(prev, curr, Math.min(prev, curr));
@@ -2071,54 +2069,35 @@ function exhibition_permission_form($form, $form_state){
     jQuery( ".accordion >div" ).accordion({header: "h3", collapsible: true
     });
   });
-fillInSidebar = function(){
-jQuery("#main_shown .fieldset-wrapper").html("");
-jQuery("[id$=show-name]:checked").each(function(){
-  jQuery("#main_shown .fieldset-wrapper").append("<div>"+jQuery(this).closest("li").children()[2].innerHTML+"</div>");
-})
-jQuery("#main_hidden .fieldset-wrapper").html("");
-jQuery("[id$=show-name]").not(":checked").each(function(){
-  jQuery("#main_hidden .fieldset-wrapper").append("<div>"+jQuery(this).closest("li").children()[2].innerHTML+"</div>");
-})
-
-jQuery("#meta_shown .fieldset-wrapper").html("");
-jQuery("[id$=show-meta]:checked").each(function(){
-  jQuery("#meta_shown .fieldset-wrapper").append("<div>"+jQuery(this).closest("li").children()[2].innerHTML+"</div>");
-})
-jQuery("#meta_hidden .fieldset-wrapper").html("");
-jQuery("[id$=show-meta]").not(":checked").each(function(){
-  if (jQuery(jQuery(this).closest("li").children()[3]).children(":checked").size() > 0){
-    jQuery("#meta_hidden .fieldset-wrapper").append("<div>"+jQuery(this).closest("li").children()[2].innerHTML+"</div>");
-  }
-})
-jQuery("#preview_shown .fieldset-wrapper").html("");
-jQuery("[id$=show-preview]:checked").each(function(){
-  jQuery("#preview_shown .fieldset-wrapper").append("<div>"+jQuery(this).closest("li").children()[2].innerHTML+"</div>");
-})
-jQuery("#preview_hidden .fieldset-wrapper").html("");
-jQuery("[id$=show-preview]").not(":checked").each(function(){
-  if (jQuery(jQuery(this).closest("li").children()[3]).children(":checked").size() > 0){
-    jQuery("#preview_hidden .fieldset-wrapper").append("<div>"+jQuery(this).closest("li").children()[2].innerHTML+"</div>");
-  }
-})
-jQuery("#downloads_shown .fieldset-wrapper").html("");
-jQuery("[id$=allow-download]:checked").each(function(){
-  jQuery("#downloads_shown .fieldset-wrapper").append("<div>"+jQuery(this).closest("li").children()[2].innerHTML+"</div>");
-})
-jQuery("#downloads_hidden .fieldset-wrapper").html("");
-jQuery("[id$=allow-download]").not(":checked").each(function(){
-  if (jQuery(jQuery(this).closest("li").children()[3]).children(":checked").size() > 0){
-    jQuery("#downloads_hidden .fieldset-wrapper").append("<div>"+jQuery(this).closest("li").children()[2].innerHTML+"</div>");
-  }
-})
-}
-resizeConceptTreePage = function() {
-  jQuery("#concept_tree").parent().height(jQuery(window).innerHeight()-100);
-}
 fillInSidebar();
 resizeConceptTreePage();
-jQuery( "#visibility-list-table li:odd" ).css( "background-color", "#eeeeff" );
+jQuery( ".visibility-list-table li:odd" ).css( "background-color", "#eeeeff" );
 jQuery("input:checkbox").click(fillInSidebar);
+jQuery("input:checkbox").click(function(){
+ var message = "<ul>";
+ if (jQuery(this).is(":checked")){
+  /* if ((jQuery(this).attr("name")).indexof("show_name") != "-1") {
+	   nameCheckbox = "visibility["+jQuery(this).attr("path")+"][show_name]";
+ 	   if (!(jQuery("[name=\'"+nameCheckbox+"\']").is(":checked"))){
+	     message += "<li>This object needs to be visible</li>";
+		 }
+	 }*/
+	 var path = jQuery(this).attr("path").split("/");
+	 pid = "";
+	 for (ctr=0;ctr<path.length;ctr++){
+	   if (pid == "") {
+		   pid = path[ctr];
+		}else{
+		  pid = pid+"/"+path[ctr];
+		}
+		if (!(jQuery("[name=\'visibility["+pid+"][show_name]\']").is(":checked"))) {		  
+	     message +="<li>This object needs to be visible"+pid+"</li>";
+		 }
+	 }
+	 message += "</ul>";
+	 alert(message); 
+	}
+})		
 jQuery("#open-advanced").after(jQuery("#edit-save"));
 jQuery(window).resize(resizeConceptTreePage);
   </script>';

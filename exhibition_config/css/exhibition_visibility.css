@@ -12,19 +12,20 @@
   padding-bottom:10px;
 }
 #selectable {width:100%; margin: 0; padding: 0; height:100%;} 
-#visibility-list-table {list-style:none; margin:0; padding:0; width:100%;display:table;}
-#visibility-list-table #header {background-color:#ccc; cursor:default;display:table-header-group;}
-#visibility-list-table #header div {display:table-cell;}
-#visibility-list-table li {display:table-row;}
-#visibility-list-table li div.visibility-name,div.visibility-type,div.visibility-path,div.visibility-setting,div.empty-visibility-setting {display:block;float:left;padding:3px 5px;border-bottom:1px solid #ccc;border-right:1px solid #ccc;display:table-cell;}
-#visibility-list-table li div.visibility-name{width:15%;border-left:1px solid #ccc;display:table-cell;}
-#visibility-list-table li div.visibility-type{width:10%;display:table-cell;}
-#visibility-list-table li div.visibility-path{width:25%;display:table-cell;}
-#visibility-list-table li div.visibility-setting{width:10%;display:table-cell;}
-#visibility-list-table li div.empty-visibility-setting{width:10%;display:table-cell;height:100%;}
-#visibility-list-table li div.form-item{margin:0;}
-#visibility-list-table ul.visibility-sub-list {list-style:none; margin:0;padding:0;}
-.visibility_checkbox {border:1px solid #000000;}
+ul.visibility-list-table {list-style:none; margin:0; padding:0; width:100%;display:table;}
+ul.visibility-list-table>#header {background-color:#ccc; cursor:default;display:table-header-group;}
+ul.visibility-list-table div {display:table-cell;}
+ul.visibility-list-table li {list-style:none;display:table-row;}
+//#visibility-list-table>li>div[class="visibility-*"] {display:block;float:left;padding:3px 5px;border-bottom:1px solid #ccc;border-right:1px solid #ccc;display:table-cell;}
+.visibility-list-table div.visibility-name,div.visibility-type,div.visibility-path,div.visibility-setting,div.empty-visibility-setting {display:block;float:left;padding:3px 5px;border-bottom:1px solid #ccc;border-right:1px solid #ccc;display:table-cell;}
+.visibility-list-table div.visibility-name{width:15%;border-left:1px solid #ccc;display:table-cell;}
+.visibility-list-table div.visibility-type{width:10%;display:table-cell;}
+.visibility-list-table div.visibility-path{width:25%;display:table-cell;}
+.visibility-list-table div.visibility-setting{width:10%;display:table-cell;}
+.visibility-list-table div.empty-visibility-setting{width:10%;display:table-cell;height:100%;}
+.visibility-list-table div.form-item{margin:0;}
+#visibility-list-table ul.visibility-sub-list {list-style:none; margin:0;padding:0; width:100%; display:table;}
+#visibility_checkbox {border:1px solid #000000;}
 //#selectable .ui-selecting { background: #FECA40; }
 #selectable .ui-selected { background: #F39814; color: white; }
 .visibility_settings {width:100%; border:0px;}
