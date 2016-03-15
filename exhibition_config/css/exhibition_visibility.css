@@ -1,6 +1,16 @@
-#concept_tree {
+.dialog_concept_tree {
+  height: 90%; /* fallback for browsers without calc */
+  width: 70%; /* fallback for browsers without calc */
+  height:calc(100% - 45px);
+  width: calc(100% - 50px);
+  overflow-x:auto;
+  overflow-y:auto;
+  border:1px solid black;
+  vertical-align:top;
+  padding-bottom:10px;
+	padding-left:10px;
 }
-#concept_tree {
+.concept_tree {
   height: 90%; /* fallback for browsers without calc */
   width: 70%; /* fallback for browsers without calc */
   height:calc(100% - 45px);
@@ -13,17 +23,17 @@
 }
 .light-background{background-color:#eeeeff}
 #selectable {width:100%; margin: 0; padding: 0; height:100%;} 
-#visibility-list-table {list-style:none; margin:0; padding:0; width:100%;display:table;min-width:975px;}
-#visibility-list-table #header {background-color:#ccc; cursor:default;display:table-header-group;}
-#visibility-list-table #header div {display:table-cell;}
-#visibility-list-table li {display:table-row;min-width:975px;}
-#visibility-list-table li div.visibility-name,div.visibility-type,div.visibility-path,div.visibility-setting,div.empty-visibility-setting {display:block;float:left;padding:3px 5px;display:table-cell;}
-#visibility-list-table li div.visibility-name{width:33%;border-left:1px solid #ccc;display:table-cell;}
-#visibility-list-table li div.visibility-type{width:5%;display:table-cell;}
-#visibility-list-table li div.visibility-path{width:33%;display:table-cell;}
-#visibility-list-table li div.visibility-setting{width:5%;display:table-cell;min-width:47px}
-#visibility-list-table li div.empty-visibility-setting{width:5%;display:table-cell;height:100%;min-width:47px}
-#visibility-list-table li div.form-item{margin:0;}
+ul.visibility-list-table {list-style:none; margin:0; padding:0; width:100%;display:table;min-width:975px;}
+ul.visibility-list-table>#header {background-color:#ccc; cursor:default;display:table-header-group;}
+ul.visibility-list-table div {display:table-cell;}
+ul.visibility-list-table li {display:table-row;min-width:975px;list-style:none;}
+.visibility-list-table div.visibility-name,div.visibility-type,div.visibility-path,div.visibility-setting,div.empty-visibility-setting {display:block;float:left;padding:3px 5px;display:table-cell;}
+.visibility-list-table div.visibility-name{width:33%;border-left:1px solid #ccc;display:table-cell;}
+.visibility-list-table div.visibility-type{width:5%;display:table-cell;}
+.visibility-list-table div.visibility-path{width:33%;display:table-cell;}
+.visibility-list-table div.visibility-setting{width:5%;display:table-cell;min-width:47px}
+.visibility-list-table div.empty-visibility-setting{width:5%;display:table-cell;height:100%;min-width:47px}
+.visibility-list-table div.form-item{margin:0;}
 #visibility-list-table ul.visibility-sub-list {list-style:none; margin:0;padding:0;}
 .visibility_checkbox {border:1px solid #000000;}
 //#selectable .ui-selecting { background: #FECA40; }
@@ -40,3 +50,4 @@
 .scroller-holder {position:absolute; top:0; right:0; height:100%;max-height:910px;float:right;width:380px;overflow-y:scroll;}
 /*overwrite default Drupal #page*/
 #page { padding:0; margin-left:10px; margin-right:10px;}
+ul.visibility-list-table>#dialog-header {background-color:#ccc; cursor:default;display:table-header-group;}

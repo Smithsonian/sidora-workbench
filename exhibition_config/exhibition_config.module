@@ -1904,7 +1904,7 @@ function exhibition_config_generate_checkboxes($branch,&$rows,$visibility_settin
 		    $array_index = $path;
 		  }	
 		  if ($tree_depth > 0) $array_index = $path.$child_array['pid'];
-	    $html = '<li class="visibility-row" id="' . $child_array['pid'] . '" depth="' . $array_index . '"><div class="visibility-name">'.$indent.'<span class ="' . $child_array['type'] . ' ui-selectee"></span>' . $child_array['title'].'</div><div class="visibility-type">'.$child_array['type'].'</div><div class="visibility-path">'.$child_array['relationship'].'</div>';
+	    $html = '<li class="visibility-row" id="' . $child_array['pid'] . '" depth="' . $array_index . '" name="' . $child_array['title'] . '"><div class="visibility-name">'.$indent.'<span class ="' . $child_array['type'] . ' ui-selectee"></span>' . $child_array['title'].'</div><div class="visibility-type">'.$child_array['type'].'</div><div class="visibility-path">'.$child_array['relationship'].'</div>';
  	    $checkboxes_array = array();
 	    foreach ($visibility_settings as $setting => $name) {
 		    $checkboxes_array[$setting] = '';
@@ -1970,12 +1970,6 @@ function exhibition_permission_form($form, $form_state){
   $saved_visibility = exhibition_config_load_visibility($pid);
   $existing_visibility = array();
 	exhibition_config_flatten_tree($saved_visibility,$existing_visibility,$visibility_settings,$pid);
-  $form['#attached']['js'] = array(
-     array(
-     'data' => 'jQuery("#selectable").selectable("option", "filter", "li");',
-     'type' => 'inline',
-     ),
-   );
   $modulepath = drupal_get_path('module', 'exhibition_config');
   $form['#attached']['js'] = array(
     'data' => $modulepath . '/js/visibility.js',
@@ -1984,11 +1978,12 @@ function exhibition_permission_form($form, $form_state){
 	drupal_add_library('system', 'ui.resizable');
   drupal_add_library('system', 'ui.selectable');
   drupal_add_library('system', 'ui.accordion');
+  drupal_add_library('system', 'ui.dialog');
   drupal_add_css($modulepath . '/css/exhibition_visibility.css',array('weight' => '1000000', 'group' => CSS_THEME));
 	$pid_tree = array(
 	  '0' => exhibition_config_get_pid_tree($pid)
 	);
-	$tree_html = '<div id="concept_tree">';
+	$tree_html = '<div class="concept_tree">';
   $tree_html .= '<div id="selectable"><ul class="visibility-list-table"><li id="header"><div class="visibility-name">Name</div><div class="visibility-type">Type</div><div class="visibility-path">Full Path</div><div class="visibility-setting">Show Name</div><div class="visibility-setting">Show Metadata</div><div class="visibility-setting">Show Preview</div><div class="visibility-setting">Show Download</div></li>';
 	$checkbox_rows = array();
 	exhibition_config_generate_checkboxes($pid_tree,$checkbox_rows,$visibility_settings,$pid);
@@ -2533,17 +2528,17 @@ function exhibition_permission_form_submit($form, &$form_state) {
   exhibition_config_save_visibility($root_pid,$visibility_settings_array);
 }
 function update_visibility_pid(&$visibility_array,$object_pid,$visibility_value) {
-  if (substr_count($object_pid,'\\') > 0) {
-	  $key_array = explode('\\',$object_pid,-1);
-	  $object_pid = implode('\\',$key_array);
-	  $children_branch = &return_branch_by_address($visibility_array,$object_pid,'\\');
+  if (substr_count($object_pid,'/') > 0) {
+	  $key_array = explode('/',$object_pid,-1);
+	  $object_pid = implode('/',$key_array);
+	  $children_branch = &return_branch_by_address($visibility_array,$object_pid,'/');
 	  array_push($children_branch,$visibility_value);
 	}else{
 	  $visibility_value['children'] = array();
 	  $visibility_array[] = $visibility_value;
 	}
 }	 
-function &return_branch_by_address (&$parent_array, $child_address, $addressSeparator = '\\') {
+function &return_branch_by_address (&$parent_array, $child_address, $addressSeparator = '/') {
   $parts = explode($addressSeparator, $child_address);
   $thisLevel = array_shift($parts);
   foreach ($parent_array as &$branch) {
