@@ -156,7 +156,7 @@ function si_exhibition_get_children_info(FedoraObject $object) {
     if ($a['type'] == $b['type']){
       return strcmp($a['title'],$b['title']);
     } else {
-      return strcmp($a['type'],$b['type']);
+      return strcmp($b['type'],$a['type']);
     }
   });
 	return $children;

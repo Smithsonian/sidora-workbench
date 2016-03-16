@@ -1896,7 +1896,7 @@ function exhibition_config_generate_checkboxes($branch,&$rows,$visibility_settin
 	      $indent .= '<span class="tree-indent ui-selectee"></span>';
 	    }	
 	    if ($child_array['type'] == 'Resource') {
-	      $indent .= '<span class="tree-indent ui-selectee"></span>';
+	      //$indent .= '<span class="tree-indent ui-selectee"></span>';
 	    }
 		  if ($path == '') {
 		    $array_index = $child_array['pid'];
@@ -1927,7 +1927,7 @@ function exhibition_config_generate_checkboxes($branch,&$rows,$visibility_settin
   }	
 }
 function exhibition_config_flatten_tree($branch, &$rows,$visibility_settings,$path) {
-	if (isset($branch) && sizeof($branch)) {
+	if (isset($branch) && sizeof($branch) && !empty($branch)) {
 	  foreach ($branch as $child_array) {
 	    if (sizeof($child_array)) {
 			  $tree_depth = substr_count($path,'/');
@@ -1971,10 +1971,6 @@ function exhibition_permission_form($form, $form_state){
   $existing_visibility = array();
 	exhibition_config_flatten_tree($saved_visibility,$existing_visibility,$visibility_settings,$pid);
   $modulepath = drupal_get_path('module', 'exhibition_config');
-  $form['#attached']['js'] = array(
-    'data' => $modulepath . '/js/visibility.js',
-		'type' => 'file'
-  );
 	drupal_add_library('system', 'ui.resizable');
   drupal_add_library('system', 'ui.selectable');
   drupal_add_library('system', 'ui.accordion');
@@ -1983,7 +1979,7 @@ function exhibition_permission_form($form, $form_state){
 	$pid_tree = array(
 	  '0' => exhibition_config_get_pid_tree($pid)
 	);
-	$tree_html = '<div class="concept_tree">';
+	$tree_html = '<div id="concept_tree">';
   $tree_html .= '<div id="selectable"><ul class="visibility-list-table"><li id="header"><div class="visibility-name">Name</div><div class="visibility-type">Type</div><div class="visibility-path">Full Path</div><div class="visibility-setting">Show Name</div><div class="visibility-setting">Show Metadata</div><div class="visibility-setting">Show Preview</div><div class="visibility-setting">Show Download</div></li>';
 	$checkbox_rows = array();
 	exhibition_config_generate_checkboxes($pid_tree,$checkbox_rows,$visibility_settings,$pid);
