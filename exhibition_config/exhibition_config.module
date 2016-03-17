@@ -1904,7 +1904,7 @@ function exhibition_config_generate_checkboxes($branch,&$rows,$visibility_settin
 		    $array_index = $path;
 		  }	
 		  if ($tree_depth > 0) $array_index = $path.$child_array['pid'];
-	    $html = '<li class="visibility-row" id="' . $child_array['pid'] . '" depth="' . $array_index . '" name="' . $child_array['title'] . '"><div class="visibility-name">'.$indent.'<span class ="' . $child_array['type'] . ' ui-selectee"></span>' . $child_array['title'].'</div><div class="visibility-type">'.$child_array['type'].'</div><div class="visibility-path">'.$child_array['relationship'].'</div>';
+	    $html = '<li class="visibility-row full-browser" id="' . $child_array['pid'] . '" depth="' . $array_index . '" name="' . $child_array['title'] . '"><div class="visibility-name">'.$indent.'<span class ="' . $child_array['type'] . ' ui-selectee"></span>' . $child_array['title'].'</div><div class="visibility-type">'.$child_array['type'].'</div><div class="visibility-path">'.$child_array['relationship'].'</div>';
  	    $checkboxes_array = array();
 	    foreach ($visibility_settings as $setting => $name) {
 		    $checkboxes_array[$setting] = '';
@@ -1969,7 +1969,8 @@ function exhibition_permission_form($form, $form_state){
 	'allow_download' => 'Show Download');
   $saved_visibility = exhibition_config_load_visibility($pid);
   $existing_visibility = array();
-	exhibition_config_flatten_tree($saved_visibility,$existing_visibility,$visibility_settings,$pid);
+  //flatten_tree takes an array of children, but the root object is not a child of anything, so pop it in an array
+	exhibition_config_flatten_tree(array($saved_visibility),$existing_visibility,$visibility_settings,$pid);
   $modulepath = drupal_get_path('module', 'exhibition_config');
 	drupal_add_library('system', 'ui.resizable');
   drupal_add_library('system', 'ui.selectable');
@@ -2141,6 +2142,10 @@ function exhibition_config_save_visibility($pid, $visibility_obj_tree) {
   if (!exhibition_config_allowed_to_edit($pid)) {
     drupal_not_found();
     drupal_exit();
+  }
+  //if the tree is a child array, just take the first element
+  if (empty($visibility_obj_tree['pid']) && !empty($visibility_obj_tree[0])){
+    $visibility_obj_tree = $visibility_obj_tree[0];
   }
   $query = db_update('exhibition_config')
     ->fields(array(
@@ -2482,7 +2487,7 @@ function exhibition_config_reset_visibility($vis_obj, $pid_that_requires_update,
  */
 function exhibition_config_filter_visibility_show_name($vis_obj) {
   $to_return = $vis_obj;
-  if (empty($to_return['show_name'])) return FALSE;
+  if (empty($to_return['show_name'])){ return FALSE; }
   $new_children = array();
   if (!empty($vis_obj['children'])){
     foreach($vis_obj['children'] as $curr_child) {

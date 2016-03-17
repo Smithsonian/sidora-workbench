@@ -100,15 +100,16 @@ jQuery(function(){
   jQuery("#open-advanced").after(jQuery("#edit-save"));
   jQuery(window).resize(resizeConceptTreePage);
   jQuery("input:checkbox").click(function(){
-    var invisibleParents = [];
-    var message = "";
-    message += "<ul>";
     if (jQuery(this).is(":checked")){
-      var path = jQuery(this).attr("path").split("/");
+      var invisibleParents = [];
+      var message = "";
+      message += "<ul>";
+      var pidPath = jQuery(this).attr("path");
+      var path = pidPath.split("/");
       pid = "";
       for (ctr=0;ctr<path.length;ctr++){
         if (pid == "") {
-          message = "In order to display this object and its information, the object and a path through the exhibition needs to be displayed. Should the following objects be shown?"+message;
+          message = "In order to display this object and its information, the object and a path through the exhibition needs to be displayed. If you confirm, the following items will be shown."+message;
           pid = path[ctr];
         }else{
           pid = pid+"/"+path[ctr];
@@ -119,32 +120,62 @@ jQuery(function(){
           message += "<li>" + jQuery("[name=\'"+visibilityToCheck+"\']").attr("label")+"</li>";
         }
       }
-    }
-    /*
-    if (
-        (jQuery(this).attr("id").indexOf("show-name") != -1) 
-        &&
-        (jQuery(this).closest("li").children("div")[1].innerHTML == 'Concept')
-      ) {
-      var children = jQuery("#selectable").find("[depth^='"+jQuery(this).attr("path")+"/']");
-      if (children.length >0) {
-        for (ctr=0;ctr<children.length;ctr++){
-          var path = jQuery(children[ctr]).attr("depth");
-          if (!(jQuery("[name=\'visibility[" + path + "][show_name]\']").is(":checked"))){
-            invisibleParents.push("visibility[" + path + "][show_name]");
-            message += "<li>Child : " + jQuery("[name=\'visibility[" + path + "][show_name]\']").attr("label")+"</li>";
-          }
+      message += "</ul>";
+      if (invisibleParents.length > 0){
+        var resetCheckboxID = jQuery(this).attr("id");
+        var selectedCheckbox = this;
+        changeParentConfirm("Visibility Settings Change", message, 
+          function(){ 
+            setToChecked(invisibleParents);
+            //store and restore the current settings for this object
+            var changeBack = jQuery(selectedCheckbox).closest("li").find("input").filter(
+              function(){
+                if (jQuery(this) == jQuery(selectedCheckbox)) return false;
+                if (jQuery(this).attr("name").indexOf("[show_name]") != -1) return false;
+                return true;
+              }
+            );
+            var objSettings = changeBack.map(function(){return jQuery(this).prop("checked");});
+            changedShowName(pidPath, true);
+            for (ctr=0;ctr<changeBack.length;ctr++) {
+              jQuery(changeBack[ctr]).prop("checked",objSettings[ctr]);
+            }
+          },
+          function(){ jQuery("#"+resetCheckboxID).prop("checked",false); }
+        ); 
+      }
+      else {
+        if (jQuery(this).attr("name").indexOf("[show_name]") != -1) {
+          changedShowName(pidPath, true);
         }
       }
-    } 
-    */      
-    message += "</ul>";
-    if (invisibleParents.length > 0){
-      var resetCheckboxID = jQuery(this).attr("id");
-      changeParentConfirm("Visibility Settings Change", message, 
-        function(){ setToChecked(invisibleParents); fillInSidebar(); },
-        function(){ resetCheckbox(resetCheckboxID); }
-      ); 
+    }
+    else {
+      if (jQuery(this).attr("name").indexOf("[show_name]") != -1) {
+        var pidPath = jQuery(this).attr("path");
+        var linesToBeHidden = getUL(pidPath).find("li").filter(
+          function(){
+            return jQuery(this).find("input:checked").length > 0;
+          }
+        );
+        var message = "When hiding this concept, all children and child trees will be hidden. If you confirm, the concept and the following items will be hidden.";
+        message += "<ul>";
+        for (ctr=0;ctr<linesToBeHidden.length;ctr++){
+          message += "<li>"+ jQuery(linesToBeHidden[ctr]).attr("name") + "</li>";
+        }
+        message += "</ul>";
+        if (linesToBeHidden.length > 0){ //This is a concept with children that will be changed
+          var resetCheckboxID = jQuery(this).attr("id");
+          var pidPath = jQuery(this).attr("path");
+          changeParentConfirm("Visibility Settings Change", message, 
+            function(){ changedShowName(pidPath, false); },
+            function(){ jQuery("#"+resetCheckboxID).prop("checked",true); }
+          ); 
+        }
+        else {  //This is a resource of concept with no children that change, just hide it
+          changedShowName(pidPath, false);
+        }
+      }
     }
   }); //Ends jQuery("input:checkbox").click
   jQuery("#change_all").click(changeAllWindow);
@@ -160,16 +191,21 @@ jQuery(function(){
  */
 changedShowName = function(pidPath, changedTo) {
   jQuery("[path='"+pidPath+"']").prop("checked",changedTo);
+  getUL(pidPath).find("li").each(function(){
+    var currPath = jQuery(this).attr("depth");
+    jQuery("[path='"+currPath+"']").prop("checked",changedTo);
+  });
+  fillInSidebar();
+}
+/*
+ * Helper to get the UL for any pid path since root is a special case
+ */
+getUL = function(pidPath){
   docElementForUL = document.getElementById(pidPath);
-  if (docElementForUL != null) {
-    if (pidPath.indexOf("/") == -1){ //Special if root since that is not a normal pid path
-      docElementForUL = jQuery(docElementForUL).closest("ul");
-    }
-    jQuery(docElementForUL).find("li").each(function(){
-      var currPath = jQuery(this).attr("depth");
-      jQuery("[path='"+currPath+"']").prop("checked",changedTo);
-    });
+  if (docElementForUL != null && pidPath.indexOf("/") == -1){
+    docElementForUL = jQuery(docElementForUL).closest("ul"); //Special if root since that is not a normal pid path
   }
+  return jQuery(docElementForUL);
 }
 
 changeSelected = function(visibilitySettings) {
@@ -187,9 +223,6 @@ setToChecked = function(namesOfCheckboxes) {
     jQuery("[name='" + namesOfCheckboxes[ctr] + "']").prop("checked",true);
   }
 }   
-resetCheckbox = function(visibilityCheckbox) {
-  jQuery("#"+visibilityCheckbox).prop("checked",false);
-} 
 changeParentConfirm = function(title, questionText, onConfirmation, onCancel, confirmButtonText, cancelButtonText, onAnyClose){
   if (typeof(onConfirmation) != 'function') onConfirmation = function(){};
   if (typeof(onCancel) != 'function') onCancel = function(){};
@@ -302,7 +335,7 @@ changeAllWindow = function(){
     checkboxesHtml += "<div>Saving will apply visibility changes to the following:</div>";
     checkboxesHtml += "<div class='dialog_concept_tree'>";
     for (ctr=0;ctr<selectedArray.length;ctr++){
-      checkboxesHtml += "<div>"+selectedArray[ctr].name+"<div>";
+      checkboxesHtml += "<div>"+selectedArray[ctr].name+"</div>";
     }
     checkboxesHtml += "</div>"; 
     jQuery("body").append("<div id='changeAll' style='display:none;' title='Change Visibility for all selected:'><div>"+checkboxesHtml+"</div></div>");
