@@ -5444,7 +5444,8 @@ function sidora_get_plupload_html($elements, $button_text = 'Browse'){
           uploader.start();
           return false;
         };
-      },
+				if (uploader.files.length == "0") jQuery("#Next").attr("disabled", true).addClass("form-button-disabled");
+			},
       Browse: function(up) {
          // Called when file picker is clicked
         if (jQuery("#Next").length > 0)
@@ -5466,6 +5467,7 @@ function sidora_get_plupload_html($elements, $button_text = 'Browse'){
             up.removeFile(file);
             jQuery("#" + file.id).remove();
             var toDelete = file.name;
+            if (up.files.length == "0") jQuery("#Next").attr("disabled", true).addClass("form-button-disabled");
             console.log(toDelete);';
             //TBD TODO Put in a check here to remove the correct file when multiple files have same filename
             
