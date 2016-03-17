@@ -457,14 +457,17 @@ function sidora_get_model(AbstractObject $object, array $ignore_models = NULL) {
  *   TRUE if the given object is a resource, FALSE otherwise.
  */
 function sidora_is_resource(AbstractObject $object) {
-  module_load_include('inc', 'islandora', 'includes/content_model.autocomplete');
-  $names = islandora_get_content_model_names();
+  $names = sidora_get_content_model_names();
   $all_models = array();
   foreach($names as $model => $name){ $all_models[] = $model; }
   if (sidora_is_concept($object)) return FALSE;
   if (sidora_is_codebook($object)) return FALSE;
-  return in_array('si:resourceCModel', $object->models) ||
-    array_intersect($all_models, $object->models);
+  if (empty($GLOBALS['sidora_object_models_'.$object])){
+    $GLOBALS['sidora_object_models_'.$object] = $object->models;
+  }
+  $curr_models = $GLOBALS['sidora_object_models_'.$object];
+  return in_array('si:resourceCModel', $curr_models) ||
+    array_intersect($all_models, $curr_models);
 }
 
 /**
@@ -480,7 +483,11 @@ function sidora_is_codebook(AbstractObject $object) {
   $codebook_models = array(
       'si:codebookCModel',
   );
-  return array_intersect($codebook_models, $object->models);
+  if (empty($GLOBALS['sidora_object_models_'.$object])){
+    $GLOBALS['sidora_object_models_'.$object] = $object->models;
+  }
+  $curr_models = $GLOBALS['sidora_object_models_'.$object];
+  return array_intersect($codebook_models, $curr_models);
 }
 
 /**
@@ -505,8 +512,13 @@ function sidora_is_concept(AbstractObject $object) {
       'si:dwcCModel',
       'si:lidoCollectionCModel',
   );
-  return in_array('si:conceptCModel', $object->models)  ||
-    array_intersect($concept_models, $object->models);
+
+  if (empty($GLOBALS['sidora_object_models_'.$object])){
+    $GLOBALS['sidora_object_models_'.$object] = $object->models;
+  }
+  $curr_models = $GLOBALS['sidora_object_models_'.$object];
+  return in_array('si:conceptCModel', $curr_models)  ||
+    array_intersect($concept_models, $curr_models);
 }
 
 /**
@@ -676,15 +688,259 @@ function sidora_create_user_object(stdClass $account) {
  *   The generated XACML POLICY.
  */
 function sidora_create_default_xacml(stdClass $account = NULL) {
-  module_load_include('inc', 'islandora_xacml_api', 'Xacml');
   global $user;
   $account = is_object($account) ? $account : $user;
+  $xml = 
+"<Policy xmlns=\"urn:oasis:names:tc:xacml:1.0:policy\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" PolicyId=\"islandora-xacml-editor-v1\" RuleCombiningAlgId=\"urn:oasis:names:tc:xacml:1.0:rule-combining-algorithm:first-applicable\">
+  <Target>
+    <Subjects>
+      <AnySubject></AnySubject>
+    </Subjects>
+    <Resources>
+      <AnyResource></AnyResource>
+    </Resources>
+    <Actions>
+      <AnyAction></AnyAction>
+    </Actions>
+  </Target>
+  <Rule RuleId=\"deny-management-functions\" Effect=\"Deny\">
+    <Target>
+      <Subjects>
+        <AnySubject></AnySubject>
+      </Subjects>
+      <Resources>
+        <AnyResource></AnyResource>
+      </Resources>
+      <Actions>
+        <Action>
+          <ActionMatch MatchId=\"urn:oasis:names:tc:xacml:1.0:function:string-equal\">
+            <AttributeValue DataType=\"http://www.w3.org/2001/XMLSchema#string\">urn:fedora:names:fedora:2.1:action:id-addDatastream</AttributeValue>
+            <ActionAttributeDesignator AttributeId=\"urn:fedora:names:fedora:2.1:action:id\" DataType=\"http://www.w3.org/2001/XMLSchema#string\"></ActionAttributeDesignator>
+          </ActionMatch>
+        </Action>
+        <Action>
+          <ActionMatch MatchId=\"urn:oasis:names:tc:xacml:1.0:function:string-equal\">
+            <AttributeValue DataType=\"http://www.w3.org/2001/XMLSchema#string\">urn:fedora:names:fedora:2.1:action:id-addDisseminator</AttributeValue>
+            <ActionAttributeDesignator AttributeId=\"urn:fedora:names:fedora:2.1:action:id\" DataType=\"http://www.w3.org/2001/XMLSchema#string\"></ActionAttributeDesignator>
+          </ActionMatch>
+        </Action>
+        <Action>
+          <ActionMatch MatchId=\"urn:oasis:names:tc:xacml:1.0:function:string-equal\">
+            <AttributeValue DataType=\"http://www.w3.org/2001/XMLSchema#string\">urn:fedora:names:fedora:2.1:action:id-adminPing</AttributeValue>
+            <ActionAttributeDesignator AttributeId=\"urn:fedora:names:fedora:2.1:action:id\" DataType=\"http://www.w3.org/2001/XMLSchema#string\"></ActionAttributeDesignator>
+          </ActionMatch>
+        </Action>
+        <Action>
+          <ActionMatch MatchId=\"urn:oasis:names:tc:xacml:1.0:function:string-equal\">
+            <AttributeValue DataType=\"http://www.w3.org/2001/XMLSchema#string\">urn:fedora:names:fedora:2.1:action:id-getDisseminatorHistory</AttributeValue>
+            <ActionAttributeDesignator AttributeId=\"urn:fedora:names:fedora:2.1:action:id\" DataType=\"http://www.w3.org/2001/XMLSchema#string\"></ActionAttributeDesignator>
+          </ActionMatch>
+        </Action>
+        <Action>
+          <ActionMatch MatchId=\"urn:oasis:names:tc:xacml:1.0:function:string-equal\">
+            <AttributeValue DataType=\"http://www.w3.org/2001/XMLSchema#string\">urn:fedora:names:fedora:2.1:action:id-getNextPid</AttributeValue>
+            <ActionAttributeDesignator AttributeId=\"urn:fedora:names:fedora:2.1:action:id\" DataType=\"http://www.w3.org/2001/XMLSchema#string\"></ActionAttributeDesignator>
+          </ActionMatch>
+        </Action>
+        <Action>
+          <ActionMatch MatchId=\"urn:oasis:names:tc:xacml:1.0:function:string-equal\">
+            <AttributeValue DataType=\"http://www.w3.org/2001/XMLSchema#string\">urn:fedora:names:fedora:2.1:action:id-ingest</AttributeValue>
+            <ActionAttributeDesignator AttributeId=\"urn:fedora:names:fedora:2.1:action:id\" DataType=\"http://www.w3.org/2001/XMLSchema#string\"></ActionAttributeDesignator>
+          </ActionMatch>
+        </Action>
+        <Action>
+          <ActionMatch MatchId=\"urn:oasis:names:tc:xacml:1.0:function:string-equal\">
+            <AttributeValue DataType=\"http://www.w3.org/2001/XMLSchema#string\">urn:fedora:names:fedora:2.1:action:id-modifyDatastreamByReference</AttributeValue>
+            <ActionAttributeDesignator AttributeId=\"urn:fedora:names:fedora:2.1:action:id\" DataType=\"http://www.w3.org/2001/XMLSchema#string\"></ActionAttributeDesignator>
+          </ActionMatch>
+        </Action>
+        <Action>
+          <ActionMatch MatchId=\"urn:oasis:names:tc:xacml:1.0:function:string-equal\">
+            <AttributeValue DataType=\"http://www.w3.org/2001/XMLSchema#string\">urn:fedora:names:fedora:2.1:action:id-modifyDatastreamByValue</AttributeValue>
+            <ActionAttributeDesignator AttributeId=\"urn:fedora:names:fedora:2.1:action:id\" DataType=\"http://www.w3.org/2001/XMLSchema#string\"></ActionAttributeDesignator>
+          </ActionMatch>
+        </Action>
+        <Action>
+          <ActionMatch MatchId=\"urn:oasis:names:tc:xacml:1.0:function:string-equal\">
+            <AttributeValue DataType=\"http://www.w3.org/2001/XMLSchema#string\">urn:fedora:names:fedora:2.1:action:id-modifyDisseminator</AttributeValue>
+            <ActionAttributeDesignator AttributeId=\"urn:fedora:names:fedora:2.1:action:id\" DataType=\"http://www.w3.org/2001/XMLSchema#string\"></ActionAttributeDesignator>
+          </ActionMatch>
+        </Action>
+        <Action>
+          <ActionMatch MatchId=\"urn:oasis:names:tc:xacml:1.0:function:string-equal\">
+            <AttributeValue DataType=\"http://www.w3.org/2001/XMLSchema#string\">urn:fedora:names:fedora:2.1:action:id-modifyObject</AttributeValue>
+            <ActionAttributeDesignator AttributeId=\"urn:fedora:names:fedora:2.1:action:id\" DataType=\"http://www.w3.org/2001/XMLSchema#string\"></ActionAttributeDesignator>
+          </ActionMatch>
+        </Action>
+        <Action>
+          <ActionMatch MatchId=\"urn:oasis:names:tc:xacml:1.0:function:string-equal\">
+            <AttributeValue DataType=\"http://www.w3.org/2001/XMLSchema#string\">urn:fedora:names:fedora:2.1:action:id-purgeObject</AttributeValue>
+            <ActionAttributeDesignator AttributeId=\"urn:fedora:names:fedora:2.1:action:id\" DataType=\"http://www.w3.org/2001/XMLSchema#string\"></ActionAttributeDesignator>
+          </ActionMatch>
+        </Action>
+        <Action>
+          <ActionMatch MatchId=\"urn:oasis:names:tc:xacml:1.0:function:string-equal\">
+            <AttributeValue DataType=\"http://www.w3.org/2001/XMLSchema#string\">urn:fedora:names:fedora:2.1:action:id-purgeDatastream</AttributeValue>
+            <ActionAttributeDesignator AttributeId=\"urn:fedora:names:fedora:2.1:action:id\" DataType=\"http://www.w3.org/2001/XMLSchema#string\"></ActionAttributeDesignator>
+          </ActionMatch>
+        </Action>
+        <Action>
+          <ActionMatch MatchId=\"urn:oasis:names:tc:xacml:1.0:function:string-equal\">
+            <AttributeValue DataType=\"http://www.w3.org/2001/XMLSchema#string\">urn:fedora:names:fedora:2.1:action:id-purgeDisseminator</AttributeValue>
+            <ActionAttributeDesignator AttributeId=\"urn:fedora:names:fedora:2.1:action:id\" DataType=\"http://www.w3.org/2001/XMLSchema#string\"></ActionAttributeDesignator>
+          </ActionMatch>
+        </Action>
+        <Action>
+          <ActionMatch MatchId=\"urn:oasis:names:tc:xacml:1.0:function:string-equal\">
+            <AttributeValue DataType=\"http://www.w3.org/2001/XMLSchema#string\">urn:fedora:names:fedora:2.1:action:id-setDatastreamState</AttributeValue>
+            <ActionAttributeDesignator AttributeId=\"urn:fedora:names:fedora:2.1:action:id\" DataType=\"http://www.w3.org/2001/XMLSchema#string\"></ActionAttributeDesignator>
+          </ActionMatch>
+        </Action>
+        <Action>
+          <ActionMatch MatchId=\"urn:oasis:names:tc:xacml:1.0:function:string-equal\">
+            <AttributeValue DataType=\"http://www.w3.org/2001/XMLSchema#string\">urn:fedora:names:fedora:2.1:action:id-setDisseminatorState</AttributeValue>
+            <ActionAttributeDesignator AttributeId=\"urn:fedora:names:fedora:2.1:action:id\" DataType=\"http://www.w3.org/2001/XMLSchema#string\"></ActionAttributeDesignator>
+          </ActionMatch>
+        </Action>
+        <Action>
+          <ActionMatch MatchId=\"urn:oasis:names:tc:xacml:1.0:function:string-equal\">
+            <AttributeValue DataType=\"http://www.w3.org/2001/XMLSchema#string\">urn:fedora:names:fedora:2.1:action:id-setDatastreamVersionable</AttributeValue>
+            <ActionAttributeDesignator AttributeId=\"urn:fedora:names:fedora:2.1:action:id\" DataType=\"http://www.w3.org/2001/XMLSchema#string\"></ActionAttributeDesignator>
+          </ActionMatch>
+        </Action>
+        <Action>
+          <ActionMatch MatchId=\"urn:oasis:names:tc:xacml:1.0:function:string-equal\">
+            <AttributeValue DataType=\"http://www.w3.org/2001/XMLSchema#string\">urn:fedora:names:fedora:2.1:action:id-compareDatastreamChecksum</AttributeValue>
+            <ActionAttributeDesignator AttributeId=\"urn:fedora:names:fedora:2.1:action:id\" DataType=\"http://www.w3.org/2001/XMLSchema#string\"></ActionAttributeDesignator>
+          </ActionMatch>
+        </Action>
+        <Action>
+          <ActionMatch MatchId=\"urn:oasis:names:tc:xacml:1.0:function:string-equal\">
+            <AttributeValue DataType=\"http://www.w3.org/2001/XMLSchema#string\">urn:fedora:names:fedora:2.1:action:id-serverShutdown</AttributeValue>
+            <ActionAttributeDesignator AttributeId=\"urn:fedora:names:fedora:2.1:action:id\" DataType=\"http://www.w3.org/2001/XMLSchema#string\"></ActionAttributeDesignator>
+          </ActionMatch>
+        </Action>
+        <Action>
+          <ActionMatch MatchId=\"urn:oasis:names:tc:xacml:1.0:function:string-equal\">
+            <AttributeValue DataType=\"http://www.w3.org/2001/XMLSchema#string\">urn:fedora:names:fedora:2.1:action:id-serverStatus</AttributeValue>
+            <ActionAttributeDesignator AttributeId=\"urn:fedora:names:fedora:2.1:action:id\" DataType=\"http://www.w3.org/2001/XMLSchema#string\"></ActionAttributeDesignator>
+          </ActionMatch>
+        </Action>
+        <Action>
+          <ActionMatch MatchId=\"urn:oasis:names:tc:xacml:1.0:function:string-equal\">
+            <AttributeValue DataType=\"http://www.w3.org/2001/XMLSchema#string\">urn:fedora:names:fedora:2.1:action:id-upload</AttributeValue>
+            <ActionAttributeDesignator AttributeId=\"urn:fedora:names:fedora:2.1:action:id\" DataType=\"http://www.w3.org/2001/XMLSchema#string\"></ActionAttributeDesignator>
+          </ActionMatch>
+        </Action>
+        <Action>
+          <ActionMatch MatchId=\"urn:oasis:names:tc:xacml:1.0:function:string-equal\">
+            <AttributeValue DataType=\"http://www.w3.org/2001/XMLSchema#string\">urn:fedora:names:fedora:2.1:action:id-dsstate</AttributeValue>
+            <ActionAttributeDesignator AttributeId=\"urn:fedora:names:fedora:2.1:action:id\" DataType=\"http://www.w3.org/2001/XMLSchema#string\"></ActionAttributeDesignator>
+          </ActionMatch>
+        </Action>
+        <Action>
+          <ActionMatch MatchId=\"urn:oasis:names:tc:xacml:1.0:function:string-equal\">
+            <AttributeValue DataType=\"http://www.w3.org/2001/XMLSchema#string\">urn:fedora:names:fedora:2.1:action:id-resolveDatastream</AttributeValue>
+            <ActionAttributeDesignator AttributeId=\"urn:fedora:names:fedora:2.1:action:id\" DataType=\"http://www.w3.org/2001/XMLSchema#string\"></ActionAttributeDesignator>
+          </ActionMatch>
+        </Action>
+        <Action>
+          <ActionMatch MatchId=\"urn:oasis:names:tc:xacml:1.0:function:string-equal\">
+            <AttributeValue DataType=\"http://www.w3.org/2001/XMLSchema#string\">urn:fedora:names:fedora:2.1:action:id-reloadPolicies</AttributeValue>
+            <ActionAttributeDesignator AttributeId=\"urn:fedora:names:fedora:2.1:action:id\" DataType=\"http://www.w3.org/2001/XMLSchema#string\"></ActionAttributeDesignator>
+          </ActionMatch>
+        </Action>
+      </Actions>
+    </Target>
+    <Condition FunctionId=\"urn:oasis:names:tc:xacml:1.0:function:not\">
+      <Apply FunctionId=\"urn:oasis:names:tc:xacml:1.0:function:or\">
+        <Apply FunctionId=\"urn:oasis:names:tc:xacml:1.0:function:string-at-least-one-member-of\">
+          <SubjectAttributeDesignator DataType=\"http://www.w3.org/2001/XMLSchema#string\" MustBePresent=\"false\" AttributeId=\"urn:fedora:names:fedora:2.1:subject:loginId\"></SubjectAttributeDesignator>
+          <Apply FunctionId=\"urn:oasis:names:tc:xacml:1.0:function:string-bag\">
+            <AttributeValue DataType=\"http://www.w3.org/2001/XMLSchema#string\">fedoraAdmin</AttributeValue>
+            <AttributeValue DataType=\"http://www.w3.org/2001/XMLSchema#string\">" . $account->name . "</AttributeValue>
+          </Apply>
+        </Apply>
+        <Apply FunctionId=\"urn:oasis:names:tc:xacml:1.0:function:string-at-least-one-member-of\">
+          <SubjectAttributeDesignator DataType=\"http://www.w3.org/2001/XMLSchema#string\" MustBePresent=\"false\" AttributeId=\"fedoraRole\"></SubjectAttributeDesignator>
+          <Apply FunctionId=\"urn:oasis:names:tc:xacml:1.0:function:string-bag\">
+            <AttributeValue DataType=\"http://www.w3.org/2001/XMLSchema#string\">administrator</AttributeValue>
+          </Apply>
+        </Apply>
+      </Apply>
+    </Condition>
+  </Rule>
+  <Rule RuleId=\"deny-access-functions\" Effect=\"Deny\">
+    <Target>
+      <Subjects>
+        <AnySubject></AnySubject>
+      </Subjects>
+      <Resources>
+        <AnyResource></AnyResource>
+      </Resources>
+      <Actions>
+        <Action>
+          <ActionMatch MatchId=\"urn:oasis:names:tc:xacml:1.0:function:string-equal\">
+            <AttributeValue DataType=\"http://www.w3.org/2001/XMLSchema#string\">urn:fedora:names:fedora:2.1:action:api-a</AttributeValue>
+            <ActionAttributeDesignator AttributeId=\"urn:fedora:names:fedora:2.1:action:api\" DataType=\"http://www.w3.org/2001/XMLSchema#string\"></ActionAttributeDesignator>
+          </ActionMatch>
+        </Action>
+        <Action>
+          <ActionMatch MatchId=\"urn:oasis:names:tc:xacml:1.0:function:string-equal\">
+            <AttributeValue DataType=\"http://www.w3.org/2001/XMLSchema#string\">urn:fedora:names:fedora:2.1:action:id-getDatastreamHistory</AttributeValue>
+            <ActionAttributeDesignator AttributeId=\"urn:fedora:names:fedora:2.1:action:id\" DataType=\"http://www.w3.org/2001/XMLSchema#string\"></ActionAttributeDesignator>
+          </ActionMatch>
+        </Action>
+        <Action>
+          <ActionMatch MatchId=\"urn:oasis:names:tc:xacml:1.0:function:string-equal\">
+            <AttributeValue DataType=\"http://www.w3.org/2001/XMLSchema#string\">urn:fedora:names:fedora:2.1:action:id-listObjectInResourceIndexResults</AttributeValue>
+            <ActionAttributeDesignator AttributeId=\"urn:fedora:names:fedora:2.1:action:id\" DataType=\"http://www.w3.org/2001/XMLSchema#string\"></ActionAttributeDesignator>
+          </ActionMatch>
+        </Action>
+      </Actions>
+    </Target>
+    <Condition FunctionId=\"urn:oasis:names:tc:xacml:1.0:function:not\">
+      <Apply FunctionId=\"urn:oasis:names:tc:xacml:1.0:function:or\">
+        <Apply FunctionId=\"urn:oasis:names:tc:xacml:1.0:function:string-at-least-one-member-of\">
+          <SubjectAttributeDesignator DataType=\"http://www.w3.org/2001/XMLSchema#string\" MustBePresent=\"false\" AttributeId=\"urn:fedora:names:fedora:2.1:subject:loginId\"></SubjectAttributeDesignator>
+          <Apply FunctionId=\"urn:oasis:names:tc:xacml:1.0:function:string-bag\">
+            <AttributeValue DataType=\"http://www.w3.org/2001/XMLSchema#string\">fedoraAdmin</AttributeValue>
+            <AttributeValue DataType=\"http://www.w3.org/2001/XMLSchema#string\">" . $account->name . "</AttributeValue>
+          </Apply>
+        </Apply>
+        <Apply FunctionId=\"urn:oasis:names:tc:xacml:1.0:function:string-at-least-one-member-of\">
+          <SubjectAttributeDesignator DataType=\"http://www.w3.org/2001/XMLSchema#string\" MustBePresent=\"false\" AttributeId=\"fedoraRole\"></SubjectAttributeDesignator>
+          <Apply FunctionId=\"urn:oasis:names:tc:xacml:1.0:function:string-bag\">
+            <AttributeValue DataType=\"http://www.w3.org/2001/XMLSchema#string\">administrator</AttributeValue>
+          </Apply>
+        </Apply>
+      </Apply>
+    </Condition>
+  </Rule>
+  <Rule RuleId=\"allow-everything-else\" Effect=\"Permit\">
+    <Target>
+      <Subjects>
+        <AnySubject></AnySubject>
+      </Subjects>
+      <Resources>
+        <AnyResource></AnyResource>
+      </Resources>
+      <Actions>
+        <AnyAction></AnyAction>
+      </Actions>
+    </Target>
+  </Rule>
+</Policy>
+";
+  /*
+  module_load_include('inc', 'islandora_xacml_api', 'Xacml');
   $xacml = new Xacml();
   $xacml->managementRule->addUser(array('fedoraAdmin', $account->name));
   $xacml->managementRule->addRole(array('administrator'));
   $xacml->viewingRule->addUser(array('fedoraAdmin', $account->name));
   $xacml->viewingRule->addRole(array('administrator'));
   $xml = $xacml->getXmlString(TRUE);
+  */
   return $xml;
 }
 
