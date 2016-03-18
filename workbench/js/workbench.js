@@ -638,8 +638,9 @@ sidora.InitiateJSTree = function(){
                 var showTextForUnassociate = "The resources listed below existed on the target already and will not be overwritten. They will be removed from the concepts that they were dragged from:<ul>";
                 jQuery.ajax({
                   url: Drupal.settings.basePath+"sidora/ajax_parts/generate_resource_list/"+jQuery("#"+mouseOverObject.id).children("a").attr("pid"),
-                  success: function(resourceList){
-                    var currentChildrenPids = JSON.parse(resourceList);;
+                  dataType: "json",
+                  error: function(){}, //OCIO error page will not parse as JSON, will be error. TBD, retry this command?
+                  success: function(currentChildrenPids){
                     var resourcesToMoveOver = [];
                     var resourcesToUnassociate = [];
                     for (var i = 0; i < sidora.util.dragResources.length; i++){
@@ -666,9 +667,11 @@ sidora.InitiateJSTree = function(){
                       }     
                     }else{
                       if (!sidora.util.isConfirmShowing()){
-                        sidora.util.Confirm("Move Resources","<h4>All items selected for move already exist on the target.</h4>"+showTextForUnassociate,
+                        sidora.util.Confirm(
+                          "Move Resources",
+                          "<h4>All items selected for move already exist on the target.</h4>"+showTextForUnassociate,
                           function(){
-                           sidora.resources.performCopyOrMove("move",mouseOverObject.id);
+                            sidora.resources.performCopyOrMove("move",mouseOverObject.id);
                           }
                         );
                       }
@@ -944,6 +947,7 @@ sidora.InitiateConfirmAccess = function(){
     },
     "error":function(){
        console.log("Problem getting basic data, redirecting to the user profile");
+       //OCIO message will also end up here since not json
        //This can also happen if the .htaccess file is incorrect
        window.location = Drupal.settings.basePath+"user";
     }
@@ -973,6 +977,7 @@ sidora.IsUserSetUp = function(callOnCorrectSetup, callOnIncorrectSetup){
       },
       "error":function(){
          console.log("Problem getting basic user info, redirecting to the user profile");
+         //OCIO message will also end up here since not json
          //This can also happen if the .htaccess file is incorrect
          window.location = Drupal.settings.basePath+"user";
       }
@@ -982,7 +987,15 @@ sidora.IsUserSetUp = function(callOnCorrectSetup, callOnIncorrectSetup){
 sidora.doubleCheckUser = function(){
   jQuery("#page").before("<div id='remove-me' style='width:100%'><div style='margin:auto;width:400px;'>Validating your user...</div></div>");
   setTimeout(function(){
-    sidora.IsUserSetUp(function(){ jQuery("#remove-me").remove(); sidora.continueInit(); }, function(){ jQuery("#remove-me").remove(); recreateUser(); });
+    sidora.IsUserSetUp(
+      function(){
+        jQuery("#remove-me").remove(); 
+        sidora.continueInit(); 
+      }, function(){
+        jQuery("#remove-me").remove();
+        recreateUser(); 
+      }
+    );
   },5000);
 }
 sidora.InitiatePage = function(){
@@ -1022,11 +1035,12 @@ sidora.InitiatePage = function(){
           "dataType":"json",
           "url":Drupal.settings.basePath+"sidora/ajax_parts/create_and_set_new_user_object",
           "success":function(data){
-             console.log(data);
-             window.location.reload();
+            console.log(data);
+            window.location.reload();
           },
           "error":function(){
-             console.log("Problem getting basic user info, redirecting to the user profile");
+            //OCIO message will also end up here since not json
+            console.log("Problem getting basic user info, redirecting to the user profile");
           }
         }
       );
@@ -1167,7 +1181,7 @@ sidora.ontology.CreateConceptMenu = function(){
     dataType: "json",
     url: ontologyUrl,
     error: function(){
-      console.log("error on create menu");
+      console.log("error on create menu"); //OCIO message will also end up here since not json
     },
     success: function (json_obj){
       window.sidora.ontology.tree = json_obj;
@@ -1444,62 +1458,137 @@ sidora.util.refreshConceptChildrenNumberDirectByTreeId = function(treeId, number
   var pid = jQuery("#"+treeId+" a").attr("pid");
   sidora.util.refreshConceptChildrenNumberDirect(pid, number_of_children);
 }
+
+sidora.util.refreshTreeRequestInProgress = false;
+sidora.util.refreshTreeFailuresInARow = 0;
 /*
  * Goes to get the tree from the server and replaces exsiting tree
- * singleTripWaitMilliseconds - number of milliseconds to wait for other refreshTree requests to come in
+ * secondsOfWait - number of seconds to wait for other refreshTree requests to come in
  *      - so that only one refresh tree request goes out no matter how many times its called during that time period
  */
-sidora.util.refreshTreeRequestInProgress = false;
-sidora.util.RefreshTreeIfNew = function(secondsOfWait){
+sidora.util.RefreshTreeHelper = function(secondsOfWait, onlyRefreshIfNew) {
   if (typeof(secondsOfWait) == 'undefined') secondsOfWait = .01;
-  setTimeout(function(){
-    jQuery.ajax({
-      url: Drupal.settings.basePath+'sidora/ajax_parts/tree',
-    }).done(function(tree_html){
-      if (tree_html == '') window.location = Drupal.settings.basePath+'user';  //No tree indicates a user problem
-      if (tree_html == sidora.util.latestTreeGrab){
-        console.log("Tree same as prior tree, no update to UI");
-        return;
-      }
-      sidora.util.latestTreeGrab = tree_html;
-      sidora.RefreshTreeHtml(tree_html);
-    }).fail(function(failure_obj){
-      sidora.recentAjaxFailure(failure_obj);
-    });
-  },secondsOfWait*1000);
-}
-sidora.util.RefreshTree = function(singleTripWaitMilliseconds){
-  if (typeof(singleTripWaitMilliseconds) == 'undefined') singleTripWaitMilliseconds = 10;
-  //Wait to see if we get a few requests at a time before going thru with the reload
   if (sidora.util.refreshTreeRequestInProgress) return;
   sidora.util.refreshTreeRequestInProgress = true;
   setTimeout(function(){
     jQuery.ajax({
       url: Drupal.settings.basePath+'sidora/ajax_parts/tree',
     }).done(function(tree_html){
-      if (tree_html == '') window.location = Drupal.settings.basePath+'user';  //No tree indicates a user problem
-			sidora.util.latestTreeGrab = tree_html;
-      //Note that you may want to refresh the tree even if the latest is the same as the previous
-      //For example, a concept move has failed.  The concept move shows in the UI, so the tree
-      //needs to be reverted back.  If you want to update the tree only on if it's changed see RefreshTreeIfNew
+      var suggestedAction = sidora.util.RefreshTreeSuggestAction(tree_html, true);
+      if (suggestedAction.suggestRedirect) { window.location = Drupal.settings.basePath+'user';  }
+      if (suggestedAction.suggestRetry){
+        sidora.util.refreshTreeFailuresInARow++;
+        if (sidora.util.refreshTreeFailuresInARow > 10) {
+          console.log("Too many tree failures without a success. Stopping retries.");
+          return;
+        } else {
+          console.log("Initiated retry:"+sidora.util.refreshTreeFailuresInARow);
+          sidora.util.refreshTreeRequestInProgress = false;
+          sidora.util.RefreshTreeHelper(3, onlyRefreshIfNew);
+          return;
+        }
+      }
+      if (suggestedAction.suggestIgnore) { return; }
+      if (!suggestedAction.valid) { console.log("Unknown tree issue. Error code:surt1"); return; }
+      if (tree_html == sidora.util.latestTreeGrab && onlyRefreshIfNew){
+        console.log("Tree same as prior tree, no update to UI");
+        return;
+      }
+      sidora.util.latestTreeGrab = tree_html;
       sidora.RefreshTreeHtml(tree_html);
+      sidora.util.refreshTreeFailuresInARow = 0;
     }).fail(function(failure_obj){
       sidora.recentAjaxFailure(failure_obj);
     }).always(function(){
       sidora.util.refreshTreeRequestInProgress = false;
     });
-  },singleTripWaitMilliseconds);
+  },secondsOfWait*1000);
+}
+/*
+ * These two are the functions that get called in practice
+ */
+sidora.util.RefreshTreeIfNew = function(secondsOfWait){ sidora.util.RefreshTreeHelper(secondsOfWait, true); }
+sidora.util.RefreshTree      = function(secondsOfWait){ sidora.util.RefreshTreeHelper(secondsOfWait, false); }
+
+/*
+ * Does NOT return a true / false
+ * Returns an explanation of the problem and suggested method to deal with it
+ * Returns an object of the form:
+{
+  "valid": true / false,
+  "description":"Reason it failed or empty string",
+  "suggestRedirect": true / false,
+  "suggestRetry": true / false,
+  "suggestIgnore": true / false
+}
+ */
+sidora.util.RefreshTreeSuggestAction = function(tree_html, outputProblemToConsole){
+  var toReturn = {
+    "valid":false,
+    "description":"Never attempted validity check",
+    "suggestRedirect":false,
+    "suggestRetry":false,
+    "suggestIgnore":true
+  };
+  var failures = 0;
+  if (tree_html == '') {
+    toReturn.description = "No tree indicates a user problem";
+    toReturn.suggestRetry = false;
+    toReturn.suggestRedirect = true;
+    toReturn.suggestIgnore = false;
+    failures++;
+  }
+  if (typeof(tree_html) != "string"){
+    tree_html = ""
+    toReturn.description = "Tree html was not a string";
+    toReturn.suggestRetry = false;
+    toReturn.suggestRedirect = true;
+    toReturn.suggestIgnore = false;
+    failures++;
+  }
+  //Various ways to check if valid, but we'll use the following:
+  //Should NOT say "contact the OCIO Help Desk"
+  //Should have at least one <ul> and one <li>
+  var tree_html_lowercase = tree_html.toLowerCase();
+  if (tree_html_lowercase.indexOf("contact the ocio help desk") > -1){
+    toReturn.description = "OCIO intercepted tree html issue.";
+    toReturn.suggestRetry = true;
+    toReturn.suggestRedirect = false;
+    toReturn.suggestIgnore = false;
+    failures++;
+  }
+  if (tree_html_lowercase.indexOf("<ul>") == -1 || tree_html_lowercase.indexOf("<li>") == -1){
+    toReturn.description = "Did not receive tree in proper tree format.";
+    toReturn.suggestRetry = false;
+    toReturn.suggestRedirect = false;
+    toReturn.suggestIgnore = true;
+    failures++;
+  }
+  if (failures == 0) {
+    toReturn.description = "";
+    toReturn.suggestRetry = false;
+    toReturn.suggestRedirect = false;
+    toReturn.suggestIgnore = false;
+    toReturn.valid = true;
+  }
+  if (toReturn.description != "" && outputProblemToConsole) {
+    console.log(toReturn.description);
+  }
+  return toReturn;
 }
 /*
  * Replaces exsiting tree with passed in html, and initializes new tree
  */
 sidora.RefreshTreeHtml = function(tree_html){
-    myDiv = jQuery(tree_html);
-    jQuery('#forjstree').after("<div id='toReplaceForjstree' style='display:none;'></div>").attr("id","oldjstree");
-    jQuery('#toReplaceForjstree').append(myDiv).attr("id","forjstree");
-    sidora.InitiateJSTree();
-    jQuery("#oldjstree").remove();
+  //The tree should be a SINGLE element, pull the first one
+  myDiv = jQuery("<div>"+tree_html+"</div>").children().first();
+  jQuery('#forjstree').after("<div id='toReplaceForjstree' style='display:none;'></div>").attr("id","oldjstree");
+  jQuery('#toReplaceForjstree').append(myDiv).attr("id","forjstree");
+  sidora.InitiateJSTree();
+  jQuery("#oldjstree").remove();
 }
+
+
 sidora.util.refreshNodeByID = function(pidsProcessed){
 	if (pidsProcessed.length != 2) return;
 	jQuery.ajax({
@@ -1863,20 +1952,27 @@ sidora.resources.individualPanel.LoadContent = function(suppressResourceViewerRe
     jQuery('#resourceIframeHolder').append(resourceViewerHtml);
   }
   jQuery('#resource-meta .error-message').remove();
-  jQuery.ajax({
-    url: Drupal.settings.basePath+'sidora/info/'+roipid+'/meta/sidora_xsl_config_variable/browser/html',
-  }).done(function(meta_html){
-    myDiv = jQuery(meta_html);
-    jQuery('#resource-meta .metadata-table').remove();
-    jQuery('#resource-meta').append(myDiv);
-    sidora.resources.individualPanel.ResizeAndStop(); //Gives it proper height
-  }).fail(function(meta_html){
+  var toPerformOnFail = function(meta_html){
     var myDiv = sidora.util.getErrorMessageHtml();
     jQuery('#resource-meta .metadata-table').remove();
     jQuery('#resource-meta').append(myDiv);
     sidora.resources.individualPanel.ResizeAndStop(); //Gives it proper height
     sidora.recentAjaxFailure(meta_html);
-  });;
+  };
+  jQuery.ajax({
+    url: Drupal.settings.basePath+'sidora/info/'+roipid+'/meta/sidora_xsl_config_variable/browser/html',
+  }).done(function(meta_html){
+    if (meta_html.toLowerCase().indexOf("contact the ocio help desk") == -1){
+      myDiv = jQuery(meta_html);
+      jQuery('#resource-meta .metadata-table').remove();
+      jQuery('#resource-meta').append(myDiv);
+      sidora.resources.individualPanel.ResizeAndStop(); //Gives it proper height
+    }else{
+      toPerformOnFail(meta_html);
+    }
+  }).fail(function(meta_html){
+    toPerformOnFail(meta_html);
+  });
   sidora.resources.individualPanel.LoadRelationships();
   sidora.ResizeToBrowser();
 }
