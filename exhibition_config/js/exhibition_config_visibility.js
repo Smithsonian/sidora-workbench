@@ -308,7 +308,7 @@ openAdvancedWindow = function(){
 			  } 
 			}	     
       changeAdvanced(futureVisibility);
-    //  jQuery( this ).dialog( "destroy" );
+			jQuery("#exhibition-permission-form").submit();
     };
     dialogConfig.buttons['Cancel'] = function() {
 			jQuery( this ).dialog( "destroy" );
