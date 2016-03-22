@@ -50,45 +50,77 @@ jQuery(function() {
   jQuery( ".accordion >div" ).accordion({header: "h3", collapsible: true});
 });
 fillInSidebar = function(){
-  jQuery("#main_shown .fieldset-wrapper").html("");
-  jQuery("[id$=show-name]:checked").each(function(){
-    jQuery("#main_shown .fieldset-wrapper").append("<div>"+jQuery(this).closest("li").children()[2].innerHTML+"</div>");
-  });
-  jQuery("#main_hidden .fieldset-wrapper").html("");
-  jQuery("[id$=show-name]").not(":checked").each(function(){
-    jQuery("#main_hidden .fieldset-wrapper").append("<div>"+jQuery(this).closest("li").children()[2].innerHTML+"</div>");
-  });
+  var totalAdded;
 
-  jQuery("#meta_shown .fieldset-wrapper").html("");
-  jQuery("[id$=show-meta]:checked").each(function(){
-    jQuery("#meta_shown .fieldset-wrapper").append("<div>"+jQuery(this).closest("li").children()[2].innerHTML+"</div>");
+  totalAdded = 0;
+  jQuery("#main_shown .fieldset-wrapper").html("");
+  jQuery("[id$='show-name']:checked").not("[id$='future-children-show-name']").each(function(){
+    jQuery("#main_shown .fieldset-wrapper").append("<div>"+jQuery(this).closest("li").children()[2].innerHTML+"</div>");
+    totalAdded++;
   });
+  jQuery("#main_shown .summary").html("("+totalAdded+")");
+
+  totalAdded = 0;
+  jQuery("#main_hidden .fieldset-wrapper").html("");
+  jQuery("[id$=show-name]").not(":checked").not("[id$='future-children-show-name']").each(function(){
+    jQuery("#main_hidden .fieldset-wrapper").append("<div>"+jQuery(this).closest("li").children()[2].innerHTML+"</div>");
+    totalAdded++;
+  });
+  jQuery("#main_hidden .summary").html("("+totalAdded+")");
+
+  totalAdded = 0;
+  jQuery("#meta_shown .fieldset-wrapper").html("");
+  jQuery("[id$=show-meta]:checked").not("[id$='future-children-show-meta']").each(function(){
+    jQuery("#meta_shown .fieldset-wrapper").append("<div>"+jQuery(this).closest("li").children()[2].innerHTML+"</div>");
+    totalAdded++;
+  });
+  jQuery("#meta_shown .summary").html("("+totalAdded+")");
+
+  totalAdded = 0;
   jQuery("#meta_hidden .fieldset-wrapper").html("");
-  jQuery("[id$=show-meta]").not(":checked").each(function(){
+  jQuery("[id$=show-meta]").not(":checked").not("[id$='future-children-show-meta']").each(function(){
     if (jQuery(jQuery(this).closest("li").children()[3]).find("input:checked").size() > 0){
       jQuery("#meta_hidden .fieldset-wrapper").append("<div>"+jQuery(this).closest("li").children()[2].innerHTML+"</div>");
+      totalAdded++;
     }
   });
+  jQuery("#meta_hidden .summary").html("("+totalAdded+")");
+
+  totalAdded = 0;
   jQuery("#preview_shown .fieldset-wrapper").html("");
-  jQuery("[id$=show-preview]:checked").each(function(){
+  jQuery("#exhibition-permission-form [id$=show-preview]:checked").not("[id$='future-children-show-preview']").each(function(){
     jQuery("#preview_shown .fieldset-wrapper").append("<div>"+jQuery(this).closest("li").children()[2].innerHTML+"</div>");
+    totalAdded++;
   });
+  jQuery("#preview_shown .summary").html("("+totalAdded+")");
+
+  totalAdded = 0;
   jQuery("#preview_hidden .fieldset-wrapper").html("");
-  jQuery("[id$=show-preview]").not(":checked").each(function(){
+  jQuery("exhibition-permission-form [id$=show-preview]").not(":checked").not("[id$='future-children-show-preview']").each(function(){
     if (jQuery(jQuery(this).closest("li").children()[3]).find("input:checked").size() > 0){
       jQuery("#preview_hidden .fieldset-wrapper").append("<div>"+jQuery(this).closest("li").children()[2].innerHTML+"</div>");
+      totalAdded++;
     }
   });
+  jQuery("#preview_hidden .summary").html("("+totalAdded+")");
+
+  totalAdded = 0;
   jQuery("#downloads_shown .fieldset-wrapper").html("");
-  jQuery("[id$=allow-download]:checked").each(function(){
+  jQuery("[id$=allow-download]:checked").not("[id$='future-children-allow-download']").each(function(){
     jQuery("#downloads_shown .fieldset-wrapper").append("<div>"+jQuery(this).closest("li").children()[2].innerHTML+"</div>");
+    totalAdded++;
   });
+  jQuery("#downloads_shown .summary").html("("+totalAdded+")");
+
+  totalAdded = 0;
   jQuery("#downloads_hidden .fieldset-wrapper").html("");
-  jQuery("[id$=allow-download]").not(":checked").each(function(){
+  jQuery("[id$=allow-download]").not(":checked").not("[id$='future-children-allow-download']").each(function(){
     if (jQuery(jQuery(this).closest("li").children()[3]).find("input:checked").size() > 0){
       jQuery("#downloads_hidden .fieldset-wrapper").append("<div>"+jQuery(this).closest("li").children()[2].innerHTML+"</div>");
+      totalAdded++;
     }
   });
+  jQuery("#downloads_hidden .summary").html("("+totalAdded+")");
 }
 resizeConceptTreePage = function() {
   jQuery("#concept_tree").parent().height(jQuery(window).innerHeight()-(jQuery("#page").offset().top + 25));
@@ -177,6 +209,7 @@ jQuery(function(){
         }
       }
     }
+    fillInSidebar();
   }); //Ends jQuery("input:checkbox").click
   jQuery("#change_all").click(changeAllWindow);
   jQuery("#open-advanced").click(openAdvancedWindow);
@@ -210,14 +243,25 @@ getUL = function(pidPath){
 
 changeSelected = function(visibilitySettings) {
   jQuery("li.ui-selected").each(function() {
-    jQuery("[name='visibility["+jQuery(this).attr("depth")+"][show_name]']").prop("checked",visibilitySettings.showName);
-    jQuery("[name='visibility["+jQuery(this).attr("depth")+"][show_meta]']").prop("checked",visibilitySettings.showMeta);
+    if (visibilitySettings.showName != 'indeterminate')
+      jQuery("[name='visibility["+jQuery(this).attr("depth")+"][show_name]']").prop("checked",visibilitySettings.showName=="checked");
+    if (visibilitySettings.showMeta != 'indeterminate')
+      jQuery("[name='visibility["+jQuery(this).attr("depth")+"][show_meta]']").prop("checked",visibilitySettings.showMeta=="checked");
     if (jQuery(this).children("div")[1].innerHTML == 'Resource') {
-      jQuery("[name='visibility["+jQuery(this).attr("depth")+"][show_preview]']").prop("checked",visibilitySettings.showPreview);
-      jQuery("[name='visibility["+jQuery(this).attr("depth")+"][allow_download]']").prop("checked",visibilitySettings.allowDownload);
+      if (visibilitySettings.showPreview != 'indeterminate')
+        jQuery("[name='visibility["+jQuery(this).attr("depth")+"][show_preview]']").prop("checked",visibilitySettings.showPreview=="checked");
+      if (visibilitySettings.allowDownload != 'indeterminate')
+        jQuery("[name='visibility["+jQuery(this).attr("depth")+"][allow_download]']").prop("checked",visibilitySettings.allowDownload=="checked");
     }
-  })
+  });
+  fillInSidebar();
 }
+changeAdvanced = function(visibilitySettings) {
+  for (ctr=0;ctr<visibilitySettings.length;ctr++){
+    var settingName = 'visibility[' + visibilitySettings[ctr].name + '][future_children_' + visibilitySettings[ctr].setting + ']';
+		jQuery("[name='" + settingName + "']").prop("checked",visibilitySettings[ctr].value);
+  }
+}   
 setToChecked = function(namesOfCheckboxes) {
   for (ctr=0;ctr<namesOfCheckboxes.length;ctr++){
     jQuery("[name='" + namesOfCheckboxes[ctr] + "']").prop("checked",true);
@@ -252,34 +296,38 @@ changeParentConfirm = function(title, questionText, onConfirmation, onCancel, co
   jQuery("#userConfirm").dialog(dialogConfig);
 }
 openAdvancedWindow = function(){
-  var selectedArray = [];
-  jQuery("li.ui-selected").each(function() {
-    selectedArray.push({
-      path: jQuery(this).attr("depth"), 
-      fullPath: jQuery(this).children("div")[2].innerHTML,
-      name:  jQuery(this).attr("name"),
-      type: jQuery(this).children("div")[1].innerHTML
-    }); 
-  });
-  if (selectedArray.length >0){
-    jQuery('#changeAll').remove();
-    var checkboxesHtml = "<div class='dialog_concept_tree'><ul class='visibility-list-table'><li id='dialog-header'><div class='visibility-name'>Name</div>";
-    checkboxesHtml += "<div class='visibility-type'>Type</div><div class='visibility-path'>Full Path</div>";
-    checkboxesHtml += "<div class='visibility-setting'>Show Name</div><div class='visibility-setting'>Show Meta</div>";
-    checkboxesHtml += "<div class='visibility-setting'>Show Preview</div><div class='visibility-setting'>Allow Download</div>";
-    checkboxesHtml += "<div class='visibility-setting'>Future Children Show Name</div><div class='visibility-setting'>Future Children Show Name</div>";
-    checkboxesHtml += "<div class='visibility-setting'>Future Children Show Preview</div><div class='visibility-setting'>Future Children Allow Download</div></li>";
-    checkboxesHtml += "</ul><div>Note: Concepts cannot have previews or downloads</div>";
-    checkboxesHtml += "<div>Saving will apply visibility changes to the following:</div>";
+  var conceptsInTree = jQuery("li.visibility-row").filter(function(){return jQuery(this).children("div")[1].innerHTML == 'Concept';})
+	if (conceptsInTree.length >0){
+    jQuery('#changeAdvanced').remove();
+    var visibilitySettings = ['show_name','show_meta','show_preview','allow_download'];
+    var checkboxesHtml = "<div class='dialog_concept_tree'>";
     checkboxesHtml += "<ul class='visibility-list-table'>";
-    for (ctr=0;ctr<selectedArray.length;ctr++){
-      checkboxesHtml += "<li class='visibility-row'><div class='visibility-name'>"+selectedArray[ctr].name+"</div>";
-      checkboxesHtml += "<div class='visibility-type'>"+selectedArray[ctr].type+"</div>";
-      checkboxesHtml += "<div class='visibility-path'>"+selectedArray[ctr].fullPath+"</div>";
-      //checkboxesHtml += "<div class='visibility-setting'><input type='checkbox' id='"+show-name' value='1'></div>";
-    }
+    checkboxesHtml += "<li id='dialog-header' class='nomarginnopad'>";
+    checkboxesHtml += "<div class='visibility-name nomarginnopad'><br/><br/><br/><br/>Name</div>";
+    checkboxesHtml += "<div class='visibility-type nomarginnopad'>&nbsp;</div>";
+    checkboxesHtml += "<div class='visibility-path nomarginnopad'><br/><br/><br/><br/>Full Path</div>";
+    checkboxesHtml += "<div class='visibility-setting nomarginnopad'><br/>Future Children Show Name</div>";
+    checkboxesHtml += "<div class='visibility-setting nomarginnopad'><br/>Future Children Show Metadata</div>";
+    checkboxesHtml += "<div class='visibility-setting nomarginnopad'>Future Resource Children Show Preview</div>";
+    checkboxesHtml += "<div class='visibility-setting nomarginnopad'>Future Resource Children Allow Download</div>";
+    checkboxesHtml += "</li>";
+    checkboxesHtml += "</ul>";//<div>Note: Future Concept children cannot have previews or downloads</div>";
+    //checkboxesHtml += "<div>Saving will apply visibility changes to the following:</div>";
+    checkboxesHtml += "<ul class='visibility-list-table'>";
+    for (ctr=0;ctr<conceptsInTree.length;ctr++){
+      checkboxesHtml += "<li class='dialog-visibility-row' path='" + jQuery(conceptsInTree[ctr]).attr('depth') +"'><div class='visibility-name'>"+jQuery(conceptsInTree[ctr]).attr('name')+"</div>";
+      checkboxesHtml += "<div class='visibility-type'>"+jQuery(conceptsInTree[ctr]).children("div")[1].innerHTML+"</div>";
+      checkboxesHtml += "<div class='visibility-path'>"+jQuery(conceptsInTree[ctr]).children("div")[2].innerHTML+"</div>";
+			for (var visibilityCtr = 0;visibilityCtr < visibilitySettings.length;visibilityCtr++) {
+        var checkboxFilter = jQuery("[name*='future_children_" + visibilitySettings[visibilityCtr] + "']");
+			  var checkboxSelector = jQuery(conceptsInTree[ctr]).find(checkboxFilter);
+		    var checked = jQuery(checkboxSelector).is(":checked")?' checked':'';
+			  checkboxesHtml += "<div class='visibility-setting'><input type='checkbox' name='future[" + jQuery(conceptsInTree[ctr]).attr('depth')+ "][" + visibilitySettings[visibilityCtr] + "]' value='" + jQuery(checkboxSelector).attr("value") + "'" + checked + "></div>";
+			}
+			checkboxesHtml += "</li>";
+		}
     checkboxesHtml += "</ul></div>";  
-    jQuery("body").append("<div id='changeAll' style='display:none;' title='Change Visibility for all selected:'><div>"+checkboxesHtml+"</div></div>");
+    jQuery("body").append("<div id='changeAdvanced' style='display:none;' title='Visibility for future children of concepts:'><div>"+checkboxesHtml+"</div></div>");
     var dialogConfig = {
       resizable: true,
       height:600,
@@ -287,25 +335,33 @@ openAdvancedWindow = function(){
       modal: true,
       buttons: {},
       close: function(){
-        jQuery( this ).dialog( "close" );
+        jQuery( this ).dialog( "destroy" );
+        jQuery('#changeAdvanced').remove();
       }
     };
     dialogConfig.buttons['Save'] = function() {
-      var visibilitySettings = [];
-      visibilitySettings.push({
-        showName: jQuery("#show-name").is(":checked"),
-        showMeta: jQuery("#show-meta").is(":checked"),
-        showPreview: jQuery("#show-preview").is(":checked"),
-        allowDownload: jQuery("#allow-download").is(":checked")
-      });
-      changeSelected(visibilitySettings[0]);
-      jQuery( this ).dialog( "close" );
+      var futureVisibility = [];
+			var visibilitySettings = ['show_name','show_meta','show_preview','allow_download'];
+			for (var viCtr=0;viCtr < visibilitySettings.length;viCtr++) {
+        var futureArray = jQuery("[name^='future'][name$='\\[" + visibilitySettings[viCtr] + "\\]']");
+        for (var ctr=0;ctr<futureArray.length;ctr++){
+			    futureVisibility.push({
+				    name:jQuery(futureArray[ctr]).closest("li").attr("path"),
+					  setting:visibilitySettings[viCtr],
+					  value:futureArray[ctr].checked
+				  });
+			  } 
+			}	     
+      changeAdvanced(futureVisibility);
+			jQuery("#exhibition-permission-form").submit();
     };
     dialogConfig.buttons['Cancel'] = function() {
-      jQuery( this ).dialog( "close" );
+			jQuery( this ).dialog( "destroy" );
+      jQuery('#changeAdvanced').remove();
     }
-    jQuery("#changeAll").dialog(dialogConfig);
-  }  //Ends (selectedArray.length >0){
+    jQuery("#changeAdvanced").dialog(dialogConfig);
+    jQuery("#changeAdvanced .visibility-list-table li:odd").addClass("light-background");
+  }
 }
 changeAllWindow = function(){
   var selectedArray = [];
@@ -325,14 +381,15 @@ changeAllWindow = function(){
     checkboxesHtml +=   "<div class='visibility-setting'>Allow Download</div>";
     checkboxesHtml += "</li>";
     checkboxesHtml += "<li class='visibility-row'>";
-    checkboxesHtml +=   "<div class='visibility-setting'><input type='checkbox' id='show-name' value='1'></div>";
-    checkboxesHtml +=   "<div class='visibility-setting'><input type='checkbox' id='show-meta' value='1'></div>";
-    checkboxesHtml +=   "<div class='visibility-setting'><input type='checkbox' id='show-preview' value='1'></div>";
-    checkboxesHtml +=   "<div class='visibility-setting'><input type='checkbox' id='allow-download' value='1'></div>";
+    checkboxesHtml +=   "<div class='visibility-setting'><input type='checkbox' id='future-children-show-name' value='1'></div>";
+    checkboxesHtml +=   "<div class='visibility-setting'><input type='checkbox' id='future-children-show-meta' value='1'></div>";
+    checkboxesHtml +=   "<div class='visibility-setting'><input type='checkbox' id='future-children-show-preview' value='1'></div>";
+    checkboxesHtml +=   "<div class='visibility-setting'><input type='checkbox' id='future-children-allow-download' value='1'></div>";
     checkboxesHtml += "</li>";
     checkboxesHtml += "</ul>";
-    checkboxesHtml += "<div>Note: Concepts cannot have previews or downloads</div>";
-    checkboxesHtml += "<div>Saving will apply visibility changes to the following:</div>";
+    checkboxesHtml += "<div>&bull; If 'Show Meta', 'Show Preview', or 'Allow Download' are selected to be turned on, 'Show Name' will also become checked for the selected objects</div>";
+    checkboxesHtml += "<div>&bull; Concepts cannot have previews or downloads</div>";
+    checkboxesHtml += "<div>&bull; Apply visibility changes to the following:</div>";
     checkboxesHtml += "<div class='dialog_concept_tree'>";
     for (ctr=0;ctr<selectedArray.length;ctr++){
       checkboxesHtml += "<div>"+selectedArray[ctr].name+"</div>";
@@ -349,20 +406,28 @@ changeAllWindow = function(){
         jQuery( this ).dialog( "close" );
      }
     };
-    dialogConfig.buttons['Save'] = function() {
+    dialogConfig.buttons['Apply'] = function() {
       var visibilitySettings = [];
-      visibilitySettings.push({
-        showName: jQuery("#show-name").is(":checked"),
-        showMeta: jQuery("#show-meta").is(":checked"),
-        showPreview: jQuery("#show-preview").is(":checked"),
-        allowDownload: jQuery("#allow-download").is(":checked")
-      });
-      changeSelected(visibilitySettings[0]);
+      var showNameDirect = jQuery("#future-children-show-name").is(":checked")?"checked":(jQuery("#future-children-show-name").prop("indeterminate")?"indeterminate":"off");
+      visibilitySettings = {
+        showMeta: jQuery("#future-children-show-meta").is(":checked")?"checked":(jQuery("#future-children-show-meta").prop("indeterminate")?"indeterminate":"off"),
+        showPreview: jQuery("#future-children-show-preview").is(":checked")?"checked":(jQuery("#future-children-show-preview").prop("indeterminate")?"indeterminate":"off"),
+        allowDownload: jQuery("#future-children-allow-download").is(":checked")?"checked":(jQuery("#future-children-allow-download").prop("indeterminate")?"indeterminate":"off")
+      };
+      visibilitySettings.showName = (
+        visibilitySettings.showMeta=="checked" ||
+        visibilitySettings.showPreview=="checked" ||
+        visibilitySettings.allowDownload =="checked" ||
+        showNameDirect=="checked") ? "checked" : showNameDirect;
+        
+      changeSelected(visibilitySettings);
       jQuery( this ).dialog( "close" );
     };
     dialogConfig.buttons['Cancel'] = function() {
       jQuery( this ).dialog( "close" );
     }
     jQuery("#changeAll").dialog(dialogConfig);
+    jQuery("#changeAll .dialog_concept_tree div:odd").addClass("light-background");
+    jQuery("#changeAll input").each(function(){this.indeterminate = true});
   }//Ends selectedArray.length>0
 }
