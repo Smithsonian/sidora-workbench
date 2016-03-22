@@ -21,6 +21,7 @@
   vertical-align:top;
   padding-bottom:10px;
 }
+.nomarginnopad { margin-top:0 !important; margin-bottom: 0 !important; padding-top: 0 !important; padding-bottom: 0 !important; }
 #selectable {width:100%; margin: 0; padding: 0; height:100%;} 
 .light-background {background-color: #eef;}
 ul.visibility-list-table {list-style:none; margin:0; padding:0; width:100%;display:table;}
