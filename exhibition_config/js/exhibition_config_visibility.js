@@ -387,8 +387,8 @@ changeAllWindow = function(){
     checkboxesHtml +=   "<div class='visibility-setting'><input type='checkbox' id='future-children-allow-download' value='1'></div>";
     checkboxesHtml += "</li>";
     checkboxesHtml += "</ul>";
-    checkboxesHtml += "<div>&bull; If 'Show Meta', 'Show Preview', or 'Allow Download' are selected to be turned on, 'Show Name' will also become checked for the selected objects</div>";
-    checkboxesHtml += "<div>&bull; Concepts cannot have previews or downloads</div>";
+    checkboxesHtml += "<div>&bull; Concepts cannot have previews or downloads.</div>";
+    checkboxesHtml += "<div>&bull; If 'Show Meta', 'Show Preview', or 'Allow Download' are selected to be turned on, 'Show Name' will also become checked for the selected objects including concepts.</div>";
     checkboxesHtml += "<div>&bull; Apply visibility changes to the following:</div>";
     checkboxesHtml += "<div class='dialog_concept_tree'>";
     for (ctr=0;ctr<selectedArray.length;ctr++){
