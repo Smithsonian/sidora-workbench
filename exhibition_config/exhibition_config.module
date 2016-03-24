@@ -651,10 +651,14 @@ function exhibition_config_form($form, $form_state){
   $links = unserialize($row['link_bar_links']);
   $full = '
 <a href="javascript:void(0);" onclick="togglePreviewLocation();" title="Moves the sample between the top and side of the page.  You can also move your mouse between the sections and drag to change the sizes when the sample is on the right.">Toggle Sample Location</a><br/>
-<a href="javascript:void(0);" onclick="togglePreviewEditLinks();" title="Turns off the \'Edit\' quick links to get a better view of the sample, or turns them back on to quickly jump to a section to edit">Toggle Placeholder Text and Links</a><br/>
+<a href="javascript:void(0);" onclick="togglePreviewEditLinks();" title="Turns off the \'Edit\' quick links to get a better view of the sample, or turns them back on to quickly jump to a section to edit">Toggle Placeholder Text and Links</a><br/>';
+  if ($row['is_available']) {
+    $full .= '
 <a href="javascript:void(0);" onclick="window.open(\''.
 variable_get('si_exhibition_website_location', '').
-$pid.'\')" title="Opens the current exhibit in a new window">Direct Link to Exhibition</a>
+$pid.'\')" title="Opens the current exhibit in a new window">Direct Link to Exhibition</a>';
+  }
+  $full .= '
 <script>
 window.sidora = {
   "exhibitionServerMain" : "'.variable_get('si_exhibition_website_location', '').'",
@@ -1412,16 +1416,19 @@ for(var i=0, len=els.length; i<len; ++i){
     '#default_value' => $row['is_available'],
     '#description' => t('This must be checked to view the exhibition, otherwise the exhibition is hidden (default).'),
   );
-  $form['visibility_link'] = array(
-    '#markup' => t('<p> <a target="_blank" href="'.base_path().'exhibition_config/visibility/'.$pid.'">Configure Visibility</a> (which concepts and resources are shown)</p>'),
-  );
-  $customUrl = $row['custom_url'];
-  if (!empty($customUrl)){
-    $savedUrlFullPath = variable_get('si_exhibition_friendly_website_location','').$customUrl;
-    $customUrl = 'Current Saved Custom Url:<br/> <a target="_blank" href="'.$savedUrlFullPath.'">'.$savedUrlFullPath.'</a>';
-  }else{
-    $savedUrlFullPath = variable_get('si_exhibition_website_location', '').$pid;
-    $customUrl = 'Current Url: <div id="highlight-to-copy-exhibition-url"><a target="_blank" href="'.$savedUrlFullPath.'">'.$savedUrlFullPath.'</a></div>';
+    $form['visibility_link'] = array(
+      '#markup' => t('<p> <a target="_blank" href="'.base_path().'exhibition_config/visibility/'.$pid.'">Configure Visibility</a> (which concepts and resources are shown)</p>'),
+    );
+  $customUrl = '';
+  if ($row['is_available']) {
+    $customUrl = $row['custom_url'];
+    if (!empty($customUrl)){
+      $savedUrlFullPath = variable_get('si_exhibition_friendly_website_location','').$customUrl;
+      $customUrl = 'Current Saved Custom Url:<br/> <a target="_blank" href="'.$savedUrlFullPath.'">'.$savedUrlFullPath.'</a>';
+    }else{
+      $savedUrlFullPath = variable_get('si_exhibition_website_location', '').$pid;
+      $customUrl = 'Current Url: <div id="highlight-to-copy-exhibition-url"><a target="_blank" href="'.$savedUrlFullPath.'">'.$savedUrlFullPath.'</a></div>';
+    }
   }
   $form['custom_url'] = array(
     '#type' => 'textfield',
