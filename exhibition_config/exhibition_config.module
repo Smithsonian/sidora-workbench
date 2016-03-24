@@ -1881,10 +1881,10 @@ function exhibition_config_get_pid_tree($pid,&$pid_list = array(),$parent = '',$
     $child['relationship'] = $relationship . "\\" . $child['title'];
     $child['relationship_pid'] = $relationship_pid . "/" . $child['pid'];
     if ($child['type'] == 'Concept') {
-		  if (!(in_array($child['pid'],$pid_list))){
+      if (!(in_array($child['pid'],$pid_list))){
         $to_return['children'][] = exhibition_config_get_pid_tree($child['pid'],$pid_list,$relationship,$relationship_pid);
       }
-		}else{
+    }else{
     $child['show_name'] = False;
     $child['show_meta'] = False;
     $child['show_preview'] = False;
@@ -1895,77 +1895,79 @@ function exhibition_config_get_pid_tree($pid,&$pid_list = array(),$parent = '',$
   return $to_return;
 }
 function exhibition_config_generate_checkboxes($branch,&$rows,$visibility_settings,$path){
-	if (isset($branch) && sizeof($branch)) {
-	  foreach ($branch as $child_array) {
-	    $tree_depth = substr_count($path,'/');
-	    $indent = '';
-	    for ($ctr=0;$ctr < $tree_depth; $ctr++) {
-	      $indent .= '<span class="tree-indent ui-selectee"></span>';
-	    }	
-	    if ($child_array['type'] == 'Resource') {
-	      //$indent .= '<span class="tree-indent ui-selectee"></span>';
-	    }
-		  if ($path == '') {
-		    $array_index = $child_array['pid'];
-		  }else{	
-		    $array_index = $path;
-		  }	
-		  if ($tree_depth > 0) $array_index = $path.$child_array['pid'];
-	    $html = '<li class="visibility-row full-browser" id="' . $child_array['pid'] . '" depth="' . $array_index . '" name="' . $child_array['title'] . '"><div class="visibility-name">'.$indent.'<span class ="' . $child_array['type'] . ' ui-selectee"></span>' . $child_array['title'].'</div><div class="visibility-type">'.$child_array['type'].'</div><div class="visibility-path">'.$child_array['relationship'].'</div>';
- 	    $checkboxes_array = array();
-	    foreach ($visibility_settings as $setting => $name) {
-		    $checkboxes_array[$setting] = '';
-	    }	
-		  $rows[$array_index] = array(
-		    'pid' => $child_array['pid'],
-		    'type' => $child_array['type'],
-		    'label' => $child_array['title'],
-		    'model' =>  (($child_array['type'] == 'Resource')?$child_array['model']:''),
-		    'prefix' => $html,
-		    'suffix' => '</li>',
-		    'checkboxes' => $checkboxes_array);
-	    if ((isset($child_array['children'])) && (sizeof($child_array['children']) > 0)) {
-			  $rows[$array_index]['suffix'] .= '<ul class="visibility-list-table" id="' . $array_index . '">';
-			  exhibition_config_generate_checkboxes($child_array['children'],$rows,$visibility_settings,$array_index.'/');
-		    $key = end(array_keys($rows));
-			  $rows[$key]['suffix'] .= '</ul>';
-	    }
+  if (isset($branch) && sizeof($branch)) {
+    foreach ($branch as $child_array) {
+      $tree_depth = substr_count($path,'/');
+      $indent = '';
+      for ($ctr=0;$ctr < $tree_depth; $ctr++) {
+        $indent .= '<span class="tree-indent ui-selectee"></span>';
+      } 
+      if ($child_array['type'] == 'Resource') {
+        //$indent .= '<span class="tree-indent ui-selectee"></span>';
+      }
+      if ($path == '') {
+        $array_index = $child_array['pid'];
+      }else{  
+        $array_index = $path;
+      } 
+      if ($tree_depth > 0) $array_index = $path.$child_array['pid'];
+      $html = '<li class="visibility-row full-browser" id="' . $child_array['pid'] . '" depth="' . $array_index . '" name="' . $child_array['title'] . '"><div class="visibility-name">'.$indent.'<span class ="' . $child_array['type'] . ' ui-selectee"></span>' . $child_array['title'].'</div><div class="visibility-type">'.$child_array['type'].'</div><div class="visibility-path">'.$child_array['relationship'].'</div>';
+      $checkboxes_array = array();
+      foreach ($visibility_settings as $setting => $name) {
+        $checkboxes_array[$setting] = '';
+      } 
+      $rows[$array_index] = array(
+        'pid' => $child_array['pid'],
+        'type' => $child_array['type'],
+        'label' => $child_array['title'],
+        'model' =>  (($child_array['type'] == 'Resource')?$child_array['model']:''),
+        'prefix' => $html,
+        'suffix' => '</li>',
+        'checkboxes' => $checkboxes_array);
+      if ((isset($child_array['children'])) && (sizeof($child_array['children']) > 0)) {
+        $rows[$array_index]['suffix'] .= '<ul class="visibility-list-table" id="' . $array_index . '">';
+        exhibition_config_generate_checkboxes($child_array['children'],$rows,$visibility_settings,$array_index.'/');
+        $key = end(array_keys($rows));
+        $rows[$key]['suffix'] .= '</ul>';
+      }
     } 
-  }	
+  } 
 }
 function exhibition_config_flatten_tree($branch, &$rows,$visibility_settings,$path) {
-	if (isset($branch) && sizeof($branch) && !empty($branch)) {
+  if (isset($branch) && sizeof($branch) && !empty($branch)) {
     $resource_visibility_settings = array('show_name','show_meta','show_preview','allow_download');
-	  $concept_visibility_settings = array('show_name','show_meta','future_children_show_name','future_children_show_meta','future_children_show_preview','future_children_allow_download');
-	  foreach ($branch as $child_array) {
-	    if (sizeof($child_array)) {
-			  $tree_depth = substr_count($path,'/');
-		    if ($path == '') {
-		      $array_index = $child_array['pid'];
-		    }else{	
-		      $array_index = $path;
-		    }	
-		    if ($tree_depth > 0) $array_index = $path.$child_array['pid'];
-		    $rows[$array_index] = array(
-		       'pid' => $child_array['pid'],
-		       'type' => $child_array['type']);
-	      foreach ($visibility_settings as $setting => $name) {
-			    if (($child_array['type'] == 'Concept') && (in_array($setting,$concept_visibility_settings))) {
-		        $visibility_value = (isset($child_array[$setting]))?($child_array[$setting]):'';
-		        $rows[$array_index][$setting] = $visibility_value;
-					}
-			    if (($child_array['type'] == 'Resource') && (in_array($setting,$resource_visibility_settings))) {
-		        $visibility_value = (isset($child_array[$setting]))?($child_array[$setting]):'';
-		        $rows[$array_index][$setting] = $visibility_value;
-					}
-				}	
-	    }	
-	    if ((isset($child_array['children'])) && (sizeof($child_array['children']) > 0)) {
-			  exhibition_config_flatten_tree($child_array['children'],$rows,$visibility_settings,$array_index.'/');
-	    }
+    $concept_visibility_settings = array('show_name','show_meta','future_children_show_name','future_children_show_meta','future_children_show_preview','future_children_allow_download');
+    foreach ($branch as $child_array) {
+      if (sizeof($child_array)) {
+        $tree_depth = substr_count($path,'/');
+        if ($path == '') {
+          $array_index = $child_array['pid'];
+        }else{  
+          $array_index = $path;
+        } 
+        if ($tree_depth > 1) $array_index = $path.$child_array['pid'];
+        //if (empty($child_array['type']){
+        //}
+        $rows[$array_index] = array(
+           'pid' => $child_array['pid'],
+           'type' => $child_array['type']);
+        foreach ($visibility_settings as $setting => $name) {
+          if (($child_array['type'] == 'Concept') && (in_array($setting,$concept_visibility_settings))) {
+            $visibility_value = (isset($child_array[$setting]))?($child_array[$setting]):'';
+            $rows[$array_index][$setting] = $visibility_value;
+          }
+          if (($child_array['type'] == 'Resource') && (in_array($setting,$resource_visibility_settings))) {
+            $visibility_value = (isset($child_array[$setting]))?($child_array[$setting]):'';
+            $rows[$array_index][$setting] = $visibility_value;
+          }
+        } 
+      } 
+      if ((isset($child_array['children'])) && (sizeof($child_array['children']) > 0)) {
+        exhibition_config_flatten_tree($child_array['children'],$rows,$visibility_settings,$array_index.'/');
+      }
     }
-	}
-}	
+  }
+} 
 function exhibition_permission_main_form($pid){
   $pid = urldecode($pid);
   return drupal_get_form('exhibition_permission_form',$pid);
@@ -1977,98 +1979,98 @@ function exhibition_permission_form($form, $form_state){
     drupal_set_message(t('Your user is not allowed to change the visibility of this object.  To change the visibility, the object must be viewable in Fedora by your user, and you must either be the owner of the object or have the "Exhibition Configuration Administrator" role.'), 'error');
     return;
   }
-	$visibility_settings = array(
-	'show_name' => 'Show Name',
-	'show_meta' => 'Show Meta',
-	'show_preview' => 'Show Preview',
-	'allow_download' => 'Show Download',
-	'future_children_show_name' => 'Show Name',
-	'future_children_show_meta' => 'Show Meta',
-	'future_children_show_preview' => 'Show Preview',
-	'future_children_allow_download' => 'Show Download');
+  $visibility_settings = array(
+  'show_name' => 'Show Name',
+  'show_meta' => 'Show Meta',
+  'show_preview' => 'Show Preview',
+  'allow_download' => 'Show Download',
+  'future_children_show_name' => 'Show Name',
+  'future_children_show_meta' => 'Show Meta',
+  'future_children_show_preview' => 'Show Preview',
+  'future_children_allow_download' => 'Show Download');
   $saved_visibility = exhibition_config_load_visibility($pid);
   $existing_visibility = array();
   //flatten_tree takes an array of children, but the root object is not a child of anything, so pop it in an array
-	exhibition_config_flatten_tree(array($saved_visibility),$existing_visibility,$visibility_settings,$pid);
+  exhibition_config_flatten_tree(array($saved_visibility),$existing_visibility,$visibility_settings,$pid);
   $modulepath = drupal_get_path('module', 'exhibition_config');
-	drupal_add_library('system', 'ui.resizable');
+  drupal_add_library('system', 'ui.resizable');
   drupal_add_library('system', 'ui.selectable');
   drupal_add_library('system', 'ui.accordion');
   drupal_add_library('system', 'ui.dialog');
   drupal_add_css($modulepath . '/css/exhibition_visibility.css',array('weight' => '1000000', 'group' => CSS_THEME));
-	$pid_tree = array(
-	  '0' => exhibition_config_get_pid_tree($pid)
-	);
-	$tree_html = '<div id="concept_tree">';
+  $pid_tree = array(
+    '0' => exhibition_config_get_pid_tree($pid)
+  );
+  $tree_html = '<div id="concept_tree">';
   $tree_html .= '<div id="selectable"><ul class="visibility-list-table"><li id="header"><div class="visibility-name">Name</div><div class="visibility-type">Type</div><div class="visibility-path">Full Path</div><div class="visibility-setting">Show Name</div><div class="visibility-setting">Show Metadata</div><div class="visibility-setting">Show Preview</div><div class="visibility-setting">Show Download</div></li>';
   $resource_visibility_only = array('show_preview','allow_download');
-	$concept_visibility_only = array('future_children_show_name','future_children_show_meta','future_children_show_preview','future_children_allow_download');
-	$checkbox_rows = array();
-	exhibition_config_generate_checkboxes($pid_tree,$checkbox_rows,$visibility_settings,$pid);
+  $concept_visibility_only = array('future_children_show_name','future_children_show_meta','future_children_show_preview','future_children_allow_download');
+  $checkbox_rows = array();
+  exhibition_config_generate_checkboxes($pid_tree,$checkbox_rows,$visibility_settings,$pid);
   $form['visibility']['#tree'] = 'TRUE';
-	foreach($checkbox_rows as $key => $row) {
+  foreach($checkbox_rows as $key => $row) {
     $form['visibility'][$key]['#tree'] = 'TRUE';
     $depth = $key;
-		foreach($row['checkboxes'] as $checkbox_id => $checkbox_value) {
-			if ($row['type'] == 'Concept') {
-			  if (in_array($checkbox_id,$resource_visibility_only)) {
-		      $form['visibility'][$key][$checkbox_id] = array(
-			     '#type' => 'markup',
-		       '#prefix' => $tree_html.$row['prefix'].'<div class="empty-visibility-setting">',
-			     '#suffix' => '</div>',
-			     '#access' => 'FALSE'
-			    );
-		    }elseif (in_array($checkbox_id,$concept_visibility_only)) {	
-			    $form['visibility'][$depth][$checkbox_id] = array(
-				    '#type' => 'checkbox',
-		        '#prefix' => $tree_html.$row['prefix'].'<div class="hidden-visibility-setting">',
-			      '#default_value' => (isset($existing_visibility[$depth][$checkbox_id]))?($existing_visibility[$depth][$checkbox_id]):'',
-			      '#suffix' => '</div>',
-				  );
-			  }else{	
-				  $form['visibility'][$depth][$checkbox_id] = array(
-			     '#type' => 'checkbox',
-		       '#prefix' => $tree_html.$row['prefix'].'<div class="visibility-setting">',
-			     '#default_value' => (isset($existing_visibility[$depth][$checkbox_id]))?($existing_visibility[$depth][$checkbox_id]):'',
-			     '#suffix' => '</div>',
-			     '#attributes' => array(
-			       'label' => $row['label'],
-			       'pid' => $row['pid'],
-					   'path' => $depth,
-					   'model' => $row['model'],
-					   'type' => $row['type']
-			      ),
-			    );
-			  }	
-			}else{
-			  if (in_array($checkbox_id,$concept_visibility_only)) {
-		      $form['visibility'][$key][$checkbox_id] = array(
-			     '#type' => 'markup',
-		       '#prefix' => $tree_html.$row['prefix'].'<div class="empty-visibility-setting">',
-			     '#suffix' => '</div>',
-			     '#access' => 'FALSE'
-			    );
-			  }else{
-				  $form['visibility'][$depth][$checkbox_id] = array(
-			     '#type' => 'checkbox',
-		       '#prefix' => $tree_html.$row['prefix'].'<div class="visibility-setting">',
-			     '#default_value' => (isset($existing_visibility[$depth][$checkbox_id]))?($existing_visibility[$depth][$checkbox_id]):'',
-			     '#suffix' => '</div>',
-			     '#attributes' => array(
-			       'label' => $row['label'],
-			       'pid' => $row['pid'],
-					   'path' => $depth,
-					   'model' => $row['model'],
-					   'type' => $row['type']
-			      ),
-			    );
-				}
-			}	 
-			$tree_html = '';
-			$row['prefix'] = '';
-		}
-		$tree_html = $row['suffix'];
-	}		
+    foreach($row['checkboxes'] as $checkbox_id => $checkbox_value) {
+      if ($row['type'] == 'Concept') {
+        if (in_array($checkbox_id,$resource_visibility_only)) {
+          $form['visibility'][$key][$checkbox_id] = array(
+           '#type' => 'markup',
+           '#prefix' => $tree_html.$row['prefix'].'<div class="empty-visibility-setting">',
+           '#suffix' => '</div>',
+           '#access' => 'FALSE'
+          );
+        }elseif (in_array($checkbox_id,$concept_visibility_only)) { 
+          $form['visibility'][$depth][$checkbox_id] = array(
+            '#type' => 'checkbox',
+            '#prefix' => $tree_html.$row['prefix'].'<div class="hidden-visibility-setting">',
+            '#default_value' => (isset($existing_visibility[$depth][$checkbox_id]))?($existing_visibility[$depth][$checkbox_id]):'',
+            '#suffix' => '</div>',
+          );
+        }else{  
+          $form['visibility'][$depth][$checkbox_id] = array(
+           '#type' => 'checkbox',
+           '#prefix' => $tree_html.$row['prefix'].'<div class="visibility-setting">',
+           '#default_value' => (isset($existing_visibility[$depth][$checkbox_id]))?($existing_visibility[$depth][$checkbox_id]):'',
+           '#suffix' => '</div>',
+           '#attributes' => array(
+             'label' => $row['label'],
+             'pid' => $row['pid'],
+             'path' => $depth,
+             'model' => $row['model'],
+             'type' => $row['type']
+            ),
+          );
+        } 
+      }else{
+        if (in_array($checkbox_id,$concept_visibility_only)) {
+          $form['visibility'][$key][$checkbox_id] = array(
+           '#type' => 'markup',
+           '#prefix' => $tree_html.$row['prefix'].'<div class="empty-visibility-setting">',
+           '#suffix' => '</div>',
+           '#access' => 'FALSE'
+          );
+        }else{
+          $form['visibility'][$depth][$checkbox_id] = array(
+           '#type' => 'checkbox',
+           '#prefix' => $tree_html.$row['prefix'].'<div class="visibility-setting">',
+           '#default_value' => (isset($existing_visibility[$depth][$checkbox_id]))?($existing_visibility[$depth][$checkbox_id]):'',
+           '#suffix' => '</div>',
+           '#attributes' => array(
+             'label' => $row['label'],
+             'pid' => $row['pid'],
+             'path' => $depth,
+             'model' => $row['model'],
+             'type' => $row['type']
+            ),
+          );
+        }
+      }  
+      $tree_html = '';
+      $row['prefix'] = '';
+    }
+    $tree_html = $row['suffix'];
+  }   
   $tree_html = '</ul></div>';
   $tree_html .= '<div id="action-bar"><div class="action-button"><a href="javascript:void(0);" class="button" id="change_all">Change All Selected</a></div><div class="action-button"><a href="javascript:void(0);" class="button" id="open-advanced">Advanced</a></div><div class="action-button">';
   $post_html = '</div><div class="action-button"><a href="javascript:void(0);" class="button" id="cancel-button">Cancel</a></div></div>';
@@ -2243,6 +2245,7 @@ function exhibition_config_load_visibility($pid) {
   }
   return array(
     "pid" => $pid,
+    "type" => 'Concept',
     "show_name" => FALSE,
     "show_meta" => FALSE,
   );
@@ -2555,58 +2558,58 @@ function exhibition_config_filter_visibility_show_name($vis_obj) {
 
 function exhibition_permission_form_submit($form, &$form_state) {
   $root_pid = $form['pid']['#value'];
-	$post_array = array();
+  $post_array = array();
   $resource_visibility_only = array('show_preview','allow_download');
-	$concept_visibility_only = array('future_children_show_name','future_children_show_meta','future_children_show_preview','future_children_allow_download');
-	foreach($form['visibility'] as $object_key => $object_visibility) {
-	  if ((is_array($object_visibility)) && (array_key_exists('show_name',$object_visibility))) {
-			$pid = $object_visibility['show_name']['#attributes']['pid'];
-			$depth = $object_visibility['show_name']['#attributes']['path'];
-			$pid_result = array(
-				 'pid' => $pid,
-				 'label' => $object_visibility['show_name']['#attributes']['label'],
-				 'model' => $object_visibility['show_name']['#attributes']['model'],
-				 'type' => $object_visibility['show_name']['#attributes']['type'],
-			);
-		  foreach($object_visibility as $visibility_key => $visibility_value) {
-			  if ((is_array($visibility_value)) && ((array_key_exists('#type',$visibility_value)) && ($visibility_value['#type'] == 'checkbox'))) {
-					$pid_result[$visibility_key] = $visibility_value['#value'];
-				}
-			}
-		 $post_array[$depth] = $pid_result; 
-		}		
-	}
-	$visibility_settings_array = array();
-	foreach($post_array as $key => $value) {
-	  update_visibility_pid($visibility_settings_array,$key,$value);
-	}
+  $concept_visibility_only = array('future_children_show_name','future_children_show_meta','future_children_show_preview','future_children_allow_download');
+  foreach($form['visibility'] as $object_key => $object_visibility) {
+    if ((is_array($object_visibility)) && (array_key_exists('show_name',$object_visibility))) {
+      $pid = $object_visibility['show_name']['#attributes']['pid'];
+      $depth = $object_visibility['show_name']['#attributes']['path'];
+      $pid_result = array(
+         'pid' => $pid,
+         'label' => $object_visibility['show_name']['#attributes']['label'],
+         'model' => $object_visibility['show_name']['#attributes']['model'],
+         'type' => $object_visibility['show_name']['#attributes']['type'],
+      );
+      foreach($object_visibility as $visibility_key => $visibility_value) {
+        if ((is_array($visibility_value)) && ((array_key_exists('#type',$visibility_value)) && ($visibility_value['#type'] == 'checkbox'))) {
+          $pid_result[$visibility_key] = $visibility_value['#value'];
+        }
+      }
+     $post_array[$depth] = $pid_result; 
+    }   
+  }
+  $visibility_settings_array = array();
+  foreach($post_array as $key => $value) {
+    update_visibility_pid($visibility_settings_array,$key,$value);
+  }
   exhibition_config_save_visibility($root_pid,$visibility_settings_array);
 }
 function update_visibility_pid(&$visibility_array,$object_pid,$visibility_value) {
   if (substr_count($object_pid,'/') > 0) {
-	  $key_array = explode('/',$object_pid,-1);
-	  $object_pid = implode('/',$key_array);
-	  $children_branch = &return_branch_by_address($visibility_array,$object_pid,'/');
-	  array_push($children_branch,$visibility_value);
-	}else{
-	  $visibility_value['children'] = array();
-	  $visibility_array[] = $visibility_value;
-	}
-}	 
+    $key_array = explode('/',$object_pid,-1);
+    $object_pid = implode('/',$key_array);
+    $children_branch = &return_branch_by_address($visibility_array,$object_pid,'/');
+    array_push($children_branch,$visibility_value);
+  }else{
+    $visibility_value['children'] = array();
+    $visibility_array[] = $visibility_value;
+  }
+}  
 function &return_branch_by_address (&$parent_array, $child_address, $addressSeparator = '/') {
   $parts = explode($addressSeparator, $child_address);
   $thisLevel = array_shift($parts);
   foreach ($parent_array as &$branch) {
-		if ((isset($branch['pid'])) && ($branch['pid'] == $thisLevel)) {
+    if ((isset($branch['pid'])) && ($branch['pid'] == $thisLevel)) {
       if ($parts) {
         $child_branch_address = &return_branch_by_address($branch['children'], implode($addressSeparator, $parts));
-				return $child_branch_address;
+        return $child_branch_address;
       } else {
         if (!(isset($branch['children']))) {
-					$branch['children'] = array();
-				}
-			  return $branch['children'];
+          $branch['children'] = array();
+        }
+        return $branch['children'];
       }
     }
-	}
+  }
 }
