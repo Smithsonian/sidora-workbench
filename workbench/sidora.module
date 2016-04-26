@@ -4860,7 +4860,6 @@ function sidora_move($move_from_id, $copy_to_id, $pid, $show_output = TRUE){
   sidora_release_lock($copy_to_id);
   sidora_release_lock($move_from_id);
   return $unassociated;
-  //if ($sidora_debug) print 'Move:'.$pid." from:".$move_from_id." to:".$copy_to_id;
 }
 /**
  * Return the codebook pids that have been associated with this item (hasCodebook)
