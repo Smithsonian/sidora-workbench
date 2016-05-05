@@ -1020,7 +1020,6 @@ $(function(){
   submit = false;
   $("body").css("padding-top","0px");
 jQuery("#edit-is-available").unbind(\'click\').click(function(e){
-  console.log("checked"+jQuery("#edit-is-available").prop("checked"));
   if (jQuery("#edit-is-available").prop("checked")) {
     var info = 
  ' . variable_get('si_exhibition_agree_before_allowed_public_json', '{}') . '
@@ -1056,9 +1055,7 @@ jQuery("#edit-is-available").unbind(\'click\').click(function(e){
               for(questionIndex=0;questionIndex<info.questions.length;questionIndex++){
                 var userAnswer = jQuery("#AcceptThis").find("input[name=\'Q"+questionIndex+"\']:checked").val();
                 for (possibleAnswerIndex = 0; possibleAnswerIndex < info.questions[questionIndex].answers.length; possibleAnswerIndex++){
-                  console.log("checking answer:"+info.questions[questionIndex].answers[possibleAnswerIndex].text+" === "+userAnswer);
                   if (info.questions[questionIndex].answers[possibleAnswerIndex].text == userAnswer){
-                    console.log("found answer");
                      var feedback = info.questions[questionIndex].answers[possibleAnswerIndex][\'htmlFeedbackOnThisSelection\'];
                      var currCanContinue = info.questions[questionIndex].answers[possibleAnswerIndex][\'canContinue\'];
                      canContinue = currCanContinue && canContinue;
@@ -1101,7 +1098,6 @@ jQuery("#edit-is-available").unbind(\'click\').click(function(e){
     });
 
     e.preventDefault();
-    console.log("preventing default");
   }
 })
 
