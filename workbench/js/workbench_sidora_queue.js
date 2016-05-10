@@ -131,16 +131,17 @@ SidoraQueue.prototype.Done = function(completedItem, ajaxReturn){
         sidora.util.refreshConceptChildrenNumber(completedItem.pidsBeingProcessed[i]);
       }
       if (completedItem.pidsBeingProcessed.length == '2') sidora.util.refreshNodeByID(completedItem.pidsBeingProcessed);
-     //If there was an update to the Pid user is currently looking at then anything may have changed.  Reload it.
+      //If there was an update to the Pid user is currently looking at then anything may have changed.  Reload it.
       if (sidora.concept.GetPid() == completedItem.pidsBeingProcessed[i]){
-       sidora.concept.LoadContent();
+        sidora.concept.LoadContent();
         if (processedResourceArray.length > 1){
           var processedResourceCountArray = processedResourceArray[1].split(' of ');
-          if ((processedResourceCountArray.length > 1) && (processedResourceCountArray[0] == processedResourceCountArray[1])){  // trying to get the last item of the current queue
+          if ((processedResourceCountArray.length > 1) && (processedResourceCountArray[0] == processedResourceCountArray[1])){  
+            // trying to get the last item of the current queue
             writeCookie('Drupal.selectResource','1','30');
           }
         } 
-      }else if (completedItem.pidsBeingProcessed[i] == 'edit_metadata'){
+      }else if (completedItem.pidsBeingProcessed[i] == 'EditMetadata'){
         sidora.concept.LoadContent();
       } 
     }
