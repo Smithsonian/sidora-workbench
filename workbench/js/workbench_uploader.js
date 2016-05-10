@@ -135,7 +135,12 @@ window.startBatch = function(){
       var ccSuccess = oldSuccess;
       var onSuccess = function(){console.log("FINISH! "+friendlyName);};
       if (currentInfo.formname == 'edit_metadata'){
-        var friendlyName = " Edit MetaData of Resource:"+(i+1)+" of "+window.batchRequests.length;
+        var type = "Resource";
+        //Check to see if edit metadata of current concept
+        if (window.location.href.substring(window.location.href.lastIndexOf("/")+1) == window.parent.sidora.concept.GetPid()) {
+          type = "Concept";
+        }
+        var friendlyName = " Edit MetaData of "+type+":"+(i+1)+" of "+window.batchRequests.length;
         sidora.queue.RequestPost(friendlyName,ajaxSettings.url,postData, onSuccess, function(){}, currentInfo.parentPid);
       }else{
         var friendlyName = " Create "+currentInfo.formname+" Resource:"+(i+1)+" of "+window.batchRequests.length;
