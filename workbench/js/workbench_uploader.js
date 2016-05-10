@@ -143,7 +143,7 @@ window.startBatch = function(){
           type = "Concept";
         }
         var friendlyName = " Edit MetaData of "+type+":"+(i+1)+" of "+window.batchRequests.length;
-        sidora.queue.RequestPost(friendlyName,ajaxSettings.url,postData, onSuccess, function(){}, "EditMetadata");
+        sidora.queue.RequestPost(friendlyName,ajaxSettings.url,postData, onSuccess, function(){}, ajaxSettings.pidsOfInterest);
       }else{
         var friendlyName = " Create "+currentInfo.formname+" Resource:"+(i+1)+" of "+window.batchRequests.length;
         sidora.queue.RequestPost(friendlyName,window.location.href,postData, onSuccess, function(){}, currentInfo.parentPid);
@@ -288,7 +288,8 @@ window.prepIslandoraFormForSubmit = function(formName, onSuccessfulFormSubmit, o
            jQuery(".theoverlay").remove();
          }
       },
-      dataType: "text"
+      dataType: "text",
+      pidsOfInterest: jQuery("#"+formName).attr("name")
     });//ends ajax settings
   }
   window.batchRequests.push(ajaxSettings);
