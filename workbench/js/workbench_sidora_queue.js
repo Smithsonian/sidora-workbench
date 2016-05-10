@@ -126,8 +126,10 @@ SidoraQueue.prototype.Done = function(completedItem, ajaxReturn){
       if (sidora.resources.individualPanel.resourceOfInterest != null && sidora.resources.individualPanel.resourceOfInterest.pid == completedItem.pidsBeingProcessed[i]){
         sidora.resources.individualPanel.LoadRelationships();
       }
-			//Update the tree counts if needed
-      sidora.util.refreshConceptChildrenNumber(completedItem.pidsBeingProcessed[i]);
+			//Update the tree counts if needed, only valid pids
+      if (completedItem.pidsBeingProcessed.indexOf(":") != -1) {
+        sidora.util.refreshConceptChildrenNumber(completedItem.pidsBeingProcessed[i]);
+      }
       if (completedItem.pidsBeingProcessed.length == '2') sidora.util.refreshNodeByID(completedItem.pidsBeingProcessed);
      //If there was an update to the Pid user is currently looking at then anything may have changed.  Reload it.
       if (sidora.concept.GetPid() == completedItem.pidsBeingProcessed[i]){
@@ -144,7 +146,7 @@ SidoraQueue.prototype.Done = function(completedItem, ajaxReturn){
     }
 	}
   console.log("done function of queue:"+completedItem.userFriendlyName);
- }
+}
 SidoraQueue.prototype.NotificationWindow = {"showingError":false};
 SidoraQueue.prototype.NotificationWindow.MouseIsInside = false;
 SidoraQueue.prototype.NotificationWindow.SecondsOnScreen = 4;

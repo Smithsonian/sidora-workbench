@@ -530,6 +530,7 @@ function sidora_resource_viewer($pid) {
   if (empty($viewer_config)){
     print t('The Administrator has not chosen a viewer for this combination of resource and dataset type.  You can still download the object through the View > Download option.');
     print t('<br/>The possible models that this resource uses:');
+    $models = $obj->models;
     print '<br/>'.implode('<br/>',$models);
     //Next line is for on-the-fly checking and should be left in for when problems happen in production.
     //Do an "inspect element" or just view source to see this data
