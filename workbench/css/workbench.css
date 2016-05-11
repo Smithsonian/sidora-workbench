@@ -113,6 +113,7 @@ li a input {
   top:0;
   left:300px;
   width:500px;
+	border-left:none;
 }
 #workbench-menu{
   position:relative;
@@ -149,7 +150,7 @@ li a input {
 .dataTables_wrapper{
   width:50%;
 }
-.ui-resizable-w{
+.ui-resizable-w, .ui-resizable-e{
   width:20px;
 }
 #resourceInformationPane {
@@ -349,3 +350,7 @@ Table paging
 #sidora-resource-sort{
   display: inline-block;
 }
+#fjt-holder {
+  overflow:auto;
+	height:inherit;
+}	
