@@ -1925,6 +1925,7 @@ function sidora_settings_object($ignore_list = array()){
   $starts_with[] = 'resource_viewer_viewer_';
   $starts_with[] = 'islandora_';
   $starts_with[] = 'sidora_';
+  $starts_with[] = 'si_exhibition_';
   $exact_match = array();
   $exact_match[] = 'si_exhibition_website_location';
   $exact_match[] = 'sidora_ontology_json';
