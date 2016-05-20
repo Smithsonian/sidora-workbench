@@ -79,6 +79,13 @@ function exhibition_config_menu(){
     'description' => t('JSON Visibility data'),
     'type' => MENU_CALLBACK,
   );
+	$items['exhibition_config/preview_warning'] = array(
+	  'title' => t('Visibility Settings Info'),
+		'page callback' => 'exhibition_config_info',
+		'access callback' => TRUE,
+		'description' => t('Visibility Preview Warning'),
+		'type' => MENU_CALLBACK,
+	);	
   return $items;
 }
 /*
@@ -2091,8 +2098,8 @@ function exhibition_permission_form($form, $form_state){
     '#value' => 'Save',
     '#prefix' => $tree_html,
     '#suffix' => $post_html,
-  );    
-  $form['holder'] = array(
+  ); 
+	$form['holder'] = array(
     '#prefix' => '<div class="scroller-holder">',
     '#suffix' => '</div>',
     'shown' => array(
@@ -2565,8 +2572,8 @@ function exhibition_config_filter_visibility_show_name($vis_obj) {
   }
   return $to_return;
 }
-
 function exhibition_permission_form_submit($form, &$form_state) {
+  error_log("\nIn submit :","3",DRUPAL_ROOT.'/'.drupal_get_path('module','exhibition_config')."/errorlog.txt");
   $root_pid = $form['pid']['#value'];
   $post_array = array();
   $resource_visibility_only = array('show_preview','allow_download');
@@ -2623,3 +2630,6 @@ function &return_branch_by_address (&$parent_array, $child_address, $addressSepa
     }
   }
 }
+function exhibition_config_info () {
+  return drupal_json_output(variable_get('si_exhibition_preview_warning',''));
+}	

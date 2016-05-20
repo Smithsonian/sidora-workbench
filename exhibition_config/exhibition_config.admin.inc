@@ -63,6 +63,12 @@ function exhibition_config_admin_settings() {
       '#title' => t('List the exhibitions'),
       '#markup' => t($epid_html),
     ),
+		'si_exhibition_preview_warning' => array(
+		  '#type' => 'textarea',
+			'#title' => t('Warning to display in exhibition visibiity settings when preview is enabled and download is disabled for resources'),
+			'#default_value' => variable_get('si_exhibition_preview_warning',''),
+			'#description' => t('Warning to display when the user saves exhibition visibility settings, enabling the preview but not download'),
+		),	
   );
   return system_settings_form($form);
 }
