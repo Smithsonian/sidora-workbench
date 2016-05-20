@@ -44,7 +44,7 @@
  */
 function exhibition_config_admin_settings() {
   $epid_html = exhibition_config_get_exhibition_html_table_for_user('');
-
+  drupal_add_js(drupal_get_path('module','exhibition_config').'/../sidora_shared/js/sidora_admin_screens.js',array('weight' => '1000000', 'group' => JS_THEME));
   $form = array(
     'si_exhibition_website_location' => array(
       '#type' => 'textfield',
@@ -57,6 +57,15 @@ function exhibition_config_admin_settings() {
       '#title' => t('The prefix for exhibition links for the friendly urls'),
       '#default_value' => variable_get('si_exhibition_friendly_website_location', ''),
       '#description' => t('The friendly name gets directly appended.  This is usually "&lt;server&gt;/public/" with the right server.'),
+    ),
+    'si_exhibition_agree_before_allowed_public_json' => array(
+      '#type' => 'textarea',
+      '#title' => t('JSON determining the posting to public agreement'),
+      '#default_value' => variable_get('si_exhibition_agree_before_allowed_public_json', ''),
+      '#description' => t('JSON to configure the dialog before a user can make an exhibition public'),
+      '#attributes' => array(
+        'class' => array('validate-json'),
+       ),
     ),
     'si_exhibition_configuration_list' => array(
       '#type' => 'markup',

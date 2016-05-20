@@ -1026,6 +1026,90 @@ $GLOBALS['base_url'].'/'.drupal_get_path('module','exhibition_config').'/images/
 $(function(){
   submit = false;
   $("body").css("padding-top","0px");
+jQuery("#edit-is-available").unbind(\'click\').click(function(e){
+  if (jQuery("#edit-is-available").prop("checked")) {
+    var info = 
+ ' . variable_get('si_exhibition_agree_before_allowed_public_json', '{}') . '
+    jQuery("body").append("<div id=\'AcceptThis\' style=\'display:none;\' title=\'Publishing to public\'></div>");
+    var popupHtml = info.htmlStart;
+    for (questionIndex = 0; questionIndex < info.questions.length; questionIndex++) {
+      var currQuestion = info.questions[questionIndex];
+      popupHtml += "<p>"+currQuestion.html;
+      for (answerIndex = 0; answerIndex < currQuestion.answers.length; answerIndex++) {
+        popupHtml += "<br><input type=\'radio\' name=\'Q"+questionIndex+"\' value=\'"+currQuestion.answers[answerIndex].text+"\'> "+currQuestion.answers[answerIndex].text;
+      }
+      popupHtml += "</p>";
+    }
+    jQuery("#AcceptThis").html(popupHtml)
+    jQuery("#AcceptThis").dialog({
+         height: Math.max(300,jQuery(window).height()-150),
+         width: Math.max(400,jQuery(window).width()-100),
+         modal: true,
+         resizable: true,
+         buttons: {
+          "Accept": function() {
+            var numUnanswered = 0;
+            for(questionIndex=0;questionIndex<info.questions.length;questionIndex++){
+              jQuery("#AcceptThis").find("input[name=\'Q"+questionIndex+"\']").parent().css("border","");
+              if (jQuery("#AcceptThis").find("input[name=\'Q"+questionIndex+"\']:checked").length == 0){
+                jQuery("#AcceptThis").find("input[name=\'Q"+questionIndex+"\']").parent().css("border","3px solid #AA0000");
+                numUnanswered++;
+              }
+            }
+            if (numUnanswered == 0) {
+              var afterPostHtml = "";
+              var canContinue = true;
+              for(questionIndex=0;questionIndex<info.questions.length;questionIndex++){
+                var userAnswer = jQuery("#AcceptThis").find("input[name=\'Q"+questionIndex+"\']:checked").val();
+                for (possibleAnswerIndex = 0; possibleAnswerIndex < info.questions[questionIndex].answers.length; possibleAnswerIndex++){
+                  if (info.questions[questionIndex].answers[possibleAnswerIndex].text == userAnswer){
+                     var feedback = info.questions[questionIndex].answers[possibleAnswerIndex][\'htmlFeedbackOnThisSelection\'];
+                     var currCanContinue = info.questions[questionIndex].answers[possibleAnswerIndex][\'canContinue\'];
+                     canContinue = currCanContinue && canContinue;
+                     if (typeof feedback != \'undefined\') {
+                       //if it already exists with the exact wording, do not put it again
+                       var toAppend = "<p>"+feedback+"</p>";
+                       if (afterPostHtml.indexOf(toAppend) == -1){
+                         afterPostHtml += toAppend;
+                       }
+                     }
+                  }
+                }
+              }
+              if (canContinue) {
+                afterPostHtml += "<p>"+info.htmlAllowedContinue+"</p>";
+              }
+              jQuery("<div title=\'Feedback\'>"+afterPostHtml+"</div>").dialog({
+                //Smaller than the main window so do not accidentally X them both with too many clicks
+                height: Math.max(300,jQuery(window).height()-190),
+                width: Math.max(400,jQuery(window).width()-160),
+                modal: true,
+                resizable: true
+              });
+              if (canContinue) {
+                jQuery("#edit-is-available").prop("checked",true);
+                jQuery( this ).dialog("close");
+              }
+            }
+            else {
+              jQuery("<div title=\'Answer all questions\'>Please answer all questions.  The number of unanswered questions:"+numUnanswered+" </div>").dialog({
+                modal: true,
+                resizable: true
+              });
+            }
+          },
+          Cancel: function() {
+            jQuery( this ).dialog("close");
+          }
+       }
+    });
+
+    e.preventDefault();
+  }
+})
+
+    
+
   $("#confirm-save").click(function(e){
       if ($("input[name=\'is_available\']:checked").length == 0) {
         e.preventDefault();

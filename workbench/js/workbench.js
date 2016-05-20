@@ -1847,6 +1847,19 @@ sidora.resources.DeleteResource = function(){
   });
 }
 /*
+ * Return if the input pid is currently on the Resource List current page's datatable
+ */
+sidora.resources.IsOnScreen = function(checkForPid){
+  var onScreen = sidora.resources.GetOnScreenPids();
+  return onScreen.indexOf(checkForPid) > -1;
+}
+/*
+ * Return the pids of resources that are currently on the Resource List current page's datatable
+ */
+sidora.resources.GetOnScreenPids = function(){
+  return jQuery.map(jQuery(window.sidora.resources.dataTable).find("tr[role='row']"), function(n,i){if (n.id != "") return n.id;});
+}
+/*
  * Return the total number of resources that are children of the highlighted concept.  Relys on the resource table to be loaded.
  */
 sidora.resources.GetLength = function(){

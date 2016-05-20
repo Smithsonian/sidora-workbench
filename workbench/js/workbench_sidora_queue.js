@@ -79,23 +79,23 @@ SidoraQueue.prototype.Fail = function(completedItem, ajaxReturn){
   this.completedFailedRequests.push(completedItem);
   this.NotificationWindow.Show("FAILED: " + completedItem.userFriendlyName);
   console.log("fail:"+ajaxReturn[0].status);
-	if (ajaxReturn[0].status == '500'){
+  if (ajaxReturn[0].status == '500'){
     this.NotificationWindow.Show("Error code 500 returned. Contact site administrator",true);
-	/*  jQuery("body").append("<div id='ajaxErrors' style='display:none;' title='"+completedItem.userFriendlyName+"'><p>The Server has returned an error code of 500.</p><p>"+completedItem.userFriendlyName+" has failed</p><p>Please contact the Site Administrator</p></div>");
-		jQuery("#ajaxErrors").dialog({
+  /*  jQuery("body").append("<div id='ajaxErrors' style='display:none;' title='"+completedItem.userFriendlyName+"'><p>The Server has returned an error code of 500.</p><p>"+completedItem.userFriendlyName+" has failed</p><p>Please contact the Site Administrator</p></div>");
+    jQuery("#ajaxErrors").dialog({
        height: 300,
        width: 350,
        modal: true,
        resizable: false,
        dialogClass: "no-close",
- 		  buttons: {
+      buttons: {
          "OK": function() {
- 						self.parent.Shadowbox.close();
- 						jQuery( this ).dialog( "close" );
+            self.parent.Shadowbox.close();
+            jQuery( this ).dialog( "close" );
       }
- 		 }
- 		});*/
-	}	
+     }
+    });*/
+  } 
 }
 SidoraQueue.prototype.Done = function(completedItem, ajaxReturn){
   completedItem.ajaxReturn = ajaxReturn;
@@ -122,29 +122,32 @@ SidoraQueue.prototype.Done = function(completedItem, ajaxReturn){
   }else{
     if (!completedItem.isSilent) this.NotificationWindow.Show(completedItem.userFriendlyName);
     var processedResourceArray = completedItem.userFriendlyName.split(':');
-		for (var i = 0; i < completedItem.pidsBeingProcessed.length; i++){
+    for (var i = 0; i < completedItem.pidsBeingProcessed.length; i++){
       if (sidora.resources.individualPanel.resourceOfInterest != null && sidora.resources.individualPanel.resourceOfInterest.pid == completedItem.pidsBeingProcessed[i]){
         sidora.resources.individualPanel.LoadRelationships();
       }
-			//Update the tree counts if needed
-      sidora.util.refreshConceptChildrenNumber(completedItem.pidsBeingProcessed[i]);
+      //Update the tree counts if needed, only valid pids
+      if (completedItem.pidsBeingProcessed.indexOf(":") != -1) {
+        sidora.util.refreshConceptChildrenNumber(completedItem.pidsBeingProcessed[i]);
+      }
       if (completedItem.pidsBeingProcessed.length == '2') sidora.util.refreshNodeByID(completedItem.pidsBeingProcessed);
-     //If there was an update to the Pid user is currently looking at then anything may have changed.  Reload it.
+      //If there was an update to the Pid user is currently looking at then anything may have changed.  Reload it.
       if (sidora.concept.GetPid() == completedItem.pidsBeingProcessed[i]){
-			 sidora.concept.LoadContent();
+        sidora.concept.LoadContent();
         if (processedResourceArray.length > 1){
-  				var processedResourceCountArray = processedResourceArray[1].split(' of ');
-  				if ((processedResourceCountArray.length > 1) && (processedResourceCountArray[0] == processedResourceCountArray[1])){  // trying to get the last item of the current queue
-					  writeCookie('Drupal.selectResource','1','30');
-  				}
-				}	
-      }else if (completedItem.pidsBeingProcessed[i] == 'edit_metadata'){
-			  sidora.concept.LoadContent();
-			}	
+          var processedResourceCountArray = processedResourceArray[1].split(' of ');
+          if ((processedResourceCountArray.length > 1) && (processedResourceCountArray[0] == processedResourceCountArray[1])){  
+            // trying to get the last item of the current queue
+            writeCookie('Drupal.selectResource','1','30');
+          }
+        } 
+      }else if (sidora.resources.IsOnScreen(completedItem.pidsBeingProcessed[i])){
+        sidora.concept.LoadContent();
+      } 
     }
-	}
+  }
   console.log("done function of queue:"+completedItem.userFriendlyName);
- }
+}
 SidoraQueue.prototype.NotificationWindow = {"showingError":false};
 SidoraQueue.prototype.NotificationWindow.MouseIsInside = false;
 SidoraQueue.prototype.NotificationWindow.SecondsOnScreen = 4;
