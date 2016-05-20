@@ -2573,7 +2573,6 @@ function exhibition_config_filter_visibility_show_name($vis_obj) {
   return $to_return;
 }
 function exhibition_permission_form_submit($form, &$form_state) {
-  error_log("\nIn submit :","3",DRUPAL_ROOT.'/'.drupal_get_path('module','exhibition_config')."/errorlog.txt");
   $root_pid = $form['pid']['#value'];
   $post_array = array();
   $resource_visibility_only = array('show_preview','allow_download');
