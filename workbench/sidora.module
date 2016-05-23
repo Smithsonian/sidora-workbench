@@ -478,7 +478,7 @@ jQuery(document).ready(function(){
   foreach($object as $dsid=>$datastream){
     print '<tr><td>'.$datastream->id.'</td><td>'.$datastream->label.'</td><td>'.$datastream->state.'</td><td>'.$datastream->mimetype.'</td><td>'.$datastream->createdDate.'</td><td>';
     if ($datastream->versionable) {
-      print '<a href="#" class="versionHistory" datastream="' . $datastream->id . '" pid="' . $datastream->parent->id . '">'.count($datastream).'</a> ';
+      print '<a href="javascript:void(0);" class="versionHistory" datastream="' . $datastream->id . '" pid="' . $datastream->parent->id . '">'.count($datastream).'</a> ';
 		}
     print '</td><td>';
     $viewer_filename = $datastream->id.'.';
@@ -716,7 +716,8 @@ function sidora_islandora_datastream_modified(AbstractObject $object, AbstractDa
   //not fully supported by the Workbench.
   if ($datastream->mimetype == 'text/xml' && $datastream->id != 'SIDORA' && $datastream->id != 'DC' && $datastream->id != 'RELS-EXT'){
     $all_meta_entered = filter_input(INPUT_POST, 'all_meta_entered', FILTER_SANITIZE_URL);
-    if (!empty($object['SIDORA'])){
+    $form_name = filter_input(INPUT_POST, 'form_name', FILTER_SANITIZE_URL);
+		if (!empty($object['SIDORA'])){
       $doc = new DOMDocument();
       $docToLoad = ('<'.'?'.'xml version="1.0" encoding="UTF-8"'.'?'.'>'.$object['SIDORA']->content);  
       //vi gets borked when it sees the xml declaration and no longer highlights correctly for the rest of the file
@@ -737,10 +738,22 @@ function sidora_islandora_datastream_modified(AbstractObject $object, AbstractDa
       }
       $sidora_node = $doc->getElementsByTagName('sidora');
       $object['SIDORA']->content = $doc->saveXML($sidora_node->item(0));
+			$sidora_form_name = $doc->getElementsByTagName('form');
+			if (empty($sidora_form_name) || $sidora_form_name->length == 0){
+			  $node = $doc->createElement('form');
+				$node->nodeValue = $form_name;
+				$sidora_node = $doc->getElementsByTagName('sidora');
+				$sidora_node->item(0)->appendChild($node);
+				$sidora_node = $doc->getElementsByTagName('sidora');
+        $object['SIDORA']->content = $doc->saveXML($sidora_node->item(0));
+			}
     }else{
       //Didn't have the SIDORA datastream, add at least that the metadata has been updated
       //sidora_update_datastream($object, '<sidora><meta_requirements_fulfilled>TRUE</meta_requirements_fulfilled></sidora>', 'SIDORA');
-      sidora_update_datastream($object, '<sidora><meta_requirements_fulfilled>'.$all_meta_entered.'</meta_requirements_fulfilled></sidora>', 'SIDORA');
+      sidora_update_datastream($object, '<sidora>
+			<meta_requirements_fulfilled>'.$all_meta_entered.'</meta_requirements_fulfilled>
+			<form>'.$form_name.'</form>
+			</sidora>', 'SIDORA');
     }
   }
   sidora_clear_tree_cache($object->id);
@@ -1178,7 +1191,12 @@ function sidora_edit_metadata($object_id_string = '', $dsid = '', $form_name = '
   '#name' => 'Pid',
   '#value' => $object_id
   );  
-  $tform['#attributes']['name'][] = $object_id;
+  $tform['form_name'] = array(
+	'#type' => 'hidden',
+	'#name' => 'form_name',
+	'#value' => $form_name
+	);  
+	$tform['#attributes']['name'][] = $object_id;
   $tform['#attributes']['class'][] = $object_id;
   $tform['#attributes']['count'][] = $resource_count;
   drupal_add_css(drupal_get_path('module','sidora').'/css/workbench_metadata_screens.css',array('weight' => '1000000', 'group' => CSS_THEME));
