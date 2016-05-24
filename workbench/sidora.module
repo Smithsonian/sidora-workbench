@@ -4588,7 +4588,7 @@ function sidora_ajax_parts($call_type, $param1 = '', $param2 = '', $param3 = '')
     return sidora_ontology_object();
   }
   if ($call_type == 'tree'){
-    return sidora_html_tree_for_ajax($param1);
+    return sidora_html_tree_for_ajax($param1, $param2);
   }
   if ($call_type == 'unassociate_delete_orphan'){
     return sidora_unassociate_delete_if_orphaned($param1,$param2);
@@ -5241,16 +5241,16 @@ function sidora_json_for_delete($pid, $show_output = TRUE){
  * Prints a html tree for replacing the existing tree
  * Currently assumes everyone has full read access
  */
-function sidora_html_tree_for_ajax($root_pid = ''){
+function sidora_html_tree_for_ajax($root_pid = '', $num_levels = 3){
   module_load_include('inc', 'sidora', 'includes/utils');
   if (empty($root_pid)) $root_pid = sidora_get_user_root_object();
-  print sidora_html_string_tree($root_pid);
+  print sidora_html_string_tree($root_pid, NULL, $num_levels);
   drupal_exit();
 }
 /*
  * Returns a html_string for the concept tree
  */
-function sidora_html_string_tree($root_pid = '', $root = NULL){
+function sidora_html_string_tree($root_pid = '', $root = NULL, $num_levels = 3){
   global $user;
   module_load_include('inc', 'sidora', 'includes/utils');
   if (empty($root_pid)) $root_pid = sidora_get_user_root_object();
@@ -5275,7 +5275,7 @@ function sidora_html_string_tree($root_pid = '', $root = NULL){
   }
   $results = _sidora_get_child_results_cache($root_pid);
   $filled = sidora_fill_concepts_children($results); 
-  $html_tree_from_query_result = sidora_html_tree($filled);
+  $html_tree_from_query_result = sidora_html_tree($filled, '', $num_levels);
   $to_return = '';
   $to_return .= '<ul>';
   $to_return .= '<li><a href="'.base_path().'sidora/workbench/#'.$root_pid.'" pid="'.$root_pid.'" fullname="'.$root_label.'">';
@@ -5734,7 +5734,13 @@ function sidora_cron() {
  * Creates the html_tree.  
  * (This function should not be used to restrict view permissions, instead only pass in information that is allowed to be viewed.)
  */
-function sidora_html_tree($query_result_tree, $input_path = ''){
+function sidora_html_tree($query_result_tree, $input_path = '', $num_levels = 3){
+  if (is_string($num_levels)) {
+    $num_levels = intval($num_levels);
+  }
+  if ($num_levels == 0) {
+    return '';
+  }
   $to_return = '';
   foreach($query_result_tree as $t_index=>$t_element){
     $pid = $t_element['o']['value'];
@@ -5749,7 +5755,7 @@ function sidora_html_tree($query_result_tree, $input_path = ''){
     $to_return .= '</a>';
     if (array_key_exists('children',$t_element)){
       $to_return .= '<ul>';
-      $to_return .= sidora_html_tree($t_element['children'], $current_path);
+      $to_return .= sidora_html_tree($t_element['children'], $current_path, $num_levels - 1);
       $to_return .= '</ul>';
     }
     if (array_key_exists('already_in_tree',$t_element) && $t_element['already_in_tree']){
@@ -5929,39 +5935,39 @@ function sidora_pid_set_locked($pid, $set_locked_to_user = '', $obtain_lock = fa
 /*
  * Returns an array of the form:
 Array(
-    [0] => Array(
-            [o] => Array([value] => si:user-projects  ,[uri] => info:fedora/si:user-projects ,[type] => pid )
-            [t] => Array([type] => literal[value] => Researcher Projects )
-            [k0] => Array([type] => literal[value] => 11 )
+  [0] => Array(
+    [o] => Array([value] => si:user-projects  ,[uri] => info:fedora/si:user-projects ,[type] => pid )
+    [t] => Array([type] => literal[value] => Researcher Projects )
+    [k0] => Array([type] => literal[value] => 11 )
+    [children] => Array(
+      [0] => Array(
+        [o] => Array([value] => si-user:99  ,[uri] => info:fedora/si-user:99 ,[type] => pid )
+        [t] => Array([type] => literal[value] => DingDJ Projects )
+        [k0] => Array([type] => literal[value] => 1 )
+        [children] => Array(
+          [0] => Array(
+            [o] => Array([value] => si:256795  ,[uri] => info:fedora/si:256795 ,[type] => pid )
+            [t] => Array([type] => literal[value] => TestProject )
+            [k0] => Array([type] => literal[value] => 0 )
+            [children] => Array( ) ) ) )
+          [1] => Array(
+            [o] => Array([value] => si-user:57  ,[uri] => info:fedora/si-user:57 ,[type] => pid )
+            [t] => Array([type] => literal[value] => HuaD Projects )
+            [k0] => Array([type] => literal[value] => 2 )
             [children] => Array(
-                    [0] => Array(
-                            [o] => Array([value] => si-user:99  ,[uri] => info:fedora/si-user:99 ,[type] => pid )
-                            [t] => Array([type] => literal[value] => DingDJ Projects )
-                            [k0] => Array([type] => literal[value] => 1 )
-                            [children] => Array(
-                                    [0] => Array(
-                                            [o] => Array([value] => si:256795  ,[uri] => info:fedora/si:256795 ,[type] => pid )
-                                            [t] => Array([type] => literal[value] => TestProject )
-                                            [k0] => Array([type] => literal[value] => 0 )
-                                            [children] => Array( ) ) ) )
-                    [1] => Array(
-                            [o] => Array([value] => si-user:57  ,[uri] => info:fedora/si-user:57 ,[type] => pid )
-                            [t] => Array([type] => literal[value] => HuaD Projects )
-                            [k0] => Array([type] => literal[value] => 2 )
-                            [children] => Array(
-                                    [0] => Array(
-                                            [o] => Array([value] => si:257131  ,[uri] => info:fedora/si:257131 ,[type] => pid )
-                                            [t] => Array([type] => literal[value] => Form Wizard )
-                                            [k0] => Array([type] => literal[value] => 0 )
-                                            [children] => Array( ) )
-                                    [1] => Array(
-                                            [o] => Array([value] => si:118010  ,[uri] => info:fedora/si:118010 ,[type] => pid )
-                                            [t] => Array([type] => literal[value] => Tabular Dataset Project )
-                                            [k0] => Array([type] => literal[value] => 0 )
-                                            [children] => Array( ) ) ) )
-                    [2] => Array(
+              [0] => Array(
+                [o] => Array([value] => si:257131  ,[uri] => info:fedora/si:257131 ,[type] => pid )
+                [t] => Array([type] => literal[value] => Form Wizard )
+                [k0] => Array([type] => literal[value] => 0 )
+                [children] => Array( ) )
+              [1] => Array(
+                [o] => Array([value] => si:118010  ,[uri] => info:fedora/si:118010 ,[type] => pid )
+                [t] => Array([type] => literal[value] => Tabular Dataset Project )
+                [k0] => Array([type] => literal[value] => 0 )
+                [children] => Array( ) ) ) )
+          [2] => Array(
 
- *  ...and so on.  k0 is the number of children
+ *  ...and so on.  k0 is the number of resource children
  */
 function sidora_fill_concepts_children($query_result, $current_path = array()){
   if (is_array($query_result)){

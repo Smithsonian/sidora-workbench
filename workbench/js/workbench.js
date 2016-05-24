@@ -475,6 +475,10 @@ sidora.InitiateJSTree = function(){
       var childPidsCsv = currentChildrenPids.join();
       if (childPidsCsv.length > 0) {
         sidora.util.checkUIForInvalidPids(openingPid, childPidsCsv);
+        //load the next section of the tree
+        if (currentChildrenPids.length > 0){
+          sidora.util.loadTreeSection(openingPid);
+        }
       }
     });
     jQuery('#forjstree').bind('copy_node.jstree', function (e, data) {
@@ -510,6 +514,10 @@ sidora.InitiateJSTree = function(){
       var childPidsCsv = currentChildrenPids.join();
       if (childPidsCsv.length > 0) {
         sidora.util.checkUIForInvalidPids(openingPid, childPidsCsv);
+        /*
+        This section has been eating up too many ajax calls and forcing the browser to wait
+        before sending out more important calls.  Please remove this section of the code for next update.
+        
         //Go down next step as well
         for(var i=0; i<currentChildrenPids.length; i++){
           var childPid = currentChildrenPids[i];
@@ -522,6 +530,7 @@ sidora.InitiateJSTree = function(){
             }
           }
         }
+        */
       }
     });
 
@@ -1386,7 +1395,18 @@ sidora.util.childrenPidsListedInUIByNode = function(node) {
   }
   return currentChildrenPids;
 }
-
+sidora.util.loadTreeSection = function(openingPid) {
+  var jst = jQuery("#forjstree").jstree(true);
+  var treeAddition = function(htmlTree){
+    :
+  }
+  jQuery.ajax({
+    "dataType":"html",
+    "method":"GET",
+    "url": Drupal.settings.basePath+"sidora/ajax_parts/tree/"+openingPid+"/2",
+    "success": treeAddition
+  });
+}
 sidora.util.checkUIForInvalidPids = function(openingPid, childPidsCsv) {
   var jst = jQuery("#forjstree").jstree(true);
   var pidRemoval = function(pidsValidationInfo){
