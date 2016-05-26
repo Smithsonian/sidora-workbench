@@ -150,7 +150,7 @@ li a input {
 .dataTables_wrapper{
   width:50%;
 }
-.ui-resizable-w, .ui-resizable-e{
+.ui-resizable-w{
   width:20px;
 }
 #resourceInformationPane {

@@ -905,18 +905,18 @@ sidora.RelocateTreeOnPage = function(){
                   'height':function(){return jQuery('#fjt-holder').height();},
                   'width':  function(){console.log(jQuery('#fjt-holder').width()); return parseInt(jQuery('#fjt-holder').width())-6+"px";},
                   'paddingBottom':'12px',
-									'paddingRight':'5px',
+									'paddingRight':'35px',
 									'top':parseInt(jQuery('body').css('padding-top'))+10+'px',
 									'border-right':'10px solid #aaa',
 									'min-width':function(){return jQuery('#fjt-holder').css('min-width');}
                  })
                 .resizable({handles:'e',resize:sidora.ResizeTree})
                     .find('#fjt-holder')
-                      .css({overflow:'auto',
-											      position:'absolute',
-														width: '100%',
-														top:'0px',
-                            height:'100%'});
+                      .css({'overflow':'auto',
+											      'position':'absolute',
+														'width': '100%',
+														'top':'0px',
+                            'height':'100%'});
   sidora.ResizeToBrowser();
 }
 sidora.ResizeTree = function (e, ui)
