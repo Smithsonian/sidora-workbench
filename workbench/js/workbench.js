@@ -435,28 +435,40 @@ sidora.concept.LoadContent = function(leaveContentIfAlreadyLoaded){
 sidora.util.hasElement = function(data){
   return /<[a-z][\s\S]*>/i.test(data);
 }
-sidora.queue = new SidoraQueue();
-sidora.InitiateJSTree = function(){
-  jQuery('#forjstree').bind('loaded.jstree', function(e,data){setTimeout(function(){
-    //Figure out what's supposed to be selected, given the information in the hash
-    var itemSelectorForCurrentItemInTree = 'a[href=\"'+window.location.pathname + window.location.search + window.location.hash +'\"]';
-    jstreeIdSelected = jQuery(itemSelectorForCurrentItemInTree).parent().attr('id');
-    //If the item is not available, walk down the path until it is
-    if (typeof(jstreeIdSelected) == 'undefined'){
-      var walkerItems = window.location.hash.substr(window.location.hash.indexOf("?path=")+6);
-      var walkerItemArray = walkerItems.split(",");
-      var newMainItem = '';
-      while(walkerItemArray.length > 0 && walkerItemArray[0] != "" && typeof(jstreeIdSelected) == 'undefined'){ 
-        var rearrangedHash = '#'+walkerItemArray.pop()+"?path="+walkerItemArray.join(",");
-        itemSelectorForCurrentItemInTree = 'a[href=\"'+window.location.pathname + window.location.search + rearrangedHash +'\"]';
-        jstreeIdSelected = jQuery(itemSelectorForCurrentItemInTree).parent().attr('id');
-      }
-    }
+/*
+ * Get what the href would be for the parent of the input href, null if cannot figure it out
+ */
+sidora.util.getParentHref = function(existingHref) {
+  ehParts = existingHref.split("#");
+  if (ehParts.length != 2) return null;
+  if (ehParts[1].indexOf("path") == -1) return null;
+  var ehPath = ehParts[1].substring(ehParts[1].indexOf("path") + 5);
+  if (ehPath.indexOf(",") == -1) {
+    //One down from root
+    return ehParts[0] + "#" + ehPath + "?path=";
+  }
+  var pathParts = ehPath.split(",");
+  var newConcept = pathParts.pop();
+  return ehParts[0] + "#" + newConcept + "?path=" + pathParts.join(',');
+}
+/*
+ * Get the node id that has a specified href path (does NOT need to be a DOM object), null if not found
+ */
+sidora.util.getNodeIdByHref = function(currentUrl) {
+  var jstreeIdSelected = null;
+  var jst = jQuery("#forjstree").jstree();
+  var existingTreeNodes = jst.get_json('#', {flat:true});
+  jQuery.each(existingTreeNodes,function(i,obj){
+    if (obj.a_attr.href == currentUrl) jstreeIdSelected = obj.id;
+  });
+  return jstreeIdSelected;
+}
+sidora.util.openToCurrentPathAndSelectItem = function(jstreeIdSelected, currentUrl){
     toOpen = [];
     //Figure out the path down the tree to open up
     toOpen.unshift(jstreeIdSelected);
     while(toOpen[0] != false){
-      toOpen.unshift(jQuery('#forjstree').jstree('get_parent','#'+toOpen[0]));
+      toOpen.unshift(jQuery('#forjstree').jstree('get_parent',toOpen[0]));
     }
     //Close the entire tree
     jQuery('#forjstree').jstree('close_all');
@@ -464,7 +476,44 @@ sidora.InitiateJSTree = function(){
     for (i = 0; i < toOpen.length; i++){
       if (toOpen[i]) jQuery('#forjstree').jstree('open_node','#'+toOpen[i]);
     }
+    var itemSelectorForCurrentItemInTree = 'a[href=\"'+currentUrl+'\"]';
     jQuery('#forjstree').jstree('select_node',itemSelectorForCurrentItemInTree);
+}
+sidora.queue = new SidoraQueue();
+sidora.InitiateJSTree = function(){
+  jQuery('#forjstree').bind('loaded.jstree', function(e,data){setTimeout(function(){
+    //Figure out what's supposed to be selected, given the information in the hash
+    var currentUrl = window.location.pathname + window.location.search + window.location.hash;
+    var jst = jQuery("#forjstree").jstree();
+    jstreeIdSelected = sidora.util.getNodeIdByHref(currentUrl);
+
+    //If the item is not available, walk down the path until it is
+    if (jstreeIdSelected == null){
+      var walkerItems = window.location.hash.substr(window.location.hash.indexOf("?path=")+6);
+      var walkerItemArray = walkerItems.split(",");
+      var newMainItem = '';
+      var openingPid = null;
+      while(walkerItemArray.length > 0 && walkerItemArray[0] != "" && jstreeIdSelected == null){ 
+        var rearrangedHash = '#'+walkerItemArray.pop()+"?path="+walkerItemArray.join(",");
+        var checkUrl = window.location.pathname + window.location.search + rearrangedHash;
+        jstreeIdSelected = sidora.util.getNodeIdByHref(checkUrl);
+      }
+      if (jstreeIdSelected != null) {
+        //Is not loaded yet if we think children should be there but not there
+        var treeNode = jst.get_node(jstreeIdSelected);
+        if (jQuery("#"+jstreeIdSelected+" a").attr("conceptchildren") > treeNode.children.length) {
+          var parentNode = jst.get_node(treeNode.parent);
+          var openingPid = parentNode.a_attr.pid;
+          sidora.util.loadTreeSection(openingPid, function(){jQuery("#forjstree").trigger("loaded.jstree");});
+          return;
+        }
+      }
+    } else {
+      var parentId = jst.get_node(jstreeIdSelected).parent;
+      var parentPid = jst.get_node(parentId).a_attr.pid;
+      sidora.util.loadTreeSection(parentPid);
+    }
+    sidora.util.openToCurrentPathAndSelectItem(jstreeIdSelected, currentUrl);
     //When you select a node, update the url in the browser, change the page title (not browser title) and load the concept content into the main window
     jQuery('#forjstree').bind('select_node.jstree', function(e,data) {
       window.location = jQuery('#'+data.selected[0]).children('a').attr('href');
@@ -475,9 +524,25 @@ sidora.InitiateJSTree = function(){
       var childPidsCsv = currentChildrenPids.join();
       if (childPidsCsv.length > 0) {
         sidora.util.checkUIForInvalidPids(openingPid, childPidsCsv);
+        //Prep the UI for children incoming
+        jQuery("#forjstree a").not("[conceptchildren=0]").parent(".jstree-leaf")
+          .removeClass("jstree-leaf")
+          .addClass("jstree-closed");
         //load the next section of the tree
         if (currentChildrenPids.length > 0){
-          sidora.util.loadTreeSection(openingPid);
+          //Only load information if the currentChildren have children that are not listed
+          var doRetrieval = false;
+          for (var ccc = 0; ccc < currentChildrenPids.length; ccc++ ){
+            var jst = jQuery("#forjstree").jstree();
+            var numberOfChildrenThisShouldHave = parseInt(jst.get_node(data.node.children[ccc]).a_attr.conceptchildren);
+            var numberOfChildrenThisDoesHave = jst.get_node(data.node.children[ccc]).children.length;
+            if (numberOfChildrenThisShouldHave > numberOfChildrenThisDoesHave) {
+              doRetrieval = true;
+            }
+          }
+          if (doRetrieval) {
+            sidora.util.loadTreeSection(openingPid);
+          }
         }
       }
     });
@@ -514,6 +579,25 @@ sidora.InitiateJSTree = function(){
       var childPidsCsv = currentChildrenPids.join();
       if (childPidsCsv.length > 0) {
         sidora.util.checkUIForInvalidPids(openingPid, childPidsCsv);
+        //Prep the UI for children incoming
+        jQuery("#forjstree a").not("[conceptchildren=0]").parent(".jstree-leaf")
+          .removeClass("jstree-leaf")
+          .addClass("jstree-closed");
+        //load the next section of the tree
+        if (currentChildrenPids.length > 0){
+          //Only load information if the currentChildren have children that are not listed
+          var doRetrieval = false;
+          for (var ccc = 0; ccc < currentChildrenPids.length; ccc++ ){
+            var numberOfChildrenThisShouldHave = parseInt(jst.get_node(data.node.children[ccc]).a_attr.conceptchildren);
+            var numberOfChildrenThisDoesHave = jst.get_node(data.node.children[ccc]).children.length;
+            if (numberOfChildrenThisShouldHave > numberOfChildrenThisDoesHave) {
+              doRetrieval = true;
+            }
+          }
+          if (doRetrieval) {
+            sidora.util.loadTreeSection(openingPid);
+          }
+        }
         /*
         This section has been eating up too many ajax calls and forcing the browser to wait
         before sending out more important calls.  Please remove this section of the code for next update.
@@ -658,7 +742,6 @@ sidora.InitiateJSTree = function(){
                         showTextForUnassociate += " ("+sidora.util.dragResources[i]+")</li>";
                         resourcesToUnassociate.push(sidora.util.dragResources[i]);
                       }else{
-                        showText += "<li>"+jQuery(jq(sidora.util.dragResources[i])).find(".resource-list-label").text();
                         showText += " ("+sidora.util.dragResources[i]+")";
                         resourcesToMoveOver.push(sidora.util.dragResources[i]);
                       }  
@@ -1395,11 +1478,81 @@ sidora.util.childrenPidsListedInUIByNode = function(node) {
   }
   return currentChildrenPids;
 }
-sidora.util.loadTreeSection = function(openingPid) {
+sidora.util.loadTreeSection = function(openingPid, onLoadComplete) {
+  //TBD: Use jstree's lazy loading instead of home brew
+
+  if (typeof(onLoadComplete) != 'function') {
+    onLoadComplete = function(){console.log(this);}
+  }
+
+  if (typeof(sidora.util.loadTreeSectionCurrent) == 'undefined') {
+    sidora.util.loadTreeSectionCurrent = [];
+  }
+  if (sidora.util.loadTreeSectionCurrent[openingPid] == true) {
+    //Already checking on this set, don't do it again
+    return;
+  }
+  //Inform the utility that we are checking on this already so don't check again
+  sidora.util.loadTreeSectionCurrent[openingPid] = true;
+
   var jst = jQuery("#forjstree").jstree(true);
   var treeAddition = function(htmlTree){
-    :
-  }
+    var documentFragment = jQuery(document.createDocumentFragment());
+    documentFragment.append(htmlTree);
+    console.log('BBB:'+documentFragment);
+    //Find the items in the existing tree that match with what is loaded.
+    //Keep in mind there may be copies of the item in different parts of the tree
+    var clickedOnPid = jQuery(documentFragment).children().find("a").first().attr("pid");
+    //Do not use jQuery to get information out of an existing jstree
+    var existingTreeNodes = jst.get_json('#', {flat:true});
+    var mainItems = [];
+    for (var etni = 0; etni < existingTreeNodes.length; etni++) {
+      var currEtn = jst.get_node(existingTreeNodes[etni].id);
+      if (currEtn.a_attr.pid == clickedOnPid) {
+        mainItems.push(currEtn);
+      }
+    }
+    jQuery.each(mainItems, function( mii, mainItem) {
+      var miChildrenIds = mainItem.children;
+      //Go through the children
+      for (var micIndex = 0; micIndex < miChildrenIds.length; micIndex++) {
+        var currChild = jst.get_node(miChildrenIds[micIndex]);
+        //Do not add children to items that are already filled in
+        if (currChild.children.length == 0) {
+          var ccp = currChild.a_attr.pid;
+          var dfAnchor = jQuery(documentFragment).children().find("[pid='"+ccp+"']");
+          //Find the current child representation in the document fragment
+          var currRep = dfAnchor.parent();
+          //Go through the children of the representative DOM object from document fragment
+          var repChildren = currRep.children("ul").children("li");
+          for (var repChildIndex = 0; repChildIndex < repChildren.length; repChildIndex++) {
+            //Create node in the current child to copy the elements found in the document fragment
+            var currRepChild = repChildren[repChildIndex];
+            var a_attr_obj = {};
+            jQuery(jQuery(currRepChild).children("a").first()[0].attributes).each(function() {
+              a_attr_obj[this.nodeName] = this.nodeValue;
+            });
+            //The information coming back from the ajax call will not have the path through the tree
+            //and since the concept listed can be in multiple places, the path to the concepts
+            //must pull information from the existing tree for the current path we've used
+            var prependHrefPath = "?path=" + currChild.a_attr.href.split("?path=")[1] + ',';
+            var currRepHrefPathParts = jQuery(currRepChild).children("a").attr("href").split("?path=");
+            newHrefPath = currRepHrefPathParts[0] + prependHrefPath + currRepHrefPathParts[1];
+            a_attr_obj['href'] = newHrefPath;
+            //Do not add to items that already were added to
+            var newNodeId = jQuery("#forjstree").jstree(
+                              "create_node", 
+                              currChild,
+                              { "text" : jQuery(currRepChild).children("a").first()[0].text, "a_attr":a_attr_obj }, 
+                              0,
+                              onLoadComplete,
+                              true
+                            );
+          }//Ends repChildIndex
+        }//Ends if ul.length == 0
+      }//Ends micIndex
+    });//Ends mainItems each
+  }//Ends treeAddition function
   jQuery.ajax({
     "dataType":"html",
     "method":"GET",
@@ -1408,6 +1561,15 @@ sidora.util.loadTreeSection = function(openingPid) {
   });
 }
 sidora.util.checkUIForInvalidPids = function(openingPid, childPidsCsv) {
+  if (typeof(sidora.util.checkUIForInvalidPidsCurrent) == 'undefined') {
+    sidora.util.checkUIForInvalidPidsCurrent = [];
+  }
+  if (sidora.util.checkUIForInvalidPidsCurrent[openingPid] == childPidsCsv) {
+    //Already checking on this set, don't do it again
+    return;
+  }
+  //Inform the utility that we are checking on this already so don't check again
+  sidora.util.checkUIForInvalidPidsCurrent[openingPid] = childPidsCsv;
   var jst = jQuery("#forjstree").jstree(true);
   var pidRemoval = function(pidsValidationInfo){
     if (pidsValidationInfo.invalid.length > 0) {
