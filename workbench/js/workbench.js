@@ -463,24 +463,65 @@ sidora.util.getNodeIdByHref = function(currentUrl) {
   });
   return jstreeIdSelected;
 }
-sidora.util.openToCurrentPathAndSelectItem = function(jstreeIdSelected, currentUrl){
-    toOpen = [];
-    //Figure out the path down the tree to open up
-    toOpen.unshift(jstreeIdSelected);
-    while(toOpen[0] != false){
-      toOpen.unshift(jQuery('#forjstree').jstree('get_parent',toOpen[0]));
+/*
+ * Opens the tree to the specified path or up through the path that can be opened
+ * @param currentUrl - the href of the item to be opened, if not passed in the browser location is used
+ */
+sidora.util.openToCurrentPathAndSelectItem = function(currentUrl){
+  if (typeof(currentUrl) == 'undefined' || currentUrl == null) {
+    currentUrl = window.location.pathname + window.location.search + window.location.hash;
+  } 
+  var jstreeIdSelected = sidora.util.getNodeIdByHref(currentUrl);
+  toOpen = [];
+  //Figure out the path down the tree to open up
+  toOpen.unshift(jstreeIdSelected);
+  while(toOpen[0] != false){
+    toOpen.unshift(jQuery('#forjstree').jstree('get_parent',toOpen[0]));
+  }
+  //Close the entire tree
+  jQuery('#forjstree').jstree('close_all');
+  //Open up the path that was figured out above
+  for (i = 0; i < toOpen.length; i++){
+    if (toOpen[i]) jQuery('#forjstree').jstree('open_node',toOpen[i]);
+  }
+  var itemSelectorForCurrentItemInTree = 'a[href=\"'+currentUrl+'\"]';
+  jQuery('#forjstree').jstree('select_node',itemSelectorForCurrentItemInTree);
+}
+/*
+ * Given a node, loads its grandchildren if needed and checks the validation status of grandchildren
+ * @param data - jstree node
+ */
+sidora.util.loadTreeSectionsIfNeeded = function(data){
+  var jst = jQuery("#forjstree").jstree(true);
+  var openingPid = data.node.a_attr.pid;
+  var currentChildrenPids = sidora.util.childrenPidsListedInUIByNode(data.node);
+  var childPidsCsv = currentChildrenPids.join();
+  if (childPidsCsv.length > 0) {
+    sidora.util.checkUIForInvalidPids(openingPid, childPidsCsv);
+    //Prep the UI for children incoming
+    jQuery("#forjstree a").not("[conceptchildren=0]").parent(".jstree-leaf")
+      .removeClass("jstree-leaf")
+      .addClass("jstree-closed");
+    //load the next section of the tree
+    if (currentChildrenPids.length > 0){
+      //Only load information if the currentChildren have children that are not listed
+      var doRetrieval = false;
+      for (var ccc = 0; ccc < currentChildrenPids.length; ccc++ ){
+        var numberOfChildrenThisShouldHave = parseInt(jst.get_node(data.node.children[ccc]).a_attr.conceptchildren);
+        var numberOfChildrenThisDoesHave = jst.get_node(data.node.children[ccc]).children.length;
+        if (numberOfChildrenThisShouldHave > numberOfChildrenThisDoesHave) {
+          doRetrieval = true;
+        }
+      }
+      if (doRetrieval) {
+        sidora.util.loadTreeSection(openingPid);
+      }
     }
-    //Close the entire tree
-    jQuery('#forjstree').jstree('close_all');
-    //Open up the path that was figured out above
-    for (i = 0; i < toOpen.length; i++){
-      if (toOpen[i]) jQuery('#forjstree').jstree('open_node','#'+toOpen[i]);
-    }
-    var itemSelectorForCurrentItemInTree = 'a[href=\"'+currentUrl+'\"]';
-    jQuery('#forjstree').jstree('select_node',itemSelectorForCurrentItemInTree);
+  }
 }
 sidora.queue = new SidoraQueue();
 sidora.InitiateJSTree = function(){
+  //loaded.jstree will also be called whenever a node is added to the tree programmatically
   jQuery('#forjstree').bind('loaded.jstree', function(e,data){setTimeout(function(){
     //Figure out what's supposed to be selected, given the information in the hash
     var currentUrl = window.location.pathname + window.location.search + window.location.hash;
@@ -513,39 +554,17 @@ sidora.InitiateJSTree = function(){
       var parentPid = jst.get_node(parentId).a_attr.pid;
       sidora.util.loadTreeSection(parentPid);
     }
-    sidora.util.openToCurrentPathAndSelectItem(jstreeIdSelected, currentUrl);
+    sidora.util.openToCurrentPathAndSelectItem(currentUrl);
     //When you select a node, update the url in the browser, change the page title (not browser title) and load the concept content into the main window
+    jQuery("#forjstree").unbind('select_node.jstree');
     jQuery('#forjstree').bind('select_node.jstree', function(e,data) {
+      var jst = jQuery("#forjstree").jstree();
       window.location = jQuery('#'+data.selected[0]).children('a').attr('href');
       sidora.UpdateTitleBasedOnNameInTree(jQuery(jQuery('#'+data.selected[0]).find("a")[0]).text());
       sidora.concept.LoadContent();
-      var openingPid = data.node.a_attr.pid;
-      var currentChildrenPids = sidora.util.childrenPidsListedInUIByNode(data.node);
-      var childPidsCsv = currentChildrenPids.join();
-      if (childPidsCsv.length > 0) {
-        sidora.util.checkUIForInvalidPids(openingPid, childPidsCsv);
-        //Prep the UI for children incoming
-        jQuery("#forjstree a").not("[conceptchildren=0]").parent(".jstree-leaf")
-          .removeClass("jstree-leaf")
-          .addClass("jstree-closed");
-        //load the next section of the tree
-        if (currentChildrenPids.length > 0){
-          //Only load information if the currentChildren have children that are not listed
-          var doRetrieval = false;
-          for (var ccc = 0; ccc < currentChildrenPids.length; ccc++ ){
-            var jst = jQuery("#forjstree").jstree();
-            var numberOfChildrenThisShouldHave = parseInt(jst.get_node(data.node.children[ccc]).a_attr.conceptchildren);
-            var numberOfChildrenThisDoesHave = jst.get_node(data.node.children[ccc]).children.length;
-            if (numberOfChildrenThisShouldHave > numberOfChildrenThisDoesHave) {
-              doRetrieval = true;
-            }
-          }
-          if (doRetrieval) {
-            sidora.util.loadTreeSection(openingPid);
-          }
-        }
-      }
+      sidora.util.loadTreeSectionsIfNeeded(data);
     });
+    jQuery("#forjstree").unbind('copy_node.jstree');
     jQuery('#forjstree').bind('copy_node.jstree', function (e, data) {
       //Copy node
       var toMovePid = data.node.a_attr.pid;
@@ -572,52 +591,12 @@ sidora.InitiateJSTree = function(){
       sidora.queue.incomingRequestsAreSilent = false;
       sidora.queue.Next();
     });
+    jQuery("#forjstree").unbind('open_node.jstree');
     jQuery('#forjstree').bind('open_node.jstree', function (e, data) {
-      var jst = jQuery("#forjstree").jstree(true);
-      var openingPid = data.node.a_attr.pid;
-      var currentChildrenPids = sidora.util.childrenPidsListedInUIByNode(data.node);
-      var childPidsCsv = currentChildrenPids.join();
-      if (childPidsCsv.length > 0) {
-        sidora.util.checkUIForInvalidPids(openingPid, childPidsCsv);
-        //Prep the UI for children incoming
-        jQuery("#forjstree a").not("[conceptchildren=0]").parent(".jstree-leaf")
-          .removeClass("jstree-leaf")
-          .addClass("jstree-closed");
-        //load the next section of the tree
-        if (currentChildrenPids.length > 0){
-          //Only load information if the currentChildren have children that are not listed
-          var doRetrieval = false;
-          for (var ccc = 0; ccc < currentChildrenPids.length; ccc++ ){
-            var numberOfChildrenThisShouldHave = parseInt(jst.get_node(data.node.children[ccc]).a_attr.conceptchildren);
-            var numberOfChildrenThisDoesHave = jst.get_node(data.node.children[ccc]).children.length;
-            if (numberOfChildrenThisShouldHave > numberOfChildrenThisDoesHave) {
-              doRetrieval = true;
-            }
-          }
-          if (doRetrieval) {
-            sidora.util.loadTreeSection(openingPid);
-          }
-        }
-        /*
-        This section has been eating up too many ajax calls and forcing the browser to wait
-        before sending out more important calls.  Please remove this section of the code for next update.
-        
-        //Go down next step as well
-        for(var i=0; i<currentChildrenPids.length; i++){
-          var childPid = currentChildrenPids[i];
-          var nodes = sidora.util.getViewableJstreeNodesByPid(childPid);
-          for (var nii = 0; nii < nodes.length; nii++){
-            var currentGrandchildPids = sidora.util.childrenPidsListedInUIByNode(nodes[nii]);
-            var grandchildPidsCsv = currentGrandchildPids.join();
-            if (grandchildPidsCsv.length > 0) {
-              sidora.util.checkUIForInvalidPids(childPid, grandchildPidsCsv);
-            }
-          }
-        }
-        */
-      }
+      sidora.util.loadTreeSectionsIfNeeded(data);
     });
 
+    jQuery("#forjstree").unbind('delete_node.jstree');
     jQuery('#forjstree').bind('delete_node.jstree',function(event,data){
       var jst = jQuery("#forjstree").jstree(true);
       if (typeof(jst.pureUIChange) != 'undefined' && jst.pureUIChange) return; //don't want a Fedora change
@@ -641,6 +620,7 @@ sidora.InitiateJSTree = function(){
       sidora.queue.Next();
     });
 
+    jQuery("#forjstree").unbind('move_node.jstree');
     jQuery('#forjstree').bind('move_node.jstree',function(event,data){
       var toMovePid = data.node.a_attr.pid;
       var moveToPid = jQuery("#"+data.parent+" a").attr('pid');
@@ -1026,9 +1006,11 @@ sidora.ResizeToBrowser = function(){
 
   
 }
+/*
+ * Checks to see if a user can communicate with the backend and redirects to user page if problem
+ */
 sidora.InitiateConfirmAccess = function(){
-  jQuery.ajax(
-  {
+  jQuery.ajax({
     "dataType":"json",
     "url":Drupal.settings.basePath+"sidora/info/si:root/permission",
     "success":function(data){
@@ -1043,9 +1025,16 @@ sidora.InitiateConfirmAccess = function(){
        //This can also happen if the .htaccess file is incorrect
        window.location = Drupal.settings.basePath+"user";
     }
-  }
-);
+  });
 }
+/*
+ * Checks to see if a user has already been set up and can get that information from the backend
+ * Calls input functions based on that information, or redirect to user profile if communication
+ * is cut to backend
+ * @param callOnCorrectSetup - what function to call if the user is set up
+ * @param callOnIncorrectSetup - what function to call if not set up
+ *
+ */
 sidora.IsUserSetUp = function(callOnCorrectSetup, callOnIncorrectSetup){
   jQuery.ajax(
     {
@@ -1076,6 +1065,9 @@ sidora.IsUserSetUp = function(callOnCorrectSetup, callOnIncorrectSetup){
     }
   );
 }
+/*
+ * Wait 5 seconds and check user account set up. Used to double-check after a user set up failure occurred.
+ */
 sidora.doubleCheckUser = function(){
   jQuery("#page").before("<div id='remove-me' style='width:100%'><div style='margin:auto;width:400px;'>Validating your user...</div></div>");
   setTimeout(function(){
@@ -1461,6 +1453,9 @@ sidora.util.checkRecentChanges = function(){
     });
   }
 }
+/*
+ * Returns only nodes that are currently viewable in the tree based on pid
+ */
 sidora.util.getViewableJstreeNodesByPid = function(pid) {
   var jst = jQuery("#forjstree").jstree(true);
   var toReturn = [];
@@ -1469,6 +1464,9 @@ sidora.util.getViewableJstreeNodesByPid = function(pid) {
   });
   return toReturn; 
 }
+/*
+ * Returns children from the tree's data structure
+ */
 sidora.util.childrenPidsListedInUIByNode = function(node) {
   var jst = jQuery("#forjstree").jstree(true);
   var currentChildren = node.children;
@@ -1478,11 +1476,18 @@ sidora.util.childrenPidsListedInUIByNode = function(node) {
   }
   return currentChildrenPids;
 }
+/*
+ * Ajax load of a section of a tree. Given the openingPid, load thru its grandchildren
+ * Will
+ * @param openingPid - pid to check it's grandchildren
+ * @param onLoadComplete - function to call when the grandchildren are loaded into the tree
+ * @return true if call will be made, false if call was already made and will not be made again
+ */
 sidora.util.loadTreeSection = function(openingPid, onLoadComplete) {
   //TBD: Use jstree's lazy loading instead of home brew
 
   if (typeof(onLoadComplete) != 'function') {
-    onLoadComplete = function(){console.log(this);}
+    onLoadComplete = function(){}
   }
 
   if (typeof(sidora.util.loadTreeSectionCurrent) == 'undefined') {
@@ -1490,7 +1495,7 @@ sidora.util.loadTreeSection = function(openingPid, onLoadComplete) {
   }
   if (sidora.util.loadTreeSectionCurrent[openingPid] == true) {
     //Already checking on this set, don't do it again
-    return;
+    return false;
   }
   //Inform the utility that we are checking on this already so don't check again
   sidora.util.loadTreeSectionCurrent[openingPid] = true;
@@ -1559,14 +1564,19 @@ sidora.util.loadTreeSection = function(openingPid, onLoadComplete) {
     "url": Drupal.settings.basePath+"sidora/ajax_parts/tree/"+openingPid+"/2",
     "success": treeAddition
   });
+  return true;
 }
+/*
+ * Make ajax call to see if the pids are still valid objects, removes any invalid pids from the UI
+ * @return true if call will be made, false if call was already made and will not be made again
+ */
 sidora.util.checkUIForInvalidPids = function(openingPid, childPidsCsv) {
   if (typeof(sidora.util.checkUIForInvalidPidsCurrent) == 'undefined') {
     sidora.util.checkUIForInvalidPidsCurrent = [];
   }
   if (sidora.util.checkUIForInvalidPidsCurrent[openingPid] == childPidsCsv) {
     //Already checking on this set, don't do it again
-    return;
+    return false;
   }
   //Inform the utility that we are checking on this already so don't check again
   sidora.util.checkUIForInvalidPidsCurrent[openingPid] = childPidsCsv;
@@ -1605,9 +1615,10 @@ sidora.util.checkUIForInvalidPids = function(openingPid, childPidsCsv) {
       "success": pidRemoval
     });
   }
+  return true;
 }
 /*
- * 
+ * Checks the backend to see what the number of resource children is currently so that the UI can be updated
  */
 sidora.util.refreshConceptChildrenNumber = function(pid){
 	if (pid == "") return;
@@ -1619,6 +1630,9 @@ sidora.util.refreshConceptChildrenNumber = function(pid){
     sidora.recentAjaxFailure(failure_obj);
   });
 }
+/*
+ * Directly changes the number in parenthesis on the UI of the tree by the input Pid
+ */
 sidora.util.refreshConceptChildrenNumberDirect = function(pid, number_of_children){
   var treeIdsToUpdate = jQuery("a").filter(
     function(){ return jQuery(this).attr("pid") == pid; }
@@ -1636,6 +1650,10 @@ sidora.util.refreshConceptChildrenNumberDirect = function(pid, number_of_childre
     jQuery("#"+toUpdateId).find("a").attr("resourcechildren",""+number_of_children);
   }
 }
+/*
+ * Directly changes the number in parenthesis on the UI of the tree by the input DOM id
+ * This REQUIRES that the item is currently visible
+ */
 sidora.util.refreshConceptChildrenNumberDirectByTreeId = function(treeId, number_of_children){
   var pid = jQuery("#"+treeId+" a").attr("pid");
   sidora.util.refreshConceptChildrenNumberDirect(pid, number_of_children);
