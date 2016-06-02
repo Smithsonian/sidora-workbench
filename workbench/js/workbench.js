@@ -882,69 +882,81 @@ sidora.RelocateTreeOnPage = function(){
   jQuery("#branding").css("margin-left","300px");
   jQuery("body").append("<div id='fjt-holder'></div>");
   jQuery("#fjt-holder").append(jQuery("#forjstree"));
-	/*jQuery("#resizableTree").append("<div id='egrip' class = 'ui-resizable-handle ui-resizable-e'></div>");
-  jQuery("#resizableTree").css("min-width","300px");
-  jQuery("#resizableTree").css("position","fixed");
-  jQuery("#resizableTree").css("top",parseInt(jQuery("body").css("padding-top"))+10+"px");
-	jQuery("#resizableTree").resizable({
-    handles: {'e':'#egrip'},
-		resize: sidora.ResizeTree,
-    stop: sidora.StopResizeTree
-	});*/
-	jQuery("#fjt-holder").css("min-width","300px");
+	jQuery("#fjt-holder").css("width","280px");
+	jQuery("#fjt-holder").css("min-width","200px");
 	jQuery("#fjt-holder").css("height","100%");
 	jQuery("#fjt-holder").css("position","fixed");
 	jQuery("#fjt-holder").css("top",parseInt(jQuery("body").css("padding-top"))+10+"px");
 	jQuery("#fjt-holder")
       .wrap('<div/>')
-        //.css({'overflow':'hidden'})
           .parent()
-            .css({'display':'inline-block',
+            .attr('id','conceptResizable')
+						.css({'display':'inline-block',
                   'overflow':'hidden',
 									'position':'fixed',
                   'height':function(){return jQuery('#fjt-holder').height();},
-                  'width':  function(){console.log(jQuery('#fjt-holder').width()); return parseInt(jQuery('#fjt-holder').width())-6+"px";},
+                  'width':  function(){return parseInt(jQuery('#fjt-holder').width())+'px';},
                   'paddingBottom':'12px',
-									'paddingRight':'35px',
+									'margin-right' : '2px',
 									'top':parseInt(jQuery('body').css('padding-top'))+10+'px',
-									'border-right':'10px solid #aaa',
-									'min-width':function(){return jQuery('#fjt-holder').css('min-width');}
+									'min-width':function(){return parseInt(jQuery('#fjt-holder').css('min-width'))+20+'px';}
                  })
-                .resizable({handles:'e',resize:sidora.ResizeTree})
+                .resizable({handles:'e',resize:sidora.ResizeTree,stop:sidora.stopResizeTree})
                     .find('#fjt-holder')
                       .css({'overflow':'auto',
 											      'position':'absolute',
-														'width': '100%',
+														'width': function(){return parseInt(jQuery('#conceptResizable').outerWidth())-10+'px';},
 														'top':'0px',
                             'height':'100%'});
-  sidora.ResizeToBrowser();
+	jQuery('#conceptResizable')
+	  .wrap('<div/>')
+		  .parent()
+			.attr('id','conceptTreeParent')
+			.append('<div id="iframeTreeOverlay" style="position:absolute;width:100%;height:100%;"></div>');
+	jQuery('#branding').css('margin-left',parseInt(jQuery('#fjt-holder').parent().outerWidth())+'px');												
+ jQuery("#conceptResizable").find(".ui-resizable-e").css("background-color","#aaa").css("width","10px").css("right","0");
+ sidora.ResizeToBrowser();
+ sidora.ResizeTree(null,{element:jQuery("#conceptResizable")});
+ sidora.stopResizeTree();
 }
 sidora.ResizeTree = function (e, ui)
 {
+  //Protect the cursor input from being taken into the iframe by making the overlay displayable
+  jQuery("#iframeTreeOverlay").show();
+  if (jQuery('#resourceInformationPane').is(':visible')) {
+	  // if a resource is currently selected, get the width ratio for the resourcepanel
+    var resourceDivWidth = parseInt(jQuery('#resourceInformationPane').outerWidth()) / parseInt(jQuery('#resourceInformationPane').parent().width()) * 100;
+	}	
   var treeWidth = parseInt(ui.element.outerWidth())+6+"px";
-	var parent = ui.element.parent();
-  var remainingSpace = ui.element.parent().width() - ui.element.outerWidth() - 6,
-  divTwo = jQuery("#sidora_content_concept_info"),
-  divTwoWidthPixels = (remainingSpace - (divTwo.outerWidth() - divTwo.width()));
-  //if they were attempted to be set at smaller than their min size, resize everything
+	var parent = jQuery('body');
+  var remainingSpace = parent.width() - ui.element.outerWidth() - 6;
+  var minRequiredSpace = parseInt(jQuery('#sidora_content_concept_info').css('min-width'));
+	if (remainingSpace < minRequiredSpace) {
+	  var maxWidth = parent.width() - parseInt(jQuery("#sidora_content_concept_info").css('min-width'));
+		jQuery(ui.element).resizable('option', 'maxWidth', maxWidth);
+	}	
+		var divTree = ui.element.children('#fjt-holder');
+	  divTree.css('width',parseInt(ui.element.outerWidth())-10+'px');
+    divTwo = jQuery("#sidora_content_concept_info");
+    divTwoWidthPixels = (remainingSpace - (divTwo.outerWidth() - divTwo.width()));
   if (parseInt(divTwo.css("min-width")) > divTwoWidthPixels){
     divTwoWidthPixels = parseInt(divTwo.css("min-width"));
   }
   divTwoWidth = (divTwoWidthPixels) / parent.width() * 100 + '%';
-  
-  divTwo.width(divTwoWidth);
-  //jQuery(ui.element).css('left', 15);
+  divTwo.width(divTwoWidthPixels + 'px');
+	jQuery('#concept_tabs').css('width',divTwoWidthPixels-8+'px');
+  treeWidth = parseInt(ui.element.outerWidth())+6+"px";
   divTwo.css("left",treeWidth);
 	var divTop = jQuery("#branding");
 	divTop.css("margin-left",treeWidth);
-  //Give the max width of the resizable element to be the entire parent minus what the left element has declared as its min-width
-  var maxWidth = parent.width() - parseInt(jQuery("#sidora_content_concept_info").css('min-width'));
-  jQuery(ui.element).resizable('option', 'maxWidth', maxWidth); 
-
-  //var newMinHeight = Math.max(600,jQuery("#resourceResizable").height(),jQuery("#res_table_wrapper").height(), jQuery("#resource-meta").height()+jQuery("#resourceResizable ul").height()+10);
-  //Protect the cursor input from being taken into the iframe by making the overlay displayable
-  //jQuery("#iframeOverlay").show();
-  
+	if (jQuery('#resourceInformationPane').is(':visible')) {
+		if ((resourceDivWidth * parseInt(jQuery('#concept_tabs').width()) / 100) < (parseInt(jQuery('#resourceInformationPane').css('min-width')) + 25)) {
+			resourceDivWidth = (parseInt(jQuery('#resourceInformationPane').css('min-width'))+25) / parseInt(jQuery('#concept_tabs').width()) * 100;
+		}	
+		resourceDivWidth = resourceDivWidth * parseInt(jQuery('#concept_tabs').width()) / 100;
+		jQuery('#resourceInformationPane').outerWidth(resourceDivWidth+'px');
+		jQuery('#res_table_wrapper').outerWidth(parseInt(jQuery('#concept_tabs').width()) - parseInt(jQuery('#resourceInformationPane').outerWidth()) - 15 + 'px');
+	}		
   //Move items around to fit the menu in the best place
   if (jQuery("#res_table_wrapper").width() < 470){
     jQuery("#res_table_wrapper").css("margin-top","83px");
@@ -957,22 +969,9 @@ sidora.ResizeTree = function (e, ui)
 /*
  * Resizes items on the resources pane once the user (or program) is done with dragging the splitter bar between the table and viewer
  */
-sidora.resources.individualPanel.StopIt = function (e, ui)
+sidora.stopResizeTree = function (e, ui)
 {
-  var parent = ui.element.parent();
-  var maxWidth = parent.width() - (50 + parseInt(ui.element.prev().css('min-width')));
-  ui.element.css({
-    width: ui.element.width() / parent.width() * 100 + '%',
-  });
-  var currWidth = parseInt(ui.element.width());
-  var isNumber = !isNaN(currWidth);
-  if (isNumber){
-    var isTooBig = currWidth > maxWidth;
-    if (isTooBig){
-        ui.element.css("width",maxWidth);
-    }
-  }
-  jQuery("#iframeOverlay").hide(); //Allow the cursor into the iframe
+  jQuery("#iframeTreeOverlay").hide(); //Allow the cursor into the iframe
 };
 sidora.ResizeToBrowser = function(){
   //jQuery("#sidora_content_concept_info").css("min-width",0);
@@ -983,9 +982,10 @@ sidora.ResizeToBrowser = function(){
     newHeight -= jQuery("footer").height();
   }
   jQuery("#fjt-holder").css("height",newHeight+"px");
-  var tabsHeight = newHeight-50;
+  jQuery("#conceptResizable").css("height",jQuery('#fjt-holder').height());
+	var tabsHeight = newHeight-50;
   jQuery("#concept_tabs").css("height",tabsHeight+"px");
-  jQuery("#concept_tabs").css("width",(jQuery(window).width()-310)+"px");
+  jQuery("#concept_tabs").css("width",parseInt(jQuery(window).width()-jQuery('#conceptResizable').outerWidth()-8)+"px");
   var tabContentHeight = tabsHeight - jQuery(".ui-tabs-nav").height();
   jQuery("#concept-resource-list").css("height",tabContentHeight);
   jQuery("#resourceResizable").css("height",'99%');
@@ -1334,10 +1334,11 @@ sidora.ResizeOnWindowResize = function(){
   var bodywidth = jQuery(window).width();
   // Cannot use a fixed width for the tree on the left since its resizable now.
 	//var menuwidth = 360;
-	var menuwidth = jQuery("#fjt-holder").width() + 50;
+	var menuwidth = jQuery("#fjt-holder").width() + 10;
   var newwidth = bodywidth-menuwidth;
   jQuery("#sidora_content_concept_info").width(newwidth);
-
+  var newMaxWidth = bodywidth - parseInt(jQuery('#sidora_content_concept_info').css('min-width'));
+	jQuery('#conceptResizable').resizable('option', 'maxWidth', newMaxWidth);
   //Resize the resource information pane for the resource page 
   sidora.resources.individualPanel.ResizeAndStop();
 }
@@ -2208,7 +2209,8 @@ sidora.resources.individualPanel.ResizeAndStop = function () {
 sidora.resources.individualPanel.ResizeIt = function (e, ui)
 {
   var parent = ui.element.parent();
-  var remainingSpace = parent.width() - ui.element.outerWidth() - 0,
+  // when calculating the remainingSpace, factor in the 15px offset for the resourceInformationPane 
+	var remainingSpace = parent.width() - ui.element.outerWidth() -15,
   divTwo = ui.element.prev(),
   divTwoWidthPixels = (remainingSpace - (divTwo.outerWidth() - divTwo.width()));
   //if they were attempted to be set at smaller than their min size, resize everything
