@@ -1394,7 +1394,16 @@ sidora.CloseIFrame = function(newlyCreatedConceptId, typeOfClosure){
   if (typeOfClosure == 'edit metadata'){
     //Nothing?  do users need a confirmation? the reloaded page should be good enough
   }
-  sidora.util.RefreshTree();
+  //Reload the current concept's tree
+  var jst = jQuery("#forjstree").jstree();
+  var itemsSelected = jst.get_selected();
+  for (isi = 0; isi < itemsSelected.length; isi++) {
+    var node = jst.get_node(itemsSelected[isi]);
+    if (node.a_attr.pid == sidora.concept.GetPid()) {
+      var parentPid = jst.get_node(node.parent).a_attr.pid;
+      sidora.util.RefreshTree(null, parentPid); 
+    }
+  }
 }
 /*
  * Keep checking for 100 minutes.  
@@ -1474,55 +1483,48 @@ sidora.util.childrenPidsListedInUIByNode = function(node) {
   }
   return currentChildrenPids;
 }
-/*
- * Ajax load of a section of a tree. Given the openingPid, load thru its grandchildren
- * @param openingPid - pid to check it's grandchildren
- * @param onLoadComplete - function to call when the grandchildren are loaded into the tree
- * @return true if call will be made, false if call was already made and will not be made again
- */
-sidora.util.loadTreeSection = function(openingPid, onLoadComplete) {
-
+sidora.util.createTreeAddition = function(onLoadComplete, overwriteType) {
+  return function(htmlTree) { 
+    sidora.util.treeAddition(htmlTree, onLoadComplete, overwriteType);
+  }
+}
+sidora.util.treeAddition = function(htmlTree, onLoadComplete, overwriteType){
   if (typeof(onLoadComplete) != 'function') {
     onLoadComplete = function(){}
   }
-
-  if (typeof(sidora.util.loadTreeSectionCurrent) == 'undefined') {
-    sidora.util.loadTreeSectionCurrent = [];
+  if (typeof(overwriteType) != 'string') {
+    overwriteType = "changes";
   }
-  if (sidora.util.loadTreeSectionCurrent[openingPid] == true) {
-    //Already checking on this set, don't do it again
-    return false;
-  }
-  //Inform the utility that we are checking on this already so don't check again
-  sidora.util.loadTreeSectionCurrent[openingPid] = true;
-
-  var jst = jQuery("#forjstree").jstree(true);
-  var treeAddition = function(htmlTree){
-    var documentFragment = jQuery(document.createDocumentFragment());
-    documentFragment.append(htmlTree);
-    //Find the items in the existing tree that match with what is loaded.
-    //Keep in mind there may be copies of the item in different parts of the tree
-    var clickedOnPid = jQuery(documentFragment).children().find("a").first().attr("pid");
-    //Note: Do not use jQuery to get information out of an existing jstree
-    var existingTreeNodes = jst.get_json('#', {flat:true});
-    var mainItems = [];
-    for (var etni = 0; etni < existingTreeNodes.length; etni++) {
-      var currEtn = jst.get_node(existingTreeNodes[etni].id);
-      if (currEtn.a_attr.pid == clickedOnPid) {
-        mainItems.push(currEtn);
-      }
-    }
-    jQuery.each(mainItems, function( mii, mainItem) {
-      var miChildrenIds = mainItem.children;
-      //Go through the children
-      for (var micIndex = 0; micIndex < miChildrenIds.length; micIndex++) {
-        var currChild = jst.get_node(miChildrenIds[micIndex]);
+  var jst = jQuery("#forjstree").jstree();
+  var documentFragment = jQuery(document.createDocumentFragment());
+  documentFragment.append(htmlTree);
+  //Find the items in the existing tree that match with what is loaded.
+  //Keep in mind there may be copies of the item in different parts of the tree
+  var clickedOnPid = jQuery(documentFragment).children().find("a").first().attr("pid");
+  //Note: Do not use jQuery to get information out of an existing jstree
+  mainItems = sidora.util.GetTreeIdsByPid(clickedOnPid);
+  //mainItems now holds all the nodes which have a pid matching the root pid from the returned html
+  jQuery.each(mainItems, function( mii, mainItem) {
+    var miChildrenIds = mainItem.children;
+    //Go through the children
+    for (var micIndex = 0; micIndex < miChildrenIds.length; micIndex++) {
+      var currChild = jst.get_node(miChildrenIds[micIndex]);
+      var ccp = currChild.a_attr.pid;
+      var dfAnchor = jQuery(documentFragment).children().find("[pid='"+ccp+"']");
+      //If the document fragment does not include the child then that concept was removed
+      if (dfAnchor.length == 0) {
+        //TBD remove this
+      } else {
+        //Find the current child representation in the document fragment
+        var currRep = dfAnchor.parent();
+        //Replace the name if the name of the item changed
+        if (currChild.text != dfAnchor.text()) {
+          jst.rename_node(currChild, dfAnchor.text());
+        }
+        
+   
         //Do not add children to items that are already filled in
-        if (currChild.children.length == 0) {
-          var ccp = currChild.a_attr.pid;
-          var dfAnchor = jQuery(documentFragment).children().find("[pid='"+ccp+"']");
-          //Find the current child representation in the document fragment
-          var currRep = dfAnchor.parent();
+        if (currChild.children.length == 0 || overwriteType == "changes") {
           //Go through the children of the representative DOM object from document fragment
           var repChildren = currRep.children("ul").children("li");
           //Set up the functions so that the onLoadComplete will be called after all of the nodes are added
@@ -1534,9 +1536,34 @@ sidora.util.loadTreeSection = function(openingPid, onLoadComplete) {
              };
           };
           var individualReturnFunction = olcCheck(myCounter, onLoadComplete);
+          //If want to do changes, remove any existing children that were not in the document fragment
+          for (var grandchildIndex = 0; grandchildIndex < currChild.children.length; grandchildIndex++){
+            var currTreeGrandchild = jst.get_node(currChild.children[grandchildIndex]);
+            var isFound = false;
+            for (var repChildIndex = 0; repChildIndex < repChildren.length; repChildIndex++){
+              var currRepChild = repChildren[repChildIndex];
+              if (jQuery(currRepChild).children("a").attr("pid") == currTreeGrandchild.a_attr.pid) {
+                isFound = true;
+              }
+            }
+            if (!isFound) {
+              jst.pureUIChange = true;
+              jst.delete_node(currTreeGrandchild.id);
+              jst.pureUIChange = false;
+            }
+          }
           for (var repChildIndex = 0; repChildIndex < repChildren.length; repChildIndex++) {
             //Create node in the current child to copy the elements found in the document fragment
             var currRepChild = repChildren[repChildIndex];
+
+            //Dont add a child that's already there
+            var isFound = false;
+            for (var grandchildIndex = 0; grandchildIndex < currChild.children.length; grandchildIndex++){
+              var currTreeGrandchild = jst.get_node(currChild.children[grandchildIndex]);
+              if (jQuery(currRepChild).children("a").attr("pid") == currTreeGrandchild.a_attr.pid) {
+                isFound = currTreeGrandchild.id;
+              }
+            }
             var a_attr_obj = {};
             jQuery(jQuery(currRepChild).children("a").first()[0].attributes).each(function() {
               a_attr_obj[this.nodeName] = this.nodeValue;
@@ -1548,8 +1575,8 @@ sidora.util.loadTreeSection = function(openingPid, onLoadComplete) {
             var currRepHrefPathParts = jQuery(currRepChild).children("a").attr("href").split("?path=");
             newHrefPath = currRepHrefPathParts[0] + prependHrefPath + currRepHrefPathParts[1];
             a_attr_obj['href'] = newHrefPath;
-            //Do not add to items that already were added to
-            var newNodeId = jQuery("#forjstree").jstree(
+            if (!isFound) {
+              var newNodeId = jQuery("#forjstree").jstree(
                               "create_node", 
                               currChild,
                               { "text" : jQuery(currRepChild).children("a").first()[0].text, "a_attr":a_attr_obj }, 
@@ -1557,16 +1584,47 @@ sidora.util.loadTreeSection = function(openingPid, onLoadComplete) {
                               individualReturnFunction,
                               true
                             );
+            }else{
+              jst.rename_node(isFound, jQuery(currRepChild).children("a").first()[0].text);
+              jQuery(a_attr_obj).each(function(){
+                jst.get_node(isFound).a_attr[this.nodeName] = this.nodeValue;
+              });
+            }
           }//Ends repChildIndex
         }//Ends if ul.length == 0
-      }//Ends micIndex
-    });//Ends mainItems each
-  }//Ends treeAddition function
+      }//Ends dfAnchor.length not zero
+    }//Ends micIndex
+  });//Ends mainItems each
+}//Ends treeAddition function
+/*
+ * Ajax load of a section of a tree. Given the openingPid, load thru its grandchildren
+ * @param openingPid - pid to check it's grandchildren
+ * @param onLoadComplete - function to call when the grandchildren are loaded into the tree
+ * @param overwriteType - undefined / null for no overwrites if already attempted this pid, only add children if doesn't already have any
+ *                      - "changes" - remove items that are gone from the return and add items from return that don't exist
+ * @return true if call will be made, false if call was already made and will not be made again
+ */
+sidora.util.loadTreeSection = function(openingPid, onLoadComplete, overwriteType) {
+
+  if (typeof(sidora.util.loadTreeSectionCurrent) == 'undefined') {
+    sidora.util.loadTreeSectionCurrent = [];
+  }
+  if (
+       sidora.util.loadTreeSectionCurrent[openingPid] == true && 
+       (typeof(overwriteType) == "undefined" || overwriteType == null)
+     ) {
+    //Already checking on this set, don't do it again
+    return false;
+  }
+  //Inform the utility that we are checking on this already so don't check again
+  sidora.util.loadTreeSectionCurrent[openingPid] = true;
+
+  var jst = jQuery("#forjstree").jstree(true);
   jQuery.ajax({
     "dataType":"html",
     "method":"GET",
     "url": Drupal.settings.basePath+"sidora/ajax_parts/tree/"+openingPid+"/2",
-    "success": treeAddition
+    "success": sidora.util.createTreeAddition(onLoadComplete, overwriteType)
   });
   return true;
 }
@@ -1663,50 +1721,68 @@ sidora.util.refreshConceptChildrenNumberDirectByTreeId = function(treeId, number
   sidora.util.refreshConceptChildrenNumberDirect(pid, number_of_children);
 }
 
-sidora.util.refreshTreeRequestInProgress = false;
 sidora.util.refreshTreeFailuresInARow = 0;
 /*
+ * Returns the existing tree ids by a pid
+ */
+sidora.util.GetTreeIdsByPid = function(pid) {
+  var jst = jQuery("#forjstree").jstree();
+  var existingTreeNodes = jst.get_json('#', {flat:true});
+  var mainItems = [];
+  for (var etni = 0; etni < existingTreeNodes.length; etni++) {
+    var currEtn = jst.get_node(existingTreeNodes[etni].id);
+    if (currEtn.a_attr.pid == pid) {
+      mainItems.push(currEtn);
+    }
+  }
+  return mainItems;
+}
+/*
  * Goes to get the tree from the server and replaces exsiting tree
- * secondsOfWait - number of seconds to wait for other refreshTree requests to come in
+ * @param secondsOfWait - number of seconds to wait for other refreshTree requests to come in
  *      - so that only one refresh tree request goes out no matter how many times its called during that time period
+ * @param pid - pid of item that we expect the children to change, or for the name to change
  */
 sidora.util.RefreshTreeHelper = function(secondsOfWait, pid, onlyRefreshIfNew) {
-  if (typeof(secondsOfWait) == 'undefined') secondsOfWait = .01;
-  if (sidora.util.refreshTreeRequestInProgress) return;
-  sidora.util.refreshTreeRequestInProgress = true;
-  setTimeout(function(){
-    jQuery.ajax({
-      url: Drupal.settings.basePath+'sidora/ajax_parts/tree/'+pid+"/2",
-    }).done(function(tree_html){
-      var suggestedAction = sidora.util.RefreshTreeSuggestAction(tree_html, true);
-      if (suggestedAction.suggestRedirect) { window.location = Drupal.settings.basePath+'user';  }
-      if (suggestedAction.suggestRetry){
-        sidora.util.refreshTreeFailuresInARow++;
-        if (sidora.util.refreshTreeFailuresInARow > 10) {
-          console.log("Too many tree failures without a success. Stopping retries.");
-          return;
-        } else {
-          console.log("Initiated retry:"+sidora.util.refreshTreeFailuresInARow);
-          sidora.util.refreshTreeRequestInProgress = false;
-          sidora.util.RefreshTreeHelper(3, pid, onlyRefreshIfNew);
-          return;
+  
+  if (typeof(secondsOfWait) == 'undefined' || secondsOfWait == null) secondsOfWait = .01;
+  //Since we are concerned about the children of this and our treeAddition function expects to get the grandparent
+  //of newly changed items, find an appropriate parent 
+  var nodeIds = sidora.util.GetTreeIdsByPid(pid);
+  var jst = jQuery("#forjstree").jstree();
+  nodeIds.forEach(function(treeId, index, arr) {
+    var node = jst.get_node(treeId);
+    var parentNode = jst.get_node(node.parent);
+    var parentPid = parentNode.a_attr.pid;
+    setTimeout(function(pid){
+      jQuery.ajax({
+        url: Drupal.settings.basePath+'sidora/ajax_parts/tree/'+pid+"/2",
+      }).done(function(tree_html){
+        var suggestedAction = sidora.util.RefreshTreeSuggestAction(tree_html, true);
+        if (suggestedAction.suggestRedirect) { window.location = Drupal.settings.basePath+'user';  }
+        if (suggestedAction.suggestRetry){
+          sidora.util.refreshTreeFailuresInARow++;
+          if (sidora.util.refreshTreeFailuresInARow > 10) {
+            console.log("Too many tree failures without a success. Stopping retries.");
+            return;
+          } else {
+            console.log("Initiated retry:"+sidora.util.refreshTreeFailuresInARow);
+            sidora.util.RefreshTreeHelper(3, pid, onlyRefreshIfNew);
+            return;
+          }
         }
-      }
-      if (suggestedAction.suggestIgnore) { return; }
-      if (!suggestedAction.valid) { console.log("Unknown tree issue. Error code:surt1"); return; }
-      if (tree_html == sidora.util.latestTreeGrab && onlyRefreshIfNew){
-        console.log("Tree same as prior tree, no update to UI");
-        return;
-      }
-      sidora.util.latestTreeGrab = tree_html;
-      sidora.RefreshTreeHtml(tree_html);
-      sidora.util.refreshTreeFailuresInARow = 0;
-    }).fail(function(failure_obj){
-      sidora.recentAjaxFailure(failure_obj);
-    }).always(function(){
-      sidora.util.refreshTreeRequestInProgress = false;
-    });
-  },secondsOfWait*1000);
+        if (suggestedAction.suggestIgnore) { return; }
+        if (!suggestedAction.valid) { console.log("Unknown tree issue. Error code:surt1"); return; }
+        /*
+        */
+        sidora.util.treeAddition(tree_html);//, null, "changes");
+        sidora.util.refreshTreeFailuresInARow = 0;
+      }).fail(function(failure_obj){
+        sidora.recentAjaxFailure(failure_obj);
+      }).always(function(){
+      });
+    },secondsOfWait*1000,parentPid);
+  }); //ends nodeIds.forEach
 }
 /*
  * These two are the functions that get called in practice
