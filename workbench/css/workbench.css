@@ -202,7 +202,7 @@ div.metadata-table {
   float:right;
   padding: 0;
 }
-#iframeOverlay {
+#iframeOverlay, #iframeTreeOverlay {
   height:100%;
   width:100%;
   position:absolute;
@@ -348,4 +348,11 @@ Table paging
 }
 #sidora-resource-sort{
   display: inline-block;
+}
+#fjt-holder {
+  overflow:auto;
+	height:inherit;
+}	
+.ui-resizable-e{
+  width:10px;
 }
