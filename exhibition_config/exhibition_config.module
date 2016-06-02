@@ -2302,14 +2302,17 @@ function exhibition_config_save_visibility($pid, $visibility_obj_tree) {
   if (empty($visibility_obj_tree['pid']) && !empty($visibility_obj_tree[0])){
     $visibility_obj_tree = $visibility_obj_tree[0];
   }
-  $query = db_update('exhibition_config')
-    ->fields(array(
-      'visibility' => json_encode($visibility_obj_tree),
-    ))
-    ->condition('pid', $pid, '=');
-  $num_updated = $query->execute();
-  $new_entry = NULL;
-  if ($num_updated === 0){
+  $exists = db_query('SELECT 1 FROM {exhibition_config} WHERE pid = :pid', array(':pid' => $pid))->fetchField();
+  if ($exists) {
+    $query = db_update('exhibition_config')
+      ->fields(array(
+        'visibility' => json_encode($visibility_obj_tree),
+      ))
+      ->condition('pid', $pid, '=');
+    $num_updated = $query->execute();
+    $new_entry = NULL;
+  }
+  else {
     $fields = 
       array(
         'pid', 
@@ -2324,7 +2327,7 @@ function exhibition_config_save_visibility($pid, $visibility_obj_tree) {
     );
     $new_entry = $insert_query->execute();
   }
-  return (!empty($num_updated) || !empty($new_entry)); 
+  return TRUE; 
 }
 /*
  * Retrieves the visibility tree from the database or the default show nothing visibility
