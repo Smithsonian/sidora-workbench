@@ -471,30 +471,37 @@ sidora.util.openToCurrentPathAndSelectItem = function(currentUrl){
   if (typeof(currentUrl) == 'undefined' || currentUrl == null) {
     currentUrl = window.location.pathname + window.location.search + window.location.hash;
   } 
+  var jst = jQuery("#forjstree").jstree();
   var jstreeIdSelected = sidora.util.getNodeIdByHref(currentUrl);
   toOpen = [];
   //Figure out the path down the tree to open up
   toOpen.unshift(jstreeIdSelected);
   while(toOpen[0] != false){
-    toOpen.unshift(jQuery('#forjstree').jstree('get_parent',toOpen[0]));
+    toOpen.unshift(jst.get_parent(toOpen[0]));
   }
   //Close the entire tree
-  jQuery('#forjstree').jstree('close_all');
+  jst.close_all();
   //Open up the path that was figured out above
   for (i = 0; i < toOpen.length; i++){
-    if (toOpen[i]) jQuery('#forjstree').jstree('open_node',toOpen[i]);
+    if (toOpen[i]) jst.open_node(toOpen[i]);
   }
   var itemSelectorForCurrentItemInTree = 'a[href=\"'+currentUrl+'\"]';
-  jQuery('#forjstree').jstree('select_node',itemSelectorForCurrentItemInTree);
+  var selectThisNode = jst.get_node(itemSelectorForCurrentItemInTree);
+  sidora.util.loadTreeSectionsIfNeeded(selectThisNode);
+  jst.select_node(selectThisNode); 
 }
 /*
  * Given a node, loads its grandchildren if needed and checks the validation status of grandchildren
- * @param data - jstree node
+ * @param data - jstree node or item that has a node attribute containing a jstree node
  */
 sidora.util.loadTreeSectionsIfNeeded = function(data){
+  var node = data;
+  if (typeof(data.node) != 'undefined') {
+    node = data.node;
+  }
   var jst = jQuery("#forjstree").jstree(true);
-  var openingPid = data.node.a_attr.pid;
-  var currentChildrenPids = sidora.util.childrenPidsListedInUIByNode(data.node);
+  var openingPid = node.a_attr.pid;
+  var currentChildrenPids = sidora.util.childrenPidsListedInUIByNode(node);
   var childPidsCsv = currentChildrenPids.join();
   if (childPidsCsv.length > 0) {
     sidora.util.checkUIForInvalidPids(openingPid, childPidsCsv);
@@ -507,8 +514,8 @@ sidora.util.loadTreeSectionsIfNeeded = function(data){
       //Only load information if the currentChildren have children that are not listed
       var doRetrieval = false;
       for (var ccc = 0; ccc < currentChildrenPids.length; ccc++ ){
-        var numberOfChildrenThisShouldHave = parseInt(jst.get_node(data.node.children[ccc]).a_attr.conceptchildren);
-        var numberOfChildrenThisDoesHave = jst.get_node(data.node.children[ccc]).children.length;
+        var numberOfChildrenThisShouldHave = parseInt(jst.get_node(node.children[ccc]).a_attr.conceptchildren);
+        var numberOfChildrenThisDoesHave = jst.get_node(node.children[ccc]).children.length;
         if (numberOfChildrenThisShouldHave > numberOfChildrenThisDoesHave) {
           doRetrieval = true;
         }
