@@ -583,9 +583,9 @@ sidora.InitiateJSTree = function(){
       sidora.queue.incomingRequestsAreSilent = true;
       sidora.queue.Request('Copy Concept', actionUrl, function(){
         sidora.concept.LoadContentHelp.Relationships();
-      }, function(){
-        sidora.util.RefreshTree();
-      }, [moveToPid,toMovePid]);
+      }, 
+      sidora.util.createFunctionRefreshTree(moveToPid)
+      , [moveToPid,toMovePid]);
       sidora.queue.incomingRequestsAreSilent = false;
       sidora.queue.Next();
     });
@@ -611,15 +611,17 @@ sidora.InitiateJSTree = function(){
       sidora.queue.incomingRequestsAreSilent = true;
       sidora.queue.Request('Remove concept association', actionUrl, function(){
         sidora.concept.LoadContentHelp.Relationships();
-      },  function(){
-        sidora.util.RefreshTree();
-      }, [toMovePid,moveFromPid]);
+      },
+      sidora.util.createFunctionRefreshTree(moveFromPid)
+      , [toMovePid,moveFromPid]);
       sidora.queue.incomingRequestsAreSilent = false;
       sidora.queue.Next();
     });
 
     jQuery("#forjstree").unbind('move_node.jstree');
     jQuery('#forjstree').bind('move_node.jstree',function(event,data){
+      var jst = jQuery("#forjstree").jstree(true);
+      if (typeof(jst.pureUIChange) != 'undefined' && jst.pureUIChange) return; //don't want a Fedora change
       var toMovePid = data.node.a_attr.pid;
       var moveToPid = jQuery("#"+data.parent+" a").attr('pid');
       var moveFromPid = jQuery("#"+data.old_parent+" a").attr('pid');
@@ -627,7 +629,6 @@ sidora.InitiateJSTree = function(){
       if (moveFromPid == moveToPid){ console.log('move to itself, ignoring...'); return; }
       var actionUrl = Drupal.settings.basePath+'sidora/ajax_parts/move/'+moveFromPid+'/'+moveToPid+'/'+toMovePid;
 
-      var jst = jQuery("#forjstree").jstree(true);
       //New Parent renumber
       var newParentExistingChildConceptsNumber = parseInt(jQuery("#"+data.parent).children("a").attr("conceptchildren"));
       var npReplacer = newParentExistingChildConceptsNumber+1;
@@ -642,9 +643,9 @@ sidora.InitiateJSTree = function(){
       sidora.queue.incomingRequestsAreSilent = true;
       sidora.queue.Request('Concept move', actionUrl, function(){
         sidora.concept.LoadContentHelp.Relationships();
-      }, function(){
-        sidora.util.RefreshTree();
-      }, [moveToPid,toMovePid,moveFromPid]);
+      },
+      sidora.util.createFunctionRefreshTree([moveToPid,moveFromPid])
+      , [moveToPid,toMovePid,moveFromPid]);
       sidora.queue.incomingRequestsAreSilent = false;
       sidora.queue.Next();
     });
@@ -823,6 +824,8 @@ sidora.InitiateJSTree = function(){
           if (dragStatus.pos == "a") return false; //no inbetweens so take out "after"
         }
         if (callbackType == "move_node"){
+          var jst = jQuery("#forjstree").jstree(true);
+          if (typeof(jst.pureUIChange) != 'undefined' && jst.pureUIChange) return true; //don't want a Fedora change
           if (sidora.util.userConfirmedMove){
             return true;
           }
@@ -835,7 +838,6 @@ sidora.InitiateJSTree = function(){
                 return;
               }
               sidora_util.lock.KeepAlive();
-              var jst = jQuery("#forjstree").jstree(true);
               var parentNode = jst.get_node(mouseOverObject.id);
               var currentChildren = parentNode.children;
               var currentChildrenPids = [];
@@ -1483,11 +1485,38 @@ sidora.util.childrenPidsListedInUIByNode = function(node) {
   }
   return currentChildrenPids;
 }
-sidora.util.createTreeAddition = function(onLoadComplete, overwriteType) {
+sidora.util.createFunctionRefreshTree = function(pids) {
+  if (typeof(pids) == "string") pids = [pids];
+  return function() {
+    pids.forEach(function(pid,index,arr){
+      sidora.util.RefreshTree(null,pid);
+    });
+  }
+}
+sidora.util.createFunctionTreeAddition = function(onLoadComplete, overwriteType) {
   return function(htmlTree) { 
     sidora.util.treeAddition(htmlTree, onLoadComplete, overwriteType);
   }
 }
+sidora.util.reorderTreeChildrenAlphabetical = function(node) {
+  var jst = jQuery("#forjstree").jstree();
+  var childIds = node.children;
+  var children = [];
+  childIds.forEach(function(value,index,arr){
+    children.push(jst.get_node(value));
+  });
+  children.sort(function(a,b){
+    if (a.text < b.text) return -1;
+    return 1;
+  });
+
+  jst.pureUIChange = true;
+  children.forEach(function(value,index,arr){
+    jst.move_node(value,node,"last");
+  });
+  jst.pureUIChange = false;
+}
+
 sidora.util.treeAddition = function(htmlTree, onLoadComplete, overwriteType){
   if (typeof(onLoadComplete) != 'function') {
     onLoadComplete = function(){}
@@ -1591,7 +1620,8 @@ sidora.util.treeAddition = function(htmlTree, onLoadComplete, overwriteType){
               });
             }
           }//Ends repChildIndex
-        }//Ends if ul.length == 0
+        }//Ends (currChild.children.length == 0 || overwriteType == "changes")
+        sidora.util.reorderTreeChildrenAlphabetical(currChild);
       }//Ends dfAnchor.length not zero
     }//Ends micIndex
   });//Ends mainItems each
@@ -1624,7 +1654,7 @@ sidora.util.loadTreeSection = function(openingPid, onLoadComplete, overwriteType
     "dataType":"html",
     "method":"GET",
     "url": Drupal.settings.basePath+"sidora/ajax_parts/tree/"+openingPid+"/2",
-    "success": sidora.util.createTreeAddition(onLoadComplete, overwriteType)
+    "success": sidora.util.createFunctionTreeAddition(onLoadComplete, overwriteType)
   });
   return true;
 }
@@ -1991,9 +2021,7 @@ sidora.concept.DeleteConcept = function(){
       buttons: {
         "Delete concept": function() {
           var toClose = this;
-          var onDeleteWorked = function(){
-					  sidora.util.RefreshTree();
-          }
+          var onDeleteWorked = sidora.util.createFunctionRefreshTree(sidora.concept.GetPid());
           var onDeleteFailed = function(data){
             jQuery("#deleteConceptConfirm").remove();
             if (typeof(data) != 'undefined' && typeof(data.description) != 'undefined'){
@@ -2115,7 +2143,7 @@ sidora.resources.DeleteResource = function(){
     modal: true,
     buttons: {
       "Delete resource": function() {
-        var onDeleteWorked = function(){sidora.util.RefreshTree();}
+        var onDeleteWorked = sidora.util.createFunctionRefreshTree(sidora.concept.GetPid());
         var onDeleteFailed = function(data){};
         sidora.resources.DeleteResourceBusinessLogic(onDeleteWorked,onDeleteFailed);
         jQuery( this ).dialog( "close" );
