@@ -1535,7 +1535,7 @@ function sidora_osd_proxy($pid){
 /*
  * Creates a codebook in the Fedora repo and returns the Fedora object
  */
-function sidora_create_codebook_from_url($url, $codebook_label){
+function sidora_create_codebook_from_url($url, $codebook_label, $header_amount = 0){
   global $user;
   module_load_include('inc', 'islandora', 'includes/utilities');
   module_load_include('inc', 'islandora', 'includes/ingest.form');
@@ -1565,6 +1565,7 @@ function sidora_create_codebook_from_url($url, $codebook_label){
 <ontology_location_id/>
 <meta_requirements_fulfilled>TRUE</meta_requirements_fulfilled>
 <initial_dsid>DDI</initial_dsid>
+<num_header_rows>'.intval($header_amount).'</num_header_rows>
 </sidora>';
   $sidora_ds = $codebook->constructDatastream('SIDORA');
   $sidora_ds->label = 'SIDORA';
@@ -3076,12 +3077,19 @@ function sidora_codebook_upload_form($form, &$form_state){
   $form['gen-codebook']['radio']['header_choice'] = array(
     '#type' => 'radios',
     '#title' => t('Select option for column headers'),
-    '#description' => t('This determines if the first line of the data files is a list of headings for the data, or is part of the data itself'),
+    '#description' => t('This determines if the first line of the data files is part of the data, or if header data exists.'),
     '#options' => array( 
-      'TRUE' => t('All uploaded data files will have a header row'),
-      'FALSE' => t('Uploaded data files will not have a header row'),
+      'TRUE' => t('All uploaded data files will have header row(s)'),
+      'FALSE' => t('Uploaded data files will not have any header rows'),
     ),
     '#required' => TRUE,
+  );
+  $form['gen-codebook']['radio']['header_amount'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Enter the number of header rows'),
+    '#description' => t('The data for the files will start after this many rows (lines) of information.'),
+    '#required' => FALSE,
+    '#default_value' => '1',
   );
   $form['gen-codebook']['file'] = array(
     '#type' => 'file',
@@ -3144,10 +3152,30 @@ function sidora_codebook_upload_form($form, &$form_state){
  */
 function sidora_codebook_upload_form_validate($form, &$form_state) {
   if ($form_state['triggering_element']['#id'] == 'edit-upload-codebook-submit'){
+    $header_amount = $form_state['values']['header_amount'];
+    $header_choice = $form_state['values']['header_choice']; //Note this is a string, not a boolean
+    if (strcasecmp($header_choice,'true') !== 0) {
+      $header_amount = 0;
+    } 
+    else {
+      if (($header_amount !== '') && (intval($header_amount) != $header_amount || $header_amount <= 0)) {
+        //Did not use element_validate_integer_positive because want to ensure the order of validation and can leave blank (if no header rows)
+        //Want to exit out if this fails and not to bother with the file_move if the number of header rows is bad
+        form_set_error('header_amount',t("The number of lines must be a positive integer."));
+        return;
+      }
+    }
     $file = file_save_upload('file', array(
       // Validate extensions.
       'file_validate_extensions' => array('csv xls xlsx'),
     ));
+    if (strcasecmp($header_choice,'true') === 0) {
+      if ($file && $header_amount > 0) {
+        //Do the restructuring of the file and resave it
+        //resave the file by using first line, skipping N-1, then rest of file
+        //TBD TODO
+      }  
+    }
     // If the file passed validation:
     if ($file) {
       // Move the file into the Drupal file system.
@@ -3157,7 +3185,6 @@ function sidora_codebook_upload_form_validate($form, &$form_state) {
         file_save($file);
         // Set a response to the user.
         //drupal_set_message(t('The form has been submitted and the image has been saved, filename: @filename.', array('@filename' => $file->filename)));
-        $header_choice = $form_state['values']['header_choice']; //Note this is a string, not a boolean
         //The parser can't communicate over https, so swap it to http if that is attempted
         $fcu = file_create_url($file->uri);
         $fcu = str_replace('https://','http://',$fcu);
@@ -3165,7 +3192,7 @@ function sidora_codebook_upload_form_validate($form, &$form_state) {
         variable_get('sidora_codebook_parser_url', '').'url='.$fcu.'&headers='.$header_choice;
         $codebook_label = 'Codebook '.date('Ymd_His');
         try{
-          $codebook = sidora_create_codebook_from_url($url, $codebook_label);
+          $codebook = sidora_create_codebook_from_url($url, $codebook_label, $header_amount);
           $form_state['storage']['codebook'] = $codebook;
         }catch(Exception $e){
           watchdog('SIdora_Tabular_Parse',t("Problem with creating a codebook:<br/>").$e->getMessage().t("URL:").$url);
