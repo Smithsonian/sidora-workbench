@@ -495,6 +495,7 @@ sidora.util.openToCurrentPathAndSelectItem = function(currentUrl){
  * @param data - jstree node or item that has a node attribute containing a jstree node
  */
 sidora.util.loadTreeSectionsIfNeeded = function(data){
+  if (data == false) return;
   var jst = jQuery("#forjstree").jstree();
   var node = data;
   if (typeof(data.node) != 'undefined') {
