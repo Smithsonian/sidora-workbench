@@ -156,8 +156,8 @@ function sidora_tabular_view_phpexcelreader($pid,$dsid = 'OBJ'){
 ';
   echo '<input type="checkbox" id="showHeaderTable" />Has Header Row';
   echo $use_codebook_headers;
-  echo sidora_tabular_view_phpexcelreader_html($temp.'/'.$filename, TRUE, 'hasHeader');
-  echo sidora_tabular_view_phpexcelreader_html($temp.'/'.$filename, FALSE, 'noHeader');
+  echo sidora_tabular_view_phpexcelreader_html($temp.'/'.$filename, 1, 'hasHeader');
+  echo sidora_tabular_view_phpexcelreader_html($temp.'/'.$filename, 0, 'noHeader');
   echo '</body>
 </html>';
   drupal_exit();
@@ -199,37 +199,43 @@ function sidora_tabular_view_phpexcelreader_html_string($objPHPExcel, $cell) {
 /*
  * Returns the pure HTML table based on the given filename
  */
-function sidora_tabular_view_phpexcelreader_html($filename, $first_line_header = TRUE, $table_id = ''){
+function sidora_tabular_view_phpexcelreader_html($filename, $number_header_lines = 1, $table_id = ''){
   require_once(libraries_get_path('PHPExcel') . '/Classes/PHPExcel/IOFactory.php');
   $objReader = PHPExcel_IOFactory::createReaderForFile($filename);
   $objPHPExcel = $objReader->load($filename);
   $worksheet = $objPHPExcel->getActiveSheet();
   $table_header = '<thead><tr>';
   $table_data = '<tbody>';
-  $is_first = TRUE;
-  $count = 0;
+  $num_lines_so_far = 0;
+  //remove $first_line_header $is_first
   foreach ($worksheet->getRowIterator() as $row) {
-  	if (!$is_first || !$first_line_header){
-      $table_data .= '<tr>';
+  	if ($num_lines_so_far >= $number_header_lines){
+      $table_data .= "\n".'<tr>';
     }
     $cellIterator = $row->getCellIterator();
   	$cellIterator->setIterateOnlyExistingCells(false); // Loop all cells, even if it is not set
     foreach ($cellIterator as $cell) {
-      if ($is_first){
-        if ($first_line_header){
+      if ($num_lines_so_far == 0) {
+        if ($num_lines_so_far < $number_header_lines ){
           $table_header .= '<th>' . sidora_tabular_view_phpexcelreader_html_string($objPHPExcel, $cell) . '</th>';
-        }else{
-          $table_header .= '<th></th>'; 
+        }
+        else {
+          $table_header .= '<th></th>';
         }
       }
-      if (!is_null($cell) && !($is_first && $first_line_header)) {
-        $table_data .= '<td>' . sidora_tabular_view_phpexcelreader_html_string($objPHPExcel, $cell) . '</td>';
+      if ($num_lines_so_far >= $number_header_lines) {
+        if (!is_null($cell)) {
+          $table_data .= '<td>' . sidora_tabular_view_phpexcelreader_html_string($objPHPExcel, $cell) . '</td>';
+        }
+        else {
+          $table_data .= '<td></td>';
+        }
       }
     }
-  	if (!$is_first || !$first_line_header){
-		  $table_data .= '</tr>';
+  	if ($num_lines_so_far >= $number_header_lines){
+      $table_data .= '</tr>';
     }
-    $is_first = FALSE;
+    $num_lines_so_far++;
   }
   $table_header .= '</tr></thead>';
   $table_data .= '</tbody>';
