@@ -3187,7 +3187,8 @@ function sidora_codebook_upload_form_validate($form, &$form_state) {
       'file_validate_extensions' => array('csv xls xlsx'),
     ));
     if (empty($file)) { 
-      form_set_error('file', t("Failed to write the uploaded file to the site's file folder."));
+      form_set_error('file', t("No file or failed to write the uploaded file to the site's file folder."));
+      return;
     }
     $parser_os_file_path = drupal_realpath($file->destination);
     $parser_drupal_file_path = NULL;
