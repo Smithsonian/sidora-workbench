@@ -3168,6 +3168,9 @@ function sidora_codebook_upload_form_validate($form, &$form_state) {
   if ($form_state['triggering_element']['#id'] == 'edit-upload-codebook-submit'){
     $header_amount = $form_state['values']['header_amount'];
     $header_choice = $form_state['values']['header_choice']; //Note this is a string, not a boolean
+    if (strtolower($header_choice) != 'true' && strtolower($header_choice) != 'false') {
+      return;
+    }
     if (strcasecmp($header_choice,'true') !== 0) {
       $header_amount = 0;
     } 
@@ -3183,7 +3186,10 @@ function sidora_codebook_upload_form_validate($form, &$form_state) {
       // Validate extensions.
       'file_validate_extensions' => array('csv xls xlsx'),
     ));
-    $parser_os_file_path = drupal_realpath($file);
+    if (empty($file)) { 
+      form_set_error('file', t("Failed to write the uploaded file to the site's file folder."));
+    }
+    $parser_os_file_path = drupal_realpath($file->destination);
     $parser_drupal_file_path = NULL;
     $delete_parser_file = FALSE;
     if (strcasecmp($header_choice,'true') === 0) {
@@ -3198,6 +3204,18 @@ function sidora_codebook_upload_form_validate($form, &$form_state) {
         $objReader = PHPExcel_IOFactory::createReaderForFile($file_path); 
         $objPHPExcel = $objReader->load($file_path);
         $worksheet = $objPHPExcel->getActiveSheet();
+        //Maximum number of headers is the highest row - 1 since they need at least 1 line of data
+        if ($header_amount > ($worksheet->getHighestRow() - 1)) {
+          watchdog('SIdora_Tabular_Parse',t("Too many header rows: %num_hr_chosen but has this many rows: %real_rows Problem creating a codebook:<br/>parser_os_file_path: %for_parser <br/>drupal_realpath(file): %drupal_rp <br/>This file has NOT been deleted and is not going to be deleted by Drupal. It must be handled on the OS level.",array(
+                             '%for_parser' => $parser_os_file_path, 
+                             '%drupal_rp' => drupal_realpath($file->destination),
+                             '%num_hr_chosen' => $header_amount,
+                             '%real_rows' => $worksheet->getHighestRow(),
+                           )
+          ));
+          form_set_error('file',t("The demonstration file does not have data for the number of header rows chosen."));
+          return;
+        }
         $worksheet->removeRow(2 , $header_amount - 1);
         $objWriter = PHPExcel_IOFactory::createWriter($objPHPExcel, "Excel2007");
         $parser_os_file_path = $file_path . '.xlsx';
@@ -3205,12 +3223,12 @@ function sidora_codebook_upload_form_validate($form, &$form_state) {
         $delete_parser_file = TRUE;
       }
     }
-    $expl_rp = explode(drupal_realpath("public://"), $parser_os_file_path);
+    $expl_rp = explode(drupal_realpath("temporary://"), $parser_os_file_path);
     if (sizeof($expl_rp) == 2) {
       $parser_url_file_path = file_create_url("public://") . substr($expl_rp[1],1);
     }
     else {
-      watchdog('SIdora_Tabular_Parse',t("File System Problem with creating a codebook:<br/>parser_os_file_path: %for_parser <br/>drupal_realpath(file): %drupal_rp <br/>This file has NOT been deleted and is not going to be deleted by Drupal. It must be handled on the OS level.",array('%for_parser' => $parser_os_file_path, '%drupal_rp' => drupal_realpath($file))));
+      watchdog('SIdora_Tabular_Parse',t("File System Problem with creating a codebook:<br/>parser_os_file_path: %for_parser <br/>drupal_realpath(file): %drupal_rp <br/>This file has NOT been deleted and is not going to be deleted by Drupal. It must be handled on the OS level.",array('%for_parser' => $parser_os_file_path, '%drupal_rp' => drupal_realpath($file->destination))));
       form_set_error('file',t("Unable to parse the uploaded file. Contact an administrator if you believe this file should be able to be parsed.  Please send a screenshot of this page, include the file you uploaded, and the time and date this occurred.  The administrator should check the Drupal log for 'SIdora_Tabular_Parse' for more information."));
       return;
     }
@@ -3237,9 +3255,6 @@ function sidora_codebook_upload_form_validate($form, &$form_state) {
           form_set_error('file',t("Unable to parse the uploaded file. Contact an administrator if you believe this file should be able to be parsed.  Please send a screenshot of this page, include the file you uploaded, and the time and date this occurred.  The administrator should check the Drupal log for 'SIdora_Tabular_Parse' for more information."));
           return;
         }
-      }
-      else {
-        form_set_error('file', t("Failed to write the uploaded file to the site's file folder."));
       }
     } //Ends if ($file)
     else {
@@ -3378,12 +3393,21 @@ jQuery(document).ready(function(){
     jQuery("#edit-existing-codebook").hide();
     jQuery("#cover").hide();
     addBackButton();
+    showOrHideBackedOnColumnHeaderChoice();
   });
   addBackButton = function(){
     jQuery("#content").append(\'<input id="back-button" type="submit" class="form-submit" value="Back"/>\');
     jQuery("#back-button").click(function(){
       jQuery("#back-button").remove();
       jQuery("#cover").show();
+    });
+  }
+  showOrHideBackedOnColumnHeaderChoice = function(){
+    jQuery("#edit-header-choice-false").click(function() {
+      jQuery("#edit-header-amount").closest("div").hide();
+    });
+    jQuery("#edit-header-choice-true").click(function() {
+      jQuery("#edit-header-amount").closest("div").show();
     });
   }
   jQuery("#cover").prepend(jQuery("#console"));
