@@ -181,10 +181,10 @@ function sidora_tabular_view_phpexcelreader($pid,$dsid = 'OBJ'){
   if (empty($num_header_lines)) $num_header_lines = 1;
   echo '<input type="checkbox" id="showHeaderTable" />';
   if ($num_header_lines == 1) {
-    echo t('Has Header Row:');
+    echo t('Skip header row');
   }
   elseif ($num_header_lines > 1) {
-    echo t('Has %num_headers Header Rows:',array('%num_headers'=>$num_header_lines));
+    echo t('Skip header rows (%num_headers)',array('%num_headers'=>$num_header_lines));
   }
   echo $use_codebook_headers;
  
