@@ -3096,7 +3096,7 @@ function sidora_codebook_upload_form($form, &$form_state){
     '#title' => t('Example Data File'),
     '#description' => t('The codebook will be generated on this uploaded example data.'),
     '#upload_validators' => array(
-      'file_validate_extensions' => array('csv xls'),
+      'file_validate_extensions' => array('csv xls xlsx'),
     ),
     '#attributes' => array(
       'accept'=> '.csv, .xls',
@@ -3147,6 +3147,20 @@ function sidora_codebook_upload_form($form, &$form_state){
   );
   return $form;
 }
+/**
+ * Helper function to do deletes without worring where they are from
+ * @param $path - a OS path or Drupal file path
+ */
+function sidora_do_any_file_delete($path) {
+  $fid = db_query("SELECT fid FROM {file_managed} WHERE uri = :path", array(':path' => $path))->fetchField();
+  if ($fid) {
+    $file = file_load($fid);
+    file_delete($file);
+  }
+  else {
+    file_unmanaged_delete($path);
+  } 
+}
 /*
  * hook_form_validate for the sidora_codebook_upload, also moves file if validation was successful
  */
@@ -3169,12 +3183,36 @@ function sidora_codebook_upload_form_validate($form, &$form_state) {
       // Validate extensions.
       'file_validate_extensions' => array('csv xls xlsx'),
     ));
+    $parser_os_file_path = drupal_realpath($file);
+    $parser_drupal_file_path = NULL;
+    $delete_parser_file = FALSE;
     if (strcasecmp($header_choice,'true') === 0) {
-      if ($file && $header_amount > 0) {
+      if ($file && $header_amount > 1) {
+        $parser_drupal_file_path = 'public://'.'_for_parser_'.uniqid();
+        file_copy($file, $parser_drupal_file_path);
+        $file_path = drupal_realpath($parser_drupal_file_path);
         //Do the restructuring of the file and resave it
         //resave the file by using first line, skipping N-1, then rest of file
-        //TBD TODO
-      }  
+        require_once(libraries_get_path('PHPExcel') . '/Classes/PHPExcel/IOFactory.php');
+        //createReaderForFile uses the extension to look for information so use the filename that has an extension
+        $objReader = PHPExcel_IOFactory::createReaderForFile($file_path); 
+        $objPHPExcel = $objReader->load($file_path);
+        $worksheet = $objPHPExcel->getActiveSheet();
+        $worksheet->removeRow(2 , $header_amount - 1);
+        $objWriter = PHPExcel_IOFactory::createWriter($objPHPExcel, "Excel2007");
+        $parser_os_file_path = $file_path . '.xlsx';
+        $objWriter->save($parser_os_file_path);
+        $delete_parser_file = TRUE;
+      }
+    }
+    $expl_rp = explode(drupal_realpath("public://"), $parser_os_file_path);
+    if (sizeof($expl_rp) == 2) {
+      $parser_url_file_path = file_create_url("public://") . substr($expl_rp[1],1);
+    }
+    else {
+      watchdog('SIdora_Tabular_Parse',t("File System Problem with creating a codebook:<br/>parser_os_file_path: %for_parser <br/>drupal_realpath(file): %drupal_rp <br/>This file has NOT been deleted and is not going to be deleted by Drupal. It must be handled on the OS level.",array('%for_parser' => $parser_os_file_path, '%drupal_rp' => drupal_realpath($file))));
+      form_set_error('file',t("Unable to parse the uploaded file. Contact an administrator if you believe this file should be able to be parsed.  Please send a screenshot of this page, include the file you uploaded, and the time and date this occurred.  The administrator should check the Drupal log for 'SIdora_Tabular_Parse' for more information."));
+      return;
     }
     // If the file passed validation:
     if ($file) {
@@ -3186,7 +3224,7 @@ function sidora_codebook_upload_form_validate($form, &$form_state) {
         // Set a response to the user.
         //drupal_set_message(t('The form has been submitted and the image has been saved, filename: @filename.', array('@filename' => $file->filename)));
         //The parser can't communicate over https, so swap it to http if that is attempted
-        $fcu = file_create_url($file->uri);
+        $fcu = $parser_url_file_path;
         $fcu = str_replace('https://','http://',$fcu);
         $url = 
         variable_get('sidora_codebook_parser_url', '').'url='.$fcu.'&headers='.$header_choice;
@@ -3195,7 +3233,7 @@ function sidora_codebook_upload_form_validate($form, &$form_state) {
           $codebook = sidora_create_codebook_from_url($url, $codebook_label, $header_amount);
           $form_state['storage']['codebook'] = $codebook;
         }catch(Exception $e){
-          watchdog('SIdora_Tabular_Parse',t("Problem with creating a codebook:<br/>").$e->getMessage().t("URL:").$url);
+          watchdog('SIdora_Tabular_Parse',t("Problem with creating a codebook:<br/>") . $e->getMessage() . t("URL:") . $url);
           form_set_error('file',t("Unable to parse the uploaded file. Contact an administrator if you believe this file should be able to be parsed.  Please send a screenshot of this page, include the file you uploaded, and the time and date this occurred.  The administrator should check the Drupal log for 'SIdora_Tabular_Parse' for more information."));
           return;
         }
@@ -3203,9 +3241,15 @@ function sidora_codebook_upload_form_validate($form, &$form_state) {
       else {
         form_set_error('file', t("Failed to write the uploaded file to the site's file folder."));
       }
-    }
+    } //Ends if ($file)
     else {
       form_set_error('file', t('No file was uploaded.'));
+    } //Ends else of if ($file)
+    if ($delete_parser_file) {
+      //Remove the original copy
+      sidora_do_any_file_delete($parser_drupal_file_path);
+      //Remove the resaved copy
+      sidora_do_any_file_delete($parser_os_file_path);
     }
   }
 }
