@@ -2690,7 +2690,13 @@ sidora.manage.removeDatastream = function(pid,dsid){
   jQuery("#removeDatastreamDialog").closest(".ui-dialog").css("z-index", 1000); //shadowbox is 998
 }
 jQuery(function () {
-  window.sidora.InitiatePage()
+  //Check to see that the page has a hash or ends with a '/' so that we will not have to reload the page on first click
+  if (window.location.hash == "" && !window.location.pathname.endsWith("/")){
+    window.location = window.location.pathname + "/";
+  }
+  else {
+    window.sidora.InitiatePage()
+  }
 });
 
 jQuery(window).resize(function() {
