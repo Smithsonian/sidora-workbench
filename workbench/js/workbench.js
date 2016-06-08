@@ -2691,11 +2691,14 @@ sidora.manage.removeDatastream = function(pid,dsid){
 }
 jQuery(function () {
   //Check to see that the page has a hash or ends with a '/' so that we will not have to reload the page on first click
-  if (window.location.hash == "" && !window.location.pathname.endsWith("/")){
-    window.location = window.location.pathname + "/";
+  if (
+       window.location.hash == "" && 
+       (!window.location.pathname.startsWith(Drupal.settings.basePath) || !window.location.pathname.endsWith("/sidora/workbench/")) 
+     ){
+    window.location = Drupal.settings.basePath + "sidora/workbench/#";
   }
   else {
-    window.sidora.InitiatePage()
+    window.sidora.InitiatePage();
   }
 });
 
