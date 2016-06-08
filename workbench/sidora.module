@@ -3182,10 +3182,13 @@ function sidora_codebook_upload_form_validate($form, &$form_state) {
         return;
       }
     }
-    $file = file_save_upload('file', array(
-      // Validate extensions.
-      'file_validate_extensions' => array('csv xls xlsx'),
-    ));
+    $file = file_save_upload('file', 
+      array(
+        // Validate extensions.
+        'file_validate_extensions' => array('csv xls xlsx'),
+      ),
+      'public://'
+    );
     if (empty($file)) { 
       form_set_error('file', t("No file or failed to write the uploaded file to the site's file folder."));
       return;
@@ -3215,6 +3218,10 @@ function sidora_codebook_upload_form_validate($form, &$form_state) {
                            )
           ));
           form_set_error('file',t("The demonstration file does not have data for the number of header rows chosen."));
+          //Remove the original
+          sidora_do_any_file_delete($parser_os_file_path);
+          //Remove the copy created for the parser
+          sidora_do_any_file_delete($file_path);
           return;
         }
         $worksheet->removeRow(2 , $header_amount - 1);
@@ -3224,7 +3231,7 @@ function sidora_codebook_upload_form_validate($form, &$form_state) {
         $delete_parser_file = TRUE;
       }
     }
-    $expl_rp = explode(drupal_realpath("temporary://"), $parser_os_file_path);
+    $expl_rp = explode(drupal_realpath("public://"), $parser_os_file_path);
     if (sizeof($expl_rp) == 2) {
       $parser_url_file_path = file_create_url("public://") . substr($expl_rp[1],1);
     }
@@ -3235,31 +3242,25 @@ function sidora_codebook_upload_form_validate($form, &$form_state) {
     }
     // If the file passed validation:
     if ($file) {
-      // Move the file into the Drupal file system.
-      if ($file = file_move($file, 'public://')) {
-        // Save the file for use in the submit handler.
-        $form_state['storage']['file'] = $file;
-        file_save($file);
-        // Set a response to the user.
-        //drupal_set_message(t('The form has been submitted and the image has been saved, filename: @filename.', array('@filename' => $file->filename)));
-        //The parser can't communicate over https, so swap it to http if that is attempted
-        $fcu = $parser_url_file_path;
-        $fcu = str_replace('https://','http://',$fcu);
-        $url = 
-        variable_get('sidora_codebook_parser_url', '').'url='.$fcu.'&headers='.$header_choice;
-        $codebook_label = 'Codebook '.date('Ymd_His');
-        try{
-          $codebook = sidora_create_codebook_from_url($url, $codebook_label, $header_amount);
-          $form_state['storage']['codebook'] = $codebook;
-        }catch(Exception $e){
-          watchdog('SIdora_Tabular_Parse',t("Problem with creating a codebook:<br/>") . $e->getMessage() . t("URL:") . $url);
-          form_set_error('file',t("Unable to parse the uploaded file. Contact an administrator if you believe this file should be able to be parsed.  Please send a screenshot of this page, include the file you uploaded, and the time and date this occurred.  The administrator should check the Drupal log for 'SIdora_Tabular_Parse' for more information."));
-          return;
-        }
+      // Save the file for use in the submit handler.
+      $form_state['storage']['file'] = $file;
+      file_save($file);
+      // Set a response to the user.
+      //drupal_set_message(t('The form has been submitted and the image has been saved, filename: @filename.', array('@filename' => $file->filename)));
+      //The parser can't communicate over https, so swap it to http if that is attempted
+      $fcu = $parser_url_file_path;
+      $fcu = str_replace('https://','http://',$fcu);
+      $url = 
+      variable_get('sidora_codebook_parser_url', '').'url='.$fcu.'&headers='.$header_choice;
+      $codebook_label = 'Codebook '.date('Ymd_His');
+      try{
+        $codebook = sidora_create_codebook_from_url($url, $codebook_label, $header_amount);
+        $form_state['storage']['codebook'] = $codebook;
+      }catch(Exception $e){
+        watchdog('SIdora_Tabular_Parse',t("Problem with creating a codebook:<br/>") . $e->getMessage() . t("URL:") . $url);
+        form_set_error('file',t("Unable to parse the uploaded file. Contact an administrator if you believe this file should be able to be parsed.  Please send a screenshot of this page, include the file you uploaded, and the time and date this occurred.  The administrator should check the Drupal log for 'SIdora_Tabular_Parse' for more information."));
+        return;
       }
-    } //Ends if ($file)
-    else {
-      form_set_error('file', t('No file was uploaded.'));
     } //Ends else of if ($file)
     if ($delete_parser_file) {
       //Remove the original copy
