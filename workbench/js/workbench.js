@@ -1590,8 +1590,9 @@ sidora.util.createFunctionRefreshTree = function(pids) {
     });
   }
 }
-sidora.util.createFunctionTreeAddition = function(onLoadComplete, overwriteType) {
-  return function(htmlTree) { 
+sidora.util.createFunctionTreeAddition = function(openingPid, onLoadComplete, overwriteType) {
+  return function(htmlTree) {
+    sidora.util.loadTreeSectionCurrent[openingPid] = false;
     sidora.util.treeAddition(htmlTree, onLoadComplete, overwriteType);
   }
 }
@@ -1751,7 +1752,7 @@ sidora.util.loadTreeSection = function(openingPid, onLoadComplete, overwriteType
     "dataType":"html",
     "method":"GET",
     "url": Drupal.settings.basePath+"sidora/ajax_parts/tree/"+openingPid+"/2",
-    "success": sidora.util.createFunctionTreeAddition(onLoadComplete, overwriteType)
+    "success": sidora.util.createFunctionTreeAddition(openingPid, onLoadComplete, overwriteType)
   });
   return true;
 }

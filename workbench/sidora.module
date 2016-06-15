@@ -3257,7 +3257,10 @@ function sidora_codebook_upload_form_validate($form, &$form_state) {
         $codebook = sidora_create_codebook_from_url($url, $codebook_label, $header_amount);
         $form_state['storage']['codebook'] = $codebook;
       }catch(Exception $e){
-        watchdog('SIdora_Tabular_Parse',t("Problem with creating a codebook:<br/>") . $e->getMessage() . t("URL:") . $url);
+        ob_start();
+        var_dump($e);
+        $exception_dump = ob_get_clean();
+        watchdog('SIdora_Tabular_Parse',t("Problem with creating a codebook:<br/>") . $e->getMessage() . '<br>' . $exception_dump . t("URL:") . $url);
         form_set_error('file',t("Unable to parse the uploaded file. Contact an administrator if you believe this file should be able to be parsed.  Please send a screenshot of this page, include the file you uploaded, and the time and date this occurred.  The administrator should check the Drupal log for 'SIdora_Tabular_Parse' for more information."));
         return;
       }
