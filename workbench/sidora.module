@@ -3224,7 +3224,7 @@ function sidora_codebook_upload_form_validate($form, &$form_state) {
           sidora_do_any_file_delete($file_path);
           return;
         }
-        $worksheet->removeRow(2 , $header_amount - 1);
+        $worksheet->removeRow(1 , $header_amount - 1);
         $objWriter = PHPExcel_IOFactory::createWriter($objPHPExcel, "Excel2007");
         $parser_os_file_path = $file_path . '.xlsx';
         $objWriter->save($parser_os_file_path);

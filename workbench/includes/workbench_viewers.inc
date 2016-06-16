@@ -236,24 +236,25 @@ function sidora_tabular_view_phpexcelreader_html($filename, $number_header_lines
   $objReader = PHPExcel_IOFactory::createReaderForFile($filename);
   $objPHPExcel = $objReader->load($filename);
   $worksheet = $objPHPExcel->getActiveSheet();
-  $table_header = '<thead><tr>';
+  $table_header = "\n" . '<thead><tr>';
   $table_data = '<tbody>';
   $num_lines_so_far = 0;
   //remove $first_line_header $is_first
   foreach ($worksheet->getRowIterator() as $row) {
   	if ($num_lines_so_far >= $number_header_lines){
       $table_data .= "\n".'<tr>';
+      //$table_data .= "\n".'<tr numLinesSoFar="'.$num_lines_so_far.'" nhl="'.$number_header_lines.'">';
     }
     $cellIterator = $row->getCellIterator();
   	$cellIterator->setIterateOnlyExistingCells(false); // Loop all cells, even if it is not set
     foreach ($cellIterator as $cell) {
-      if ($num_lines_so_far == 0) {
-        if ($num_lines_so_far < $number_header_lines ){
+      if ($num_lines_so_far == $number_header_lines - 1) {
+        if ($number_header_lines != 0){
           $table_header .= '<th>' . sidora_tabular_view_phpexcelreader_html_string($objPHPExcel, $cell) . '</th>';
         }
-        else {
-          $table_header .= '<th></th>';
-        }
+      }
+      if ($num_lines_so_far == 0 && $number_header_lines == 0) {
+        $table_header .= '<th></th>';
       }
       if ($num_lines_so_far >= $number_header_lines) {
         if (!is_null($cell)) {
@@ -269,8 +270,8 @@ function sidora_tabular_view_phpexcelreader_html($filename, $number_header_lines
     }
     $num_lines_so_far++;
   }
-  $table_header .= '</tr></thead>';
-  $table_data .= '</tbody>';
+  $table_header .= '</tr></thead>'."\n";
+  $table_data .= '</tbody>'."\n";
 
   $to_return = '<table class="display" id="'.$table_id.'">';
   $to_return .= $table_header;
