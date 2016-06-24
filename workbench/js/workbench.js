@@ -345,7 +345,7 @@ sidora.concept.LoadContentHelp.CreateResourceMenu = function(conceptOfInterest){
     var availableResourcesToCreateForConceptHtml = menu_html;
     jQuery("#resource-create").remove();
     if (menu_html.length > 0){
-      jQuery("#resource-files-menu").append('<li id="resource-create"><a id="resource-create-link" href="#" onclick="return false;"><input type="image" src="'+Drupal.settings.basePath+'sites/all/modules/islandora_xml_forms-7.x/elements/images/add.png" title="Create a new resource as a child of the highlighted concept."> Add&nbsp;resource</a><ul>'+availableResourcesToCreateForConceptHtml+'</ul></li>');
+      jQuery("#resource-files-menu").append('<li id="resource-create"><a id="resource-create-link" href="#" onclick="return false;"><input type="image" src="'+Drupal.settings.basePath+'sites/all/modules/islandora_xml_forms-7.x-1.7/elements/images/add.png" title="Create a new resource as a child of the highlighted concept."> Add&nbsp;resource</a><ul>'+availableResourcesToCreateForConceptHtml+'</ul></li>');
       jQuery("#resource-create a").attr("onclick","return false;");
       jQuery("#resource-create a").click(function(){
         var model = jQuery(this).attr("model");
@@ -1363,7 +1363,7 @@ sidora.ontology.CreateConceptMenu = function(){
     },
     success: function (json_obj){
       window.sidora.ontology.tree = json_obj;
-      jQuery("#concept-file-menu").append("<li id='concept-create'><a href='#' onclick='return false;'><input type='image' src='"+Drupal.settings.basePath+"sites/all/modules/islandora_xml_forms-7.x/elements/images/add.png' title='Create a new concept as a child of the highlighted concept.'>&nbsp;Add&nbsp;a&nbsp;new&nbsp;concept</a><ul>"+window.sidora.ontology._createSubmenu(window.sidora.ontology.tree)+"</ul></li>");
+      jQuery("#concept-file-menu").append("<li id='concept-create'><a href='#' onclick='return false;'><input type='image' src='"+Drupal.settings.basePath+"sites/all/modules/islandora_xml_forms-7.x-1.7/elements/images/add.png' title='Create a new concept as a child of the highlighted concept.'>&nbsp;Add&nbsp;a&nbsp;new&nbsp;concept</a><ul>"+window.sidora.ontology._createSubmenu(window.sidora.ontology.tree)+"</ul></li>");
       resetMenu("concept-menu");
       jQuery("#concept-create").find("a").not(".ui-state-disabled").bind("click.createConcept",function(){
         var model = jQuery(this).attr("model");
@@ -2210,7 +2210,7 @@ sidora.GetPermissionsHtml = function(){
   toReturn += '</tbody></table>';
   toReturn += '<span>Add Login / Group: </span>';
   toReturn += '<input type="text" size="45"/>';
-  toReturn += ' <input type="image" src="'+Drupal.settings.basePath+'sites/all/modules/islandora_xml_forms-7.x/elements/images/add.png" title="Add the login / group to the list">';
+  toReturn += ' <input type="image" src="'+Drupal.settings.basePath+'sites/all/modules/islandora_xml_forms-7.x-1.7/elements/images/add.png" title="Add the login / group to the list">';
   toReturn += '';
   toReturn += '';
   toReturn += '';
