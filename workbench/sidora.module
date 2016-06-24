@@ -1584,7 +1584,15 @@ function sidora_create_codebook_from_url($url, $codebook_label, $header_amount =
  * dry_run will not make any changes, just give the messages
  * 
  */
-function sidora_settings_import($object, $ignore_settings = array(), $only_apply_settings = array(), $dry_run = TRUE, $show_ignores_as_warnings = FALSE){
+function sidora_settings_import($object, $settings = array(), $dry_run = TRUE){
+  $ignore_settings           = isset($settings['ignore_settings']) ?           $settings['ignore_settings']            : array();
+  $only_apply_settings       = isset($settings['only_apply_settings']) ?       $settings['only_apply_settings']        : array();
+  $show_ignores_as_warnings  = isset($settings['how_ignores_as_warnings']) ?   $settings['show_ignores_as_warnings']   : FALSE;
+  $process_forms             = isset($settings['process_forms']) ?             $settings['process_forms']              : TRUE;
+  $process_form_associations = isset($settings['process_form_associations']) ? $settings['process_form_associations']  : TRUE;
+  $process_admin_settings    = isset($settings['process_admin_settings']) ?    $settings['process_admin_settings']     : TRUE;
+
+
   $ignore_message_type = $show_ignores_as_warnings?'warning':'status';
   //make the comparisons case insensitive by having all lower
   $ignore_settings = array_map('strtolower',$ignore_settings); 
@@ -1596,9 +1604,9 @@ function sidora_settings_import($object, $ignore_settings = array(), $only_apply
   //$full_export['forms'] = $forms;
   //$full_export['associations'] = $associations;
   //$full_export['admin_settings'] = $settings_holder;
-  $forms = $object->forms;
-  $associations = $object->associations;
-  $admin_settings = $object->admin_settings;
+  $forms = ($process_forms) ? $object->forms : array();
+  $associations = ($process_form_associations) ? $object->associations : array();
+  $admin_settings = ($process_admin_settings) ? $object->admin_settings : array();
   module_load_include('inc', 'xml_form_builder', 'XMLFormRepository');
   module_load_include('inc', 'xml_form_builder', 'XMLFormDatabase');
   module_load_include('inc', 'xml_form_builder', 'includes/associations');
@@ -1830,12 +1838,9 @@ function sidora_config_transfer($direct_download = ""){
   }
   else if (array_key_exists('useLastDryRunAsConfigSource', $_GET) && $_GET['useLastDryRunAsConfigSource'] === 'true') {
       $filepath = $_SESSION['sidora_uploaded_json_config']['object_filepath'];
-      $ignore_settings = $_SESSION['sidora_uploaded_json_config']['ignore_settings'];
-      $only_apply_settings = $_SESSION['sidora_uploaded_json_config']['only_apply_settings'];
-      $show_ignores_as_warnings = $_SESSION['sidora_uploaded_json_config']['show_ignores_as_warnings'];
       $file_contents = file_get_contents($filepath);
       $object = json_decode($file_contents);
-      sidora_settings_import($object,$ignore_settings,$only_apply_settings,FALSE,$show_ignores_as_warnings);
+      sidora_settings_import($object,$_SESSION['sidora_uploaded_json_config'],FALSE);
       drupal_goto('admin/sidora/config_transfer');
   }
   else {
@@ -1887,6 +1892,21 @@ function sidora_config_form($form, &$form_state){
     '#title'=>t('Dry Run (do not actually make changes)'),
     '#default_value' =>TRUE, // for default checked and false is not checked
   );
+  $form['process_forms'] = array(
+    '#type' =>'checkbox',
+    '#title'=>t('Process Forms'),
+    '#default_value' => variable_get('sidora_config_process_forms',TRUE),
+  );
+  $form['process_form_associations'] = array(
+    '#type' =>'checkbox',
+    '#title'=>t('Process Form Associations'),
+    '#default_value' => variable_get('sidora_config_process_form_associations',TRUE),
+  );
+  $form['process_admin_settings'] = array(
+    '#type' =>'checkbox',
+    '#title'=>t('Process Administrative Settings'),
+    '#default_value' => variable_get('sidora_config_process_admin_settings',TRUE),
+  );
   $form['only_apply_settings'] = array(
     '#type' => 'textarea',
     '#title' => t('Only apply settings that have one of the following in the name'),
@@ -1914,6 +1934,13 @@ function sidora_config_form_submit($form, &$form_state) {
   $file = file_save_upload('file',$validators);
   variable_set("sidora_config_import_ignores",$form_state['values']['ignore_settings']);
   variable_set("sidora_config_only_apply",$form_state['values']['only_apply_settings']);
+  variable_set("sidora_config_process_forms",$form_state['values']['process_forms']);
+  variable_set("sidora_config_process_form_associations",$form_state['values']['process_form_associations']);
+  variable_set("sidora_config_process_admin_settings",$form_state['values']['process_admin_settings']);
+  $process_forms = $form_state['values']['process_forms'];
+  $process_form_associations = $form_state['values']['process_form_associations'];
+  $process_admin_settings = $form_state['values']['process_admin_settings'];
+  $ignore_settings = array_map('trim', explode("\n",$form_state['values']['ignore_settings'])); //Explode it and trim any whitespace
   $ignore_settings = array_map('trim', explode("\n",$form_state['values']['ignore_settings'])); //Explode it and trim any whitespace
   $only_apply_settings = array_map('trim', explode("\n",$form_state['values']['only_apply_settings'])); //Explode it and trim any whitespace
   $dry_run = $form_state['values']['dry_run'];
@@ -1922,13 +1949,16 @@ function sidora_config_form_submit($form, &$form_state) {
     $filepath = drupal_realpath($file->uri);
     $file_contents = file_get_contents($filepath);
     $object = json_decode($file_contents);
-    sidora_settings_import($object,$ignore_settings,$only_apply_settings,$dry_run,$show_ignores_as_warnings);
     $_SESSION['sidora_uploaded_json_config'] = array();
     $_SESSION['sidora_uploaded_json_config']['object_filepath'] = $filepath;
     $_SESSION['sidora_uploaded_json_config']['ignore_settings'] = $ignore_settings;
     $_SESSION['sidora_uploaded_json_config']['only_apply_settings'] = $only_apply_settings;
     $_SESSION['sidora_uploaded_json_config']['dry_run'] = $dry_run;
     $_SESSION['sidora_uploaded_json_config']['show_ignores_as_warnings'] = $show_ignores_as_warnings;
+    $_SESSION['sidora_uploaded_json_config']['process_forms'] = $process_forms;
+    $_SESSION['sidora_uploaded_json_config']['process_form_associations'] = $process_form_associations;
+    $_SESSION['sidora_uploaded_json_config']['process_admin_settings'] = $process_admin_settings;
+    sidora_settings_import($object,$_SESSION['sidora_uploaded_json_config'],$dry_run);
 
     if ($dry_run) drupal_set_message('Update the configuration of server with the configuration used in the dry run by clicking this link: <a href="?useLastDryRunAsConfigSource=true">Use the Dry Run config</a>','whitebox');
   }
