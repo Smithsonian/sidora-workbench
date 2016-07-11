@@ -3282,7 +3282,7 @@ function sidora_codebook_upload_form_validate($form, &$form_state) {
       $fcu = $parser_url_file_path;
       $fcu = str_replace('https://','http://',$fcu);
       $url = 
-      variable_get('sidora_codebook_parser_url', '').'url='.$fcu.'&headers='.$header_choice;
+      variable_get('sidora_codebook_parser_url', '').'url='.urlencode($fcu).'&headers='.$header_choice;
       $codebook_label = 'Codebook '.date('Ymd_His');
       try{
         $codebook = sidora_create_codebook_from_url($url, $codebook_label, $header_amount);
