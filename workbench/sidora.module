@@ -3491,6 +3491,15 @@ jQuery(document).ready(function(){
               myFile.loaded = '.$filesize.'; 
               myFile.percent = 100; 
               myFile.status = 5;
+              //Large files that go beyond the chunking limit will check that their chunks are completed in a way
+              //that looks for the original uploader.  Since no such uploader exists the "getSource" will return
+              //a blank object.  The source will be asked for the slice function to see if it is complete, which
+              //would then be calling a function of an object where it does not exist, generating a javascript error.
+              myFile.getSource = function() {
+                return {
+                  slice: function(){}
+                }
+              };
               uploader.addFile(myFile);
             };
             sidoraCodebookGhostRemoved = false;
