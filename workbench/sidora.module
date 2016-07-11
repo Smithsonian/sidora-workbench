@@ -6004,10 +6004,21 @@ function sidora_fill_concepts_children($query_result, $current_path = array()){
 function _sidora_get_child_results_cache($child_pid){
   if (cache_get("sidora:children_results:".$child_pid) === FALSE){
     $tuque = islandora_get_tuque_connection();
-    $grandchildren_query = wb_si_exhibition_generate_child_concept_query($child_pid);
+    $grandchildren_query = wb_si_exhibition_generate_child_concept_query_children_only($child_pid); // this is where we exceute the Main list query
     $ri = $tuque->repository->ri;
     $results = $ri->itqlQuery($grandchildren_query);
-    cache_set("sidora:children_results:".$child_pid,$results);
+		foreach ($results as $gc_index=>$gchild){
+      $grandchild_pid = $gchild['o']['value']; 
+			$concept_count_query = wb_si_exhibition_generate_child_concept_query_concepts_count($grandchild_pid); // to be substituted by Concept Query
+			$ri = $tuque->repository->ri;
+      $concept_results = $ri->itqlQuery($concept_count_query);
+			$results[$gc_index]['k0'] = $concept_results['0']['k0'];
+		  $resource_count_query = wb_si_exhibition_generate_child_concept_query_resources_count($grandchild_pid); // to be substituted by Resource Query
+      $ri = $tuque->repository->ri;
+      $resource_results = $ri->itqlQuery($resource_count_query);
+		  $results[$gc_index]['k1'] = $resource_results['0']['k0'];
+		}
+		cache_set("sidora:children_results:".$child_pid,$results);
   }else{
     $results = cache_get("sidora:children_results:".$child_pid)->data;
   }
@@ -6810,6 +6821,35 @@ function wb_si_exhibition_generate_child_concept_query($pid) {
      $o <fedora-model:label> $t and
      <info:fedora/' . $pid . '> <fedora-rels-ext:hasConcept> $o
      order by $t';   
+}
+function wb_si_exhibition_generate_child_concept_query_children_only($pid) {
+  return 'select $o $t from <#ri> where
+     ( 
+       $o <fedora-model:hasModel> <info:fedora/si:conceptCModel> or
+       $o <fedora-model:hasModel> <info:fedora/si:collectionCModel>
+     ) and
+     $o <fedora-model:state> <fedora-model:Active> and
+     $o <fedora-model:label> $t and
+     <info:fedora/' . $pid . '> <fedora-rels-ext:hasConcept> $o
+     order by $t';   
+}
+function wb_si_exhibition_generate_child_concept_query_concepts_count($pid) {
+return 'select count(select $c from <#ri> where
+    <info:fedora/' . $pid . '> <fedora-rels-ext:hasConcept> ?c and
+    ?c <fedora-model:state> <fedora-model:Active>
+   ) from <#ri> 
+where
+  $s $p $o';
+	/*select $o count(select $c from <#ri> where
+    $o <fedora-rels-ext:hasConcept> $c and
+    $c <fedora-model:state> <fedora-model:Active>) from <#ri> where
+    <info:fedora/' . $pid . '> <fedora-rels-ext:hasConcept> $o';*/
+}
+function wb_si_exhibition_generate_child_concept_query_resources_count($pid) {
+return 'select count(select $c from <#ri> where
+    <info:fedora/' . $pid . '> <fedora-rels-ext:hasResource> $c and
+    $c <fedora-model:state> <fedora-model:Active>) from <#ri> where
+    $s $p $o';
 }
 function wb_si_exhibition_xsl_string_default(){
   return '<?xml version="1.0" encoding="UTF-8"?>
