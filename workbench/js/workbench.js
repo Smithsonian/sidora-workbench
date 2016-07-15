@@ -704,7 +704,7 @@ sidora.InitiateJSTree = function(){
                     if (resourcesToCopyOver.length > 0){
                        sidora.util.Confirm("Copy resource",showText,
                          function(){
-                           sidora.resources.performCopyOrMove("copy",mouseOverObject.id);
+                           sidora.resources.performCopyOrMove("copy",mouseOverObject.id, resourcesToCopyOver);
                          }
                       );
                     }else{
@@ -730,6 +730,7 @@ sidora.InitiateJSTree = function(){
                         showTextForUnassociate += " ("+sidora.util.dragResources[i]+")</li>";
                         resourcesToUnassociate.push(sidora.util.dragResources[i]);
                       }else{
+                        showText += "<li>"+jQuery(jq(sidora.util.dragResources[i])).find(".resource-list-label").text();
                         showText += " ("+sidora.util.dragResources[i]+")";
                         resourcesToMoveOver.push(sidora.util.dragResources[i]);
                       }  
@@ -741,7 +742,10 @@ sidora.InitiateJSTree = function(){
                         if (resourcesToUnassociate.length > 0) showText += showTextForUnassociate;
                         sidora.util.Confirm("Move resource",showText,
                           function(){
-                           sidora.resources.performCopyOrMove("move",mouseOverObject.id);
+                           sidora.resources.performCopyOrMove("move",mouseOverObject.id, resourcesToMoveOver);
+                           for (rtui = 0; rtui < resourcesToUnassociate.length; rtui++){
+                             sidora.util.deletePid(resourcesToUnassociate[rtui]);
+                           }
                           }
                         );
                       }     
@@ -751,7 +755,7 @@ sidora.InitiateJSTree = function(){
                           "Move Resources",
                           "<h4>All items selected for move already exist on the target.</h4>"+showTextForUnassociate,
                           function(){
-                            sidora.resources.performCopyOrMove("move",mouseOverObject.id);
+                            sidora.resources.performCopyOrMove("move",mouseOverObject.id, resourcesToMoveOver);
                           }
                         );
                       }
@@ -1294,8 +1298,14 @@ sidora.resources.download = function(){
     window.open(Drupal.settings.basePath+"sidora/info/"+pids[i]+"/meta/OBJ/download");
   }
 }
-sidora.resources.performCopyOrMove = function(copyOrMove, toLocationId){
-  var pids = sidora.util.dragResources;
+sidora.resources.performCopyOrMove = function(copyOrMove, toLocationId, resourcesOfInterest){
+  
+  var pids = [];
+  if (Array.isArray(resourcesOfInterest)){
+    pids = resourcesOfInterest;
+  } else {
+    pids = sidora.util.dragResources;
+  }
   var fromParent = window.sidora.concept.GetPid();
   var droppedOn = jQuery("#"+toLocationId).find("a").attr("pid");
   var droppingThese = pids.join(",");
@@ -1308,22 +1318,22 @@ sidora.resources.performCopyOrMove = function(copyOrMove, toLocationId){
   var action = 'move/'+fromParent;
   if (copyOrMove == 'copy'){ action = 'copy'; }
   console.log("FCR "+action+" pids:"+pids.join(",")+" dropped on:"+jQuery("#"+toLocationId).find("a").attr("pid"));
-  var newParentExistingChildResourcesCount = parseInt(jQuery("#"+toLocationId).find("a").attr("resourcechildren")); // the original number of resources in the target pid
   var jst = jQuery("#forjstree").jstree(true);
+  var newParentExistingChildResourcesCount = parseInt(jst.get_node(toLocationId).a_attr.resourcechildren);
   var onSuccessfulCopy = function(ajaxRequest,ajaxReturn){
-    var newParentExistingChildResourceNumber = parseInt(jQuery("#"+toLocationId).find("a").attr("resourcechildren"));
+    var newParentExistingChildResourceNumber = parseInt(jst.get_node(toLocationId).a_attr.resourcechildren);
     var newParentNewChildResourceNumber = newParentExistingChildResourceNumber+1;
     sidora.util.refreshConceptChildrenNumberDirectByTreeId(toLocationId, newParentNewChildResourceNumber);
   }   
   var onSuccessfulMove = function(ajaxRequest,ajaxReturn){
-    var newParentExistingChildResourceNumber = parseInt(jQuery("#"+toLocationId).find("a").attr("resourcechildren"));
+    var newParentExistingChildResourceNumber = parseInt(jst.get_node(toLocationId).a_attr.resourcechildren);
     var newParentNewChildResourceNumber = newParentExistingChildResourceNumber+1;
     sidora.util.refreshConceptChildrenNumberDirectByTreeId(toLocationId, newParentNewChildResourceNumber);
     var fromSource = jq(fromParent).substring(1);
-    var oldParentExistingChildResourceNumber = parseInt(jQuery("[pid=" + fromSource + "]").attr("resourcechildren"));
-    var oldParentNewChildResourceNumber = oldParentExistingChildResourceNumber - 1;
     var oldParentNode = jst.get_node(jQuery("[pid='" + fromSource + "']").closest("li").attr("id"));
-    sidora.util.refreshConceptChildrenNumberDirect(fromSource, newParentNewChildResourceNumber);
+    var oldParentExistingChildResourceNumber = parseInt(oldParentNode.a_attr.resourcechildren);
+    var oldParentNewChildResourceNumber = oldParentExistingChildResourceNumber - 1;
+    sidora.util.refreshConceptChildrenNumberDirect(fromParent, oldParentNewChildResourceNumber);
   }  
   for(var i=0;i<pids.length;i++){
     droppedPid = pids[i];
@@ -1629,7 +1639,7 @@ sidora.util.treeAddition = function(htmlTree, onLoadComplete, overwriteType){
   //Keep in mind there may be copies of the item in different parts of the tree
   var clickedOnPid = jQuery(documentFragment).children().find("a").first().attr("pid");
   //Note: Do not use jQuery to get information out of an existing jstree
-  mainItems = sidora.util.GetTreeIdsByPid(clickedOnPid);
+  mainItems = sidora.util.GetTreeNodesByPid(clickedOnPid);
   //mainItems now holds all the nodes which have a pid matching the root pid from the returned html
   jQuery.each(mainItems, function( mii, mainItem) {
     var miChildrenIds = mainItem.children;
@@ -1832,12 +1842,12 @@ sidora.util.refreshConceptChildrenNumberDirect = function(pid, number_of_childre
   var jst = jQuery("#forjstree").jstree(true);
   for(var tii = 0; tii < treeIdsToUpdate.length; tii++){
     var toUpdateId = treeIdsToUpdate[tii];
-    var existingChildResourceNumber = parseInt(jQuery("#"+toUpdateId).find("a").attr("resourcechildren"));
+    var existingChildResourceNumber = parseInt(jst.get_node(toUpdateId).a_attr.resourcechildren);
     var parentName = jQuery("#"+toUpdateId+" a").attr("fullname");
     var newFullName =  parentName + " (" + number_of_children + ")";
     if (number_of_children == 0) newFullName = parentName;
     jst.rename_node("#"+toUpdateId, newFullName);
-    jQuery("#"+toUpdateId).find("a").attr("resourcechildren",""+number_of_children);
+    jst.get_node(toUpdateId).a_attr.resourcechildren = ""+number_of_children;
   }
 }
 /*
@@ -1851,9 +1861,9 @@ sidora.util.refreshConceptChildrenNumberDirectByTreeId = function(treeId, number
 
 sidora.util.refreshTreeFailuresInARow = 0;
 /*
- * Returns the existing tree ids by a pid
+ * Returns the existing tree nodes by a pid
  */
-sidora.util.GetTreeIdsByPid = function(pid) {
+sidora.util.GetTreeNodesByPid = function(pid) {
   var jst = jQuery("#forjstree").jstree();
   var existingTreeNodes = jst.get_json('#', {flat:true});
   var mainItems = [];
@@ -1876,10 +1886,9 @@ sidora.util.RefreshTreeHelper = function(secondsOfWait, pid, onlyRefreshIfNew) {
   if (typeof(secondsOfWait) == 'undefined' || secondsOfWait == null) secondsOfWait = .01;
   //Since we are concerned about the children of this and our treeAddition function expects to get the grandparent
   //of newly changed items, find an appropriate parent 
-  var nodeIds = sidora.util.GetTreeIdsByPid(pid);
+  var nodeIds = sidora.util.GetTreeNodesByPid(pid);
   var jst = jQuery("#forjstree").jstree();
-  nodeIds.forEach(function(treeId, index, arr) {
-    var node = jst.get_node(treeId);
+  nodeIds.forEach(function(node, index, arr) {
     var parentNode = jst.get_node(node.parent);
     var parentPid = parentNode.a_attr.pid;
     setTimeout(function(pid){
@@ -2023,15 +2032,14 @@ sidora.util.refreshConceptTreeUIDirect = function(pid, tree_html){
     function(){ return this.id; }
   ).get();
   var jst = jQuery("#forjstree").jstree(true);
-  jst.refresh_node("node_1")
   for(var tii = 0; tii < treeIdsToUpdate.length; tii++){
     var toUpdateId = treeIdsToUpdate[tii];
-    var existingChildResourceNumber = parseInt(jQuery("#"+toUpdateId).find("a").attr("resourcechildren"));
+    var existingChildResourceNumber = parseInt(jst.get_node(toUpdateId).a_attr.resourcechildren);
     var parentName = jQuery("#"+toUpdateId+" a").attr("fullname");
     var newFullName =  parentName + " (" + number_of_children + ")";
     if (number_of_children == 0) newFullName = parentName;
     jst.rename_node("#"+toUpdateId, newFullName);
-    jQuery("#"+toUpdateId).find("a").attr("resourcechildren",""+number_of_children);
+    jst.get_node(toUpdateId).a_attr.resourcechildren = ""+number_of_children;
   }
 }
 /*

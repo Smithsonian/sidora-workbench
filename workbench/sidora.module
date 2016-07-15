@@ -3130,7 +3130,7 @@ function sidora_codebook_upload_form($form, &$form_state){
       'file_validate_extensions' => array('csv xls xlsx'),
     ),
     '#attributes' => array(
-      'accept'=> '.csv, .xls',
+      'accept'=> '.csv, .xls, .xlsx',
     ),
   );
   $form['gen-codebook']['some_text'] = array(
@@ -3282,7 +3282,7 @@ function sidora_codebook_upload_form_validate($form, &$form_state) {
       $fcu = $parser_url_file_path;
       $fcu = str_replace('https://','http://',$fcu);
       $url = 
-      variable_get('sidora_codebook_parser_url', '').'url='.$fcu.'&headers='.$header_choice;
+      variable_get('sidora_codebook_parser_url', '').'url='.urlencode($fcu).'&headers='.$header_choice;
       $codebook_label = 'Codebook '.date('Ymd_His');
       try{
         $codebook = sidora_create_codebook_from_url($url, $codebook_label, $header_amount);
@@ -3491,6 +3491,15 @@ jQuery(document).ready(function(){
               myFile.loaded = '.$filesize.'; 
               myFile.percent = 100; 
               myFile.status = 5;
+              //Large files that go beyond the chunking limit will check that their chunks are completed in a way
+              //that looks for the original uploader.  Since no such uploader exists the "getSource" will return
+              //a blank object.  The source will be asked for the slice function to see if it is complete, which
+              //would then be calling a function of an object where it does not exist, generating a javascript error.
+              myFile.getSource = function() {
+                return {
+                  slice: function(){}
+                }
+              };
               uploader.addFile(myFile);
             };
             sidoraCodebookGhostRemoved = false;
