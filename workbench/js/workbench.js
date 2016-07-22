@@ -1890,10 +1890,13 @@ sidora.util.RefreshTreeHelper = function(secondsOfWait, pid, onlyRefreshIfNew) {
   var jst = jQuery("#forjstree").jstree();
   nodeIds.forEach(function(node, index, arr) {
     var parentNode = jst.get_node(node.parent);
+    if (parentNode.id == '#') {
+      //window.location.reload(); //TBD give proper refresh when adding a concept to their root
+    }
     var parentPid = parentNode.a_attr.pid;
-    setTimeout(function(pid){
+    setTimeout(function(myPid){
       jQuery.ajax({
-        url: Drupal.settings.basePath+'sidora/ajax_parts/tree/'+pid+"/2",
+        url: Drupal.settings.basePath+'sidora/ajax_parts/tree/'+myPid+"/2",
       }).done(function(tree_html){
         var suggestedAction = sidora.util.RefreshTreeSuggestAction(tree_html, true);
         if (suggestedAction.suggestRedirect) { window.location = Drupal.settings.basePath+'user';  }
@@ -1904,7 +1907,7 @@ sidora.util.RefreshTreeHelper = function(secondsOfWait, pid, onlyRefreshIfNew) {
             return;
           } else {
             console.log("Initiated retry:"+sidora.util.refreshTreeFailuresInARow);
-            sidora.util.RefreshTreeHelper(3, pid, onlyRefreshIfNew);
+            sidora.util.RefreshTreeHelper(3, myPid, onlyRefreshIfNew);
             return;
           }
         }
@@ -2352,6 +2355,13 @@ sidora.recentAjaxFailure = function(failure_object){
   window.ajaxer.failure_object = failure_object;
   window.ajaxer.fail = true;
   console.log("Ajax failure logged to window.ajaxer");
+  if (window.ajaxer.failure_object.status == 403) {
+    console.log("Ajax failure was due to a 403 'Forbidden' so the user likely has been logged out somehow. Reloading page in 3 seconds");
+    setTimeout(function(){
+      window.location.reload();
+    }, 3000);
+
+  }
 }
 sidora.resources.individualPanel.LoadRelationships = function(){
   if (sidora.resources.individualPanel.resourceOfInterest != null){
@@ -2765,4 +2775,7 @@ function readCookie(name) {
         }
     }
     return '';
+}
+sidora.reloadPage = function(){
+  window.location.reload();
 }

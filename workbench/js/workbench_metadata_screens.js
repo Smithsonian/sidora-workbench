@@ -62,6 +62,11 @@ jQuery().ready(function(){
     };
     var parentPid = sidora_util.ParentPid();
     var ccSuccess = createCcSuccess(parentPid);
+    if (parent.location.hash == '#' + parentPid) {
+      ccSuccess = function(){ 
+        sidora.reloadPage();
+      }
+    }
     var postData = jQuery("#islandora-ingest-form").serialize()+"&ingest=Ingest";
     if (typeof(sidora) != "undefined"){
       sidora.queue.RequestPost("Create Concept",window.location.href,postData, ccSuccess, function(){}, "");
