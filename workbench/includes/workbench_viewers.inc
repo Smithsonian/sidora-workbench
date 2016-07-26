@@ -36,6 +36,25 @@ function sidora_view_openseadragon($pid, $dsid, $version='0'){
   print "\r\n".'</html>                                                                                                     ';
   drupal_exit();
 }
+/**
+ * Pull the number of header rows from SIDORA datastream from a codebook
+ * @param codebook_obj - Tuque object that represents the codebook
+ * @return number of header rows
+ *         NULL if cannot determine the number of header rows (old SIDORA datastream or no SIDORA datastream)
+ */
+function sidora_codebook_pull_num_header_rows($codebook_obj) {
+  $num_header_rows = NULL;
+  if (!empty($codebook_obj['SIDORA'])){
+    $doc = new DOMDocument();
+    $content = $codebook_obj['SIDORA']->content;
+    $doc->loadXML($content);
+    $num_header_rows_elements = $doc->getElementsByTagName('num_header_rows');
+    foreach($num_header_rows_elements as $element){
+      $num_header_rows = $element->nodeValue;
+    }
+  }
+  return $num_header_rows;
+}
 /*
  * Returns the full view for the phpexcelreader plus javascript
  */
@@ -87,10 +106,13 @@ function sidora_tabular_view_phpexcelreader($pid,$dsid = 'OBJ'){
     });
   </script>
 ';
+  $codebook_headers_exist = FALSE;
+  $num_header_lines = NULL;
   $use_codebook_headers = '';
   if (!empty($rels)){
     $codebook_pid = ($rels[0]['object']['value']);
     $codebook_obj = sidora_obj($codebook_pid);
+    $num_header_lines = sidora_codebook_pull_num_header_rows($codebook_obj);
     if (!empty($codebook_obj['DDI'])){
       $doc = new DOMDocument();
       $content = $codebook_obj['DDI']->content;
@@ -98,6 +120,7 @@ function sidora_tabular_view_phpexcelreader($pid,$dsid = 'OBJ'){
       $label_elements = $doc->getElementsByTagName('label');
       $labels = array(); 
       foreach($label_elements as $element){
+        $codebook_headers_exist = TRUE;
         $labels[] = $element->nodeValue;
       }
       $use_codebook_headers = '<br/><input type="checkbox" id="useCodebookHeaders" />Use Codebook Headers';
@@ -154,10 +177,19 @@ function sidora_tabular_view_phpexcelreader($pid,$dsid = 'OBJ'){
 </head>
 <body>
 ';
-  echo '<input type="checkbox" id="showHeaderTable" />Has Header Row';
+  if ($num_header_lines === NULL && $codebook_headers_exist) $num_header_lines = 1;
+  if (empty($num_header_lines)) $num_header_lines = 1;
+  echo '<input type="checkbox" id="showHeaderTable" />';
+  if ($num_header_lines == 1) {
+    echo t('Skip header row');
+  }
+  elseif ($num_header_lines > 1) {
+    echo t('Skip header rows (%num_headers)',array('%num_headers'=>$num_header_lines));
+  }
   echo $use_codebook_headers;
-  echo sidora_tabular_view_phpexcelreader_html($temp.'/'.$filename, TRUE, 'hasHeader');
-  echo sidora_tabular_view_phpexcelreader_html($temp.'/'.$filename, FALSE, 'noHeader');
+ 
+  echo sidora_tabular_view_phpexcelreader_html($temp.'/'.$filename, $num_header_lines, 'hasHeader');
+  echo sidora_tabular_view_phpexcelreader_html($temp.'/'.$filename, 0, 'noHeader');
   echo '</body>
 </html>';
   drupal_exit();
@@ -199,40 +231,47 @@ function sidora_tabular_view_phpexcelreader_html_string($objPHPExcel, $cell) {
 /*
  * Returns the pure HTML table based on the given filename
  */
-function sidora_tabular_view_phpexcelreader_html($filename, $first_line_header = TRUE, $table_id = ''){
+function sidora_tabular_view_phpexcelreader_html($filename, $number_header_lines = 1, $table_id = ''){
   require_once(libraries_get_path('PHPExcel') . '/Classes/PHPExcel/IOFactory.php');
   $objReader = PHPExcel_IOFactory::createReaderForFile($filename);
   $objPHPExcel = $objReader->load($filename);
   $worksheet = $objPHPExcel->getActiveSheet();
-  $table_header = '<thead><tr>';
+  $table_header = "\n" . '<thead><tr>';
   $table_data = '<tbody>';
-  $is_first = TRUE;
-  $count = 0;
+  $num_lines_so_far = 0;
+  //remove $first_line_header $is_first
   foreach ($worksheet->getRowIterator() as $row) {
-  	if (!$is_first || !$first_line_header){
-      $table_data .= '<tr>';
+  	if ($num_lines_so_far >= $number_header_lines){
+      $table_data .= "\n".'<tr>';
+      //$table_data .= "\n".'<tr numLinesSoFar="'.$num_lines_so_far.'" nhl="'.$number_header_lines.'">';
     }
     $cellIterator = $row->getCellIterator();
   	$cellIterator->setIterateOnlyExistingCells(false); // Loop all cells, even if it is not set
     foreach ($cellIterator as $cell) {
-      if ($is_first){
-        if ($first_line_header){
+      if ($num_lines_so_far == $number_header_lines - 1) {
+        if ($number_header_lines != 0){
           $table_header .= '<th>' . sidora_tabular_view_phpexcelreader_html_string($objPHPExcel, $cell) . '</th>';
-        }else{
-          $table_header .= '<th></th>'; 
         }
       }
-      if (!is_null($cell) && !($is_first && $first_line_header)) {
-        $table_data .= '<td>' . sidora_tabular_view_phpexcelreader_html_string($objPHPExcel, $cell) . '</td>';
+      if ($num_lines_so_far == 0 && $number_header_lines == 0) {
+        $table_header .= '<th></th>';
+      }
+      if ($num_lines_so_far >= $number_header_lines) {
+        if (!is_null($cell)) {
+          $table_data .= '<td>' . sidora_tabular_view_phpexcelreader_html_string($objPHPExcel, $cell) . '</td>';
+        }
+        else {
+          $table_data .= '<td></td>';
+        }
       }
     }
-  	if (!$is_first || !$first_line_header){
-		  $table_data .= '</tr>';
+  	if ($num_lines_so_far >= $number_header_lines){
+      $table_data .= '</tr>';
     }
-    $is_first = FALSE;
+    $num_lines_so_far++;
   }
-  $table_header .= '</tr></thead>';
-  $table_data .= '</tbody>';
+  $table_header .= '</tr></thead>'."\n";
+  $table_data .= '</tbody>'."\n";
 
   $to_return = '<table class="display" id="'.$table_id.'">';
   $to_return .= $table_header;

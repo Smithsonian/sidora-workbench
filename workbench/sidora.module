@@ -1535,7 +1535,7 @@ function sidora_osd_proxy($pid){
 /*
  * Creates a codebook in the Fedora repo and returns the Fedora object
  */
-function sidora_create_codebook_from_url($url, $codebook_label){
+function sidora_create_codebook_from_url($url, $codebook_label, $header_amount = 0){
   global $user;
   module_load_include('inc', 'islandora', 'includes/utilities');
   module_load_include('inc', 'islandora', 'includes/ingest.form');
@@ -1565,6 +1565,7 @@ function sidora_create_codebook_from_url($url, $codebook_label){
 <ontology_location_id/>
 <meta_requirements_fulfilled>TRUE</meta_requirements_fulfilled>
 <initial_dsid>DDI</initial_dsid>
+<num_header_rows>'.intval($header_amount).'</num_header_rows>
 </sidora>';
   $sidora_ds = $codebook->constructDatastream('SIDORA');
   $sidora_ds->label = 'SIDORA';
@@ -1583,7 +1584,15 @@ function sidora_create_codebook_from_url($url, $codebook_label){
  * dry_run will not make any changes, just give the messages
  * 
  */
-function sidora_settings_import($object, $ignore_settings = array(), $only_apply_settings = array(), $dry_run = TRUE, $show_ignores_as_warnings = FALSE){
+function sidora_settings_import($object, $settings = array(), $dry_run = TRUE){
+  $ignore_settings           = isset($settings['ignore_settings']) ?           $settings['ignore_settings']            : array();
+  $only_apply_settings       = isset($settings['only_apply_settings']) ?       $settings['only_apply_settings']        : array();
+  $show_ignores_as_warnings  = isset($settings['how_ignores_as_warnings']) ?   $settings['show_ignores_as_warnings']   : FALSE;
+  $process_forms             = isset($settings['process_forms']) ?             $settings['process_forms']              : TRUE;
+  $process_form_associations = isset($settings['process_form_associations']) ? $settings['process_form_associations']  : TRUE;
+  $process_admin_settings    = isset($settings['process_admin_settings']) ?    $settings['process_admin_settings']     : TRUE;
+
+
   $ignore_message_type = $show_ignores_as_warnings?'warning':'status';
   //make the comparisons case insensitive by having all lower
   $ignore_settings = array_map('strtolower',$ignore_settings); 
@@ -1595,9 +1604,9 @@ function sidora_settings_import($object, $ignore_settings = array(), $only_apply
   //$full_export['forms'] = $forms;
   //$full_export['associations'] = $associations;
   //$full_export['admin_settings'] = $settings_holder;
-  $forms = $object->forms;
-  $associations = $object->associations;
-  $admin_settings = $object->admin_settings;
+  $forms = ($process_forms) ? $object->forms : array();
+  $associations = ($process_form_associations) ? $object->associations : array();
+  $admin_settings = ($process_admin_settings) ? $object->admin_settings : array();
   module_load_include('inc', 'xml_form_builder', 'XMLFormRepository');
   module_load_include('inc', 'xml_form_builder', 'XMLFormDatabase');
   module_load_include('inc', 'xml_form_builder', 'includes/associations');
@@ -1829,12 +1838,9 @@ function sidora_config_transfer($direct_download = ""){
   }
   else if (array_key_exists('useLastDryRunAsConfigSource', $_GET) && $_GET['useLastDryRunAsConfigSource'] === 'true') {
       $filepath = $_SESSION['sidora_uploaded_json_config']['object_filepath'];
-      $ignore_settings = $_SESSION['sidora_uploaded_json_config']['ignore_settings'];
-      $only_apply_settings = $_SESSION['sidora_uploaded_json_config']['only_apply_settings'];
-      $show_ignores_as_warnings = $_SESSION['sidora_uploaded_json_config']['show_ignores_as_warnings'];
       $file_contents = file_get_contents($filepath);
       $object = json_decode($file_contents);
-      sidora_settings_import($object,$ignore_settings,$only_apply_settings,FALSE,$show_ignores_as_warnings);
+      sidora_settings_import($object,$_SESSION['sidora_uploaded_json_config'],FALSE);
       drupal_goto('admin/sidora/config_transfer');
   }
   else {
@@ -1886,6 +1892,21 @@ function sidora_config_form($form, &$form_state){
     '#title'=>t('Dry Run (do not actually make changes)'),
     '#default_value' =>TRUE, // for default checked and false is not checked
   );
+  $form['process_forms'] = array(
+    '#type' =>'checkbox',
+    '#title'=>t('Process Forms'),
+    '#default_value' => variable_get('sidora_config_process_forms',TRUE),
+  );
+  $form['process_form_associations'] = array(
+    '#type' =>'checkbox',
+    '#title'=>t('Process Form Associations'),
+    '#default_value' => variable_get('sidora_config_process_form_associations',TRUE),
+  );
+  $form['process_admin_settings'] = array(
+    '#type' =>'checkbox',
+    '#title'=>t('Process Administrative Settings'),
+    '#default_value' => variable_get('sidora_config_process_admin_settings',TRUE),
+  );
   $form['only_apply_settings'] = array(
     '#type' => 'textarea',
     '#title' => t('Only apply settings that have one of the following in the name'),
@@ -1913,6 +1934,13 @@ function sidora_config_form_submit($form, &$form_state) {
   $file = file_save_upload('file',$validators);
   variable_set("sidora_config_import_ignores",$form_state['values']['ignore_settings']);
   variable_set("sidora_config_only_apply",$form_state['values']['only_apply_settings']);
+  variable_set("sidora_config_process_forms",$form_state['values']['process_forms']);
+  variable_set("sidora_config_process_form_associations",$form_state['values']['process_form_associations']);
+  variable_set("sidora_config_process_admin_settings",$form_state['values']['process_admin_settings']);
+  $process_forms = $form_state['values']['process_forms'];
+  $process_form_associations = $form_state['values']['process_form_associations'];
+  $process_admin_settings = $form_state['values']['process_admin_settings'];
+  $ignore_settings = array_map('trim', explode("\n",$form_state['values']['ignore_settings'])); //Explode it and trim any whitespace
   $ignore_settings = array_map('trim', explode("\n",$form_state['values']['ignore_settings'])); //Explode it and trim any whitespace
   $only_apply_settings = array_map('trim', explode("\n",$form_state['values']['only_apply_settings'])); //Explode it and trim any whitespace
   $dry_run = $form_state['values']['dry_run'];
@@ -1921,13 +1949,16 @@ function sidora_config_form_submit($form, &$form_state) {
     $filepath = drupal_realpath($file->uri);
     $file_contents = file_get_contents($filepath);
     $object = json_decode($file_contents);
-    sidora_settings_import($object,$ignore_settings,$only_apply_settings,$dry_run,$show_ignores_as_warnings);
     $_SESSION['sidora_uploaded_json_config'] = array();
     $_SESSION['sidora_uploaded_json_config']['object_filepath'] = $filepath;
     $_SESSION['sidora_uploaded_json_config']['ignore_settings'] = $ignore_settings;
     $_SESSION['sidora_uploaded_json_config']['only_apply_settings'] = $only_apply_settings;
     $_SESSION['sidora_uploaded_json_config']['dry_run'] = $dry_run;
     $_SESSION['sidora_uploaded_json_config']['show_ignores_as_warnings'] = $show_ignores_as_warnings;
+    $_SESSION['sidora_uploaded_json_config']['process_forms'] = $process_forms;
+    $_SESSION['sidora_uploaded_json_config']['process_form_associations'] = $process_form_associations;
+    $_SESSION['sidora_uploaded_json_config']['process_admin_settings'] = $process_admin_settings;
+    sidora_settings_import($object,$_SESSION['sidora_uploaded_json_config'],$dry_run);
 
     if ($dry_run) drupal_set_message('Update the configuration of server with the configuration used in the dry run by clicking this link: <a href="?useLastDryRunAsConfigSource=true">Use the Dry Run config</a>','whitebox');
   }
@@ -3077,22 +3108,29 @@ function sidora_codebook_upload_form($form, &$form_state){
   $form['gen-codebook']['radio']['header_choice'] = array(
     '#type' => 'radios',
     '#title' => t('Select option for column headers'),
-    '#description' => t('This determines if the first line of the data files is a list of headings for the data, or is part of the data itself'),
+    '#description' => t('This determines if the first line of the data files is part of the data, or if header data exists.'),
     '#options' => array( 
-      'TRUE' => t('All uploaded data files will have a header row'),
-      'FALSE' => t('Uploaded data files will not have a header row'),
+      'TRUE' => t('All uploaded data files will have header row(s)'),
+      'FALSE' => t('Uploaded data files will not have any header rows'),
     ),
     '#required' => TRUE,
+  );
+  $form['gen-codebook']['radio']['header_amount'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Enter the number of header rows'),
+    '#description' => t('The data for the files will start after this many rows (lines) of information.'),
+    '#required' => FALSE,
+    '#default_value' => '1',
   );
   $form['gen-codebook']['file'] = array(
     '#type' => 'file',
     '#title' => t('Example Data File'),
     '#description' => t('The codebook will be generated on this uploaded example data.'),
     '#upload_validators' => array(
-      'file_validate_extensions' => array('csv xls'),
+      'file_validate_extensions' => array('csv xls xlsx'),
     ),
     '#attributes' => array(
-      'accept'=> '.csv, .xls',
+      'accept'=> '.csv, .xls, .xlsx',
     ),
   );
   $form['gen-codebook']['some_text'] = array(
@@ -3140,46 +3178,129 @@ function sidora_codebook_upload_form($form, &$form_state){
   );
   return $form;
 }
+/**
+ * Helper function to do deletes without worring where they are from
+ * @param $path - a OS path or Drupal file path
+ */
+function sidora_do_any_file_delete($path) {
+  $fid = db_query("SELECT fid FROM {file_managed} WHERE uri = :path", array(':path' => $path))->fetchField();
+  if ($fid) {
+    $file = file_load($fid);
+    file_delete($file);
+  }
+  else {
+    file_unmanaged_delete($path);
+  } 
+}
 /*
  * hook_form_validate for the sidora_codebook_upload, also moves file if validation was successful
  */
 function sidora_codebook_upload_form_validate($form, &$form_state) {
   if ($form_state['triggering_element']['#id'] == 'edit-upload-codebook-submit'){
-    $file = file_save_upload('file', array(
-      // Validate extensions.
-      'file_validate_extensions' => array('csv xls xlsx'),
-    ));
-    // If the file passed validation:
-    if ($file) {
-      // Move the file into the Drupal file system.
-      if ($file = file_move($file, 'public://')) {
-        // Save the file for use in the submit handler.
-        $form_state['storage']['file'] = $file;
-        file_save($file);
-        // Set a response to the user.
-        //drupal_set_message(t('The form has been submitted and the image has been saved, filename: @filename.', array('@filename' => $file->filename)));
-        $header_choice = $form_state['values']['header_choice']; //Note this is a string, not a boolean
-        //The parser can't communicate over https, so swap it to http if that is attempted
-        $fcu = file_create_url($file->uri);
-        $fcu = str_replace('https://','http://',$fcu);
-        $url = 
-        variable_get('sidora_codebook_parser_url', '').'url='.$fcu.'&headers='.$header_choice;
-        $codebook_label = 'Codebook '.date('Ymd_His');
-        try{
-          $codebook = sidora_create_codebook_from_url($url, $codebook_label);
-          $form_state['storage']['codebook'] = $codebook;
-        }catch(Exception $e){
-          watchdog('SIdora_Tabular_Parse',t("Problem with creating a codebook:<br/>").$e->getMessage().t("URL:").$url);
-          form_set_error('file',t("Unable to parse the uploaded file. Contact an administrator if you believe this file should be able to be parsed.  Please send a screenshot of this page, include the file you uploaded, and the time and date this occurred.  The administrator should check the Drupal log for 'SIdora_Tabular_Parse' for more information."));
-          return;
-        }
-      }
-      else {
-        form_set_error('file', t("Failed to write the uploaded file to the site's file folder."));
+    $header_amount = $form_state['values']['header_amount'];
+    $header_choice = $form_state['values']['header_choice']; //Note this is a string, not a boolean
+    if (strtolower($header_choice) != 'true' && strtolower($header_choice) != 'false') {
+      return;
+    }
+    if (strcasecmp($header_choice,'true') !== 0) {
+      $header_amount = 0;
+    } 
+    else {
+      if (($header_amount !== '') && (intval($header_amount) != $header_amount || $header_amount <= 0)) {
+        //Did not use element_validate_integer_positive because want to ensure the order of validation and can leave blank (if no header rows)
+        //Want to exit out if this fails and not to bother with the file_move if the number of header rows is bad
+        form_set_error('header_amount',t("The number of lines must be a positive integer."));
+        return;
       }
     }
+    $file = file_save_upload('file', 
+      array(
+        // Validate extensions.
+        'file_validate_extensions' => array('csv xls xlsx'),
+      ),
+      'public://'
+    );
+    if (empty($file)) { 
+      form_set_error('file', t("No file or failed to write the uploaded file to the site's file folder."));
+      return;
+    }
+    $parser_os_file_path = drupal_realpath($file->destination);
+    $parser_drupal_file_path = NULL;
+    $delete_parser_file = FALSE;
+    if (strcasecmp($header_choice,'true') === 0) {
+      if ($file && $header_amount > 1) {
+        $parser_drupal_file_path = 'public://'.'_for_parser_'.uniqid();
+        file_copy($file, $parser_drupal_file_path);
+        $file_path = drupal_realpath($parser_drupal_file_path);
+        //Do the restructuring of the file and resave it
+        //resave the file by using first line, skipping N-1, then rest of file
+        require_once(libraries_get_path('PHPExcel') . '/Classes/PHPExcel/IOFactory.php');
+        //createReaderForFile uses the extension to look for information so use the filename that has an extension
+        $objReader = PHPExcel_IOFactory::createReaderForFile($file_path); 
+        $objPHPExcel = $objReader->load($file_path);
+        $worksheet = $objPHPExcel->getActiveSheet();
+        //Maximum number of headers is the highest row - 1 since they need at least 1 line of data
+        if ($header_amount > ($worksheet->getHighestRow() - 1)) {
+          watchdog('SIdora_Tabular_Parse',t("Too many header rows: %num_hr_chosen but has this many rows: %real_rows Problem creating a codebook:<br/>parser_os_file_path: %for_parser <br/>drupal_realpath(file): %drupal_rp <br/>This file has NOT been deleted and is not going to be deleted by Drupal. It must be handled on the OS level.",array(
+                             '%for_parser' => $parser_os_file_path, 
+                             '%drupal_rp' => drupal_realpath($file->destination),
+                             '%num_hr_chosen' => $header_amount,
+                             '%real_rows' => $worksheet->getHighestRow(),
+                           )
+          ));
+          form_set_error('file',t("The demonstration file does not have data for the number of header rows chosen."));
+          //Remove the original
+          sidora_do_any_file_delete($parser_os_file_path);
+          //Remove the copy created for the parser
+          sidora_do_any_file_delete($file_path);
+          return;
+        }
+        $worksheet->removeRow(1 , $header_amount - 1);
+        $objWriter = PHPExcel_IOFactory::createWriter($objPHPExcel, "Excel2007");
+        $parser_os_file_path = $file_path . '.xlsx';
+        $objWriter->save($parser_os_file_path);
+        $delete_parser_file = TRUE;
+      }
+    }
+    $expl_rp = explode(drupal_realpath("public://"), $parser_os_file_path);
+    if (sizeof($expl_rp) == 2) {
+      $parser_url_file_path = file_create_url("public://") . substr($expl_rp[1],1);
+    }
     else {
-      form_set_error('file', t('No file was uploaded.'));
+      watchdog('SIdora_Tabular_Parse',t("File System Problem with creating a codebook:<br/>parser_os_file_path: %for_parser <br/>drupal_realpath(file): %drupal_rp <br/>This file has NOT been deleted and is not going to be deleted by Drupal. It must be handled on the OS level.",array('%for_parser' => $parser_os_file_path, '%drupal_rp' => drupal_realpath($file->destination))));
+      form_set_error('file',t("Unable to parse the uploaded file. Contact an administrator if you believe this file should be able to be parsed.  Please send a screenshot of this page, include the file you uploaded, and the time and date this occurred.  The administrator should check the Drupal log for 'SIdora_Tabular_Parse' for more information."));
+      return;
+    }
+    // If the file passed validation:
+    if ($file) {
+      // Save the file for use in the submit handler.
+      $form_state['storage']['file'] = $file;
+      file_save($file);
+      // Set a response to the user.
+      //drupal_set_message(t('The form has been submitted and the image has been saved, filename: @filename.', array('@filename' => $file->filename)));
+      //The parser can't communicate over https, so swap it to http if that is attempted
+      $fcu = $parser_url_file_path;
+      $fcu = str_replace('https://','http://',$fcu);
+      $url = 
+      variable_get('sidora_codebook_parser_url', '').'url='.urlencode($fcu).'&headers='.$header_choice;
+      $codebook_label = 'Codebook '.date('Ymd_His');
+      try{
+        $codebook = sidora_create_codebook_from_url($url, $codebook_label, $header_amount);
+        $form_state['storage']['codebook'] = $codebook;
+      }catch(Exception $e){
+        ob_start();
+        var_dump($e);
+        $exception_dump = ob_get_clean();
+        watchdog('SIdora_Tabular_Parse',t("Problem with creating a codebook:<br/>") . $e->getMessage() . '<br>' . $exception_dump . t("URL:") . $url);
+        form_set_error('file',t("Unable to parse the uploaded file. Contact an administrator if you believe this file should be able to be parsed.  Please send a screenshot of this page, include the file you uploaded, and the time and date this occurred.  The administrator should check the Drupal log for 'SIdora_Tabular_Parse' for more information."));
+        return;
+      }
+    } //Ends else of if ($file)
+    if ($delete_parser_file) {
+      //Remove the original copy
+      sidora_do_any_file_delete($parser_drupal_file_path);
+      //Remove the resaved copy
+      sidora_do_any_file_delete($parser_os_file_path);
     }
   }
 }
@@ -3308,12 +3429,21 @@ jQuery(document).ready(function(){
     jQuery("#edit-existing-codebook").hide();
     jQuery("#cover").hide();
     addBackButton();
+    showOrHideBackedOnColumnHeaderChoice();
   });
   addBackButton = function(){
     jQuery("#content").append(\'<input id="back-button" type="submit" class="form-submit" value="Back"/>\');
     jQuery("#back-button").click(function(){
       jQuery("#back-button").remove();
       jQuery("#cover").show();
+    });
+  }
+  showOrHideBackedOnColumnHeaderChoice = function(){
+    jQuery("#edit-header-choice-false").click(function() {
+      jQuery("#edit-header-amount").closest("div").hide();
+    });
+    jQuery("#edit-header-choice-true").click(function() {
+      jQuery("#edit-header-amount").closest("div").show();
     });
   }
   jQuery("#cover").prepend(jQuery("#console"));
@@ -3361,6 +3491,15 @@ jQuery(document).ready(function(){
               myFile.loaded = '.$filesize.'; 
               myFile.percent = 100; 
               myFile.status = 5;
+              //Large files that go beyond the chunking limit will check that their chunks are completed in a way
+              //that looks for the original uploader.  Since no such uploader exists the "getSource" will return
+              //a blank object.  The source will be asked for the slice function to see if it is complete, which
+              //would then be calling a function of an object where it does not exist, generating a javascript error.
+              myFile.getSource = function() {
+                return {
+                  slice: function(){}
+                }
+              };
               uploader.addFile(myFile);
             };
             sidoraCodebookGhostRemoved = false;
@@ -3761,11 +3900,16 @@ function sidora_open_access($info_type, $pid){
     case 'file_extension':
       module_load_include('inc', 'sidora', 'includes/utils');
       $object = sidora_obj($pid);
-      $mime_type = $object['OBJ']->mimeType;
-      if ($mime_type != ''){
-        $file_extension = sidora_get_file_extension_from_mime($mime_type);
-        print (json_encode($file_extension));
-      } 
+      if (!empty($object) && !empty($object['OBJ'])) {
+        $mime_type = $object['OBJ']->mimeType;
+        if ($mime_type != ''){
+          $file_extension = sidora_get_file_extension_from_mime($mime_type);
+          print (json_encode($file_extension));
+        } 
+      }
+      else {
+        watchdog('sidora_workbench','Could not retrieve file extension for PID:'.$pid);
+      }
       break;
     case 'xsl':
       $file = sidora_get_xsl_file_for_object($pid);
@@ -4607,7 +4751,7 @@ function sidora_ajax_parts($call_type, $param1 = '', $param2 = '', $param3 = '')
     return sidora_ontology_object();
   }
   if ($call_type == 'tree'){
-    return sidora_html_tree_for_ajax($param1);
+    return sidora_html_tree_for_ajax($param1, $param2);
   }
   if ($call_type == 'unassociate_delete_orphan'){
     return sidora_unassociate_delete_if_orphaned($param1,$param2);
@@ -5260,16 +5404,16 @@ function sidora_json_for_delete($pid, $show_output = TRUE){
  * Prints a html tree for replacing the existing tree
  * Currently assumes everyone has full read access
  */
-function sidora_html_tree_for_ajax($root_pid = ''){
+function sidora_html_tree_for_ajax($root_pid = '', $num_levels = 3){
   module_load_include('inc', 'sidora', 'includes/utils');
   if (empty($root_pid)) $root_pid = sidora_get_user_root_object();
-  print sidora_html_string_tree($root_pid);
+  print sidora_html_string_tree($root_pid, NULL, $num_levels);
   drupal_exit();
 }
 /*
  * Returns a html_string for the concept tree
  */
-function sidora_html_string_tree($root_pid = '', $root = NULL){
+function sidora_html_string_tree($root_pid = '', $root = NULL, $num_levels = 3){
   global $user;
   module_load_include('inc', 'sidora', 'includes/utils');
   if (empty($root_pid)) $root_pid = sidora_get_user_root_object();
@@ -5294,7 +5438,7 @@ function sidora_html_string_tree($root_pid = '', $root = NULL){
   }
   $results = _sidora_get_child_results_cache($root_pid);
   $filled = sidora_fill_concepts_children($results); 
-  $html_tree_from_query_result = sidora_html_tree($filled);
+  $html_tree_from_query_result = sidora_html_tree($filled, '', $num_levels);
   $to_return = '';
   $to_return .= '<ul>';
   $to_return .= '<li><a href="'.base_path().'sidora/workbench/#'.$root_pid.'" pid="'.$root_pid.'" fullname="'.$root_label.'">';
@@ -5753,7 +5897,13 @@ function sidora_cron() {
  * Creates the html_tree.  
  * (This function should not be used to restrict view permissions, instead only pass in information that is allowed to be viewed.)
  */
-function sidora_html_tree($query_result_tree, $input_path = ''){
+function sidora_html_tree($query_result_tree, $input_path = '', $num_levels = 3){
+  if (is_string($num_levels)) {
+    $num_levels = intval($num_levels);
+  }
+  if ($num_levels == 0) {
+    return '';
+  }
   $to_return = '';
   foreach($query_result_tree as $t_index=>$t_element){
     $pid = $t_element['o']['value'];
@@ -5768,7 +5918,7 @@ function sidora_html_tree($query_result_tree, $input_path = ''){
     $to_return .= '</a>';
     if (array_key_exists('children',$t_element)){
       $to_return .= '<ul>';
-      $to_return .= sidora_html_tree($t_element['children'], $current_path);
+      $to_return .= sidora_html_tree($t_element['children'], $current_path, $num_levels - 1);
       $to_return .= '</ul>';
     }
     if (array_key_exists('already_in_tree',$t_element) && $t_element['already_in_tree']){
@@ -5948,39 +6098,39 @@ function sidora_pid_set_locked($pid, $set_locked_to_user = '', $obtain_lock = fa
 /*
  * Returns an array of the form:
 Array(
-    [0] => Array(
-            [o] => Array([value] => si:user-projects  ,[uri] => info:fedora/si:user-projects ,[type] => pid )
-            [t] => Array([type] => literal[value] => Researcher Projects )
-            [k0] => Array([type] => literal[value] => 11 )
+  [0] => Array(
+    [o] => Array([value] => si:user-projects  ,[uri] => info:fedora/si:user-projects ,[type] => pid )
+    [t] => Array([type] => literal[value] => Researcher Projects )
+    [k0] => Array([type] => literal[value] => 11 )
+    [children] => Array(
+      [0] => Array(
+        [o] => Array([value] => si-user:99  ,[uri] => info:fedora/si-user:99 ,[type] => pid )
+        [t] => Array([type] => literal[value] => DingDJ Projects )
+        [k0] => Array([type] => literal[value] => 1 )
+        [children] => Array(
+          [0] => Array(
+            [o] => Array([value] => si:256795  ,[uri] => info:fedora/si:256795 ,[type] => pid )
+            [t] => Array([type] => literal[value] => TestProject )
+            [k0] => Array([type] => literal[value] => 0 )
+            [children] => Array( ) ) ) )
+          [1] => Array(
+            [o] => Array([value] => si-user:57  ,[uri] => info:fedora/si-user:57 ,[type] => pid )
+            [t] => Array([type] => literal[value] => HuaD Projects )
+            [k0] => Array([type] => literal[value] => 2 )
             [children] => Array(
-                    [0] => Array(
-                            [o] => Array([value] => si-user:99  ,[uri] => info:fedora/si-user:99 ,[type] => pid )
-                            [t] => Array([type] => literal[value] => DingDJ Projects )
-                            [k0] => Array([type] => literal[value] => 1 )
-                            [children] => Array(
-                                    [0] => Array(
-                                            [o] => Array([value] => si:256795  ,[uri] => info:fedora/si:256795 ,[type] => pid )
-                                            [t] => Array([type] => literal[value] => TestProject )
-                                            [k0] => Array([type] => literal[value] => 0 )
-                                            [children] => Array( ) ) ) )
-                    [1] => Array(
-                            [o] => Array([value] => si-user:57  ,[uri] => info:fedora/si-user:57 ,[type] => pid )
-                            [t] => Array([type] => literal[value] => HuaD Projects )
-                            [k0] => Array([type] => literal[value] => 2 )
-                            [children] => Array(
-                                    [0] => Array(
-                                            [o] => Array([value] => si:257131  ,[uri] => info:fedora/si:257131 ,[type] => pid )
-                                            [t] => Array([type] => literal[value] => Form Wizard )
-                                            [k0] => Array([type] => literal[value] => 0 )
-                                            [children] => Array( ) )
-                                    [1] => Array(
-                                            [o] => Array([value] => si:118010  ,[uri] => info:fedora/si:118010 ,[type] => pid )
-                                            [t] => Array([type] => literal[value] => Tabular Dataset Project )
-                                            [k0] => Array([type] => literal[value] => 0 )
-                                            [children] => Array( ) ) ) )
-                    [2] => Array(
+              [0] => Array(
+                [o] => Array([value] => si:257131  ,[uri] => info:fedora/si:257131 ,[type] => pid )
+                [t] => Array([type] => literal[value] => Form Wizard )
+                [k0] => Array([type] => literal[value] => 0 )
+                [children] => Array( ) )
+              [1] => Array(
+                [o] => Array([value] => si:118010  ,[uri] => info:fedora/si:118010 ,[type] => pid )
+                [t] => Array([type] => literal[value] => Tabular Dataset Project )
+                [k0] => Array([type] => literal[value] => 0 )
+                [children] => Array( ) ) ) )
+          [2] => Array(
 
- *  ...and so on.  k0 is the number of children
+ *  ...and so on.  k0 is the number of resource children
  */
 function sidora_fill_concepts_children($query_result, $current_path = array()){
   if (is_array($query_result)){
@@ -8748,3 +8898,29 @@ function sidora_import_xml_form_submit(array $form, array &$form_state) {
   }
   $form_state['redirect'] = "admin/islandora/xmlform";
 }
+
+function sidora_debug_string_backtrace() { 
+  ob_start(); 
+  debug_print_backtrace(); 
+  $trace = ob_get_contents(); 
+  ob_end_clean(); 
+
+  // Remove first item from backtrace as it's this function which 
+  // is redundant. 
+  $trace = preg_replace ('/^#0\s+' . __FUNCTION__ . "[^\n]*\n/", '', $trace, 1); 
+
+  // Renumber backtrace items. 
+  $trace = preg_replace ('/^#(\d+)/me', '\'#\' . ($1 - 1)', $trace); 
+
+  return $trace; 
+} 
+function sidora_drupal_goto_alter(&$path, &$options, &$http_response_code) {
+  $to_save = sidora_debug_string_backtrace();
+  ob_start();
+  $args = func_get_args();
+  var_dump($args);
+  $objects = ob_get_contents();
+  ob_end_clean();
+  watchdog('SIGotoCheck',$to_save . '<hr>' . $objects);
+}
+
