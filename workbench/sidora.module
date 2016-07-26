@@ -6005,23 +6005,26 @@ function _sidora_get_child_results_cache($child_pid){
   if (cache_get("sidora:children_results:".$child_pid) === FALSE){
     $tuque = islandora_get_tuque_connection();
     $grandchildren_query = wb_si_exhibition_generate_child_concept_query($child_pid);
-		//$grandchildren_query = wb_si_exhibition_generate_child_concept_query_children_only($child_pid); // this is where we exceute the Main list query - part1 of the 3 query approach
+    // this is where we exceute the Main list query - part1 of the 3 query approach
+     //$grandchildren_query = wb_si_exhibition_generate_child_concept_query_children_only($child_pid); 
     $ri = $tuque->repository->ri;
     $results = $ri->sparqlQuery($grandchildren_query);
-		if (sizeof($results) == 1 && $results[0]['o']['value'] == '') $results = array();
-		/* code change to incorporate the 3 query approach for generating the concept tree */
-		/*
-		foreach ($results as $gc_index=>$gchild){
+    if (sizeof($results) == 1 && $results[0]['o']['value'] == '') $results = array();
+    /* code change to incorporate the 3 query approach for generating the concept tree */
+    /*
+    foreach ($results as $gc_index=>$gchild){
       $grandchild_pid = $gchild['o']['value']; 
-			$concept_count_query = wb_si_exhibition_generate_child_concept_query_concepts_count($grandchild_pid); // count of concept children
+      $concept_count_query = wb_si_exhibition_generate_child_concept_query_concepts_count($grandchild_pid); 
+      // count of concept children
       $concept_results = $ri->sparqlQuery($concept_count_query);
-			$results[$gc_index]['k0'] = $concept_results[0]['k0'];
-		  $resource_count_query = wb_si_exhibition_generate_child_concept_query_resources_count($grandchild_pid); // count of resource children
+      $results[$gc_index]['k0'] = $concept_results[0]['k0'];
+      $resource_count_query = wb_si_exhibition_generate_child_concept_query_resources_count($grandchild_pid); 
+      // count of resource children
       $resource_results = $ri->sparqlQuery($resource_count_query);
-		  $results[$gc_index]['k1'] = $resource_results[0]['k1'];
-		}
-		*/
-		cache_set("sidora:children_results:".$child_pid,$results);
+      $results[$gc_index]['k1'] = $resource_results[0]['k1'];
+     }
+     */
+     cache_set("sidora:children_results:".$child_pid,$results);
   }else{
     $results = cache_get("sidora:children_results:".$child_pid)->data;
   }
@@ -6823,16 +6826,16 @@ function wb_si_exhibition_generate_child_concept_query($pid) {
 /* concept tree query split into 3 queries
 function wb_si_exhibition_generate_child_concept_query_children_only($pid) {
   return 'SELECT ?o ?t 
-	        FROM <#ri>
-            WHERE {
+	  FROM <#ri>
+          WHERE {
               <info:fedora/' . $pid . '> <info:fedora/fedora-system:def/relations-external#hasConcept> ?o .
               { ?o <info:fedora/fedora-system:def/model#hasModel> <info:fedora/si:conceptCModel> }
               UNION { ?o <info:fedora/fedora-system:def/model#hasModel> <info:fedora/si:collectionCModel> } .
               ?o <info:fedora/fedora-system:def/model#state> <info:fedora/fedora-system:def/model#Active> .
               ?o <info:fedora/fedora-system:def/model#label> ?l .
             }
-            GROUP BY ?o (STR(?l) AS ?t)
-            ORDER BY ?t';
+          GROUP BY ?o (STR(?l) AS ?t)
+          ORDER BY ?t';
 }
 function wb_si_exhibition_generate_child_concept_query_concepts_count($pid) {
 return 'select (count(?c) as ?k0) 
@@ -6845,10 +6848,10 @@ return 'select (count(?c) as ?k0)
 function wb_si_exhibition_generate_child_concept_query_resources_count($pid) {
 return 'select (count(?r) as ?k1) 
         FROM <#ri> 
-				where {
+	where {
          <info:fedora/' . $pid . '> <info:fedora/fedora-system:def/relations-external#hasResource> ?r .
          ?r <info:fedora/fedora-system:def/model#state> <info:fedora/fedora-system:def/model#Active>
-				 }';
+	 }';
 }
 */
 function wb_si_exhibition_xsl_string_default(){
