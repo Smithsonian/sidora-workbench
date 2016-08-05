@@ -350,16 +350,18 @@ function sidora_get_number_of_children(AbstractObject $object) {
  */
 function sidora_get_where_codebook_used(AbstractObject $object) {
   $out = array();
-  $query = "SELECT ?pid ?label ?model FROM <#ri> WHERE {
-      {
-        ?pid  <fedora-rels-ext:hasCodebook> <info:fedora/{$object->id}>;
-          <fedora-model:state> <fedora-model:Active>;
-          <fedora-model:label> ?label;
-          <fedora-model:hasModel> ?model.
-        FILTER(!sameTerm(?model, <info:fedora/fedora-system:FedoraObject-3.0>) &&
-               !sameTerm(?model, <info:fedora/si:conceptCModel>))
-      }
-    } ORDER BY ?label";
+  $tuque = islandora_get_tuque_connection();
+  $query = "SELECT ?pid ?label ?model FROM <#ri> 
+	    WHERE {
+             { ?pid <info:fedora/fedora-system:def/relations-external#hasCodebook> <info:fedora/" . $object->id . "> .
+               ?pid <info:fedora/fedora-system:def/model#state> <info:fedora/fedora-system:def/model#Active> .
+               ?pid <info:fedora/fedora-system:def/model#hasModel> ?model .
+               ?pid <info:fedora/fedora-system:def/model#label> ?label .
+               FILTER(!sameTerm(?model, <info:fedora/fedora-system:FedoraObject-3.0>) &&
+                     !sameTerm(?model, <info:fedora/si:resourceCModel>))
+             }
+            }
+            ORDER BY ?label";
   $results = $object->repository->ri->query($query, 'sparql');
   foreach ($results as $result) {
     $pid = $result['pid']['value'];
@@ -380,30 +382,32 @@ function sidora_get_where_codebook_used(AbstractObject $object) {
  */
 function sidora_get_parent_concepts(AbstractObject $object) {
   $out = array();
-  $query = "SELECT ?pid ?label ?model FROM <#ri> WHERE {
-      {
-        ?pid  <fedora-rels-ext:hasConcept> <info:fedora/{$object->id}>;
-          <fedora-model:state> <fedora-model:Active>;
-          <fedora-model:label> ?label;
-          <fedora-model:hasModel> ?model.
-        FILTER(!sameTerm(?model, <info:fedora/fedora-system:FedoraObject-3.0>) &&
-               !sameTerm(?model, <info:fedora/si:conceptCModel>))
-      } UNION {
-        ?pid  <fedora-rels-ext:hasResource> <info:fedora/{$object->id}>;
-          <fedora-model:state> <fedora-model:Active>;
-          <fedora-model:label> ?label;
-          <fedora-model:hasModel> ?model.
-        FILTER(!sameTerm(?model, <info:fedora/fedora-system:FedoraObject-3.0>) &&
-               !sameTerm(?model, <info:fedora/si:resourceCModel>))
-      } UNION {
-        ?pid  <fedora-rels-ext:managesCodebook> <info:fedora/{$object->id}>;
-          <fedora-model:state> <fedora-model:Active>;
-          <fedora-model:label> ?label;
-          <fedora-model:hasModel> ?model.
-        FILTER(!sameTerm(?model, <info:fedora/fedora-system:FedoraObject-3.0>) &&
-               !sameTerm(?model, <info:fedora/si:resourceCModel>))
-      }
-    } ORDER BY ?label";
+  $query = "SELECT ?pid ?label ?model FROM <#ri> 
+	WHERE {
+         {
+         ?pid <info:fedora/fedora-system:def/relations-external#hasConcept> <info:fedora/" . $object->id . "> .
+         ?pid <info:fedora/fedora-system:def/model#state> <info:fedora/fedora-system:def/model#Active> .
+         ?pid <info:fedora/fedora-system:def/model#label> ?label .
+         ?pid <info:fedora/fedora-system:def/model#hasModel> ?model .
+          FILTER(!sameTerm(?model, <info:fedora/fedora-system:FedoraObject-3.0>) &&
+                 !sameTerm(?model, <info:fedora/si:conceptCModel>))
+         } UNION {
+         ?pid <info:fedora/fedora-system:def/relations-external#hasResource> <info:fedora/" . $object->id . "> .
+         ?pid <info:fedora/fedora-system:def/model#state> <info:fedora/fedora-system:def/model#Active> .
+         ?pid <info:fedora/fedora-system:def/model#label> ?label .
+         ?pid <info:fedora/fedora-system:def/model#hasModel> ?model .
+          FILTER(!sameTerm(?model, <info:fedora/fedora-system:FedoraObject-3.0>) &&
+                 !sameTerm(?model, <info:fedora/si:resourceCModel>))
+         } UNION {
+         ?pid <info:fedora/fedora-system:def/relations-external#managesCodebook> <info:fedora/" . $object->id . "> .
+         ?pid <info:fedora/fedora-system:def/model#state> <info:fedora/fedora-system:def/model#Active> .
+         ?pid <info:fedora/fedora-system:def/model#label> ?label .
+         ?pid <info:fedora/fedora-system:def/model#hasModel> ?model .
+          FILTER(!sameTerm(?model, <info:fedora/fedora-system:FedoraObject-3.0>) &&
+                 !sameTerm(?model, <info:fedora/si:resourceCModel>) &&
+                 !sameTerm(?model, <info:fedora/si:conceptCModel>))
+        }
+      } ORDER BY ?label";
   $results = $object->repository->ri->query($query, 'sparql');
   foreach ($results as $result) {
     $pid = $result['pid']['value'];
