@@ -8877,6 +8877,7 @@ function sidora_debug_string_backtrace() {
   return $trace; 
 } 
 function sidora_drupal_goto_alter(&$path, &$options, &$http_response_code) {
+  /*
   $to_save = sidora_debug_string_backtrace();
   ob_start();
   $args = func_get_args();
@@ -8884,5 +8885,6 @@ function sidora_drupal_goto_alter(&$path, &$options, &$http_response_code) {
   $objects = ob_get_contents();
   ob_end_clean();
   watchdog('SIGotoCheck',$to_save . '<hr>' . $objects);
+  */
 }
 
