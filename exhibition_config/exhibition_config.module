@@ -79,13 +79,20 @@ function exhibition_config_menu(){
     'description' => t('JSON Visibility data'),
     'type' => MENU_CALLBACK,
   );
-	$items['exhibition_config/preview_warning'] = array(
-	  'title' => t('Visibility Settings Info'),
-		'page callback' => 'exhibition_config_info',
-		'access callback' => TRUE,
-		'description' => t('Visibility Preview Warning'),
-		'type' => MENU_CALLBACK,
-	);	
+  $items['exhibition_config/preview_warning'] = array(
+    'title' => t('Visibility Settings Info'),
+    'page callback' => 'exhibition_config_info',
+    'access callback' => TRUE,
+    'description' => t('Visibility Preview Warning'),
+    'type' => MENU_CALLBACK,
+  );	
+  $items['admin/exhibition_config/delete'] = array(
+    'title' => t('Exhibition Deletion'),
+    'page callback' => 'exhibition_config_delete',
+    'access arguments' => array('administer site configuration'),
+    'description' => t('Exhibition Delete'),
+    'type' => MENU_CALLBACK,
+  );	
   return $items;
 }
 /*
@@ -124,8 +131,17 @@ function exhibition_config_get_exhibition_pids_for_user($user_id){
  * Returns an html table with a line for each exhibition owned by the user
  */
 function exhibition_config_get_exhibition_html_table_for_user($user_name){
+  global $user;
+  $enable_deletes = in_array('administrator', array_values($user->roles)); 
+  drupal_add_library('system', 'ui.dialog');
   $epids = exhibition_config_get_exhibition_pids_for_user($user_name);
-  $epid_html = '<table><tr><th>ID</th><th>Label</th><th>Configure</th><th>Public</th><th>Link</th><th>Friendly Link</th></tr>';
+  $epid_html = '<table>';
+  $epid_html .= '<tr>';
+  $epid_html .= '<th>ID</th><th>Label</th><th>Configure</th><th>Public</th><th>Link</th><th>Friendly Link</th>';
+  if ($enable_deletes) {
+    $epid_html .= '<th>Delete</th>';
+  }
+  $epid_html .= '</tr>';
   foreach($epids as $epid){
     $epid_html .= '<tr>';
     $epid_html .= '<td>'.$epid['pid'].'</td>';
@@ -145,9 +161,64 @@ function exhibition_config_get_exhibition_html_table_for_user($user_name){
     }else{
       $epid_html .= '<td>None set</td>';
     }
+    if ($enable_deletes) {
+      $epid_html .= '<td>
+<input class="form-submit" value="Delete" style="width:48px" onclick="exhibitionDeleteConfirm(\''.$epid['pid'].'\', \'' . $epid['label'] . '\');"/>
+    </td>';
+    }
     $epid_html .= '</tr>';
   }
   $epid_html .= '</table>';
+  if ($enable_deletes) {
+    $epid_html .= '<script>
+window.exhibitionDeleteConfirm = function(pid, label){
+jQuery("#deleteExhibitionDialog").remove();
+var deletionWarning = "Are you sure you want to delete this exhibition: <br/><br/>"+pid+" <br/>"+label+"";
+jQuery("body").append("<div id=\'deleteExhibitionDialog\' style=\'display:none;\' title=\'Delete Exhibition\'><p>"+deletionWarning+"</p></div>");
+    jQuery("#deleteExhibitionDialog").dialog({
+      resizable: false,
+      height:250,
+      width: 400,
+      modal: true,
+      buttons: {
+        "Delete": function() {
+          jQuery.ajax({
+            url: Drupal.settings.basePath + "admin/exhibition_config/delete/"+pid,
+            success : function (checkFeedback) {
+              try{
+                checkItem = jQuery.parseJSON(checkFeedback);
+                jQuery("#deleteExhibitionDialogConfirmed").remove();
+                if (checkItem.error) {
+                  jQuery("body").append("<div id=\'deleteExhibitionDialogConfirmed\' style=\'display:none\' title=\'Deletion Complete with Error\'><p>Errors:"+checkItem.error+"<br/>Deleted:"+checkItem.num_deleted+"</p></div>");
+                  jQuery("#deleteExhibitionDialogConfirmed").dialog({ modal:true }).on(\'dialogclose\',function(event){ });
+                } else if (checkItem.num_deleted === 0) {
+                  jQuery("body").append("<div id=\'deleteExhibitionDialogConfirmed\' style=\'display:none\' title=\'Deletion Complete\'><p>Pid not found, deleted:"+checkItem.num_deleted+"</p></div>");
+                  jQuery("#deleteExhibitionDialogConfirmed").dialog({ modal:true }).on(\'dialogclose\',function(event){ });
+                } else {
+                  jQuery("body").append("<div id=\'deleteExhibitionDialogConfirmed\' style=\'display:none\' title=\'Deletion Complete\'><p>Deleted:"+checkItem.num_deleted+"<br/>Window will reload on close</p></div>");
+                  jQuery("#deleteExhibitionDialogConfirmed").dialog({ modal:true }).on(\'dialogclose\',function(event){ window.location.reload(); });
+                }
+              } catch (err) {
+                jQuery("#deleteExhibitionDialogError").remove();
+                var dNode = document.createElement(\'div\');
+                dNode.textContent = checkFeedback;
+                jQuery("body").append("<div id=\'deleteExhibitionDialogError\' style=\'display:none\' title=\'Error on Deletion\'></div>");
+                jQuery("#deleteExhibitionDialogError").append(dNode);
+                jQuery("#deleteExhibitionDialogError").dialog({width:800});
+              }
+              console.log(checkFeedback);
+            }
+          })
+        },
+        "Close": function() {
+          jQuery( "#deleteExhibitionDialog" ).dialog( "close" );
+        }
+      }
+    });
+};
+</script>
+';
+  }
   return $epid_html;
 }
 /*
@@ -2718,4 +2789,16 @@ function &return_branch_by_address (&$parent_array, $child_address, $addressSepa
 }
 function exhibition_config_info () {
   return drupal_json_output(variable_get('si_exhibition_preview_warning',''));
-}	
+}
+/**
+ * Deletes a configuration from the database.  There is no undo.
+ * 
+ */
+function exhibition_config_delete($pid = '') {
+  if (empty($pid)){
+    return "No valid pid";
+  }
+ $num_deleted = db_delete('exhibition_config')->condition('pid', $pid)->execute();
+ print '{ "error": false, "num_deleted": ' . $num_deleted . '}';
+ drupal_exit();
+}
