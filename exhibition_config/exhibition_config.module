@@ -343,6 +343,8 @@ function exhibition_config_form_submit($form, &$form_state) {
          $file = file_save_upload('logo_upload', array(), 'public://');
          if($file){
            $form['top']['logo']['#value'] = file_create_url($file->destination);
+           $file->status = FILE_STATUS_PERMANENT;
+           file_save($file);
          }else{
            drupal_set_message(t("Could not save upload: $name"));
          }
