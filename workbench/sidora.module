@@ -8778,6 +8778,8 @@ function sidora_add_fedora_assumption_problem($type, $problem, $pid = '') {
     'relationship_issues' => array(),
     'other_issues' => array(),
   ));
+  // Convert back to array if it became a stdObject through a config transfer
+  $assumption_problems = json_decode(json_encode($assumption_problems), true);
   switch ($type) {
     case 'object_issues':
     case 'relationship_issues':
