@@ -5873,7 +5873,7 @@ function sidora_cron() {
     $file_time = filectime($temp_dir . '/' . $k);
     $time_alive = $curr_time - $file_time;
     //if > 20000 sec (333 min) then delete
-    if ($time_alive > 20000 && fileowner($temp_dir . '/' . $k) == 'apache') return TRUE;
+    if ($time_alive > 20000) return TRUE;
     return FALSE;
   });
   $deleted_files = array();
