@@ -18,12 +18,12 @@ var resetMenu = function(menuId){
     ulOfInterest.show();
     ulOfInterest.css("width","");
    /* Mod added by RA on 3/11/15 to fix the issue where the concept dropdown menu widths were changing on each load */
-	  var prefWidth = '0';
-		if (ulOfInterest.css("position") != "relative"){ // eof - RA mod
-		var prefWidth = ulOfInterest[0].scrollWidth; //Math.max(ulOfInterest[0].scrollWidth + 10, ulOfInterest.width());
-	  }
-		ulOfInterest.css("height","0");
-  	ulOfInterest.css("position","relative");
+    var prefWidth = '0';
+    if (ulOfInterest.css("position") != "relative"){ // eof - RA mod
+      var prefWidth = ulOfInterest[0].scrollWidth; //Math.max(ulOfInterest[0].scrollWidth + 10, ulOfInterest.width());
+    }
+    ulOfInterest.css("height","0");
+    ulOfInterest.css("position","relative");
     isFirstLevel = !(jQuery(this).parent().parent().parent().is('li'));
     if (!isFirstLevel){
       ulOfInterest.css("top","-"+myHeight+"px");
@@ -32,15 +32,13 @@ var resetMenu = function(menuId){
     ulOfInterest.css("width","0px");
     //check if any of them are newly added and not widthed properly
     var toCheckSet = ulOfInterest.children("li");
-    /* Mod added by RA on 3/11/15 to fix the issue where the concept dropdown menu widths were changing on each load */
-		if ((prefWidth == '0') && (toCheckSet.length > 0)){
-		  prefWidth = toCheckSet[0].scrollWidth;
-		}	
-		// eof RA - mod
-		for(var i = 0; i < ulOfInterest.length; i++){
-      var liOfInterest = jQuery(ulOfInterest[i]);
+    if ((prefWidth == '0') && (toCheckSet.length > 0)){
+      prefWidth = toCheckSet[0].scrollWidth;
+    }	
+    for(var i = 0; i < toCheckSet.length; i++){
+      var liOfInterest = jQuery(toCheckSet[i]);
       if (liOfInterest.css("width") == "0px" || liOfInterest.width() < 1) 
-         ulOfInterest.children("li").css("width",prefWidth+"px");
+        ulOfInterest.children("li").css("width",prefWidth+"px");
     }  
     jQuery(this).parent().css("height",myHeight+"px");
     jQuery(this).parent().css("width",myWidth+"px");

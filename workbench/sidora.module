@@ -280,7 +280,7 @@ function sidora_menu() {
       'page arguments' => array('sidora_import_xml_form', 2),
       'access arguments' => array('Create XML Forms'),
       'type' => MENU_CALLBACK,
-		),	 
+		),
  );
 }
 
@@ -1150,8 +1150,20 @@ function sidora_delete_xsl_form($form,&$form_state){
  */
 function sidora_edit_metadata($object_id_string = '', $dsid = '', $form_name = ''){
   drupal_add_css(drupal_get_path('module','sidora').'/css/workbench_create_resource.css',array('weight' => '1000000', 'group' => CSS_THEME));
-   global $user;
-  //if the pid is locked, can't do it
+  drupal_add_css(drupal_get_path('module','sidora').'/css/workbench_metadata_screens.css',array('weight' => '1000000', 'group' => CSS_THEME));
+  drupal_add_js(drupal_get_path('module','sidora').'/js/workbench_util.js',array('weight' => '1000000', 'group' => JS_THEME));
+  drupal_add_library('system','ui.dialog');
+  global $user;
+  if (strpos($object_id_string, 'retry') !== false) {
+    $to_return = '<script>
+      jQuery(document).ready(function(){
+      jQuery("body").prepend(\'<div id="retry_edit" style="width:100%;height:100%;position:absolute;left:0;top:0;z-index:100;background:white;"></div>\');
+	    var parent = window.parent;
+	    jQuery("#retry_edit").html(parent.jQuery("#edit_form").text());
+	    });
+    </script>';
+  }else{
+	//if the pid is locked, can't do it
   $to_return = '';
   $to_return .= '<div id="edit-metadata">';
   $object_id_array = explode("&",$object_id_string);
@@ -1195,13 +1207,10 @@ function sidora_edit_metadata($object_id_string = '', $dsid = '', $form_name = '
 	'#type' => 'hidden',
 	'#name' => 'form_name',
 	'#value' => $form_name
-	);  
+	); 
 	$tform['#attributes']['name'][] = $object_id;
   $tform['#attributes']['class'][] = $object_id;
   $tform['#attributes']['count'][] = $resource_count;
-  drupal_add_css(drupal_get_path('module','sidora').'/css/workbench_metadata_screens.css',array('weight' => '1000000', 'group' => CSS_THEME));
-  drupal_add_js(drupal_get_path('module','sidora').'/js/workbench_util.js',array('weight' => '1000000', 'group' => JS_THEME));
-  drupal_add_library('system','ui.dialog');
   $is_concept = sidora_is_concept($object);
   if ($is_concept) 
     drupal_add_js('window.isConcept = true;',array('type' => 'inline', 'weight' => '1000000', 'group' => JS_THEME));
@@ -1247,10 +1256,11 @@ function sidora_edit_metadata($object_id_string = '', $dsid = '', $form_name = '
   }else{
     $to_return .= '<div>'.drupal_render($tform);
   }
-  $to_return .= "<div id='bottom-panel' class='bottom-panel' style='position:absolute; bottom:0; left:0; width:100%;'></div></div>";
+  $to_return .= '<div id="bottom-panel" class="bottom-panel" style="position:absolute; bottom:0; left:0; width:100%;"></div></div>';
   $to_return .= "</div>";
 }
   $to_return .= "</div>";
+	}
   drupal_add_js(drupal_get_path('module','sidora').'/js/workbench_uploader.js',array('weight' => '1000000', 'group' => JS_THEME));
   return $to_return;
 }
@@ -5439,9 +5449,10 @@ function sidora_html_string_tree($root_pid = '', $root = NULL, $num_levels = 3){
   $results = _sidora_get_child_results_cache($root_pid);
   $filled = sidora_fill_concepts_children($results); 
   $html_tree_from_query_result = sidora_html_tree($filled, '', $num_levels);
+  $html_escaped_name = htmlspecialchars($root_label);
   $to_return = '';
   $to_return .= '<ul>';
-  $to_return .= '<li><a href="'.base_path().'sidora/workbench/#'.$root_pid.'" pid="'.$root_pid.'" fullname="'.$root_label.'">';
+  $to_return .= '<li><a href="'.base_path().'sidora/workbench/#'.$root_pid.'" pid="'.$root_pid.'" fullname="'.$html_escaped_name.'">';
   $to_return .= $root_label;
   $to_return .= '</a>';
   $to_return .= '<ul>';
@@ -5912,7 +5923,8 @@ function sidora_html_tree($query_result_tree, $input_path = '', $num_levels = 3)
     $current_path .= $pid;
     $resource_children_num = -1;
     if (array_key_exists('k1',$t_element)) $resource_children_num = $t_element['k1']['value'];
-    $to_return .= '<li><a href="'.base_path().'sidora/workbench/#'.$pid.'?path='.$input_path.'" pid="'.$pid.'" fullname="'.$t_element['t']['value'].'" conceptchildren="'.$t_element['k0']['value'].'" resourcechildren="'.$resource_children_num.'">';
+    $html_escaped_name = htmlspecialchars($t_element['t']['value']);
+    $to_return .= '<li><a href="'.base_path().'sidora/workbench/#'.$pid.'?path='.$input_path.'" pid="'.$pid.'" fullname="'.$html_escaped_name.'" conceptchildren="'.$t_element['k0']['value'].'" resourcechildren="'.$resource_children_num.'">';
     $to_return .= $t_element['t']['value'];
     if ($resource_children_num > 0) $to_return .= ' ('.$resource_children_num.')';
     $to_return .= '</a>';
@@ -8778,6 +8790,8 @@ function sidora_add_fedora_assumption_problem($type, $problem, $pid = '') {
     'relationship_issues' => array(),
     'other_issues' => array(),
   ));
+  // Convert back to array if it became a stdObject through a config transfer
+  $assumption_problems = json_decode(json_encode($assumption_problems), true);
   switch ($type) {
     case 'object_issues':
     case 'relationship_issues':

@@ -257,7 +257,7 @@ sidora.concept.LoadContentHelp.Permissions = function(conceptOfInterest){
   });
 }
 /*
- * Sets the visiblility of exhibition menu item on the concept menu. - RA 3/12/15
+ * Sets the visiblility of exhibition menu item on the concept menu.
  */
 sidora.concept.LoadContentHelp.Exhibition_view = function(conceptOfInterest){
   jQuery.ajax({
