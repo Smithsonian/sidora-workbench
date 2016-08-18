@@ -2747,7 +2747,9 @@ function sidora_form_alter(&$form, &$form_state, $form_id){
         $association_step_storage['association'] = $association; 
       }
     }
-
+ //  error_log("\nIn sidora_form-alter, form keys :".print_r(array_map('strtolower', array_keys($form)),true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
+ //  error_log("\nIn sidora_form-alter, form :".print_r($form,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
+  if (!in_array(strtolower('codebook'), array_map('strtolower', array_keys($form)))){
 		remove_validation_for_this_and_children($form);
     $form['all_meta_entered'] = array(
       '#name' => 'all_meta_entered',
@@ -2756,6 +2758,8 @@ function sidora_form_alter(&$form, &$form_state, $form_id){
       '#description' => '',
       '#required' => false,
     );
+ //  error_log("\nIn sidora_form-alter, form :".print_r($form,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
+	}	
   }
   switch ($form_id) {
     case 'user_login':
