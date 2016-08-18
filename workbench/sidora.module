@@ -5487,8 +5487,10 @@ function sidora_block_content_navigation(){
   drupal_add_css($datatables_loc . 'css/jquery.dataTables.css', array('type' => 'external'));
   drupal_add_js(drupal_get_path('module','sidora') . '/js/pipeline.js');  //Pipeline is non-standard
 
-  //Sidora specific
+  // Sidora specific
   drupal_add_css(drupal_get_path('module','sidora') . '/css/workbench.css', array('weight' => 10000, 'group' => CSS_THEME));
+  // Some of the icons we use are from islandora xml forms, inform Javascript where to get those
+  drupal_add_js(array('islandora_xml_forms' => array('basepath' => '/' . drupal_get_path('module','xml_forms') . '/')), 'setting');
   drupal_add_js(drupal_get_path('module','sidora') . '/js/workbench_sidora_queue.js');
   drupal_add_js(drupal_get_path('module','sidora') . '/js/workbench.js');
   drupal_add_js(drupal_get_path('module','sidora') . '/js/workbench_util.js');

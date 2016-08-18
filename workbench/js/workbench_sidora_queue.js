@@ -136,7 +136,7 @@ SidoraQueue.prototype.Done = function(completedItem, ajaxReturn){
 	    var toShow = "Did not perform action:"+completedItem.userFriendlyName;
 			if (completedItem.fullObject.userFriendlyName.indexOf("Edit MetaData")>0){
 			  this.completedFailedRequests.push({pid:completedItem.pidsBeingProcessed[0],form:jsonString})
-			  toShow += '  <a rel="shadowbox; width=500; height=600; player=iframe" href="javascript:void(0)" id="retry_edit_metadata" class="' + completedItem.pidsBeingProcessed[0] + '" onClick = window.sidora.queue.Retry("'+completedItem.pidsBeingProcessed[0]+'");>Click here to view the errors and retry</a>';
+			  toShow += '<div class="messages error"><a rel="shadowbox; width=500; height=600; player=iframe" href="javascript:void(0)" id="retry_edit_metadata" class="' + completedItem.pidsBeingProcessed[0] + '" onClick = window.sidora.queue.Retry("'+completedItem.pidsBeingProcessed[0]+'");>Click here to view the errors and retry</a></div>';
 			}
 			this.NotificationWindow.Show(toShow, true);
 			return;
@@ -187,7 +187,7 @@ SidoraQueue.prototype.NotificationWindow.UpdateTime = Date.now();
 SidoraQueue.prototype.NotificationWindow.Show = function(message, isError){
   var nw = this;
   if (jQuery('#queueMessage').length == 0){
-    var notificationWindowHtml = '<div id="queueMessage" style="display:none; position: fixed; bottom: 26px; right: 30px; min-height: 50px; width: 400px;"><div id="" role="tooltip" class="queue-message-block ui-tooltip ui-widget ui-corner-all ui-widget-content" style=" display: block;width: 100%;height: 100%;max-width: 1000px;"><div class="notification-window-message"></div><div class="queue-mb-close" style="background: url(/sites/all/modules/islandora_xml_forms-7.x/elements/css/images/ui-icons_222222_256x240.png) no-repeat -30px -191px;width: 20px;height: 20px;z-index: 100;position: absolute;right: 0;top: 0;"></div></div></div>';
+    var notificationWindowHtml = '<div id="queueMessage" style="display:none; position: fixed; bottom: 26px; right: 30px; min-height: 50px; width: 400px;"><div id="" role="tooltip" class="queue-message-block ui-tooltip ui-widget ui-corner-all ui-widget-content" style=" display: block;width: 100%;height: 100%;max-width: 1000px;"><div class="notification-window-message"></div><div class="queue-mb-close" style="background: url(' + Drupal.settings.islandora_xml_forms.basepath + 'elements/css/images/ui-icons_222222_256x240.png) no-repeat -30px -191px;width: 20px;height: 20px;z-index: 100;position: absolute;right: 0;top: 0; cursor: pointer; cursor: hand;"></div></div></div>';
     jQuery("body").append(notificationWindowHtml);
       jQuery("#queueMessage").mouseenter(function(){
 			  nw.MouseIsInside = true;
@@ -206,10 +206,10 @@ SidoraQueue.prototype.NotificationWindow.Show = function(message, isError){
   jQuery(".notification-window-message div:hidden").remove();
   jQuery(".notification-window-message").append("<div>"+message+"</div>");
   jQuery("#queueMessage").height(jQuery("#queueMessage").css("min-height"));
+  jQuery("#queueMessage").fadeIn();
   if (jQuery("#queueMessage")[0].scrollHeight > jQuery("#queueMessage").height()){
     jQuery("#queueMessage").height(jQuery("#queueMessage")[0].scrollHeight);
   }
-  jQuery("#queueMessage").fadeIn();
   this.UpdateTime = Date.now();
   if (isError || nw.showingError){
     nw.showingError = true;
