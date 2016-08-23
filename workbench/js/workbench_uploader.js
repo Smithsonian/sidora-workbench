@@ -50,35 +50,35 @@ jQuery().ready(function(){
     jQuery(".sidora-form-finish").click(function(e){ 
       var toIterate = jQuery(".sidora-ingest-form-holder");
       var toSubmit = true;
-			for (var i = 0; i < toIterate.length; i++){
-        if ((jQuery(toIterate[i]).find("form").find("[name='form_name']").length > 0) && (jQuery(toIterate[i]).find("form").find("[name='form_name']").val().toLowerCase().indexOf('codebook') != -1)) {
-          var needVals = jQuery(".form-required").closest("div").find("input[type=text], textarea").filter(function(){return this.value == "";});
-          if (needVals.length >0){
-					  toSubmit = false;
-						if (jQuery(".messages.error").length == 0){
-						  if (jQuery(".messages.status").length == 0){
-							  jQuery("#content").find(".element-invisible").after('<div id = "console" class="clearfix"><div class = "messages error"></div></div>');
-							}
-							else{
-							 jQuery(".messages.status").after('<div class = "messages error"></div>');
-							} 	
-						}
-						 for (var x = 0; x < needVals.length; x++){
+	for (var i = 0; i < toIterate.length; i++){
+          if ((jQuery(toIterate[i]).find("form").find("[name='form_name']").length > 0) && (jQuery(toIterate[i]).find("form").find("[name='form_name']").val().toLowerCase().indexOf('codebook') != -1)) {
+            var needVals = jQuery(".form-required").closest("div").find("input[type=text], textarea").filter(function(){return this.value == "";});
+            if (needVals.length >0){
+	      toSubmit = false;
+	      if (jQuery(".messages.error").length == 0){
+	        if (jQuery(".messages.status").length == 0){
+		  jQuery("#content").find(".element-invisible").after('<div id = "console" class="clearfix"><div class = "messages error"></div></div>');
+		}
+		else{
+		 jQuery(".messages.status").after('<div class = "messages error"></div>');
+		} 	
+	      }
+       	      for (var x = 0; x < needVals.length; x++){
                 var label = jQuery("label[for='"+jQuery(needVals[i]).attr('id')+"']").html();
-							  jQuery(".messages").filter(".error").html(label + ' is required');
-								jQuery(needVals[i]).addClass('error');
-            } 
-					}else{
-				  var formId = jQuery(toIterate[i]).find("form").attr('id');
-          window.prepIslandoraFormForSubmit(formId, updateCodebookComplete);
-				  }	
-				}	else{
-				var formId = jQuery(toIterate[i]).find("form").attr('id');
-        window.prepIslandoraFormForSubmit(formId, updateCodebookComplete);
+	        jQuery(".messages").filter(".error").html(label + ' is required');
+		jQuery(needVals[i]).addClass('error');
+              } 
+	    }else{
+	       var formId = jQuery(toIterate[i]).find("form").attr('id');
+               window.prepIslandoraFormForSubmit(formId, updateCodebookComplete);
+	    }	
+	  }else{
+	    var formId = jQuery(toIterate[i]).find("form").attr('id');
+            window.prepIslandoraFormForSubmit(formId, updateCodebookComplete);
+          }
       }
-			}
       if (toSubmit)
-			window.startBatch();
+	window.startBatch();
     });
   }else{
     jQuery(".sidora-form-finish").click(function(e){ window.submitAll(); });
@@ -130,53 +130,53 @@ window.showNext=function(){
 window.submitAll=function(){
   var toIterate = jQuery(".sidora-ingest-form-holder");
   var toSubmit = true;
-	for (var i = 0; i < toIterate.length; i++){
-        if ((jQuery(toIterate[i]).find("form").find("[name='form_name']").length > 0) && (jQuery(toIterate[i]).find("form").find("[name='form_name']").val().toLowerCase().indexOf('codebook') != -1)) {
+  for (var i = 0; i < toIterate.length; i++){
+    if ((jQuery(toIterate[i]).find("form").find("[name='form_name']").length > 0) && (jQuery(toIterate[i]).find("form").find("[name='form_name']").val().toLowerCase().indexOf('codebook') != -1)) {
       var needVals = jQuery(".form-required").closest("div").find("input[type=text], textarea").filter(function(){return this.value == "";});
       if (needVals.length >0){
         toSubmit = false;	
-				if (jQuery(".messages.error").length == 0){
-				  if (jQuery(".messages.status").length == 0){
-					  jQuery("#content").find(".element-invisible").after('<div id = "console" class="clearfix"><div class = "messages error"></div></div>');
-					}
-					else{
-					 jQuery(".messages.status").after('<div class = "messages error"></div>');
-					} 	
-				}
-				for (var x = 0; x < needVals.length; x++){
+	if (jQuery(".messages.error").length == 0){
+	  if (jQuery(".messages.status").length == 0){
+	    jQuery("#content").find(".element-invisible").after('<div id = "console" class="clearfix"><div class = "messages error"></div></div>');
+	  }
+	  else{
+	    jQuery(".messages.status").after('<div class = "messages error"></div>');
+	  } 	
+	}
+	for (var x = 0; x < needVals.length; x++){
           var label = jQuery("label[for='"+jQuery(needVals[i]).attr('id')+"']").html();
-					jQuery(".messages").filter(".error").html(label + ' is required');
-					jQuery(needVals[i]).addClass('error');
+	  jQuery(".messages").filter(".error").html(label + ' is required');
+	  jQuery(needVals[i]).addClass('error');
         } 
-			}else{
-			  var formId = jQuery(toIterate[i]).find("form").attr('id');
+      }else{
+        var formId = jQuery(toIterate[i]).find("form").attr('id');
         window.prepIslandoraFormForSubmit(formId, updateCodebookComplete);
-			}	
-		}	else{
-    var formId = jQuery(toIterate[i]).find("form").attr('id');
-    if (formId.search('islandora-ingest-form') != '-1'){
-      var toConsole = function(){console.log('finished');};  // create resource success function
-      window.prepIslandoraFormForSubmit(formId, toConsole );
+      }	
     }else{
-			var toConsole = function(){sidora.concept.forceRefreshOnNextLoadContent = true;sidora.concept.LoadContent();};
-      var onFailure = function(){jQuery("#edit-update").click();};
-			var sidora = window.parent.sidora;
-			if (typeof(sidora.queue) != "undefined"){
-			  sidora.queue.completedFailedRequests = sidora.queue.completedFailedRequests.filter(function( obj ) {
+      var formId = jQuery(toIterate[i]).find("form").attr('id');
+      if (formId.search('islandora-ingest-form') != '-1'){
+        var toConsole = function(){console.log('finished');};  // create resource success function
+        window.prepIslandoraFormForSubmit(formId, toConsole );
+      }else{
+	var toConsole = function(){sidora.concept.forceRefreshOnNextLoadContent = true;sidora.concept.LoadContent();};
+        var onFailure = function(){jQuery("#edit-update").click();};
+	var sidora = window.parent.sidora;
+	if (typeof(sidora.queue) != "undefined"){
+	  sidora.queue.completedFailedRequests = sidora.queue.completedFailedRequests.filter(function( obj ) {
           return obj.pid !== jQuery("[name='Pid']").val();
-        });
-			  window.parent.jQuery('#queueMessage').find('.notification-window-message').find('a[class="' + jQuery("[name='Pid']").val() + '"]').parent().remove();
-				if (sidora.queue.completedFailedRequests.length == 0){
-				  window.parent.jQuery('#queueMessage').fadeOut('fast');
-					sidora.queue.NotificationWindow.ResetError(false);
-				}	
-			}	
+          });
+          window.parent.jQuery('#queueMessage').find('.notification-window-message').find('a[class="' + jQuery("[name='Pid']").val() + '"]').parent().remove();
+	  if (sidora.queue.completedFailedRequests.length == 0){
+	    window.parent.jQuery('#queueMessage').fadeOut('fast');
+	    sidora.queue.NotificationWindow.ResetError(false);
+	  }	
+	}	
       window.prepIslandoraFormForSubmit(formId, toConsole, onFailure);
     } 
   }
-	}
-  if (toSubmit)
-	window.startBatch();
+ }
+ if (toSubmit)
+   window.startBatch();
 }
 
 /**
