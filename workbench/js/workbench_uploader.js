@@ -2,7 +2,7 @@ window.batchRequests = [];
 jQuery().ready(function(){
   window.currentInfo = {};
   var myLoc = decodeURIComponent(window.location.pathname);
-  if (myLoc.split("/").splice(myLoc.split("/").length-2)[0] == "edit_metadata"){
+  if (myLoc.indexOf("edit_metadata")>0){
     window.currentInfo.type = "EditMetadata";
     // need to send this to sidora queue done() to force a refresh after edit metadata is finished
   }else{  // code for create resource
@@ -158,8 +158,19 @@ window.submitAll=function(){
       var toConsole = function(){console.log('finished');};  // create resource success function
       window.prepIslandoraFormForSubmit(formId, toConsole );
     }else{
-      var toConsole = function(){sidora.concept.forceRefreshOnNextLoadContent = true;sidora.concept.LoadContent();};
+			var toConsole = function(){sidora.concept.forceRefreshOnNextLoadContent = true;sidora.concept.LoadContent();};
       var onFailure = function(){jQuery("#edit-update").click();};
+			var sidora = window.parent.sidora;
+			if (typeof(sidora.queue) != "undefined"){
+			  sidora.queue.completedFailedRequests = sidora.queue.completedFailedRequests.filter(function( obj ) {
+          return obj.pid !== jQuery("[name='Pid']").val();
+        });
+			  window.parent.jQuery('#queueMessage').find('.notification-window-message').find('a[class="' + jQuery("[name='Pid']").val() + '"]').parent().remove();
+				if (sidora.queue.completedFailedRequests.length == 0){
+				  window.parent.jQuery('#queueMessage').fadeOut('fast');
+					sidora.queue.NotificationWindow.ResetError(false);
+				}	
+			}	
       window.prepIslandoraFormForSubmit(formId, toConsole, onFailure);
     } 
   }
@@ -186,7 +197,8 @@ window.startBatch = function(){
       var postData = ajaxSettings.data;
       var ccSuccess = oldSuccess;
       var onSuccess = function(){console.log("FINISH! "+friendlyName);};
-      if (currentInfo.type == 'EditMetadata'){
+      //var onSuccess = ajaxSettings.success;
+			if (currentInfo.type == 'EditMetadata'){
         var type = "Resource";
         //Check to see if edit metadata of current concept
         if (window.location.href.substring(window.location.href.lastIndexOf("/")+1) == window.parent.sidora.concept.GetPid()) {
@@ -323,7 +335,11 @@ window.prepIslandoraFormForSubmit = function(formName, onSuccessfulFormSubmit, o
     if (window.location.href.search('&') != '-1'){
       var ajaxUrl = sidora_util.ajaxUrl(jQuery("#"+formName).attr("count"));
     }else{
-      var ajaxUrl = window.location.href;
+      if (window.location.href.indexOf('retry') > 0) {
+			 var ajaxUrl = sidora_util.ajaxUrl(0);
+			}else{  
+			 var ajaxUrl = window.location.href;
+			} 
     }
     ajaxSettings = ({
       type: "POST",

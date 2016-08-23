@@ -649,8 +649,6 @@ function sidora_create_user_object(stdClass $account) {
   */
   $descmeta = sidora_create_default_person_descmeta($user_object, $account);
   sidora_update_datastream($user_object, $descmeta, 'DESCMETA');
-  $collection_policy = drupal_get_path('module', 'sidora') . '/data/policies/default_COLLECTION_POLICY.xml';
-  sidora_update_datastream($user_object, $collection_policy, 'COLLECTION_POLICY');
   sidora_update_datastream($user_object, sidora_create_default_xacml($account), 'POLICY');
   $associations = xml_form_builder_get_associations(array(), $user_object->models, array());
   if (count($associations) == 1){

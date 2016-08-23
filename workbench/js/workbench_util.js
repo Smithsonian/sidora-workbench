@@ -118,7 +118,6 @@ sidora_util.ajaxUrl = function(count){
   var baseUrl = window.location.href.substr(0,pidsInUrl);
   return baseUrl+pidsBeingProcessedArray[count];
 }
- 
 fixXmlFormsBehavior = function() {
   if (!(Drupal && Drupal.behaviors && Drupal.behaviors.xmlFormElementTabs && Drupal.behaviors.xmlFormElementTabs.tabs)){
     return;
