@@ -5438,9 +5438,10 @@ function sidora_html_string_tree($root_pid = '', $root = NULL, $num_levels = 3){
   $results = _sidora_get_child_results_cache($root_pid);
   $filled = sidora_fill_concepts_children($results); 
   $html_tree_from_query_result = sidora_html_tree($filled, '', $num_levels);
+  $html_escaped_name = htmlspecialchars($root_label);
   $to_return = '';
   $to_return .= '<ul>';
-  $to_return .= '<li><a href="'.base_path().'sidora/workbench/#'.$root_pid.'" pid="'.$root_pid.'" fullname="'.$root_label.'">';
+  $to_return .= '<li><a href="'.base_path().'sidora/workbench/#'.$root_pid.'" pid="'.$root_pid.'" fullname="'.$html_escaped_name.'">';
   $to_return .= $root_label;
   $to_return .= '</a>';
   $to_return .= '<ul>';
@@ -5911,7 +5912,8 @@ function sidora_html_tree($query_result_tree, $input_path = '', $num_levels = 3)
     $current_path .= $pid;
     $resource_children_num = -1;
     if (array_key_exists('k1',$t_element)) $resource_children_num = $t_element['k1']['value'];
-    $to_return .= '<li><a href="'.base_path().'sidora/workbench/#'.$pid.'?path='.$input_path.'" pid="'.$pid.'" fullname="'.$t_element['t']['value'].'" conceptchildren="'.$t_element['k0']['value'].'" resourcechildren="'.$resource_children_num.'">';
+    $html_escaped_name = htmlspecialchars($t_element['t']['value']);
+    $to_return .= '<li><a href="'.base_path().'sidora/workbench/#'.$pid.'?path='.$input_path.'" pid="'.$pid.'" fullname="'.$html_escaped_name.'" conceptchildren="'.$t_element['k0']['value'].'" resourcechildren="'.$resource_children_num.'">';
     $to_return .= $t_element['t']['value'];
     if ($resource_children_num > 0) $to_return .= ' ('.$resource_children_num.')';
     $to_return .= '</a>';
