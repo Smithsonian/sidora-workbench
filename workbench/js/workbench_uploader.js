@@ -49,11 +49,36 @@ jQuery().ready(function(){
     });
     jQuery(".sidora-form-finish").click(function(e){ 
       var toIterate = jQuery(".sidora-ingest-form-holder");
-      for (var i = 0; i < toIterate.length; i++){
-        var formId = jQuery(toIterate[i]).find("form").attr('id');
+      var toSubmit = true;
+			for (var i = 0; i < toIterate.length; i++){
+        if ((jQuery(toIterate[i]).find("form").find("[name='form_name']").length > 0) && (jQuery(toIterate[i]).find("form").find("[name='form_name']").val().toLowerCase().indexOf('codebook') != -1)) {
+          var needVals = jQuery(".form-required").closest("div").find("input[type=text], textarea").filter(function(){return this.value == "";});
+          if (needVals.length >0){
+					  toSubmit = false;
+						if (jQuery(".messages.error").length == 0){
+						  if (jQuery(".messages.status").length == 0){
+							  jQuery("#content").find(".element-invisible").after('<div id = "console" class="clearfix"><div class = "messages error"></div></div>');
+							}
+							else{
+							 jQuery(".messages.status").after('<div class = "messages error"></div>');
+							} 	
+						}
+						 for (var x = 0; x < needVals.length; x++){
+                var label = jQuery("label[for='"+jQuery(needVals[i]).attr('id')+"']").html();
+							  jQuery(".messages").filter(".error").html(label + ' is required');
+								jQuery(needVals[i]).addClass('error');
+            } 
+					}else{
+				  var formId = jQuery(toIterate[i]).find("form").attr('id');
+          window.prepIslandoraFormForSubmit(formId, updateCodebookComplete);
+				  }	
+				}	else{
+				var formId = jQuery(toIterate[i]).find("form").attr('id');
         window.prepIslandoraFormForSubmit(formId, updateCodebookComplete);
       }
-      window.startBatch();
+			}
+      if (toSubmit)
+			window.startBatch();
     });
   }else{
     jQuery(".sidora-form-finish").click(function(e){ window.submitAll(); });
@@ -104,7 +129,30 @@ window.showNext=function(){
  */
 window.submitAll=function(){
   var toIterate = jQuery(".sidora-ingest-form-holder");
-  for (var i = 0; i < toIterate.length; i++){
+  var toSubmit = true;
+	for (var i = 0; i < toIterate.length; i++){
+        if ((jQuery(toIterate[i]).find("form").find("[name='form_name']").length > 0) && (jQuery(toIterate[i]).find("form").find("[name='form_name']").val().toLowerCase().indexOf('codebook') != -1)) {
+      var needVals = jQuery(".form-required").closest("div").find("input[type=text], textarea").filter(function(){return this.value == "";});
+      if (needVals.length >0){
+        toSubmit = false;	
+				if (jQuery(".messages.error").length == 0){
+				  if (jQuery(".messages.status").length == 0){
+					  jQuery("#content").find(".element-invisible").after('<div id = "console" class="clearfix"><div class = "messages error"></div></div>');
+					}
+					else{
+					 jQuery(".messages.status").after('<div class = "messages error"></div>');
+					} 	
+				}
+				for (var x = 0; x < needVals.length; x++){
+          var label = jQuery("label[for='"+jQuery(needVals[i]).attr('id')+"']").html();
+					jQuery(".messages").filter(".error").html(label + ' is required');
+					jQuery(needVals[i]).addClass('error');
+        } 
+			}else{
+			  var formId = jQuery(toIterate[i]).find("form").attr('id');
+        window.prepIslandoraFormForSubmit(formId, updateCodebookComplete);
+			}	
+		}	else{
     var formId = jQuery(toIterate[i]).find("form").attr('id');
     if (formId.search('islandora-ingest-form') != '-1'){
       var toConsole = function(){console.log('finished');};  // create resource success function
@@ -115,7 +163,9 @@ window.submitAll=function(){
       window.prepIslandoraFormForSubmit(formId, toConsole, onFailure);
     } 
   }
-  window.startBatch();
+	}
+  if (toSubmit)
+	window.startBatch();
 }
 
 /**
@@ -280,7 +330,7 @@ window.prepIslandoraFormForSubmit = function(formName, onSuccessfulFormSubmit, o
       url: ajaxUrl,
       data: jQuery("#"+formName).serialize()+"&op=Submit&update=Update",
       success: function( data ) {
-         if (data.indexOf("<h2 class=\"element-invisible\">Error message</h2")>0){
+         if (data.indexOf("<h2 class=\"element-invisible\">Error message</h2") != -1){
            //If not successful, reload the page so that the user can see why
            // store this error/failure in a queue message area with the proper SID to process after end of the current queue
            
