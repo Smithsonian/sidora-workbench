@@ -508,9 +508,12 @@ sidora.util.loadTreeSectionsIfNeeded = function(data){
   if (childPidsCsv.length > 0) {
     sidora.util.checkUIForInvalidPids(openingPid, childPidsCsv);
     //Prep the UI for children incoming
-    jQuery("#forjstree a").not("[conceptchildren=0]").parent(".jstree-leaf")
-      .removeClass("jstree-leaf")
-      .addClass("jstree-closed");
+    if (jQuery("#forjstree a").not("[conceptchildren=0]").parent(".jstree-leaf").length > 0){
+      jQuery("#forjstree a").not("[conceptchildren=0]").parent(".jstree-leaf").children("i")
+        .css("background","url(../../misc/throbber.gif) no-repeat 6px -14px");
+
+      jQuery("#forjstree a").not("[conceptchildren=0]").parent(".jstree-leaf").removeClass("jstree-leaf")
+    }
     //load the next section of the tree
     if (currentChildrenPids.length > 0){
       //Only load information if the currentChildren have children that are not listed
