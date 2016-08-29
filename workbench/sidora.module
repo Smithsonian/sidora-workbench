@@ -2075,6 +2075,32 @@ function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $ex
   }
   if (!sidora_is_admin()) print t("Remember that nonadmins will NOT see output from dsm!");
 
+  if ($one == 'project_user_check') {
+    $users = entity_load('user');
+    $header = array('username','islandora_pid');
+    $rows = array();
+    $in_use_pids = array();
+    foreach($users as $account) {
+      if (is_array($account->data) && array_key_exists('islandora_user_pid',$account->data)) {
+        $rows[] = array($account->name,$account->data['islandora_user_pid']);
+        $in_use_pids[] = $account->data['islandora_user_pid'];
+      }
+      else {
+        $rows[] = array('<div class="messages warning">' . $account->name . '</div>','Never set up');
+      }
+    }
+
+    $cr = _sidora_get_child_results_cache('si:user-projects');
+    foreach($cr as $child) {
+      $pid = $child['o']['value'];
+      if (!in_array($pid, $in_use_pids)) {
+        $rows[] =  array('<div class="messages warning">No User Found</div>','<div class="messages warning">' . $pid . '</div>');
+      }
+    }
+    $to_return = theme('table',array('header' => $header, 'rows' => $rows));
+    return $to_return;
+  } 
+
   if ($one == 'file_check'){
     $temp_dir = file_directory_temp();
     $dir_content = scandir($temp_dir);
