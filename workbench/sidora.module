@@ -2757,7 +2757,6 @@ function sidora_form_alter(&$form, &$form_state, $form_id){
         $association_step_storage['association'] = $association; 
       }
     }
-
 		remove_validation_for_this_and_children($form);
     $form['all_meta_entered'] = array(
       '#name' => 'all_meta_entered',
@@ -8941,4 +8940,3 @@ function sidora_drupal_goto_alter(&$path, &$options, &$http_response_code) {
   watchdog('SIGotoCheck',$to_save . '<hr>' . $objects);
   */
 }
-
