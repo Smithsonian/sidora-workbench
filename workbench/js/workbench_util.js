@@ -118,6 +118,26 @@ sidora_util.ajaxUrl = function(count){
   var baseUrl = window.location.href.substr(0,pidsInUrl);
   return baseUrl+pidsBeingProcessedArray[count];
 }
+
+/**
+ * Intended to block clicking on new items and show the "loading" cursor, but no z-index given
+ */
+sidora_util.clickBlocker = {};
+sidora_util.clickBlocker.block = function(showOrHide) {
+  if (showOrHide !== 'hide' && showOrHide !== false && jQuery("#click_blocker").length < 1) {
+    jQuery(".content").append("<div id='click_blocker' style='position:absolute;top:0px;left:0px;width:100%;height:100%;cursor:wait;'></div>");
+    sidora_util.clickBlocker.started = (new Date()).getTime();
+  } else {
+    sidora_util.clickBlocker.ended = (new Date()).getTime();
+    if (typeof(sidora_util.clickBlocker.started) != 'undefined' && (sidora_util.clickBlocker.ended - sidora_util.clickBlocker.started > 1)){
+      jQuery("#click_blocker").css("background","rgba(0,200,0,0.05)").fadeOut("normal",function(){jQuery(this).remove();});
+    } else {
+      jQuery("#click_blocker").remove();
+    }
+  }
+}
+sidora_util.clickBlocker.unblock = function(){this.block(false);}
+
 fixXmlFormsBehavior = function() {
   if (!(Drupal && Drupal.behaviors && Drupal.behaviors.xmlFormElementTabs && Drupal.behaviors.xmlFormElementTabs.tabs)){
     return;
@@ -262,5 +282,17 @@ jQuery(document).ready(function(){
   }
   fixXmlFormsBehavior();
   fixXmlFormFieldpanelBehavior();
+  jQuery(document).ajaxSend(function(){
+    //Don't block on renew calls
+    if (!arguments[2].url.endsWith("/renew")){
+      sidora_util.clickBlocker.block();
+    }
+  });
+  jQuery(document).ajaxComplete(function(){
+    //ALL current AJAX calls have completed, including the lock renews
+    if (!arguments[2].url.endsWith("/renew")){
+      sidora_util.clickBlocker.block(false);
+    }
+  });
 });
 
