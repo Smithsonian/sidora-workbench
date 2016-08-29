@@ -118,6 +118,26 @@ sidora_util.ajaxUrl = function(count){
   var baseUrl = window.location.href.substr(0,pidsInUrl);
   return baseUrl+pidsBeingProcessedArray[count];
 }
+
+/**
+ * Intended to block clicking on new items and show the "loading" cursor, but no z-index given
+ */
+sidora_util.clickBlocker = {};
+sidora_util.clickBlocker.block = function(showOrHide) {
+  if (showOrHide !== 'hide' && showOrHide !== false && jQuery("#click_blocker").length < 1) {
+    jQuery(".content").append("<div id='click_blocker' style='position:absolute;top:0px;left:0px;width:100%;height:100%;cursor:wait;'></div>");
+    sidora_util.clickBlocker.started = (new Date()).getTime();
+  } else {
+    sidora_util.clickBlocker.ended = (new Date()).getTime();
+    if (typeof(sidora_util.clickBlocker.started) != 'undefined' && (sidora_util.clickBlocker.ended - sidora_util.clickBlocker.started > 1)){
+      jQuery("#click_blocker").css("background","rgba(0,200,0,0.05)").fadeOut("normal",function(){jQuery(this).remove();});
+    } else {
+      jQuery("#click_blocker").remove();
+    }
+  }
+}
+sidora_util.clickBlocker.unblock = function(){this.block(false);}
+
 fixXmlFormsBehavior = function() {
   if (!(Drupal && Drupal.behaviors && Drupal.behaviors.xmlFormElementTabs && Drupal.behaviors.xmlFormElementTabs.tabs)){
     return;
@@ -212,20 +232,20 @@ fixXmlFormFieldpanelBehavior = function() {
   if (!(Drupal && Drupal.behaviors && Drupal.behaviors.islandora_form_fieldpanel && Drupal.behaviors.islandora_form_fieldpanel.attach)){
     return;
   }
-	Drupal.behaviors.sidora = {
+  Drupal.behaviors.sidora = {
     attach: function (context) {
       var paneNames = []; 
-			jQuery(".islandora-form-fieldpanel-pane").each(function(){ paneNames.push(jQuery(this).find("input").attr("name"));})
+      jQuery(".islandora-form-fieldpanel-pane").each(function(){ paneNames.push(jQuery(this).find("input").attr("name"));})
       jQuery.each(paneNames, function( paneIndex, paneName) { 
-			  var matches = [];
+        var matches = [];
         paneName.replace(/\[(.*?)\]/, function(g0,g1){matches.push(g1);}); 
-			  if (!isNaN(matches[0])) { 
-			    jQuery('[name="'+paneName+'"]').parent().parent().children('.ui-fieldpane-move-down-button').css('display','none');
-				  jQuery('[name="'+paneName+'"]').parent().parent().children('.ui-fieldpane-move-up-button').css('display','none');
-			  }
-			})
-		}
-	}
+        if (!isNaN(matches[0])) { 
+          jQuery('[name="'+paneName+'"]').parent().parent().children('.ui-fieldpane-move-down-button').css('display','none');
+          jQuery('[name="'+paneName+'"]').parent().parent().children('.ui-fieldpane-move-up-button').css('display','none');
+        }
+      })
+    }
+  }
 }
 /* Simple countdown originally from:
 http://stackoverflow.com/questions/2064186/how-can-i-make-a-jquery-countdown
@@ -261,6 +281,18 @@ jQuery(document).ready(function(){
     sidora_util.lock.KeepAlive();
   }
   fixXmlFormsBehavior();
-	fixXmlFormFieldpanelBehavior();
+  fixXmlFormFieldpanelBehavior();
+  jQuery(document).ajaxSend(function(){
+    //Don't block on renew calls
+    if (!arguments[2].url.endsWith("/renew")){
+      sidora_util.clickBlocker.block();
+    }
+  });
+  jQuery(document).ajaxComplete(function(){
+    //ALL current AJAX calls have completed, including the lock renews
+    if (!arguments[2].url.endsWith("/renew")){
+      sidora_util.clickBlocker.block(false);
+    }
+  });
 });
 
