@@ -212,20 +212,20 @@ fixXmlFormFieldpanelBehavior = function() {
   if (!(Drupal && Drupal.behaviors && Drupal.behaviors.islandora_form_fieldpanel && Drupal.behaviors.islandora_form_fieldpanel.attach)){
     return;
   }
-	Drupal.behaviors.sidora = {
+  Drupal.behaviors.sidora = {
     attach: function (context) {
       var paneNames = []; 
-			jQuery(".islandora-form-fieldpanel-pane").each(function(){ paneNames.push(jQuery(this).find("input").attr("name"));})
+      jQuery(".islandora-form-fieldpanel-pane").each(function(){ paneNames.push(jQuery(this).find("input").attr("name"));})
       jQuery.each(paneNames, function( paneIndex, paneName) { 
-			  var matches = [];
+        var matches = [];
         paneName.replace(/\[(.*?)\]/, function(g0,g1){matches.push(g1);}); 
-			  if (!isNaN(matches[0])) { 
-			    jQuery('[name="'+paneName+'"]').parent().parent().children('.ui-fieldpane-move-down-button').css('display','none');
-				  jQuery('[name="'+paneName+'"]').parent().parent().children('.ui-fieldpane-move-up-button').css('display','none');
-			  }
-			})
-		}
-	}
+        if (!isNaN(matches[0])) { 
+          jQuery('[name="'+paneName+'"]').parent().parent().children('.ui-fieldpane-move-down-button').css('display','none');
+          jQuery('[name="'+paneName+'"]').parent().parent().children('.ui-fieldpane-move-up-button').css('display','none');
+        }
+      })
+    }
+  }
 }
 /* Simple countdown originally from:
 http://stackoverflow.com/questions/2064186/how-can-i-make-a-jquery-countdown
@@ -261,6 +261,6 @@ jQuery(document).ready(function(){
     sidora_util.lock.KeepAlive();
   }
   fixXmlFormsBehavior();
-	fixXmlFormFieldpanelBehavior();
+  fixXmlFormFieldpanelBehavior();
 });
 
