@@ -532,10 +532,6 @@ function sidora_resource_viewer($pid) {
     print t('<br/>The possible models that this resource uses:');
     $models = $obj->models;
     print '<br/>'.implode('<br/>',$models);
-    //Next line is for on-the-fly checking and should be left in for when problems happen in production.
-    //Do an "inspect element" or just view source to see this data
-    print '<br/><div style="display:none">Possible viewers:<br/>'.implode('<br/>',$viewers).'</div>';
-    
   }
   else {
     sidora_resource_version_viewer_display($pid,$viewer_config['dsid'],$viewer_config['viewer_id'],'0');
