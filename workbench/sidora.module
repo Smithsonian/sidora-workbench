@@ -44,6 +44,10 @@ function sidora_init(){
   if (request_path() == 'system/ajax'){
     module_load_include('inc', 'xml_forms', 'builder/includes/datastream.form'); 
   }
+
+  // Production is not on PHP 5.3.6 (currently 5.3.3) and some of Islandora uses 5.3.6 defined constants that are complained about
+  defined('DEBUG_BACKTRACE_PROVIDE_OBJECT') or define('DEBUG_BACKTRACE_PROVIDE_OBJECT', TRUE);
+  defined('DEBUG_BACKTRACE_IGNORE_ARGS') or define('DEBUG_BACKTRACE_IGNORE_ARGS', TRUE);
 }
 
 /**
@@ -6200,7 +6204,7 @@ function sidora_metadata_to_html_table_transform($xml, $xsl_file){
   $doc->loadXML($xsl_string);
   $xsl->importStyleSheet($doc);
   if (strpos($xml, "<?xml version") === FALSE){
-    $docToLoad = ('<?xml version="1.0" encoding="UTF-8"?>'.$xml);
+    $docToLoad = ('<?xml version="1.0" encoding="UTF-8"?' . '>' . $xml);
   }else{
     $docToLoad = $xml;
   }
