@@ -696,7 +696,6 @@ function sidora_islandora_object_ingested(AbstractObject $object){
 function sidora_islandora_object_modified(AbstractObject $object){
   //drupal_set_message("Sidora Object Modified");
   sidora_clear_tree_cache($object->id);
-
 }
 /**
  * Implements hook_islandora_datastream_modified
@@ -715,7 +714,7 @@ function sidora_islandora_datastream_modified(AbstractObject $object, AbstractDa
   //manipulate it as they desire.  This is NOT a security problem, the user would be allowed to perform these actions.
   //However, it would be a user directly manipulating data in a way that is
   //not fully supported by the Workbench.
-  if ((strpos($datastream->mimetype,'xml') !== false) && $datastream->id != 'SIDORA' && $datastream->id != 'DC' && $datastream->id != 'RELS-EXT'){
+  if ($datastream->mimetype == 'text/xml' && $datastream->id != 'SIDORA' && $datastream->id != 'DC' && $datastream->id != 'RELS-EXT'){
     $all_meta_entered = filter_input(INPUT_POST, 'all_meta_entered', FILTER_SANITIZE_URL);
     $form_name = filter_input(INPUT_POST, 'form_name', FILTER_SANITIZE_URL);
 		if (!empty($object['SIDORA'])){
@@ -1198,7 +1197,7 @@ function sidora_edit_metadata($object_id_string = '', $dsid = '', $form_name = '
     print "models:";
     var_dump($object->models);
   }
-	$tform = drupal_get_form('xml_form_builder_datastream_form_metadata_form',$object,$association);
+  $tform = drupal_get_form('xml_form_builder_datastream_form_metadata_form',$object,$association);
   $tform['pid'] = array(
   '#type' => 'hidden',
   '#name' => 'Pid',
@@ -1217,7 +1216,7 @@ function sidora_edit_metadata($object_id_string = '', $dsid = '', $form_name = '
     drupal_add_js('window.isConcept = true;',array('type' => 'inline', 'weight' => '1000000', 'group' => JS_THEME));
   else
     drupal_add_js('window.isConcept = false;',array('type' => 'inline', 'weight' => '1000000', 'group' => JS_THEME));
-	$pic_shown = FALSE;
+  $pic_shown = FALSE;
   if (!$is_concept){
     if ($association['content_model'] == "si:codebookCModel") {
       $codebook_used_on = (sidora_get_where_codebook_used($object));
@@ -2910,8 +2909,9 @@ function sidora_create_resource_get_upload_form_html($model, $form_name, $ontolo
   if (!empty($elements)) {
     $to_return .= "<div id='create-resource-upload'>";
     $to_return .= sidora_get_plupload_html($elements, $upload_button_text);
-    $to_return .= "<input class=\"form-submit\" id=\"Next\" value=\"Next\" onclick=\"jQuery('#create-resource-upload').hide(); location.reload();\"></input>";
-    $to_return .= "</div>";
+    $to_return .= "<input class=\"form-submit\" id=\"Next\" value=\"Individual Objects\" onclick=\"jQuery('#create-resource-upload').hide(); location.reload();\"></input>";
+    $to_return .= "<input class=\"form-submit\" id=\"create_batch\" value=\"Batch Objects\" onclick=\"jQuery('#create-resource-upload').hide(); if (window.location.href.indexOf('batch') == -1) {window.location.href += '//batch';}\"></input>";
+		$to_return .= "</div>";
     if ($clear_file_list){
       $_SESSION['file_uploads'][$user->uid] = array();
     }
@@ -3005,7 +3005,7 @@ function sidora_is_displayable_image($filename, $extensions = array()){
  * TBD / TODO - use the form's actual cache instead of a made-up one
  * returns string HTML of all forms
  */
-function sidora_create_resource_get_metadata_form_html($parent_pid, $model, $form_name, $current_uploads){
+function sidora_create_resource_get_metadata_form_html($parent_pid, $model, $form_name, $current_uploads, $batch = ''){
   global $user;
   $tuque = islandora_get_tuque_connection();
   $to_return = '';
@@ -3033,7 +3033,7 @@ function sidora_create_resource_get_metadata_form_html($parent_pid, $model, $for
   }else{
     $at_least_one_pic = false;
     foreach ($current_uploads as $cu){
-      $at_least_one_pic = $at_least_one_pic ||  sidora_is_displayable_image_with_convert($cu->filename);
+      $at_least_one_pic = $at_least_one_pic ||  sidora_is_displayable_image_with_convert($cu->filename) && ($batch != 'batch');
     }
     for ($form_total = 0; $form_total < count($current_uploads); $form_total++){
       $to_return .= '<div id="form-num-'.$form_total.'" class="sidora-ingest-form-holder ';
@@ -3071,8 +3071,10 @@ function sidora_create_resource_get_metadata_form_html($parent_pid, $model, $for
         }
         $form_copy_array = $form;
         if (!empty($association['title_field'])){
-          for ($title_total = 0; $title_total < count($association['title_field']); $title_total++){
+          //error_log("\nIn sidora_create_resource, batch :".print_r($batch,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
+					for ($title_total = 0; $title_total < count($association['title_field']); $title_total++){
             $form_copy_key = $association['title_field'][$title_total];
+            //error_log("\nIn sidora_create_resource, form copy key :".print_r($form_copy_key,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
             if (!empty($form_copy_key)) {
               if (array_key_exists($form_copy_key,$form_copy_array)){
                 $form_copy_array = $form_copy_array[$form_copy_key];
@@ -3082,6 +3084,11 @@ function sidora_create_resource_get_metadata_form_html($parent_pid, $model, $for
         } //If there is no specified title in the form, then the label for the object will never get set either. 
         if (!empty($form_copy_array)){
           $form_copy_array['#value'] = substr($filename,0,strpos($filename,'.'));
+				if ($batch == 'batch'){
+				  $form_copy_array['#value'] = 'This will be set to the filename of the corresponding file for each object' ;
+					$form_copy_array['#attributes'] = array('disabled' => 'TRUE');
+          error_log("\nIn sidora_create_resource, form_copy_array :".print_r($form_copy_array,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
+				}  
           drupal_array_set_nested_value($form,$form_copy_array['#array_parents'],$form_copy_array);
         }   
         $id_to_filename = cache_get("sidora:form_id_to_filename");
@@ -3099,24 +3106,7 @@ function sidora_create_resource_get_metadata_form_html($parent_pid, $model, $for
       $creation_info['ontology_id'] = $ontology_id;
       $id_to_creation_info[$form['#build_id']] = $creation_info;
       cache_set("sidora:form_id_to_creation_info",$id_to_creation_info);
-      $resource_types = array(
-        'si:imageCModel' => 'images',
-	'si:generalImageCModel' => 'images',
-        'si:fieldbookCModel' => 'pdf', 
-        'si:datasetCModel' => 'csv',
-        'islandora:sp-audioCModel' => 'audio',
-        'islandora:sp_videoCModel' => 'video'
-      );
-      $form['resource_model'] = array(
-      '#name' => 'resource_model',
-      '#type' => 'hidden',
-      '#title' => 'Model',
-      '#description' => '',
-      '#required' => false,
-      '#value' => isset($resource_types[$model])?$resource_types[$model]:''
-    );
-
-	$to_return .= drupal_render( $form);
+      $to_return .= drupal_render( $form);
       $to_return .= "<div id='bottom-panel' class='bottom-panel' style='position:absolute; bottom:0; left:0; width:100%;'></div></div>";
     }
   }
@@ -3402,7 +3392,7 @@ function sidora_is_create_resource_codebook_edit_completed() {
  *
  * extra info is whether or not the page should be refreshed to the first page, clearing out the existing session (if they stopped mid session last time)
  */
-function sidora_create_resource($parent_pid = 'si:root', $model = 'si:collectionCModel', $form_name = '', $ontology_location = '', $extra_info = ''){
+function sidora_create_resource($parent_pid = 'si:root', $model = 'si:collectionCModel', $form_name = '', $ontology_location = '', $extra_info = '', $batch = '0'){
   drupal_add_css(drupal_get_path('module','sidora').'/css/workbench_metadata_screens.css',array('weight' => '1000000', 'group' => CSS_THEME));
   global $user;
   //if the parent pid is locked, can't do it
@@ -3561,8 +3551,12 @@ jQuery(document).ready(function(){
     }
   }
   if ($show_form){
-    $to_return .= sidora_create_resource_get_metadata_form_html($parent_pid, $model, $form_name, $current_uploads);
-  }
+    if ($batch == 'batch'){
+		  $to_return .= sidora_create_resource_get_metadata_form_html($parent_pid, $model, $form_name, $current_uploads, 'batch');
+	  }else{
+		  $to_return .= sidora_create_resource_get_metadata_form_html($parent_pid, $model, $form_name, $current_uploads);
+    }
+	}
   drupal_add_css(drupal_get_path('module','sidora').'/css/workbench_create_resource.css',array('weight' => '1000000', 'group' => CSS_THEME));
   drupal_add_js(drupal_get_path('module','sidora').'/js/workbench_util.js',array('weight' => '1000000', 'group' => JS_THEME));
   drupal_add_js(drupal_get_path('module','sidora').'/js/workbench_uploader.js',array('weight' => '1000000', 'group' => JS_THEME));

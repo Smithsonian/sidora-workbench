@@ -90,6 +90,10 @@ jQuery().ready(function(){
       console.log("This is not in the expected IFrame");
     }
   });
+	if (location.href.indexOf('batch') != '-1'){
+	 jQuery(".sidora-form-prev").addClass("form-button-disabled");
+	 jQuery(".sidora-form-next").addClass("form-button-disabled");
+	}
 });//ends ready
 
 window.ifhRemove = function(){
