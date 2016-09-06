@@ -696,6 +696,7 @@ function sidora_islandora_object_ingested(AbstractObject $object){
 function sidora_islandora_object_modified(AbstractObject $object){
   //drupal_set_message("Sidora Object Modified");
   sidora_clear_tree_cache($object->id);
+
 }
 /**
  * Implements hook_islandora_datastream_modified
@@ -714,7 +715,7 @@ function sidora_islandora_datastream_modified(AbstractObject $object, AbstractDa
   //manipulate it as they desire.  This is NOT a security problem, the user would be allowed to perform these actions.
   //However, it would be a user directly manipulating data in a way that is
   //not fully supported by the Workbench.
-  if ($datastream->mimetype == 'text/xml' && $datastream->id != 'SIDORA' && $datastream->id != 'DC' && $datastream->id != 'RELS-EXT'){
+  if ((strpos($datastream->mimetype,'xml') !== false) && $datastream->id != 'SIDORA' && $datastream->id != 'DC' && $datastream->id != 'RELS-EXT'){
     $all_meta_entered = filter_input(INPUT_POST, 'all_meta_entered', FILTER_SANITIZE_URL);
     $form_name = filter_input(INPUT_POST, 'form_name', FILTER_SANITIZE_URL);
 		if (!empty($object['SIDORA'])){
@@ -1197,7 +1198,7 @@ function sidora_edit_metadata($object_id_string = '', $dsid = '', $form_name = '
     print "models:";
     var_dump($object->models);
   }
-  $tform = drupal_get_form('xml_form_builder_datastream_form_metadata_form',$object,$association);
+	$tform = drupal_get_form('xml_form_builder_datastream_form_metadata_form',$object,$association);
   $tform['pid'] = array(
   '#type' => 'hidden',
   '#name' => 'Pid',
@@ -1216,7 +1217,7 @@ function sidora_edit_metadata($object_id_string = '', $dsid = '', $form_name = '
     drupal_add_js('window.isConcept = true;',array('type' => 'inline', 'weight' => '1000000', 'group' => JS_THEME));
   else
     drupal_add_js('window.isConcept = false;',array('type' => 'inline', 'weight' => '1000000', 'group' => JS_THEME));
-  $pic_shown = FALSE;
+	$pic_shown = FALSE;
   if (!$is_concept){
     if ($association['content_model'] == "si:codebookCModel") {
       $codebook_used_on = (sidora_get_where_codebook_used($object));
