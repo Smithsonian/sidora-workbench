@@ -1627,7 +1627,93 @@ sidora.util.reorderTreeChildrenAlphabetical = function(node) {
   });
   jst.pureUIChange = false;
 }
+sidora.util.treeAdditionSingleItem = function(mainItem, htmlTree, onLoadComplete, overwriteType, jst, documentFragment, currChild){
+  var ccp = currChild.a_attr.pid;
+  var dfAnchor = jQuery(documentFragment).children().find("[pid='"+ccp+"']");
+  //If the document fragment does not include the child then that concept was removed
+  if (dfAnchor.length == 0) {
+    //TBD remove this
+  } else {
+    //Find the current child representation in the document fragment
+    var currRep = dfAnchor.parent();
+    //Replace the name if the name of the item changed
+    if (currChild.text != dfAnchor.text()) {
+      jst.rename_node(currChild, dfAnchor.text());
+    }
+    
 
+    //Do not add children to items that are already filled in
+    if (currChild.children.length == 0 || overwriteType == "changes") {
+      //Go through the children of the representative DOM object from document fragment
+      var repChildren = currRep.children("ul").children("li");
+      //Set up the functions so that the onLoadComplete will be called after all of the nodes are added
+      var myCounter = { numReturned: 0, numNeeded: repChildren.length};
+      var olcCheck = function(mc,olc){
+         return function(){
+           mc.numReturned++;
+           if (mc.numReturned == mc.numNeeded) { olc(); }
+         };
+      };
+      var individualReturnFunction = olcCheck(myCounter, onLoadComplete);
+      //If want to do changes, remove any existing children that were not in the document fragment
+      for (var grandchildIndex = 0; grandchildIndex < currChild.children.length; grandchildIndex++){
+        var currTreeGrandchild = jst.get_node(currChild.children[grandchildIndex]);
+        var isFound = false;
+        for (var repChildIndex = 0; repChildIndex < repChildren.length; repChildIndex++){
+          var currRepChild = repChildren[repChildIndex];
+          if (jQuery(currRepChild).children("a").attr("pid") == currTreeGrandchild.a_attr.pid) {
+            isFound = true;
+          }
+        }
+        if (!isFound) {
+          jst.pureUIChange = true;
+          jst.delete_node(currTreeGrandchild.id);
+          jst.pureUIChange = false;
+        }
+      }
+      for (var repChildIndex = 0; repChildIndex < repChildren.length; repChildIndex++) {
+        //Create node in the current child to copy the elements found in the document fragment
+        var currRepChild = repChildren[repChildIndex];
+
+        //Dont add a child that's already there
+        var isFound = false;
+        for (var grandchildIndex = 0; grandchildIndex < currChild.children.length; grandchildIndex++){
+          var currTreeGrandchild = jst.get_node(currChild.children[grandchildIndex]);
+          if (jQuery(currRepChild).children("a").attr("pid") == currTreeGrandchild.a_attr.pid) {
+            isFound = currTreeGrandchild.id;
+          }
+        }
+        var a_attr_obj = {};
+        jQuery(jQuery(currRepChild).children("a").first()[0].attributes).each(function() {
+          a_attr_obj[this.nodeName] = this.nodeValue;
+        });
+        //The information coming back from the ajax call will not have the path through the tree
+        //and since the concept listed can be in multiple places, the path to the concepts
+        //must pull information from the existing tree for the current path we've used
+        var prependHrefPath = "?path=" + currChild.a_attr.href.split("?path=")[1] + ',';
+        var currRepHrefPathParts = jQuery(currRepChild).children("a").attr("href").split("?path=");
+        newHrefPath = currRepHrefPathParts[0] + prependHrefPath + currRepHrefPathParts[1];
+        a_attr_obj['href'] = newHrefPath;
+        if (!isFound) {
+          var newNodeId = jQuery("#forjstree").jstree(
+                          "create_node", 
+                          currChild,
+                          { "text" : jQuery(currRepChild).children("a").first()[0].text, "a_attr":a_attr_obj }, 
+                          0,
+                          individualReturnFunction,
+                          true
+                        );
+        }else{
+          jst.rename_node(isFound, jQuery(currRepChild).children("a").first()[0].text);
+          jQuery(a_attr_obj).each(function(){
+            jst.get_node(isFound).a_attr[this.nodeName] = this.nodeValue;
+          });
+        }
+      }//Ends repChildIndex
+    }//Ends (currChild.children.length == 0 || overwriteType == "changes")
+    sidora.util.reorderTreeChildrenAlphabetical(currChild);
+  }//Ends dfAnchor.length not zero
+}
 sidora.util.treeAddition = function(htmlTree, onLoadComplete, overwriteType){
   if (typeof(onLoadComplete) != 'function') {
     onLoadComplete = function(){}
@@ -1649,91 +1735,9 @@ sidora.util.treeAddition = function(htmlTree, onLoadComplete, overwriteType){
     //Go through the children
     for (var micIndex = 0; micIndex < miChildrenIds.length; micIndex++) {
       var currChild = jst.get_node(miChildrenIds[micIndex]);
-      var ccp = currChild.a_attr.pid;
-      var dfAnchor = jQuery(documentFragment).children().find("[pid='"+ccp+"']");
-      //If the document fragment does not include the child then that concept was removed
-      if (dfAnchor.length == 0) {
-        //TBD remove this
-      } else {
-        //Find the current child representation in the document fragment
-        var currRep = dfAnchor.parent();
-        //Replace the name if the name of the item changed
-        if (currChild.text != dfAnchor.text()) {
-          jst.rename_node(currChild, dfAnchor.text());
-        }
-        
-   
-        //Do not add children to items that are already filled in
-        if (currChild.children.length == 0 || overwriteType == "changes") {
-          //Go through the children of the representative DOM object from document fragment
-          var repChildren = currRep.children("ul").children("li");
-          //Set up the functions so that the onLoadComplete will be called after all of the nodes are added
-          var myCounter = { numReturned: 0, numNeeded: repChildren.length};
-          var olcCheck = function(mc,olc){
-             return function(){
-               mc.numReturned++;
-               if (mc.numReturned == mc.numNeeded) { olc(); }
-             };
-          };
-          var individualReturnFunction = olcCheck(myCounter, onLoadComplete);
-          //If want to do changes, remove any existing children that were not in the document fragment
-          for (var grandchildIndex = 0; grandchildIndex < currChild.children.length; grandchildIndex++){
-            var currTreeGrandchild = jst.get_node(currChild.children[grandchildIndex]);
-            var isFound = false;
-            for (var repChildIndex = 0; repChildIndex < repChildren.length; repChildIndex++){
-              var currRepChild = repChildren[repChildIndex];
-              if (jQuery(currRepChild).children("a").attr("pid") == currTreeGrandchild.a_attr.pid) {
-                isFound = true;
-              }
-            }
-            if (!isFound) {
-              jst.pureUIChange = true;
-              jst.delete_node(currTreeGrandchild.id);
-              jst.pureUIChange = false;
-            }
-          }
-          for (var repChildIndex = 0; repChildIndex < repChildren.length; repChildIndex++) {
-            //Create node in the current child to copy the elements found in the document fragment
-            var currRepChild = repChildren[repChildIndex];
-
-            //Dont add a child that's already there
-            var isFound = false;
-            for (var grandchildIndex = 0; grandchildIndex < currChild.children.length; grandchildIndex++){
-              var currTreeGrandchild = jst.get_node(currChild.children[grandchildIndex]);
-              if (jQuery(currRepChild).children("a").attr("pid") == currTreeGrandchild.a_attr.pid) {
-                isFound = currTreeGrandchild.id;
-              }
-            }
-            var a_attr_obj = {};
-            jQuery(jQuery(currRepChild).children("a").first()[0].attributes).each(function() {
-              a_attr_obj[this.nodeName] = this.nodeValue;
-            });
-            //The information coming back from the ajax call will not have the path through the tree
-            //and since the concept listed can be in multiple places, the path to the concepts
-            //must pull information from the existing tree for the current path we've used
-            var prependHrefPath = "?path=" + currChild.a_attr.href.split("?path=")[1] + ',';
-            var currRepHrefPathParts = jQuery(currRepChild).children("a").attr("href").split("?path=");
-            newHrefPath = currRepHrefPathParts[0] + prependHrefPath + currRepHrefPathParts[1];
-            a_attr_obj['href'] = newHrefPath;
-            if (!isFound) {
-              var newNodeId = jQuery("#forjstree").jstree(
-                              "create_node", 
-                              currChild,
-                              { "text" : jQuery(currRepChild).children("a").first()[0].text, "a_attr":a_attr_obj }, 
-                              0,
-                              individualReturnFunction,
-                              true
-                            );
-            }else{
-              jst.rename_node(isFound, jQuery(currRepChild).children("a").first()[0].text);
-              jQuery(a_attr_obj).each(function(){
-                jst.get_node(isFound).a_attr[this.nodeName] = this.nodeValue;
-              });
-            }
-          }//Ends repChildIndex
-        }//Ends (currChild.children.length == 0 || overwriteType == "changes")
-        sidora.util.reorderTreeChildrenAlphabetical(currChild);
-      }//Ends dfAnchor.length not zero
+      setTimeout(sidora.util.treeAdditionSingleItem.bind(null, mainItem,htmlTree, onLoadComplete, overwriteType, jst, documentFragment, currChild ),
+        300 * (mii + 1)
+      );
     }//Ends micIndex
   });//Ends mainItems each
 }//Ends treeAddition function
