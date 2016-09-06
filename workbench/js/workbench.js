@@ -490,6 +490,14 @@ sidora.util.openToCurrentPathAndSelectItem = function(currentUrl){
   sidora.util.loadTreeSectionsIfNeeded(selectThisNode);
   jst.select_node(selectThisNode); 
 }
+sidora.util.throbberize = function() {
+  //Prep the UI for children incoming
+  if (jQuery("#forjstree a").not("[conceptchildren=0]").parent(".jstree-leaf").length > 0){
+    jQuery("#forjstree a").not("[conceptchildren=0]").parent(".jstree-leaf").children("i")
+      .css("background","url(../../misc/throbber.gif) no-repeat 6px -14px");
+    jQuery("#forjstree a").not("[conceptchildren=0]").parent(".jstree-leaf").removeClass("jstree-leaf")
+  }
+}
 /*
  * Given a node, loads its grandchildren if needed and checks the validation status of grandchildren
  * @param data - jstree node or item that has a node attribute containing a jstree node
@@ -507,13 +515,7 @@ sidora.util.loadTreeSectionsIfNeeded = function(data){
   var childPidsCsv = currentChildrenPids.join();
   if (childPidsCsv.length > 0) {
     sidora.util.checkUIForInvalidPids(openingPid, childPidsCsv);
-    //Prep the UI for children incoming
-    if (jQuery("#forjstree a").not("[conceptchildren=0]").parent(".jstree-leaf").length > 0){
-      jQuery("#forjstree a").not("[conceptchildren=0]").parent(".jstree-leaf").children("i")
-        .css("background","url(../../misc/throbber.gif) no-repeat 6px -14px");
-
-      jQuery("#forjstree a").not("[conceptchildren=0]").parent(".jstree-leaf").removeClass("jstree-leaf")
-    }
+    sidora.util.throbberize();
     //load the next section of the tree
     if (currentChildrenPids.length > 0){
       //Only load information if the currentChildren have children that are not listed
@@ -1656,6 +1658,7 @@ sidora.util.treeAdditionSingleItem = function(mainItem, htmlTree, onLoadComplete
       };
       var individualReturnFunction = olcCheck(myCounter, onLoadComplete);
       //If want to do changes, remove any existing children that were not in the document fragment
+      console.log("gci start:"+ new Date(new Date().getTime()) + " len:"+currChild.children.length);
       for (var grandchildIndex = 0; grandchildIndex < currChild.children.length; grandchildIndex++){
         var currTreeGrandchild = jst.get_node(currChild.children[grandchildIndex]);
         var isFound = false;
@@ -1671,18 +1674,20 @@ sidora.util.treeAdditionSingleItem = function(mainItem, htmlTree, onLoadComplete
           jst.pureUIChange = false;
         }
       }
+      console.log("rci start:"+ new Date(new Date().getTime()) + " len:"+repChildren.length);
+      var ctgMap = [];
+      for (var grandchildIndex = 0; grandchildIndex < currChild.children.length; grandchildIndex++){
+        var currTreeGrandchild = jst.get_node(currChild.children[grandchildIndex]);
+        ctgMap[currTreeGrandchild.a_attr.pid] = currTreeGrandchild.id;
+      }
       for (var repChildIndex = 0; repChildIndex < repChildren.length; repChildIndex++) {
         //Create node in the current child to copy the elements found in the document fragment
         var currRepChild = repChildren[repChildIndex];
 
         //Dont add a child that's already there
-        var isFound = false;
-        for (var grandchildIndex = 0; grandchildIndex < currChild.children.length; grandchildIndex++){
-          var currTreeGrandchild = jst.get_node(currChild.children[grandchildIndex]);
-          if (jQuery(currRepChild).children("a").attr("pid") == currTreeGrandchild.a_attr.pid) {
-            isFound = currTreeGrandchild.id;
-          }
-        }
+        var crcPid = jQuery(currRepChild).children("a").attr("pid");
+        var isFound = ctgMap[crcPid];
+       
         var a_attr_obj = {};
         jQuery(jQuery(currRepChild).children("a").first()[0].attributes).each(function() {
           a_attr_obj[this.nodeName] = this.nodeValue;
@@ -1710,6 +1715,7 @@ sidora.util.treeAdditionSingleItem = function(mainItem, htmlTree, onLoadComplete
           });
         }
       }//Ends repChildIndex
+      console.log("complete :"+ new Date(new Date().getTime()));
     }//Ends (currChild.children.length == 0 || overwriteType == "changes")
     sidora.util.reorderTreeChildrenAlphabetical(currChild);
   }//Ends dfAnchor.length not zero
@@ -1736,7 +1742,7 @@ sidora.util.treeAddition = function(htmlTree, onLoadComplete, overwriteType){
     for (var micIndex = 0; micIndex < miChildrenIds.length; micIndex++) {
       var currChild = jst.get_node(miChildrenIds[micIndex]);
       setTimeout(sidora.util.treeAdditionSingleItem.bind(null, mainItem,htmlTree, onLoadComplete, overwriteType, jst, documentFragment, currChild ),
-        300 * (mii + 1)
+        10 * (micIndex)
       );
     }//Ends micIndex
   });//Ends mainItems each
