@@ -2813,7 +2813,7 @@ function exhibition_config_update_label($pid_to_update,$new_label,$visibility_ar
   if ($visibility_array['pid'] == $pid_to_update) {
 	  $visibility_array['label'] = $new_label;
 	}
-	if (is_array($visibility_array['children']) && (count($visibility_array['children']) >0)){
+	if (isset($visibility_array['children']) && is_array($visibility_array['children']) && (count($visibility_array['children']) >0)){
 	  foreach ($visibility_array['children'] as $key=>$child){
 		  $visibility_array['children'][$key] = exhibition_config_update_label($pid_to_update,$new_label,$child);
 		}
