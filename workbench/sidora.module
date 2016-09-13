@@ -2647,6 +2647,10 @@ if ($one == 'deletexsl'){
   if ($one == 'get_tree_by_id'){
 	  var_dump(sidora_html_tree_for_ajax($two));
 	}	
+	if ($one == 'module_weight'){
+	  $modules = implode(PHP_EOL, module_list());
+    print $modules;
+	}	
   //This ends the testing function and should also indicate the end of liberal use of the dsm function
 }
 /*
@@ -2765,6 +2769,17 @@ function sidora_form_alter(&$form, &$form_state, $form_id){
       '#description' => '',
       '#required' => false,
     );
+		if (isset($form['#action']) && (strpos($form['#action'],'batch') !== false)){
+			$form['#submit'][] = 'sidora_process_batch_submit'; 
+			unset($form['next']['#submit']);
+			$form['next']['#submit'][] = 'sidora_process_batch_submit';
+			$path = $form['#action'];
+      $path = substr($path,0,strpos($path,'//batch'));
+ 	//error_log("\nIn sidora_form_alter function, form action :".print_r($form['#action'],true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
+	//error_log("\nIn sidora_form_alter function, new path :".print_r($path,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
+      $form['#action'] = $path;
+		  //error_log("\nIn sidora_form_alter function, altered form :".print_r($form,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
+		}	
   }
   switch ($form_id) {
     case 'user_login':
@@ -2780,6 +2795,35 @@ function sidora_form_alter(&$form, &$form_state, $form_id){
       $form['login_message'] = array('#markup' => ''.variable_get('sidora_login_message', '').'');
       break;
   }
+}
+function sidora_process_batch_submit($form,&$form_state){
+ 	global $user;
+	//error_log("\nIn sidora_process_batch_submit function, form_state:","3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
+  $step_storage = $form_state['islandora']['step_storage']['xml_form_builder_metadata_step'];
+  $association = $step_storage['association'];
+  $objects = $form_state['islandora']['objects'];
+	$object = reset($objects);
+  $xml_form = new XMLForm($form_state);
+  $document = $xml_form->submit($form, $form_state);
+  $label = NULL;
+  if ($association['title_field']) {
+    $title_field = drupal_array_get_nested_value($form, $association['title_field']);
+    $label = $title_field['#value'];
+  }
+  $document = $document->document;
+  $run_transforms = !variable_get('xml_form_builder_use_default_dc_xslts', FALSE);
+  if (isset($association['self_transform']) && $association['self_transform'] != 'No Transform' && $run_transforms) {
+    $document = xml_form_builder_transform_metadata_datastream($document, $association['self_transform']);
+  }
+ 	$batch_xml = trim($document->saveXML());
+	//error_log("\nIn sidora_process_batch_submit function, object xml:".print_r($batch_xml,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
+	$targetDir = file_directory_temp();
+	if (!file_exists($targetDir)) {
+     @mkdir($targetDir);
+  }
+	$targetDir .= DIRECTORY_SEPARATOR . 'batch.xml';
+	//error_log("\nIn sidora_process_batch_submit function, output from write:".print_r(file_put_contents($targetDir ,$batch_xml),true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
+	
 }
 /**
  * Helper to step through the entire form and remove actual validation, putting a red * in its place
@@ -2909,8 +2953,8 @@ function sidora_create_resource_get_upload_form_html($model, $form_name, $ontolo
   if (!empty($elements)) {
     $to_return .= "<div id='create-resource-upload'>";
     $to_return .= sidora_get_plupload_html($elements, $upload_button_text);
-    $to_return .= "<input class=\"form-submit\" id=\"Next\" value=\"Individual Objects\" onclick=\"jQuery('#create-resource-upload').hide(); location.reload();\"></input>";
-    $to_return .= "<input class=\"form-submit\" id=\"create_batch\" value=\"Batch Objects\" onclick=\"jQuery('#create-resource-upload').hide(); if (window.location.href.indexOf('batch') == -1) {window.location.href += '//batch';}\"></input>";
+    $to_return .= "<input class=\"form-submit\" id=\"Next\" value=\"Individual Metadata\" onclick=\"jQuery('#create-resource-upload').hide(); location.reload();\"></input>";
+    $to_return .= "<input class=\"form-submit\" id=\"applyBatch\" value=\"Apply Metadata\" onclick=\"jQuery('#create-resource-upload').hide(); if (window.location.href.indexOf('batch') == -1) {window.location.href += '//batch';}\"></input>";
 		$to_return .= "</div>";
     if ($clear_file_list){
       $_SESSION['file_uploads'][$user->uid] = array();
@@ -3017,6 +3061,7 @@ function sidora_create_resource_get_metadata_form_html($parent_pid, $model, $for
       'models' => array($model),
       'objects' => array($page),
       'parent' => $parent_pid,
+			'batch' => $batch,
       ));
     $id_to_creation_info = cache_get("sidora:form_id_to_creation_info");
     if (empty($id_to_creation_info)){ $id_to_creation_info = array(); }else{ $id_to_creation_info = $id_to_creation_info->data; }
@@ -3035,8 +3080,15 @@ function sidora_create_resource_get_metadata_form_html($parent_pid, $model, $for
     foreach ($current_uploads as $cu){
       $at_least_one_pic = $at_least_one_pic ||  sidora_is_displayable_image_with_convert($cu->filename) && ($batch != 'batch');
     }
-    for ($form_total = 0; $form_total < count($current_uploads); $form_total++){
-      $to_return .= '<div id="form-num-'.$form_total.'" class="sidora-ingest-form-holder ';
+    if ($batch == 'batch'){ // rename and move the uploaded files
+		  sidora_upload_batch($current_uploads);
+      //error_log("\nIn sidora_create_resource, after sidora_upload_batch :".print_r($current_uploads,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
+		}	
+		for ($form_total = 0; $form_total < count($current_uploads); $form_total++){
+      if ($form_total > 0 && $batch == 'batch'){
+			  break;
+			}	
+			$to_return .= '<div id="form-num-'.$form_total.'" class="sidora-ingest-form-holder ';
       if (!empty($current_uploads[$form_total]) && $at_least_one_pic){
         $to_return .= 'has-image';
       }
@@ -3087,7 +3139,16 @@ function sidora_create_resource_get_metadata_form_html($parent_pid, $model, $for
 				if ($batch == 'batch'){
 				  $form_copy_array['#value'] = 'This will be set to the filename of the corresponding file for each object' ;
 					$form_copy_array['#attributes'] = array('disabled' => 'TRUE');
-          error_log("\nIn sidora_create_resource, form_copy_array :".print_r($form_copy_array,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
+					$form['batch'] = array(
+            '#name' => 'batch',
+            '#type' => 'hidden',
+            '#title' => 'Apply batch',
+            '#description' => '',
+            '#required' => false,
+						'#value' => 'batch',
+          );
+					$form['#submit'][] = 'sidora_process_batch_submit';
+         // error_log("\nIn sidora_create_resource, form for batch :".print_r($form,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
 				}  
           drupal_array_set_nested_value($form,$form_copy_array['#array_parents'],$form_copy_array);
         }   
@@ -3392,7 +3453,7 @@ function sidora_is_create_resource_codebook_edit_completed() {
  *
  * extra info is whether or not the page should be refreshed to the first page, clearing out the existing session (if they stopped mid session last time)
  */
-function sidora_create_resource($parent_pid = 'si:root', $model = 'si:collectionCModel', $form_name = '', $ontology_location = '', $extra_info = '', $batch = '0'){
+function sidora_create_resource($parent_pid = 'si:root', $model = 'si:collectionCModel', $form_name = '', $ontology_location = '', $extra_info = '', $batch = ''){
   drupal_add_css(drupal_get_path('module','sidora').'/css/workbench_metadata_screens.css',array('weight' => '1000000', 'group' => CSS_THEME));
   global $user;
   //if the parent pid is locked, can't do it
@@ -3470,7 +3531,8 @@ jQuery(document).ready(function(){
       //First step for codebook is the upload or choose step (SID-243)
       $to_return .= '<div style="display:none">Tabular data files require a codebook which describes the contents of the data.  You can choose to automatically generate a codebook based on one of your files, or choose an existing codebook that describes your data.  Use one of the two options below, clicking one of the buttons to make your choice.</div>';
       $form = drupal_get_form('sidora_codebook_upload_form');  
-      $to_return .= drupal_render($form);
+      //error_log("\nIn sidora_create_resource, sidora codebook upload form :".print_r($form,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
+			$to_return .= drupal_render($form);
       $show_form = FALSE;
     }else if (!$codebook_edit_step_completed){
       $form = drupal_get_form('sidora_codebook_hidden_step_form');  
@@ -3549,13 +3611,17 @@ jQuery(document).ready(function(){
         $show_form = FALSE;
       }
     }
+		else{
+		// if current uploads not empty and batch ingest in progress
+		// move the uploads to a unique temp folder within the uploads directory 
+		// and rename all the files in the current upload
+		if ($batch == 'batch'){
+		  //error_log("\nIn sidora_create_resource function, current uploads:".print_r($current_uploads,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
+		}
+		}
   }
   if ($show_form){
-    if ($batch == 'batch'){
-		  $to_return .= sidora_create_resource_get_metadata_form_html($parent_pid, $model, $form_name, $current_uploads, 'batch');
-	  }else{
-		  $to_return .= sidora_create_resource_get_metadata_form_html($parent_pid, $model, $form_name, $current_uploads);
-    }
+		  $to_return .= sidora_create_resource_get_metadata_form_html($parent_pid, $model, $form_name, $current_uploads, $batch);
 	}
   drupal_add_css(drupal_get_path('module','sidora').'/css/workbench_create_resource.css',array('weight' => '1000000', 'group' => CSS_THEME));
   drupal_add_js(drupal_get_path('module','sidora').'/js/workbench_util.js',array('weight' => '1000000', 'group' => JS_THEME));
@@ -5666,19 +5732,29 @@ function sidora_get_plupload_html($elements, $button_text = 'Browse'){
           uploader.start();
           return false;
         };
-				if (uploader.files.length == "0") jQuery("#Next").attr("disabled", true).addClass("form-button-disabled");
+				if (uploader.files.length == "0"){
+				 jQuery("#Next").attr("disabled", true).addClass("form-button-disabled");
+				 jQuery("#applyBatch").attr("disabled", true).addClass("form-button-disabled");
+				} 
 			},
       Browse: function(up) {
          // Called when file picker is clicked
         if (jQuery("#Next").length > 0)
           document.getElementById("Next").disabled=true;
         jQuery("#Next").addClass("form-button-disabled");
+				if (jQuery("#applyBatch").length > 0)
+          document.getElementById("applyBatch").disabled=true;
+        jQuery("#applyBatch").addClass("form-button-disabled");
+
       },
       FilesAdded: function(up, files) {
         if (typeof(sidoraUploaderFilesAdded) == "function"){ sidoraUploaderFilesAdded(up,files); }
         if (jQuery("#Next").length > 0)
           document.getElementById("Next").disabled=true;
         jQuery("#Next").addClass("form-button-disabled");
+				if (jQuery("#applyBatch").length > 0)
+          document.getElementById("applyBatch").disabled=true;
+        jQuery("#applyBatch").addClass("form-button-disabled");
         plupload.each(files, function(file) {
           var item = jQuery("<li class=\"plupload_view_list plupload_file ui-state-default plupload_file_loading plupload_delete\"></li>");
           item.attr("id",file.id);
@@ -5690,7 +5766,8 @@ function sidora_get_plupload_html($elements, $button_text = 'Browse'){
             jQuery("#" + file.id).remove();
             var toDelete = file.name;
             if (up.files.length == "0") jQuery("#Next").attr("disabled", true).addClass("form-button-disabled");
-            console.log(toDelete);';
+            if (up.files.length == "0") jQuery("#applyBatch").attr("disabled", true).addClass("form-button-disabled");
+						console.log(toDelete);';
             //TBD TODO Put in a check here to remove the correct file when multiple files have same filename
             
 print  '
@@ -5721,6 +5798,10 @@ print  '
         if (jQuery("#Next").length > 0)
           document.getElementById("Next").disabled=false;
         jQuery("#Next").removeClass("form-button-disabled");
+				if (jQuery("#applyBatch").length > 0)
+          document.getElementById("applyBatch").disabled=false;
+        jQuery("#applyBatch").removeClass("form-button-disabled");
+
       }
     }
   });
@@ -9231,3 +9312,22 @@ function sidora_convert_entity($matches) {
   // Entity not found? Destroy it.
   return isset($table[$matches[1]]) ? $table[$matches[1]] : '';
 }
+function sidora_upload_batch($upload_files_array) {
+  global $user;
+	if (!empty($upload_files_array) && count($upload_files_array) > 0){
+		$targetDir = file_directory_temp();
+		//$targetDir .= DIRECTORY_SEPARATOR . $user->name . '_batch';
+		if (!file_exists($targetDir)) {
+      @mkdir($targetDir);
+    }
+    //error_log("\nIn sidora_upload_batch, targetdir :".print_r($targetDir,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
+		for ($upload_total = 0; $upload_total < count($upload_files_array); $upload_total++){
+      if (!empty($upload_files_array[$upload_total])){
+        //error_log("\nIn sidora_upload_batch, upload :".print_r($upload_files_array[$upload_total],true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
+        $filePath = $targetDir . DIRECTORY_SEPARATOR . 'batch_' . $upload_total . '_' . $user->name.'_'.$upload_files_array[$upload_total]->filename;
+        //error_log("\nIn sidora_upload_batch, new file name :".print_r($filePath,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
+				rename($upload_files_array[$upload_total]->filepath,$filePath);
+			}
+		}	
+	}	
+}		

@@ -345,7 +345,6 @@ sidora.concept.LoadContentHelp.CreateResourceMenu = function(conceptOfInterest){
     jQuery("#resource-create").remove();
     if (menu_html.length > 0){
       jQuery("#resource-files-menu").append('<li id="resource-create"><a id="resource-create-link" href="#" onclick="return false;"><input type="image" src="'+Drupal.settings.basePath+'sites/all/modules/islandora_xml_forms-7.x-1.7/elements/images/add.png" title="Create a new resource as a child of the highlighted concept."> Add&nbsp;resource</a><ul>'+availableResourcesToCreateForConceptHtml+'</ul></li>');
-     jQuery("#resource-files-menu").append('<li id="resource-batch-create"><a id="resource-batch-create-link" href="#" onclick="return false;"><input type="image" src="'+Drupal.settings.basePath+'sites/all/modules/islandora_xml_forms-7.x-1.7/elements/images/add.png" title="Create a new batch of resource as a child of the highlighted concept."> Create&nbsp;batch&nbsp;resources</a><ul>'+availableResourcesToCreateForConceptHtml+'</ul></li>');
        jQuery("#resource-create a").attr("onclick","return false;");
       jQuery("#resource-create a").click(function(){
         var model = jQuery(this).attr("model");

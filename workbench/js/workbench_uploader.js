@@ -320,9 +320,15 @@ window.prepIslandoraFormForSubmit = function(formName, onSuccessfulFormSubmit, o
     }
   }
   if (jQuery("#create-resource-form").length){
-      ajaxSettings = ({
+    if (window.location.pathname.indexOf('batch') != -1){
+		  ajaxUrl = window.location.pathname.substring(0,window.location.pathname.indexOf('//batch'));
+		}
+		else{
+		  ajaxUrl = window.location;
+		}		
+		ajaxSettings = ({
       type: "POST",
-      url: window.location,
+      url: ajaxUrl,
       //url: Drupal.settings.basePath+"/pure",
       //url: window.location.origin+Drupal.settings.basePath+'sidora/test/edit_metadata',
       data: jQuery("#"+formName).serialize()+"&ingest=Ingest",
