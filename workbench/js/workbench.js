@@ -2792,3 +2792,6 @@ function readCookie(name) {
 sidora.reloadPage = function(){
   window.location.reload();
 }
+sidora.util.refreshPidInTree = function(){
+sidora.util.RefreshTree(null,sidora.concept.GetPid());
+}
