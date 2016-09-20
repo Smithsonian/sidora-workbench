@@ -166,6 +166,7 @@ SidoraQueue.prototype.Done = function(completedItem, ajaxReturn){
       //If there was an update to the Pid user is currently looking at then anything may have changed.  Reload it.
       if (sidora.concept.GetPid() == completedItem.pidsBeingProcessed[i]){
         sidora.concept.LoadContent();
+				sidora.util.refreshPidInTree();
         if (processedResourceArray.length > 1){
           var processedResourceCountArray = processedResourceArray[1].split(' of ');
           if ((processedResourceCountArray.length > 1) && (processedResourceCountArray[0] == processedResourceCountArray[1])){  

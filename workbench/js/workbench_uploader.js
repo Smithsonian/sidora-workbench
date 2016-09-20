@@ -158,7 +158,7 @@ window.submitAll=function(){
         var toConsole = function(){console.log('finished');};  // create resource success function
         window.prepIslandoraFormForSubmit(formId, toConsole );
       }else{
-	var toConsole = function(){sidora.concept.forceRefreshOnNextLoadContent = true;sidora.concept.LoadContent();};
+	var toConsole = function(){sidora.concept.forceRefreshOnNextLoadContent = true;sidora.concept.LoadContent();sidora.util.refreshPidInTree();};
         var onFailure = function(){jQuery("#edit-update").click();};
 	var sidora = window.parent.sidora;
 	if (typeof(sidora.queue) != "undefined"){
