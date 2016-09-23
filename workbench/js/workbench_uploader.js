@@ -155,7 +155,11 @@ window.submitAll=function(){
     }else{
       var formId = jQuery(toIterate[i]).find("form").attr('id');
       if (formId.search('islandora-ingest-form') != '-1'){
-        var toConsole = function(){console.log('finished');};  // create resource success function
+				var toConsole = function(){console.log('finished'); alert('finished!');};  // create resource success function
+        if ((i == (toIterate.length - 1)) && (sidora_util.readCookie('Drupal.dtFilter') != '' && jQuery(toIterate[i]).find("form").find("[name='model']").val().toLowerCase() != sidora_util.readCookie('Drupal.dtFilter').toLowerCase())){
+			  	var toConsole = resetFilterWarning(jQuery(toIterate[i]).find("form").find("[name='model']").val());
+					//var toConsole = function(){console.log('finished');console.log('to alert the filter reset');alert('alert to reset the filter');}
+				}	
         window.prepIslandoraFormForSubmit(formId, toConsole );
       }else{
 	var toConsole = function(){sidora.concept.forceRefreshOnNextLoadContent = true;sidora.concept.LoadContent();sidora.util.refreshPidInTree();};
@@ -195,7 +199,7 @@ window.startBatch = function(){
     for (var i = 0; i < window.batchRequests.length; i++){
       var ajaxSettings = window.batchRequests[i];
       var postData = ajaxSettings.data;
-      var ccSuccess = oldSuccess;
+      var ccSuccess = ajaxSettings.success;
       var onSuccess = function(){console.log("FINISH! "+friendlyName);};
       //var onSuccess = ajaxSettings.success;
 			if (currentInfo.type == 'EditMetadata'){
@@ -208,7 +212,7 @@ window.startBatch = function(){
         sidora.queue.RequestPost(friendlyName,ajaxSettings.url,postData, onSuccess, function(){}, ajaxSettings.pidsOfInterest);
       }else{
         var friendlyName = " Create "+currentInfo.formname+" Resource:"+(i+1)+" of "+window.batchRequests.length;
-        sidora.queue.RequestPost(friendlyName,window.location.href,postData, onSuccess, function(){}, currentInfo.parentPid);
+        sidora.queue.RequestPost(friendlyName,window.location.href,postData, ccSuccess, function(){}, currentInfo.parentPid);
       } 
     }
     sidora.queue.Next();
@@ -324,7 +328,8 @@ window.prepIslandoraFormForSubmit = function(formName, onSuccessfulFormSubmit, o
       data: jQuery("#"+formName).serialize()+"&ingest=Ingest",
       success: function( data ) {
         if (data.indexOf(")"+" has been ingested") > 0){ //it would trigger success off of reading this inline JS, so break it up
-          onSuccessfulFormSubmit(formName, this, data);
+          alert('successful ingest');
+					onSuccessfulFormSubmit.apply(formName, this, data);
         }else{
           onFailureOfFormSubmit(formName, this, data);
         }
@@ -383,4 +388,8 @@ window.reference_createCodebook = function(){
     jQuery("#ifh").css("opacity","");
   },1000);
 }
-
+resetFilterWarning = function(model) {
+  return function() {
+  alert("the model is" + model);
+  }
+}

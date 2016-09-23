@@ -55,16 +55,15 @@ sidora.concept.LoadContentHelp.Resources ={};
  * Calls for the table setup information
  */
 sidora.concept.LoadContentHelp.Resources.TableLoad = function(conceptOfInterest){
- // var dtPageLength = parseInt(readCookie('Drupal.pageLength'));
   sidora.resources.dataTable = jQuery('#res_table').dataTable({
      "oLanguage": {
        "sLengthMenu": "Show _MENU_"
      },
      'sPaginationType': "input",
      'lengthMenu':[5,10,50,100],
-     'pageLength': (readCookie('Drupal.pageLength') == '')?parseInt('5'):parseInt(readCookie('Drupal.pageLength')),
+     'pageLength': (sidora_util.readCookie('Drupal.pageLength') == '')?parseInt('5'):parseInt(sidora_util.readCookie('Drupal.pageLength')),
      'search': {
-       'search': ((readCookie('Drupal.dtFilter') == '')?'all':readCookie('Drupal.dtFilter')) + '\n' + '' + '\n' + ((readCookie('Drupal.sortOn') == '')?'':readCookie('Drupal.sortOn')) + '\n' + ((readCookie('Drupal.sortOrder') == '')?'':readCookie('Drupal.sortOrder')),
+       'search': ((sidora_util.readCookie('Drupal.dtFilter') == '')?'all':sidora_util.readCookie('Drupal.dtFilter')) + '\n' + '' + '\n' + ((sidora_util.readCookie('Drupal.sortOn') == '')?'':sidora_util.readCookie('Drupal.sortOn')) + '\n' + ((sidora_util.readCookie('Drupal.sortOrder') == '')?'':sidora_util.readCookie('Drupal.sortOrder')),
       },
      'processing': true,
      'serverSide': true,
@@ -113,7 +112,7 @@ sidora.concept.LoadContentHelp.Resources.TableLoad = function(conceptOfInterest)
     }
   }); //End onclick
     table.on( 'length', function ( e, settings, len ) {
-      writeCookie('Drupal.pageLength',parseInt(len),'30')
+      sidora_util.writeCookie('Drupal.pageLength',parseInt(len),'30')
     } );
 }
 /*
@@ -141,8 +140,8 @@ sidora.concept.LoadContentHelp.Resources.TableActionsSetup = function(){
     jQuery('#sidora-resources-page-count').html(' of '+info.pages );
     if (sidora.resources.individualPanel.resourceOfInterest){
       jQuery(this).find(jq(sidora.resources.individualPanel.resourceOfInterest.pid)).trigger("click");
-      if (readCookie('Drupal.selectResource') == '1'){
-        writeCookie('Drupal.selectResource','0','30');
+      if (sidora_util.readCookie('Drupal.selectResource') == '1'){
+        sidora_util.writeCookie('Drupal.selectResource','0','30');
         jQuery('#res_table tbody').children('tr:first').trigger('click');
       }    
     }
@@ -193,16 +192,16 @@ sidora.concept.LoadContentHelp.Resources.TableActionsSetup = function(){
     );
   });
   jQuery('#res_table_filter').after('<select id=\"sidora-resource-type-dropdown\" class="form-select" name=\"search\"><option value=\"\">All</option><option value=\"images\">Image</option><option value=\"pdf\">Digitized Text</option><option value=\"csv\">Tabular Dataset</option><option value=\"audio\">Audio</option><option value=\"video\">Video</option></select><input type="text" name="titleFilter" id="titleFilter" style="border: solid 1px lightblue;">');
-  if (readCookie('Drupal.dtFilter') != ''){
-    jQuery("#sidora-resource-type-dropdown").val(readCookie('Drupal.dtFilter'));
+  if (sidora_util.readCookie('Drupal.dtFilter') != ''){
+    jQuery("#sidora-resource-type-dropdown").val(sidora_util.readCookie('Drupal.dtFilter'));
   }   
   jQuery('#titleFilter').after(' <div id="sidora-resource-sort">  Sort: '+'<select id=\"sidora-resource-sort-dropdown\" class="form-select" name=\"sort\"><option value=\"title\">Title</option><option value=\"model\">Model</option><option value=\"created\" selected=\"selected\">Created</option></select></div>');
   jQuery('#sidora-resource-sort-dropdown').after('  <select id=\"sidora-resource-sortorder-dropdown\" class="form-select" name=\"sortorder\"><option value=\"ASC\">Ascending</option><option value=\"DESC\" selected=\"selected\">Descending</option></select>');
-  if (readCookie('Drupal.sortOn') != ''){
-    jQuery('#sidora-resource-sort-dropdown').val(readCookie('Drupal.sortOn'));
+  if (sidora_util.readCookie('Drupal.sortOn') != ''){
+    jQuery('#sidora-resource-sort-dropdown').val(sidora_util.readCookie('Drupal.sortOn'));
   }
-  if (readCookie('Drupal.sortOrder') != ''){
-    jQuery("#sidora-resource-sortorder-dropdown").val(readCookie('Drupal.sortOrder'));
+  if (sidora_util.readCookie('Drupal.sortOrder') != ''){
+    jQuery("#sidora-resource-sortorder-dropdown").val(sidora_util.readCookie('Drupal.sortOrder'));
   }     
   jQuery("#res_table_length select").addClass("form-select");
   sidora.resources.reloadDatatableBasedOnCurrentFilters = function(){
@@ -210,8 +209,8 @@ sidora.concept.LoadContentHelp.Resources.TableActionsSetup = function(){
     jQuery('#res_table_filter input').val(changeTo);
     var recentSearchVal = jQuery("#titleFilter").val();
     changeTo += "\n"+recentSearchVal;
-    var sortOn = (readCookie('Drupal.sortOn') != '')?readCookie('Drupal.sortOn'):jQuery('#sidora-resource-sort-dropdown').val();
-    var sortOrder = (readCookie('Drupal.sortOrder') != '')?readCookie('Drupal.sortOrder'):jQuery('#sidora-resource-sortorder-dropdown').val();
+    var sortOn = (sidora_util.readCookie('Drupal.sortOn') != '')?sidora_util.readCookie('Drupal.sortOn'):jQuery('#sidora-resource-sort-dropdown').val();
+    var sortOrder = (sidora_util.readCookie('Drupal.sortOrder') != '')?sidora_util.readCookie('Drupal.sortOrder'):jQuery('#sidora-resource-sortorder-dropdown').val();
     changeTo += "\n"+sortOn+"\n"+sortOrder;
     window.sidora.resources.dataTable.DataTable().search(changeTo).draw();
     window.sidora.util.resourceSearchLastSearchVal = recentSearchVal;
@@ -228,15 +227,15 @@ sidora.concept.LoadContentHelp.Resources.TableActionsSetup = function(){
     },3000); //Start the search if there is no key press for 3 seconds
   });
   jQuery('#sidora-resource-type-dropdown').change(function(){
-    writeCookie('Drupal.dtFilter',jQuery('#sidora-resource-type-dropdown').val(),'30')
+    sidora_util.writeCookie('Drupal.dtFilter',jQuery('#sidora-resource-type-dropdown').val(),'30')
     sidora.resources.reloadDatatableBasedOnCurrentFilters();
   });
   jQuery('#sidora-resource-sort-dropdown').change(function(){
-   writeCookie('Drupal.sortOn',jQuery('#sidora-resource-sort-dropdown').val(),'30')
+   sidora_util.writeCookie('Drupal.sortOn',jQuery('#sidora-resource-sort-dropdown').val(),'30')
    sidora.resources.reloadDatatableBasedOnCurrentFilters();
    });
   jQuery('#sidora-resource-sortorder-dropdown').change(function(){
-   writeCookie('Drupal.sortOrder',jQuery('#sidora-resource-sortorder-dropdown').val(),'30')
+   sidora_util.writeCookie('Drupal.sortOrder',jQuery('#sidora-resource-sortorder-dropdown').val(),'30')
    sidora.resources.reloadDatatableBasedOnCurrentFilters();
    });
 }
@@ -1665,7 +1664,7 @@ sidora.util.treeAdditionSingleItem = function(mainItem, htmlTree, onLoadComplete
       };
       var individualReturnFunction = olcCheck(myCounter, onLoadComplete);
       //If want to do changes, remove any existing children that were not in the document fragment
-      console.log("gci start:"+ new Date(new Date().getTime()) + " len:"+currChild.children.length);
+      //console.log("gci start:"+ new Date(new Date().getTime()) + " len:"+currChild.children.length);
       for (var grandchildIndex = 0; grandchildIndex < currChild.children.length; grandchildIndex++){
         var currTreeGrandchild = jst.get_node(currChild.children[grandchildIndex]);
         var isFound = false;
@@ -1681,7 +1680,7 @@ sidora.util.treeAdditionSingleItem = function(mainItem, htmlTree, onLoadComplete
           jst.pureUIChange = false;
         }
       }
-      console.log("rci start:"+ new Date(new Date().getTime()) + " len:"+repChildren.length);
+      //console.log("rci start:"+ new Date(new Date().getTime()) + " len:"+repChildren.length);
       var ctgMap = [];
       for (var grandchildIndex = 0; grandchildIndex < currChild.children.length; grandchildIndex++){
         var currTreeGrandchild = jst.get_node(currChild.children[grandchildIndex]);
@@ -1722,7 +1721,7 @@ sidora.util.treeAdditionSingleItem = function(mainItem, htmlTree, onLoadComplete
           });
         }
       }//Ends repChildIndex
-      console.log("complete :"+ new Date(new Date().getTime()));
+      //console.log("complete :"+ new Date(new Date().getTime()));
     }//Ends (currChild.children.length == 0 || overwriteType == "changes")
     sidora.util.reorderTreeChildrenAlphabetical(currChild);
   }//Ends dfAnchor.length not zero
@@ -2772,31 +2771,6 @@ function getNewPid( jsonString ) {
   var pidArray = pidString.split(":");
   return (pidArray[1]+":"+pidArray[2]);
 } 
-function writeCookie(name,value,days) {
-    var date, expires;
-    if (days) {
-        date = new Date();
-        date.setTime(date.getTime()+(days*24*60*60*1000));
-        expires = "; expires=" + date.toGMTString();
-            }else{
-        expires = "";
-    }
-    document.cookie = name + "=" + value + expires;
-}
-function readCookie(name) {
-    var i, c, ca, nameEQ = name + "=";
-    ca = document.cookie.split(';');
-    for(var i=0;i < ca.length;i++) {
-        c = ca[i];
-        while (c.charAt(0)==' ') {
-            c = c.substring(1,c.length);
-        }
-        if (c.indexOf(nameEQ) == 0) {
-            return c.substring(nameEQ.length,c.length);
-        }
-    }
-    return '';
-}
 sidora.reloadPage = function(){
   window.location.reload();
 }

@@ -171,7 +171,7 @@ SidoraQueue.prototype.Done = function(completedItem, ajaxReturn){
           var processedResourceCountArray = processedResourceArray[1].split(' of ');
           if ((processedResourceCountArray.length > 1) && (processedResourceCountArray[0] == processedResourceCountArray[1])){  
             // trying to get the last item of the current queue
-            writeCookie('Drupal.selectResource','1','30');
+            sidora_util.writeCookie('Drupal.selectResource','1','30');
           }
         } 
       }else if (sidora.resources.IsOnScreen(completedItem.pidsBeingProcessed[i])){
