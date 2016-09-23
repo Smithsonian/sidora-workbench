@@ -3137,8 +3137,9 @@ function sidora_create_resource_get_metadata_form_html($parent_pid, $model, $for
         if (!empty($form_copy_array)){
           $form_copy_array['#value'] = substr($filename,0,strpos($filename,'.'));
 				if ($batch == 'batch'){
-				  $form_copy_array['#value'] = 'This will be set to the filename of the corresponding file for each object' ;
-					$form_copy_array['#attributes'] = array('disabled' => 'TRUE');
+				  $form_copy_array['#value'] = '';
+					//$form_copy_array['#value'] = 'This will be set to the filename of the corresponding file for each object' ;
+					//$form_copy_array['#attributes'] = array('disabled' => 'TRUE');
 					$form['batch'] = array(
             '#name' => 'batch',
             '#type' => 'hidden',
