@@ -2075,7 +2075,21 @@ function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $ex
     return t("You must be an administrator or have an administrator set sidora_allow_all_to_debug in order to access this information");
   }
   if (!sidora_is_admin()) print t("Remember that nonadmins will NOT see output from dsm!");
-
+  if ($one == 'show_node') {
+    $node = node_load($two);
+    var_dump($node);
+    drupal_exit();
+  }
+  if ($one == 'get_pid_node') {
+    $pid = $two;
+    return "" . sidora_get_concept_node_id($pid);
+  }
+  if ($one == 'create_pid_node') {
+    $pid = $two;
+    sidora_create_fields_for_fedora_object_nodes();
+    $node = sidora_create_concept_node($pid);
+    var_dump($node);
+  }
   if ($one == 'file_check'){
     $temp_dir = file_directory_temp();
     $dir_content = scandir($temp_dir);
@@ -6149,7 +6163,14 @@ Array(
 function sidora_fill_concepts_children($query_result, $current_path = array()){
   if (is_array($query_result)){
     foreach ($query_result as $c_index=>$child){
+      //BBB
       $child_pid = $child['o']['value'];
+      $child_info = array(
+        'label' => $child['t']['value'],
+        'concept_children' => '',
+        'resource_children' => $child['k0']['value'],
+      );
+      sidora_get_update_or_create_concept_node($child_pid, $child_info);
       if (!in_array($child_pid,$current_path)){
         $path_to_send = $current_path;
         $path_to_send[] = $child_pid;
@@ -8914,6 +8935,141 @@ function sidora_import_xml_form_submit(array $form, array &$form_state) {
   }
   $form_state['redirect'] = "admin/islandora/xmlform";
 }
+
+/**
+ * Retrieves or creates and returns a concept node for this pid
+ */
+function sidora_get_update_or_create_concept_node($pid, $info = NULL){
+  $node_id = sidora_get_concept_node_id($pid, $info);
+  if ($node_id === NULL){
+    return sidora_create_concept_node($pid, $info);
+  }
+  else {
+    $node = node_load($node_id);
+    if (!empty($info)){
+      sidora_update_concept_node($node, $info);
+    }
+  }
+}
+
+function sidora_update_concept_node($node, $info) {
+  $node_wrapper = entity_metadata_wrapper('node', $node);
+  $node_wrapper->field_fedora_label->set($info['label']);
+  $node_wrapper->field_sidora_concept_children->set($info['concept_children']);
+  $node_wrapper->field_sidora_resource_children->set($info['resource_children']);
+  $node_wrapper->save(); 
+}
+/**
+ * Retrieves concept node for this pid
+ */
+function sidora_get_concept_node_id($pid) {
+  $query = new EntityFieldQuery();
+  $query->entityCondition('entity_type', 'node')
+    ->entityCondition('bundle',  sidora_get_concept_content_type())
+    ->propertyCondition('status', 1)
+    ->fieldCondition('field_fedora_pid', 'value', $pid, '=')
+    ->addMetaData('account', user_load(1)); // Run the query as user 1.
+  $result = $query->execute();
+  if (sizeof($result) === 0){
+    return NULL;
+  }
+  foreach($result["node"] as $nid => $obj){
+    return $nid;
+  }
+  return NULL;
+}
+/**
+ * Creates a concept node - does not check to see if a node already exists for this pid
+ */
+function sidora_create_concept_node($pid, $info = NULL){
+  // add node properties
+  $newNode = (object) NULL;
+  $newNode->type = sidora_get_concept_content_type();
+  $newNode->title = 'PID_' . $pid;
+  node_object_prepare($newNode);
+  $newNode->language = LANGUAGE_NONE;
+  $newNode->uid = 1;//{USER_ID};
+  $newNode->created = strtotime("now");
+  $newNode->changed = strtotime("now");
+  $newNode->status = 1;
+  $newNode->comment = 0;
+  $newNode->promote = 0;
+  $newNode->moderate = 0;
+  $newNode->sticky = 0;
+
+  // add field data
+  $newNode->field_fedora_pid[$newNode->language][]['value'] = $pid;
+  if (!empty($info)){
+    $newNode->field_fedora_label[$newNode->language][]['value'] = $info['label'];
+    $newNode->field_sidora_concept_children[$newNode->language][]['value'] = $info['concept_children'];
+    $newNode->field_sidora_resource_children[$newNode->language][]['value'] = $info['resource_children'];
+  }
+  
+
+  // Prepare node for saving
+  $newNode = node_submit($newNode); 
+  // save node
+  node_save($newNode);
+  return $newNode;
+}
+/**
+ * Creates a node type for concepts if one doesn't exist, and returns the "machine name" for the type
+ */
+function sidora_get_concept_content_type(){
+  $type_name = 'sidora_concept';
+  if ( in_array( $type_name, node_type_get_names() ) ) {
+    return $type_name;
+  }
+  $concept_type = array(
+    'type' => $type_name,
+    'name' => t('SIdora Concept'),
+    'base' => 'node_content',
+    'description' => t("This is content related to a Fedora Commons Repository / SIdora concept"),
+    'custom' => 1,
+    'modified' => 1,
+    'locked' => 0,
+  );
+  $type = node_type_set_defaults( $concept_type );
+  node_type_save( $type );
+  //  Add a body field.
+  node_add_body_field( $type );
+  return $type_name;
+}
+
+/**
+ * Create the fields necessary for the nodes that represent a Fedora Digital Object and add it to the Fedora digital 
+ * object content type
+ */
+function sidora_create_fields_for_fedora_object_nodes(){
+  $fields = array(
+    'Fedora PID'=> array('field_name' => 'field_fedora_pid', 'type' => 'text', 'settings' => array('max_length' => 128)),
+    'Fedora Label'=> array('field_name' => 'field_fedora_label', 'type' => 'text', 'settings' => array('max_length' => 128)),
+    'Fedora Child Concepts'=> array('field_name' => 'field_sidora_concept_children', 'type' => 'text',  'settings' => array('max_length' => 2000)),
+    'Fedora Child Resources'=> array('field_name' => 'field_sidora_resource_children', 'type' => 'text',  'settings' => array('max_length' => 2000)),
+  );
+  foreach ($fields as $label => $field) {
+    $field_name = $field['field_name'];
+    // Make sure the field doesn't already exist.
+    if (!field_info_field($field_name)) {
+      // Create the field.
+      field_create_field($field);
+
+      // Create the instance.
+      $instance = array(
+        'field_name' => $field_name,
+        'entity_type' => 'node',
+        'bundle' => sidora_get_concept_content_type(),
+        'label' => $label,
+        'description' => 'Fedora Commons Repo digital object PID',
+        'required' => TRUE,
+      );
+      field_create_instance($instance);
+      watchdog('sidora', t('!field_name was added successfully.', array('!field_name' => $field_name)));
+    }
+  }
+}
+
+
 
 function sidora_debug_string_backtrace() { 
   ob_start(); 
