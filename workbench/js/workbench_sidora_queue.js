@@ -99,13 +99,13 @@ SidoraQueue.prototype.Fail = function(completedItem, ajaxReturn){
 }
 SidoraQueue.prototype.Retry = function(pid) {
   jQuery('#edit_form').remove();
-	jQuery("body").append("<div id='edit_form' style='visibility:hidden;'></div>");
-	var failedForm = sidora.queue.completedFailedRequests.filter(function (obj){ return obj.pid === pid;})[0];
-	jQuery("#edit_form").text(failedForm.form)
-	Shadowbox.close();
-	Shadowbox.open({
+  jQuery("body").append("<div id='edit_form' style='visibility:hidden;'></div>");
+  var failedForm = sidora.queue.completedFailedRequests.filter(function (obj){ return obj.pid === pid;})[0];
+  jQuery("#edit_form").text(failedForm.form)
+  Shadowbox.close();
+  Shadowbox.open({
         content: Drupal.settings.basePath+"sidora/edit_metadata/"+pid+"&retry",
-				player:     "iframe",
+        player:     "iframe",
         title:      "Edit Metadata",
       options: {
         onFinish:  function(){
@@ -118,7 +118,7 @@ SidoraQueue.prototype.Retry = function(pid) {
         }
       }
     });
-}			     
+}           
 SidoraQueue.prototype.Done = function(completedItem, ajaxReturn){
   completedItem.ajaxReturn = ajaxReturn;
   this.completedRequests.push(completedItem);
@@ -132,16 +132,16 @@ SidoraQueue.prototype.Done = function(completedItem, ajaxReturn){
     jsonString = ajaxReturn;
   }
   try{ jsonData = jQuery.parseJSON(jsonString); } catch (e){
-	  if (jsonString.indexOf("<h2 class=\"element-invisible\">Error message</h2")>0){
-	    var toShow = "Did not perform action:"+completedItem.userFriendlyName;
-			if (completedItem.fullObject.userFriendlyName.indexOf("Edit MetaData")>0){
-			  this.completedFailedRequests.push({pid:completedItem.pidsBeingProcessed[0],form:jsonString})
-			  toShow += '<div class="messages error"><a rel="shadowbox; width=500; height=600; player=iframe" href="javascript:void(0)" id="retry_edit_metadata" class="' + completedItem.pidsBeingProcessed[0] + '" onClick = window.sidora.queue.Retry("'+completedItem.pidsBeingProcessed[0]+'");>Click here to view the errors and retry</a></div>';
-			}
-			this.NotificationWindow.Show(toShow, true);
-			return;
-		}	
-	}
+    if (jsonString.indexOf("<h2 class=\"element-invisible\">Error message</h2")>0){
+      var toShow = "Did not perform action:"+completedItem.userFriendlyName;
+      if (completedItem.fullObject.userFriendlyName.indexOf("Edit MetaData")>0){
+        this.completedFailedRequests.push({pid:completedItem.pidsBeingProcessed[0],form:jsonString})
+        toShow += '<div class="messages error"><a rel="shadowbox; width=500; height=600; player=iframe" href="javascript:void(0)" id="retry_edit_metadata" class="' + completedItem.pidsBeingProcessed[0] + '" onClick = window.sidora.queue.Retry("'+completedItem.pidsBeingProcessed[0]+'");>Click here to view the errors and retry</a></div>';
+      }
+      this.NotificationWindow.Show(toShow, true);
+      return;
+    }  
+  }
   if (jsonData != null && jsonData.error){
     var toShow = "Did not perform action:"+completedItem.userFriendlyName;
     if (typeof(jsonData.error) == 'string') toShow += " - "+jsonData.error;
@@ -166,32 +166,32 @@ SidoraQueue.prototype.Done = function(completedItem, ajaxReturn){
       //If there was an update to the Pid user is currently looking at then anything may have changed.  Reload it.
       if (sidora.concept.GetPid() == completedItem.pidsBeingProcessed[i]){
         sidora.concept.LoadContent();
-	sidora.util.refreshPidInTree();
+  sidora.util.refreshPidInTree();
         if (processedResourceArray.length > 1){
           var processedResourceCountArray = processedResourceArray[1].split(' of ');
           if ((processedResourceCountArray.length > 1) && (processedResourceCountArray[0] == processedResourceCountArray[1])){  
             // trying to get the last item of the current queue
             sidora_util.writeCookie('Drupal.selectResource','1','30');
-	    if (sidora_util.readCookie('Drupal.dtFilter') != ''){
-	      if ((completedItem.fullObject.ajaxRequest.data.indexOf('islandora_ingest_form') > -1) && (completedItem.fullObject.ajaxRequest.data.indexOf('resource_model') > -1)){
-	        var rmPattern = new RegExp('&resource_model=(.*)&');
-	        var rmArray = rmPattern.exec(completedItem.fullObject.ajaxRequest.data);
-	        if ((Array.isArray(rmArray))&& (rmArray.length >= 2) && (rmArray[1] != sidora_util.readCookie('Drupal.dtFilter'))){
-		  if (!sidora.util.isConfirmShowing()){
-		    sidora.util.Confirm("Resources Filter Warning","The resources you just added aren't visible right now because they are filtered out by the current resource filter. Click 'Reset' to if you want to view all resources, or close this window to leave the current filter.",
+      if (sidora_util.readCookie('Drupal.dtFilter') != ''){
+        if ((completedItem.fullObject.ajaxRequest.data.indexOf('islandora_ingest_form') > -1) && (completedItem.fullObject.ajaxRequest.data.indexOf('resource_model') > -1)){
+          var rmPattern = new RegExp('&resource_model=(.*)&');
+          var rmArray = rmPattern.exec(completedItem.fullObject.ajaxRequest.data);
+          if ((Array.isArray(rmArray))&& (rmArray.length >= 2) && (rmArray[1] != sidora_util.readCookie('Drupal.dtFilter'))){
+      if (!sidora.util.isConfirmShowing()){
+        sidora.util.Confirm("Resources Filter Warning","The resources you just added aren't visible right now because they are filtered out by the current resource filter. Click 'Reset' to if you want to view all resources, or close this window to leave the current filter.",
                          function(){
                            sidora_util.writeCookie('Drupal.dtFilter','','30');
-			   jQuery('#sidora-resource-type-dropdown').val('');
-			   sidora.resources.reloadDatatableBasedOnCurrentFilters();
+         jQuery('#sidora-resource-type-dropdown').val('');
+         sidora.resources.reloadDatatableBasedOnCurrentFilters();
                          },
-			 function(){},
-			 'Reset'
+       function(){},
+       'Reset'
                       );
-		  }
-		}
-	      }		
+      }
+    }
+        }    
             }
-	}
+  }
         } 
       }else if (sidora.resources.IsOnScreen(completedItem.pidsBeingProcessed[i])){
         sidora.concept.LoadContent();
@@ -210,7 +210,7 @@ SidoraQueue.prototype.NotificationWindow.Show = function(message, isError){
     var notificationWindowHtml = '<div id="queueMessage" style="display:none; position: fixed; bottom: 26px; right: 30px; min-height: 50px; width: 400px;"><div id="" role="tooltip" class="queue-message-block ui-tooltip ui-widget ui-corner-all ui-widget-content" style=" display: block;width: 100%;height: 100%;max-width: 1000px;"><div class="notification-window-message"></div><div class="queue-mb-close" style="background: url(' + Drupal.settings.islandora_xml_forms.basepath + 'elements/css/images/ui-icons_222222_256x240.png) no-repeat -30px -191px;width: 20px;height: 20px;z-index: 100;position: absolute;right: 0;top: 0; cursor: pointer; cursor: hand;"></div></div></div>';
     jQuery("body").append(notificationWindowHtml);
       jQuery("#queueMessage").mouseenter(function(){
-			  nw.MouseIsInside = true;
+        nw.MouseIsInside = true;
         nw.UpdateTime = Date.now();
         //User placed their mouse in the div, reset the timer - maybe the user wants it to stay on screen
         //The timer is reset for the "overshot" where the user tried to get the mouse in on time, but left it prematurely
@@ -233,8 +233,8 @@ SidoraQueue.prototype.NotificationWindow.Show = function(message, isError){
   this.UpdateTime = Date.now();
   if (isError || nw.showingError){
     nw.showingError = true;
-		jQuery("#queueMessage").unbind('mouseenter');
-		jQuery("#queueMessage").unbind('mouseleave');
+    jQuery("#queueMessage").unbind('mouseenter');
+    jQuery("#queueMessage").unbind('mouseleave');
   }else{
     setTimeout(function(){nw.CheckHide();}, this.SecondsOnScreen * 1000);
   }
@@ -255,8 +255,8 @@ SidoraQueue.prototype.NotificationWindow.Hide = function(){
 }
 SidoraQueue.prototype.NotificationWindow.ResetError = function(queuedErrors){
   var nw = this;
-	nw.showingError = queuedErrors;
-}	
+  nw.showingError = queuedErrors;
+}  
 SidoraQueue.prototype.updateFooterWithRequestInProcess = function(){
   if (this.requestInProcess != null && !this.requestInProcess.isSilent){
     if (!jQuery("footer").is(":visible")) jQuery("footer").fadeIn();
