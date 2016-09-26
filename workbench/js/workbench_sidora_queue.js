@@ -166,13 +166,32 @@ SidoraQueue.prototype.Done = function(completedItem, ajaxReturn){
       //If there was an update to the Pid user is currently looking at then anything may have changed.  Reload it.
       if (sidora.concept.GetPid() == completedItem.pidsBeingProcessed[i]){
         sidora.concept.LoadContent();
-				sidora.util.refreshPidInTree();
+	sidora.util.refreshPidInTree();
         if (processedResourceArray.length > 1){
           var processedResourceCountArray = processedResourceArray[1].split(' of ');
           if ((processedResourceCountArray.length > 1) && (processedResourceCountArray[0] == processedResourceCountArray[1])){  
             // trying to get the last item of the current queue
             sidora_util.writeCookie('Drupal.selectResource','1','30');
-          }
+	    if (sidora_util.readCookie('Drupal.dtFilter') != ''){
+	      if ((completedItem.fullObject.ajaxRequest.data.indexOf('islandora_ingest_form') > -1) && (completedItem.fullObject.ajaxRequest.data.indexOf('resource_model') > -1)){
+	        var rmPattern = new RegExp('&resource_model=(.*)&');
+	        var rmArray = rmPattern.exec(completedItem.fullObject.ajaxRequest.data);
+	        if ((Array.isArray(rmArray))&& (rmArray.length >= 2) && (rmArray[1] != sidora_util.readCookie('Drupal.dtFilter'))){
+		  if (!sidora.util.isConfirmShowing()){
+		    sidora.util.Confirm("Reset the view filter on resources","The resource model for the new resources does not match the current view filter set on resources. Press Reset to reset the filter to view all resources.",
+                         function(){
+                           sidora_util.writeCookie('Drupal.dtFilter','','30');
+			   jQuery('#sidora-resource-type-dropdown').val('');
+			   sidora.resources.reloadDatatableBasedOnCurrentFilters();
+                         },
+			 function(){},
+			 'Reset'
+                      );
+		  }
+		}
+	      }		
+            }
+	}
         } 
       }else if (sidora.resources.IsOnScreen(completedItem.pidsBeingProcessed[i])){
         sidora.concept.LoadContent();

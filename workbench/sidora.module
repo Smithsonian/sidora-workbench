@@ -3101,22 +3101,22 @@ function sidora_create_resource_get_metadata_form_html($parent_pid, $model, $for
       cache_set("sidora:form_id_to_creation_info",$id_to_creation_info);
       $resource_types = array(
         'si:imageCModel' => 'images',
-				'si:generalImageCModel' => 'images',
+	'si:generalImageCModel' => 'images',
         'si:fieldbookCModel' => 'pdf', 
         'si:datasetCModel' => 'csv',
         'islandora:sp-audioCModel' => 'audio',
         'islandora:sp_videoCModel' => 'video'
       );
-			$form['model'] = array(
-      '#name' => 'model',
+      $form['resource_model'] = array(
+      '#name' => 'resource_model',
       '#type' => 'hidden',
       '#title' => 'Model',
       '#description' => '',
       '#required' => false,
-			'#value' => isset($resource_types[$model])?$resource_types[$model]:''
+      '#value' => isset($resource_types[$model])?$resource_types[$model]:''
     );
 
-			$to_return .= drupal_render( $form);
+	$to_return .= drupal_render( $form);
       $to_return .= "<div id='bottom-panel' class='bottom-panel' style='position:absolute; bottom:0; left:0; width:100%;'></div></div>";
     }
   }
