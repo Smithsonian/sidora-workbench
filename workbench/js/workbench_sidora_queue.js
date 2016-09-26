@@ -178,7 +178,7 @@ SidoraQueue.prototype.Done = function(completedItem, ajaxReturn){
 	        var rmArray = rmPattern.exec(completedItem.fullObject.ajaxRequest.data);
 	        if ((Array.isArray(rmArray))&& (rmArray.length >= 2) && (rmArray[1] != sidora_util.readCookie('Drupal.dtFilter'))){
 		  if (!sidora.util.isConfirmShowing()){
-		    sidora.util.Confirm("Reset the view filter on resources","The resource model for the new resources does not match the current view filter set on resources. Press Reset to reset the filter to view all resources.",
+		    sidora.util.Confirm("Resources Filter Warning","The resources you just added aren't visible right now because they are filtered out by the current resource filter. Click 'Reset' to if you want to view all resources, or close this window to leave the current filter.",
                          function(){
                            sidora_util.writeCookie('Drupal.dtFilter','','30');
 			   jQuery('#sidora-resource-type-dropdown').val('');
