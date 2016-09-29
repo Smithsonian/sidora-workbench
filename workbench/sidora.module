@@ -2080,6 +2080,22 @@ function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $ex
     var_dump($node);
     drupal_exit();
   }
+  if ($one == 'create_node_tree') {
+    $pid = $two;
+    $date = date('m/d/Y h:i:s a', time());
+    print $date . "\n";
+    $root_node = sidora_create_full_node_set($pid, 'Root', 0);
+    var_dump($root_node);
+    $date = date('m/d/Y h:i:s a', time());
+    print $date . "\n";
+    exit();
+  }
+  if ($one == 'tree_from_nodes'){
+    $pid = $two;
+    $tree_data = sidora_build_tree_from_nodes_by_pid($pid);
+    var_dump($tree_data);
+    exit();
+  }
   if ($one == 'get_pid_node') {
     $pid = $two;
     return "" . sidora_get_concept_node_id($pid);
@@ -2348,7 +2364,8 @@ function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $ex
   if ($one == 'models'){
     $root_pid = 'si:root';
     $results = _sidora_get_child_results_cache($root_pid);
-    $filled = sidora_fill_concepts_children($results); 
+    $root_children_pids = array();
+    $filled = sidora_fill_concepts_children($results, array(), $root_children_pids); 
     print '<pre>';
     //var_dump ($filled);
     $html_tree_from_query_result = sidora_html_tree($filled);
@@ -5460,8 +5477,14 @@ function sidora_html_string_tree($root_pid = '', $root = NULL, $num_levels = 3){
   else{
      $root_label = $root->label;
   }
+  /*
   $results = _sidora_get_child_results_cache($root_pid);
-  $filled = sidora_fill_concepts_children($results); 
+  $root_children_pids = array();
+  $filled = sidora_fill_concepts_children($results, array(), $root_children_pids); 
+  /* */ 
+  $filled = sidora_build_tree_from_nodes_by_pid($root_pid);
+  $filled = $filled[0]['children'];
+  /* */
   $html_tree_from_query_result = sidora_html_tree($filled, '', $num_levels);
   $html_escaped_name = htmlspecialchars($root_label);
   $to_return = '';
@@ -5481,7 +5504,8 @@ function sidora_block_content_navigation(){
   module_load_include('inc', 'sidora', 'includes/utils');
   $root_pid = sidora_get_user_root_object();
   $results = _sidora_get_child_results_cache($root_pid);
-  $filled = sidora_fill_concepts_children($results); 
+  $root_children_pids = array();
+  $filled = sidora_fill_concepts_children($results, array(), $root_children_pids); 
   $html_tree_from_query_result = sidora_html_tree($filled);
   $to_return = '<div style="float:left;width:200px;">';
   $to_return .= '<div id="concept-create-menu">';
@@ -6123,6 +6147,32 @@ function sidora_pid_set_locked($pid, $set_locked_to_user = '', $obtain_lock = fa
     return FALSE;
   }
 }
+function sidora_build_tree_from_nodes_by_pid($pid){
+  $nid = sidora_get_concept_node_id($pid);
+  $to_return = array();
+  $to_return[] = sidora_build_tree_from_nodes($nid);
+  return $to_return;
+}
+function sidora_build_tree_from_nodes($root_node_id){
+  $node = node_load($root_node_id);
+  // Assume that we are using the und field (no language) since these will be non-translated data from the Fedora Commons Repo
+  $to_return = array();
+  $to_return['o'] = array();
+  $to_return['o']['value'] = $node->field_fedora_pid[$node->language][0]['value'];
+  $to_return['t'] = array();
+  $to_return['t']['value'] = $node->field_fedora_label[$node->language][0]['value'];
+  $to_return['k0'] = array();
+  $to_return['k0']['value'] = $node->field_sidora_resource_children[$node->language][0]['value'];
+  // Load each child
+  $children = explode(',',$node->field_sidora_concept_children[$node->language][0]['value']);
+  $to_return['children'] = array();
+  foreach($children as $child) {
+    if (!empty($child)) {
+      $to_return['children'][] = sidora_build_tree_from_nodes($child);
+    }
+  }
+  return $to_return;
+}
 /*
  * Returns an array of the form:
 Array(
@@ -6160,7 +6210,7 @@ Array(
 
  *  ...and so on.  k0 is the number of resource children
  */
-function sidora_fill_concepts_children($query_result, $current_path = array()){
+function sidora_fill_concepts_children($query_result, $current_path = array(), &$direct_children = NULL){
   if (is_array($query_result)){
     foreach ($query_result as $c_index=>$child){
       //BBB
@@ -6170,12 +6220,21 @@ function sidora_fill_concepts_children($query_result, $current_path = array()){
         'concept_children' => '',
         'resource_children' => $child['k0']['value'],
       );
-      sidora_get_update_or_create_concept_node($child_pid, $child_info);
+      $node = sidora_get_update_or_create_concept_node($child_pid, $child_info);
+      if ($node !== NULL) {
+        $direct_children[] = $node->nid;
+      }
       if (!in_array($child_pid,$current_path)){
         $path_to_send = $current_path;
         $path_to_send[] = $child_pid;
         $results = _sidora_get_child_results_cache($child_pid);
-        $query_result[$c_index]['children'] = sidora_fill_concepts_children($results, $path_to_send);
+        $filled_children = array();
+        $query_result[$c_index]['children'] = sidora_fill_concepts_children($results, $path_to_send, $filled_children);
+        $child_info['concept_children'] = implode(',',$filled_children);
+        sidora_update_concept_node($node, $child_info);
+        print ("Updating $node->nid <br>"); //BBB
+        var_dump($child_info); //BBB
+        print ("<br>"); //BBB
       }else{
         $query_result[$c_index]['already_in_tree'] = true;
       }
@@ -6938,6 +6997,65 @@ function sidora_generate_child_resource_sparql_query($pid, array $resource_types
         LIMIT {$limit}";
   return $query;
 }
+
+/**
+ * Recursively create the tree based on the query information returned
+ */
+function sidora_create_full_node_set($pid, $label, $num_resources) {
+  print '.'.$pid;
+  $results = _sidora_get_child_results_cache($pid);
+  $child_nids = array();
+  $self_child = FALSE;
+  foreach ($results as $c_index=>$child){
+    $child_pid = $child['o']['value'];
+    // If it has itself as a child somehow, do not follow that tree, but add that fact in later
+    if ($pid == $child_pid) {
+      $self_child = TRUE;
+    }
+    else {
+      // Do not recreate the node if we already created it this session
+      $existing_child_nid = sidora_quick_pid_to_node($child_pid);
+      if ($existing_child_nid) {
+        $child_nids[] = $existing_child_nid;
+      }
+      else {
+        $child_node = sidora_create_full_node_set($child_pid, $child['t']['value'], $child['k0']['value']);
+        $child_nids[] = $child_node->nid;
+        // Store info in lookup table so we don't recreate it later and don't have to check the db for it
+        sidora_quick_pid_to_node($child_pid, $child_node->nid);
+      }
+    }
+  }
+  $info = array(
+    'label' => $label,
+    'concept_children' => implode(',',$child_nids),
+    'resource_children' => $num_resources
+  );
+  $node = sidora_get_update_or_create_concept_node($pid, $info);
+  if ($self_child) {
+    $child_nids[] = $node->nid;
+    $info['concept_children'] = implode(',',$child_nids);
+    $node = sidora_get_update_or_create_concept_node($pid, $info);
+  }
+  return $node;
+}
+
+/*
+ * Return a quick pid to node without doing a node DB lookup, or add to list
+ */
+function sidora_quick_pid_to_node($pid, $node_id = ''){
+  static $ptn = array();
+  if (empty($node_id)){
+    if (isset($ptn[$pid])) {
+      return $ptn[$pid];
+    }
+    return NULL;
+  }
+  else {
+    $ptn[$pid] = $node_id;
+  }
+}
+
 // All functions below this line are direct copies from exhibition.  If you change them, rename it and move above this line
 // ***********************************************************
 // ***********************************************************
@@ -8949,6 +9067,7 @@ function sidora_get_update_or_create_concept_node($pid, $info = NULL){
     if (!empty($info)){
       sidora_update_concept_node($node, $info);
     }
+    return $node;
   }
 }
 
