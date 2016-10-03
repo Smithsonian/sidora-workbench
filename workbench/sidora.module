@@ -2084,11 +2084,31 @@ function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $ex
     $pid = $two;
     $date = date('m/d/Y h:i:s a', time());
     print $date . "\n";
-    $root_node = sidora_create_full_node_set($pid, 'Root', 0);
+    $updated_set = array();
+    $root_node = sidora_create_full_node_set($pid, 'Root', 0, $updated_set);
     var_dump($root_node);
     $date = date('m/d/Y h:i:s a', time());
     print $date . "\n";
     exit();
+  }
+  if ($one == 'html_tree_from_nodes'){
+    $root_pid = $two;
+    $filled = sidora_build_tree_from_nodes_by_pid($root_pid);
+    $filled = $filled[0]['children'];
+    /* */
+    $num_levels = 4;
+    $root_label = 'Root';
+    $html_tree_from_query_result = sidora_html_tree($filled, '', $num_levels);
+    $html_escaped_name = htmlspecialchars($root_label);
+    $to_return = '';
+    $to_return .= '<ul>';
+    $to_return .= '<li><a href="'.base_path().'sidora/workbench/#'.$root_pid.'" pid="'.$root_pid.'" fullname="'.$html_escaped_name.'">';
+    $to_return .= $root_label;
+    $to_return .= '</a>';
+    $to_return .= '<ul>';
+    $to_return .= $html_tree_from_query_result;
+    $to_return .= '</ul></li></ul>';
+    print $to_return;
   }
   if ($one == 'tree_from_nodes'){
     $pid = $two;
@@ -6233,7 +6253,7 @@ function sidora_fill_concepts_children($query_result, $current_path = array(), &
         $child_info['concept_children'] = implode(',',$filled_children);
         sidora_update_concept_node($node, $child_info);
         print ("Updating $node->nid <br>"); //BBB
-        var_dump($child_info); //BBB
+        //var_dump($child_info); //BBB
         print ("<br>"); //BBB
       }else{
         $query_result[$c_index]['already_in_tree'] = true;
@@ -7001,8 +7021,37 @@ function sidora_generate_child_resource_sparql_query($pid, array $resource_types
 /**
  * Recursively create the tree based on the query information returned
  */
-function sidora_create_full_node_set($pid, $label, $num_resources) {
-  print '.'.$pid;
+function sidora_create_full_node_set($pid, $label, $num_resources, &$already_updated, $path = "") {
+  $depth = 3;
+  $depth_count = explode(" ",$path);
+  if (count($depth_count) > $depth){
+    return NULL;
+  }
+  /*
+  //If I exist and have my children already set, return.
+  $nid = sidora_get_concept_node_id($pid);
+  if (!empty($nid)) {
+    $node = node_load($nid);
+    $children = NULL;
+    if (!empty($node->field_sidora_concept_children)){
+      $children = explode(',',$node->field_sidora_concept_children[$node->language][0]['value']);
+    }
+    if (!empty($children)){
+      return $node;
+    }
+  }
+  */
+  if (count($already_updated) > 100){
+    print "\nHit max, exiting";
+    print "\n". date('Y-m-d H:i:s');
+    exit();
+  }
+  if (in_array($pid, $already_updated)){
+    return NULL;
+  }
+  //print "\n===============================================";
+  print "\n path:$path $pid";
+  flush();
   $results = _sidora_get_child_results_cache($pid);
   $child_nids = array();
   $self_child = FALSE;
@@ -7014,17 +7063,31 @@ function sidora_create_full_node_set($pid, $label, $num_resources) {
     }
     else {
       // Do not recreate the node if we already created it this session
-      $existing_child_nid = sidora_quick_pid_to_node($child_pid);
-      if ($existing_child_nid) {
+      //$existing_child_nid = sidora_quick_pid_to_node($child_pid);
+      $existing_child_nid = sidora_get_concept_node_id($child_pid);
+      if ($existing_child_nid && FALSE) {
         $child_nids[] = $existing_child_nid;
       }
       else {
-        $child_node = sidora_create_full_node_set($child_pid, $child['t']['value'], $child['k0']['value']);
-        $child_nids[] = $child_node->nid;
-        // Store info in lookup table so we don't recreate it later and don't have to check the db for it
-        sidora_quick_pid_to_node($child_pid, $child_node->nid);
+        $child_node = sidora_create_full_node_set($child_pid, $child['t']['value'], $child['k0']['value'], $already_updated, $path." ".$pid);
+        if ($child_node === NULL){
+          print "\n-Already updated-".$child_pid."-AU- Path:$path";
+          // Means we have a loop, what do we want to do about that?
+        }
+        else {
+    //print "\nwhat: $path";
+    //var_dump($child_nids);
+          $child_nids[] = $child_node->nid;
+    //var_dump($child_nids);
+          $already_updated[] = $child_pid;
+        }
+        //// Store info in lookup table so we don't recreate it later and don't have to check the db for it
+        //sidora_quick_pid_to_node($child_pid, $child_node->nid);
       }
     }
+  }
+  if (count($child_nids) == 0){
+    print "\nLeaf: $path $pid";
   }
   $info = array(
     'label' => $label,
