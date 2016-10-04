@@ -178,9 +178,13 @@ SidoraQueue.prototype.Done = function(completedItem, ajaxReturn){
       //If there was an update to the Pid user is currently looking at then anything may have changed.  Reload it.
       if (sidora.concept.GetPid() == completedItem.pidsBeingProcessed[i]){
         if ((completedItem.action == 'deleteConcept') && !(executeOnceOnly)){
-           window.location.href = sidora.util.getParentHref(window.location.href);
-           sidora.UpdateTitleBasedOnNameInTree();
-           executeOnceOnly = true;
+          window.location.href = sidora.util.getParentHref(window.location.href);
+          var jst = jQuery("#forjstree").jstree();
+          var currentUrl = window.location.pathname + window.location.search + window.location.hash;
+          var itemSelectorForCurrentItemInTree = 'a[href=\"'+currentUrl+'\"]';
+          var selectThisNode = jst.get_node(itemSelectorForCurrentItemInTree);
+          jst.select_node(selectThisNode);
+          executeOnceOnly = true;
         }    
         sidora.concept.LoadContent();
         sidora.util.refreshPidInTree();
