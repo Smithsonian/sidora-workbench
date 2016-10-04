@@ -7025,6 +7025,8 @@ function sidora_create_full_node_set($pid, $label, $num_resources, &$already_upd
   $depth = 3;
   $depth_count = explode(" ",$path);
   if (count($depth_count) > $depth){
+    // Create the node as a placeholder, but do not fill in the information or children
+    
     return NULL;
   }
   /*
@@ -9120,7 +9122,7 @@ function sidora_import_xml_form_submit(array $form, array &$form_state) {
 /**
  * Retrieves or creates and returns a concept node for this pid
  */
-function sidora_get_update_or_create_concept_node($pid, $info = NULL){
+function sidora_get_update_or_create_concept_node($pid, $info = NULL, $set_fedora_sync = FALSE){
   $node_id = sidora_get_concept_node_id($pid, $info);
   if ($node_id === NULL){
     return sidora_create_concept_node($pid, $info);
@@ -9128,17 +9130,20 @@ function sidora_get_update_or_create_concept_node($pid, $info = NULL){
   else {
     $node = node_load($node_id);
     if (!empty($info)){
-      sidora_update_concept_node($node, $info);
+      sidora_update_concept_node($node, $info, $set_fedora_sync);
     }
     return $node;
   }
 }
 
-function sidora_update_concept_node($node, $info) {
+function sidora_update_concept_node($node, $info, $set_fedora_sync = FALSE) {
   $node_wrapper = entity_metadata_wrapper('node', $node);
   $node_wrapper->field_fedora_label->set($info['label']);
   $node_wrapper->field_sidora_concept_children->set($info['concept_children']);
   $node_wrapper->field_sidora_resource_children->set($info['resource_children']);
+  if ($set_fedora_sync) {
+    $node_wrapper->field_sidora_fedora_sync->set(time());
+  }
   $node_wrapper->save(); 
 }
 /**
@@ -9163,7 +9168,7 @@ function sidora_get_concept_node_id($pid) {
 /**
  * Creates a concept node - does not check to see if a node already exists for this pid
  */
-function sidora_create_concept_node($pid, $info = NULL){
+function sidora_create_concept_node($pid, $info = NULL, $set_fedora_sync = FALSE){
   // add node properties
   $newNode = (object) NULL;
   $newNode->type = sidora_get_concept_content_type();
@@ -9187,6 +9192,9 @@ function sidora_create_concept_node($pid, $info = NULL){
     $newNode->field_sidora_resource_children[$newNode->language][]['value'] = $info['resource_children'];
   }
   
+  if ($set_fedora_sync) {
+    $newNode->field_sidora_fedora_sync[$newNode->language][]['value'] = time();
+  }
 
   // Prepare node for saving
   $newNode = node_submit($newNode); 
@@ -9228,6 +9236,9 @@ function sidora_create_fields_for_fedora_object_nodes(){
     'Fedora Label'=> array('field_name' => 'field_fedora_label', 'type' => 'text', 'settings' => array('max_length' => 128)),
     'Fedora Child Concepts'=> array('field_name' => 'field_sidora_concept_children', 'type' => 'text',  'settings' => array('max_length' => 2000)),
     'Fedora Child Resources'=> array('field_name' => 'field_sidora_resource_children', 'type' => 'text',  'settings' => array('max_length' => 2000)),
+    // Fedora Sync is a timestamp in the system given by time() that the data was last updated from Fedora
+    // It can be compared against the node->updated and if the offset is known between this system and Fedora against the updated date there
+    'Fedora Sync'=> array('field_name' => 'field_sidora_fedora_sync', 'type' => 'text'),
   );
   foreach ($fields as $label => $field) {
     $field_name = $field['field_name'];
