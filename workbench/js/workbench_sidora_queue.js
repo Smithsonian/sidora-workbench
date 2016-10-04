@@ -110,11 +110,11 @@ SidoraQueue.prototype.Fail = function(completedItem, ajaxReturn){
 }
 SidoraQueue.prototype.Retry = function(pid) {
   jQuery('#edit_form').remove();
-	jQuery("body").append("<div id='edit_form' style='visibility:hidden;'></div>");
-	var failedForm = sidora.queue.completedFailedRequests.filter(function (obj){ return obj.pid === pid;})[0];
-	jQuery("#edit_form").text(failedForm.form)
-	Shadowbox.close();
-	Shadowbox.open({
+  jQuery("body").append("<div id='edit_form' style='visibility:hidden;'></div>");
+  var failedForm = sidora.queue.completedFailedRequests.filter(function (obj){ return obj.pid === pid;})[0];
+  jQuery("#edit_form").text(failedForm.form)
+  Shadowbox.close();
+  Shadowbox.open({
         content: Drupal.settings.basePath+"sidora/edit_metadata/"+pid+"&retry",
 	player:     "iframe",
         title:      "Edit Metadata",
@@ -129,7 +129,7 @@ SidoraQueue.prototype.Retry = function(pid) {
         }
       }
     });
-}			     
+}           
 SidoraQueue.prototype.Done = function(completedItem, ajaxReturn){
   completedItem.ajaxReturn = ajaxReturn;
   this.completedRequests.push(completedItem);
@@ -192,26 +192,26 @@ SidoraQueue.prototype.Done = function(completedItem, ajaxReturn){
 	  if ((processedResourceCountArray.length > 1) && (processedResourceCountArray[0] == processedResourceCountArray[1]-1)){  
             // trying to get the last item of the current queue
             sidora_util.writeCookie('Drupal.selectResource','1','30');
-	    if (sidora_util.readCookie('Drupal.dtFilter') != ''){
-	      if ((completedItem.fullObject.ajaxRequest.data.indexOf('islandora_ingest_form') > -1) && (completedItem.fullObject.ajaxRequest.data.indexOf('resource_model') > -1)){
-	        var rmPattern = new RegExp('&resource_model=(.*)&');
-	        var rmArray = rmPattern.exec(completedItem.fullObject.ajaxRequest.data);
-	        if ((Array.isArray(rmArray))&& (rmArray.length >= 2) && (rmArray[1] != sidora_util.readCookie('Drupal.dtFilter'))){
-		  if (!sidora.util.isConfirmShowing()){
-		    sidora.util.Confirm("Reset the view filter on resources","The resource model for the new resources does not match the current view filter set on resources. Press Reset to reset the filter to view all resources.",
+      if (sidora_util.readCookie('Drupal.dtFilter') != ''){
+        if ((completedItem.fullObject.ajaxRequest.data.indexOf('islandora_ingest_form') > -1) && (completedItem.fullObject.ajaxRequest.data.indexOf('resource_model') > -1)){
+          var rmPattern = new RegExp('&resource_model=(.*)&');
+          var rmArray = rmPattern.exec(completedItem.fullObject.ajaxRequest.data);
+          if ((Array.isArray(rmArray))&& (rmArray.length >= 2) && (rmArray[1] != sidora_util.readCookie('Drupal.dtFilter'))){
+      if (!sidora.util.isConfirmShowing()){
+        sidora.util.Confirm("Resources Filter Warning","The resources you just added aren't visible right now because they are filtered out by the current resource filter. Click 'Reset' to if you want to view all resources, or close this window to leave the current filter.",
                          function(){
                            sidora_util.writeCookie('Drupal.dtFilter','','30');
-			   jQuery('#sidora-resource-type-dropdown').val('');
-			   sidora.resources.reloadDatatableBasedOnCurrentFilters();
+         jQuery('#sidora-resource-type-dropdown').val('');
+         sidora.resources.reloadDatatableBasedOnCurrentFilters();
                          },
-			 function(){},
-			 'Reset'
+       function(){},
+       'Reset'
                       );
-		  }
-		}
-	      }		
+      }
+    }
+        }    
             }
-	}
+  }
         } 
       }else if (sidora.resources.IsOnScreen(completedItem.pidsBeingProcessed[i])){
         sidora.concept.LoadContent();
@@ -230,7 +230,7 @@ SidoraQueue.prototype.NotificationWindow.Show = function(message, isError){
     var notificationWindowHtml = '<div id="queueMessage" style="display:none; position: fixed; bottom: 26px; right: 30px; min-height: 50px; width: 400px;"><div id="" role="tooltip" class="queue-message-block ui-tooltip ui-widget ui-corner-all ui-widget-content" style=" display: block;width: 100%;height: 100%;max-width: 1000px;"><div class="notification-window-message"></div><div class="queue-mb-close" style="background: url(' + Drupal.settings.islandora_xml_forms.basepath + 'elements/css/images/ui-icons_222222_256x240.png) no-repeat -30px -191px;width: 20px;height: 20px;z-index: 100;position: absolute;right: 0;top: 0; cursor: pointer; cursor: hand;"></div></div></div>';
     jQuery("body").append(notificationWindowHtml);
       jQuery("#queueMessage").mouseenter(function(){
-			  nw.MouseIsInside = true;
+        nw.MouseIsInside = true;
         nw.UpdateTime = Date.now();
         //User placed their mouse in the div, reset the timer - maybe the user wants it to stay on screen
         //The timer is reset for the "overshot" where the user tried to get the mouse in on time, but left it prematurely
