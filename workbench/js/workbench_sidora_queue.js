@@ -164,7 +164,6 @@ SidoraQueue.prototype.Done = function(completedItem, ajaxReturn){
     this.NotificationWindow.Show(toShow, true);
   }else{
     if (!completedItem.isSilent) this.NotificationWindow.Show(completedItem.userFriendlyName);
-    //var processedResourceArray = completedItem.userFriendlyName.split(':');
     var processedItemCount = completedItem.requestStat;
     var executeOnceOnly = false;
     for (var i = 0; i < completedItem.pidsBeingProcessed.length; i++){
@@ -178,41 +177,41 @@ SidoraQueue.prototype.Done = function(completedItem, ajaxReturn){
       if (completedItem.pidsBeingProcessed.length == '2') sidora.util.refreshNodeByID(completedItem.pidsBeingProcessed);
       //If there was an update to the Pid user is currently looking at then anything may have changed.  Reload it.
       if (sidora.concept.GetPid() == completedItem.pidsBeingProcessed[i]){
-  if ((completedItem.action == 'deleteConcept') && !(executeOnceOnly)){
-          window.location.href = sidora.util.getParentHref(window.location.href);
-    sidora.UpdateTitleBasedOnNameInTree();
-          executeOnceOnly = true;
-  }    
-  sidora.concept.LoadContent();
-  sidora.util.refreshPidInTree();
-        //if (processedResourceArray.length > 1){
+        if ((completedItem.action == 'deleteConcept') && !(executeOnceOnly)){
+           window.location.href = sidora.util.getParentHref(window.location.href);
+           sidora.UpdateTitleBasedOnNameInTree();
+           executeOnceOnly = true;
+        }    
+        sidora.concept.LoadContent();
+        sidora.util.refreshPidInTree();
         if (processedItemCount != ''){
-    //var processedResourceCountArray = processedResourceArray[1].split(' of ');
           var processedResourceCountArray = processedItemCount.split(' of ');
-    if ((processedResourceCountArray.length > 1) && (processedResourceCountArray[0] == processedResourceCountArray[1]-1)){  
+          if ((processedResourceCountArray.length > 1) && (processedResourceCountArray[0] == processedResourceCountArray[1]-1)){
             // trying to get the last item of the current queue
             sidora_util.writeCookie('Drupal.selectResource','1','30');
-      if (sidora_util.readCookie('Drupal.dtFilter') != ''){
-        if ((completedItem.fullObject.ajaxRequest.data.indexOf('islandora_ingest_form') > -1) && (completedItem.fullObject.ajaxRequest.data.indexOf('resource_model') > -1)){
-          var rmPattern = new RegExp('&resource_model=(.*)&');
-          var rmArray = rmPattern.exec(completedItem.fullObject.ajaxRequest.data);
-          if ((Array.isArray(rmArray))&& (rmArray.length >= 2) && (rmArray[1] != sidora_util.readCookie('Drupal.dtFilter'))){
-      if (!sidora.util.isConfirmShowing()){
-        sidora.util.Confirm("Resources Filter Warning","The resources you just added aren't visible right now because they are filtered out by the current resource filter. Click 'Reset' to if you want to view all resources, or close this window to leave the current filter.",
-                         function(){
-                           sidora_util.writeCookie('Drupal.dtFilter','','30');
-         jQuery('#sidora-resource-type-dropdown').val('');
-         sidora.resources.reloadDatatableBasedOnCurrentFilters();
-                         },
-       function(){},
-       'Reset'
-                      );
-      }
-    }
-        }    
+            if (sidora_util.readCookie('Drupal.dtFilter') != ''){
+              if ((completedItem.fullObject.ajaxRequest.data.indexOf('islandora_ingest_form') > -1) && (completedItem.fullObject.ajaxRequest.data.indexOf('resource_model') > -1)){
+                var rmPattern = new RegExp('&resource_model=(.*)&');
+                var rmArray = rmPattern.exec(completedItem.fullObject.ajaxRequest.data);
+                if ((Array.isArray(rmArray))&& (rmArray.length >= 2) && (rmArray[1] != sidora_util.readCookie('Drupal.dtFilter'))){
+                  if (!sidora.util.isConfirmShowing()){
+                    sidora.util.Confirm(
+                      "Resources Filter Warning",
+                      "The resources you just added aren't visible right now because they are filtered out by the current resource filter. Click 'Reset' to if you want to view all resources, or close this window to leave the current filter.",
+                      function(){
+                        sidora_util.writeCookie('Drupal.dtFilter','','30');
+                        jQuery('#sidora-resource-type-dropdown').val('');
+                        sidora.resources.reloadDatatableBasedOnCurrentFilters();
+                      },
+                      function(){},
+                      'Reset'
+                    );
+                  }
+                }
+              }    
             }
-  }
-        } 
+          }
+        } //Ends processedItemCount != ''
       }else if (sidora.resources.IsOnScreen(completedItem.pidsBeingProcessed[i])){
         sidora.concept.LoadContent();
       } 
