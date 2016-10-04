@@ -178,11 +178,12 @@ SidoraQueue.prototype.Done = function(completedItem, ajaxReturn){
       //If there was an update to the Pid user is currently looking at then anything may have changed.  Reload it.
       if (sidora.concept.GetPid() == completedItem.pidsBeingProcessed[i]){
         if ((completedItem.action == 'deleteConcept') && !(executeOnceOnly)){
-          window.location.href = sidora.util.getParentHref(window.location.href);
+          parentLocation = sidora.util.getParentHref(window.location.href);
           var jst = jQuery("#forjstree").jstree();
-          var currentUrl = window.location.pathname + window.location.search + window.location.hash;
-          var itemSelectorForCurrentItemInTree = 'a[href=\"'+currentUrl+'\"]';
+          var parentLocationFromBasePath = parentLocation.substring(parentLocation.indexOf(Drupal.settings.basePath));
+          var itemSelectorForCurrentItemInTree = 'a[href=\"'+parentLocationFromBasePath+'\"]';
           var selectThisNode = jst.get_node(itemSelectorForCurrentItemInTree);
+          jst.deselect_all();
           jst.select_node(selectThisNode);
           executeOnceOnly = true;
         }    
