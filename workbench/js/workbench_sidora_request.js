@@ -1,4 +1,4 @@
-var SidoraRequest = function(userFriendlyNameOrFullObject, ajaxRequestUrl, doneFunction, failFunction, pidsBeingProcessed){
+var SidoraRequest = function(userFriendlyNameOrFullObject, ajaxRequestUrl, doneFunction, failFunction, pidsBeingProcessed,action,requestStat){
   //multi-constructor
   //if only one non-string, then assume it's an object of this type:
   //{
@@ -12,30 +12,34 @@ var SidoraRequest = function(userFriendlyNameOrFullObject, ajaxRequestUrl, doneF
   if (typeof(userFriendlyNameOrFullObject) != 'string'){
     this.pullFromConfigObject(userFriendlyNameOrFullObject);
   }else{
-		var userFriendlyName = userFriendlyNameOrFullObject;
-		if (typeof(pidsBeingProcessed) == 'string') pidsBeingProcessed = [pidsBeingProcessed];
-		if (typeof(pidsBeingProcessed) == 'undefined' || !(pidsBeingProcessed instanceof Array)){
-			pidsBeingProcessed = [];
-		}
-		this.fullObject = null;
-		this.ajaxRequestUrl = ajaxRequestUrl;
-		this.doneFunction = doneFunction;
-		this.failFunction = failFunction;
-		this.pidsBeingProcessed = pidsBeingProcessed;
-		this.userFriendlyName = userFriendlyName;
-    
+    var userFriendlyName = userFriendlyNameOrFullObject;
+    if (typeof(pidsBeingProcessed) == 'string') pidsBeingProcessed = [pidsBeingProcessed];
+      if (typeof(pidsBeingProcessed) == 'undefined' || !(pidsBeingProcessed instanceof Array)){
+	pidsBeingProcessed = [];
+      }
+      this.fullObject = null;
+      this.ajaxRequestUrl = ajaxRequestUrl;
+      this.doneFunction = doneFunction;
+      this.failFunction = failFunction;
+      this.pidsBeingProcessed = pidsBeingProcessed;
+      this.userFriendlyName = userFriendlyName;
+      this.action = action;
+      this.requestStat = requestStat;
+
   }
 }
 SidoraRequest.prototype.isSilent = false;
 SidoraRequest.prototype.pullFromConfig = function(configObject){
-	this.fullObject = configObject;
-	this.pidsBeingProcessed = this.fullObject.pidsBeingProcessed;
-	if (typeof(pidsBeingProcessed) == 'undefined'){
-		this.pidsBeingProcessed = [];
-	}
-	this.userFriendlyName = this.fullObject.userFriendlyName; 
+  this.fullObject = configObject;
+  this.pidsBeingProcessed = this.fullObject.pidsBeingProcessed;
+  if (typeof(pidsBeingProcessed) == 'undefined'){
+    this.pidsBeingProcessed = [];
+  }
+  this.userFriendlyName = this.fullObject.userFriendlyName; 
   this.pidsBeingProcessed = this.fullObject.pidsBeingProcessed;
   this.isSilent = this.fullObject.isSilent;
+  this.action = this.fullObject.action;
+  this.requestStat = this.fullObject.requestStat;
 }
 
 SidoraRequest.prototype.performAjax = function(){

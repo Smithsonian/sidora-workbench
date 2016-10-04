@@ -17,7 +17,16 @@ SidoraQueue.prototype.showWarning = function(warning){
 SidoraQueue.prototype.showMessage = function(message){
   console.log(message);
 }
-SidoraQueue.prototype.RequestPost = function(userFriendlyName, ajaxRequestUrl, postData, doneFunction, failFunction, pidsBeingProcessed){
+/* The action property in Sidora queue request object is used to track the actual action being performed in the request, instead of deriving it from the 
+ * userFriendlyName. The requestStat property is used to track the item count in the current queue, e.g., if there are 3 requests being queued for deleting 
+ * 3 resources, the requestStat will contain 0 of 3, 1 of 3,etc.
+ * Use cases for action and requestStat: When multiple resources are added, the last resource added needs to be highlighted and opened in the preview pane.
+ * Prior to requestStat, this was done by geting the item count from userFriendlyName. RequestStat is a more precise way of figuring out if we are processing 
+ * the last resource in the queue.
+ * Also, when a concept is deleted, the window url needs to change to the parent pid so Sidora.Concept.LoadContent loads the metadata for the parent pid. The 
+ * done funtion of Sidora queue checks the action property to accomplish this functionality.
+*/ 
+SidoraQueue.prototype.RequestPost = function(userFriendlyName, ajaxRequestUrl, postData, doneFunction, failFunction, pidsBeingProcessed,action='',requestStat=''){
   console.log("in RequestPost of queue : Requested post '"+userFriendlyName+"' to post to:"+ajaxRequestUrl);
   if (typeof(pidsBeingProcessed) == 'string') pidsBeingProcessed = [pidsBeingProcessed];
   if (typeof(doneFunction) == 'undefined' || !jQuery.isFunction(doneFunction)) doneFunction = function(){};
@@ -43,7 +52,9 @@ SidoraQueue.prototype.RequestPost = function(userFriendlyName, ajaxRequestUrl, p
     ajaxRequest: ajaxObj,
     userFriendlyName: userFriendlyName,
     pidsBeingProcessed: pidsBeingProcessed,
-    isSilent: this.incomingRequestsAreSilent
+    isSilent: this.incomingRequestsAreSilent,
+    action: action,
+    requestStat: requestStat
   };
   sr.pullFromConfig(sidoraRequestConfig);
   myself.SidoraRequest(sr);
@@ -51,7 +62,7 @@ SidoraQueue.prototype.RequestPost = function(userFriendlyName, ajaxRequestUrl, p
 /*
  * Reminder: Request and RequestPost are handled differently
  */
-SidoraQueue.prototype.Request = function(userFriendlyName, ajaxRequestUrl, doneFunction, failFunction, pidsBeingProcessed){
+SidoraQueue.prototype.Request = function(userFriendlyName, ajaxRequestUrl, doneFunction, failFunction, pidsBeingProcessed,action='',requestStat=''){
   var myself = this;
   if (typeof(pidsBeingProcessed) == 'string') pidsBeingProcessed = [pidsBeingProcessed];
   if (typeof(doneFunction) == 'undefined' || !jQuery.isFunction(doneFunction)) doneFunction = function(){};
@@ -63,7 +74,7 @@ SidoraQueue.prototype.Request = function(userFriendlyName, ajaxRequestUrl, doneF
   srFailFunction = function(){ 
     failFunction.apply(this,arguments); myself.Fail(this, arguments); myself.requestInProcess = null; myself.Next(); 
   };
-  var sr = (new SidoraRequest(userFriendlyName, ajaxRequestUrl, srDoneFunction, srFailFunction, pidsBeingProcessed));
+  var sr = (new SidoraRequest(userFriendlyName, ajaxRequestUrl, srDoneFunction, srFailFunction, pidsBeingProcessed,action,requestStat));
   sr.isSilent = this.incomingRequestsAreSilent;
   myself.SidoraRequest(sr);
 }
@@ -105,9 +116,9 @@ SidoraQueue.prototype.Retry = function(pid) {
 	Shadowbox.close();
 	Shadowbox.open({
         content: Drupal.settings.basePath+"sidora/edit_metadata/"+pid+"&retry",
-				player:     "iframe",
+	player:     "iframe",
         title:      "Edit Metadata",
-      options: {
+        options: {
         onFinish:  function(){
           //Allow the frame to go fullscreen if needed
           jQuery("#sb-player").attr("allowfullscreen","true");
@@ -134,12 +145,12 @@ SidoraQueue.prototype.Done = function(completedItem, ajaxReturn){
   try{ jsonData = jQuery.parseJSON(jsonString); } catch (e){
 	  if (jsonString.indexOf("<h2 class=\"element-invisible\">Error message</h2")>0){
 	    var toShow = "Did not perform action:"+completedItem.userFriendlyName;
-			if (completedItem.fullObject.userFriendlyName.indexOf("Edit MetaData")>0){
-			  this.completedFailedRequests.push({pid:completedItem.pidsBeingProcessed[0],form:jsonString})
-			  toShow += '<div class="messages error"><a rel="shadowbox; width=500; height=600; player=iframe" href="javascript:void(0)" id="retry_edit_metadata" class="' + completedItem.pidsBeingProcessed[0] + '" onClick = window.sidora.queue.Retry("'+completedItem.pidsBeingProcessed[0]+'");>Click here to view the errors and retry</a></div>';
-			}
-			this.NotificationWindow.Show(toShow, true);
-			return;
+	    if (completedItem.fullObject.userFriendlyName.indexOf("Edit MetaData")>0){
+	     this.completedFailedRequests.push({pid:completedItem.pidsBeingProcessed[0],form:jsonString})
+	      toShow += '<div class="messages error"><a rel="shadowbox; width=500; height=600; player=iframe" href="javascript:void(0)" id="retry_edit_metadata" class="' + completedItem.pidsBeingProcessed[0] + '" onClick = window.sidora.queue.Retry("'+completedItem.pidsBeingProcessed[0]+'");>Click here to view the errors and retry</a></div>';
+        	}
+		this.NotificationWindow.Show(toShow, true);
+		return;
 		}	
 	}
   if (jsonData != null && jsonData.error){
@@ -153,7 +164,9 @@ SidoraQueue.prototype.Done = function(completedItem, ajaxReturn){
     this.NotificationWindow.Show(toShow, true);
   }else{
     if (!completedItem.isSilent) this.NotificationWindow.Show(completedItem.userFriendlyName);
-    var processedResourceArray = completedItem.userFriendlyName.split(':');
+    //var processedResourceArray = completedItem.userFriendlyName.split(':');
+    var processedItemCount = completedItem.requestStat;
+    var executeOnceOnly = false;
     for (var i = 0; i < completedItem.pidsBeingProcessed.length; i++){
       if (sidora.resources.individualPanel.resourceOfInterest != null && sidora.resources.individualPanel.resourceOfInterest.pid == completedItem.pidsBeingProcessed[i]){
         sidora.resources.individualPanel.LoadRelationships();
@@ -165,11 +178,18 @@ SidoraQueue.prototype.Done = function(completedItem, ajaxReturn){
       if (completedItem.pidsBeingProcessed.length == '2') sidora.util.refreshNodeByID(completedItem.pidsBeingProcessed);
       //If there was an update to the Pid user is currently looking at then anything may have changed.  Reload it.
       if (sidora.concept.GetPid() == completedItem.pidsBeingProcessed[i]){
-        sidora.concept.LoadContent();
+	if ((completedItem.action == 'deleteConcept') && !(executeOnceOnly)){
+          window.location.href = sidora.util.getParentHref(window.location.href);
+	  sidora.UpdateTitleBasedOnNameInTree();
+          executeOnceOnly = true;
+	}	  
+	sidora.concept.LoadContent();
 	sidora.util.refreshPidInTree();
-        if (processedResourceArray.length > 1){
-          var processedResourceCountArray = processedResourceArray[1].split(' of ');
-          if ((processedResourceCountArray.length > 1) && (processedResourceCountArray[0] == processedResourceCountArray[1])){  
+        //if (processedResourceArray.length > 1){
+        if (processedItemCount != ''){
+	  //var processedResourceCountArray = processedResourceArray[1].split(' of ');
+          var processedResourceCountArray = processedItemCount.split(' of ');
+	  if ((processedResourceCountArray.length > 1) && (processedResourceCountArray[0] == processedResourceCountArray[1]-1)){  
             // trying to get the last item of the current queue
             sidora_util.writeCookie('Drupal.selectResource','1','30');
 	    if (sidora_util.readCookie('Drupal.dtFilter') != ''){
@@ -233,8 +253,8 @@ SidoraQueue.prototype.NotificationWindow.Show = function(message, isError){
   this.UpdateTime = Date.now();
   if (isError || nw.showingError){
     nw.showingError = true;
-		jQuery("#queueMessage").unbind('mouseenter');
-		jQuery("#queueMessage").unbind('mouseleave');
+    jQuery("#queueMessage").unbind('mouseenter');
+    jQuery("#queueMessage").unbind('mouseleave');
   }else{
     setTimeout(function(){nw.CheckHide();}, this.SecondsOnScreen * 1000);
   }
@@ -255,7 +275,7 @@ SidoraQueue.prototype.NotificationWindow.Hide = function(){
 }
 SidoraQueue.prototype.NotificationWindow.ResetError = function(queuedErrors){
   var nw = this;
-	nw.showingError = queuedErrors;
+  nw.showingError = queuedErrors;
 }	
 SidoraQueue.prototype.updateFooterWithRequestInProcess = function(){
   if (this.requestInProcess != null && !this.requestInProcess.isSilent){

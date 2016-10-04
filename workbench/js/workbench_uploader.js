@@ -205,10 +205,10 @@ window.startBatch = function(){
           type = "Concept";
         }
         var friendlyName = " Edit MetaData of "+type+":"+(i+1)+" of "+window.batchRequests.length;
-        sidora.queue.RequestPost(friendlyName,ajaxSettings.url,postData, onSuccess, function(){}, ajaxSettings.pidsOfInterest);
+        sidora.queue.RequestPost(friendlyName,ajaxSettings.url,postData, onSuccess, function(){}, ajaxSettings.pidsOfInterest,'editMeta',i+' of '+window.batchRequests.length);
       }else{
         var friendlyName = " Create "+currentInfo.formname+" Resource:"+(i+1)+" of "+window.batchRequests.length;
-        sidora.queue.RequestPost(friendlyName,window.location.href,postData, ccSuccess, function(){}, currentInfo.parentPid);
+        sidora.queue.RequestPost(friendlyName,window.location.href,postData, onSuccess, function(){}, currentInfo.parentPid,'createResource',i+' of '+window.batchRequests.length);
       } 
     }
     sidora.queue.Next();
@@ -336,9 +336,9 @@ window.prepIslandoraFormForSubmit = function(formName, onSuccessfulFormSubmit, o
       var ajaxUrl = sidora_util.ajaxUrl(jQuery("#"+formName).attr("count"));
     }else{
       if (window.location.href.indexOf('retry') > 0) {
-	 var ajaxUrl = sidora_util.ajaxUrl(0);
+        var ajaxUrl = sidora_util.ajaxUrl(0);
       }else{  
-	 var ajaxUrl = window.location.href;
+        var ajaxUrl = window.location.href;
       } 
     }
     ajaxSettings = ({

@@ -598,7 +598,7 @@ sidora.InitiateJSTree = function(){
         sidora.concept.LoadContentHelp.Relationships();
       }, 
       sidora.util.createFunctionRefreshTree(moveToPid)
-      , [moveToPid,toMovePid]);
+      , [moveToPid,toMovePid],'copyConcept');
       sidora.queue.incomingRequestsAreSilent = false;
       sidora.queue.Next();
     });
@@ -626,7 +626,7 @@ sidora.InitiateJSTree = function(){
         sidora.concept.LoadContentHelp.Relationships();
       },
       sidora.util.createFunctionRefreshTree(moveFromPid)
-      , [toMovePid,moveFromPid]);
+      , [toMovePid,moveFromPid],'unassociate');
       sidora.queue.incomingRequestsAreSilent = false;
       sidora.queue.Next();
     });
@@ -658,7 +658,7 @@ sidora.InitiateJSTree = function(){
         sidora.concept.LoadContentHelp.Relationships();
       },
       sidora.util.createFunctionRefreshTree([moveToPid,moveFromPid])
-      , [moveToPid,toMovePid,moveFromPid]);
+      , [moveToPid,toMovePid,moveFromPid],'moveConcept');
       sidora.queue.incomingRequestsAreSilent = false;
       sidora.queue.Next();
     });
@@ -759,7 +759,7 @@ sidora.InitiateJSTree = function(){
                           "Move Resources",
                           "<h4>All items selected for move already exist on the target.</h4>"+showTextForUnassociate,
                           function(){
-                            sidora.resources.performCopyOrMove("move",mouseOverObject.id, resourcesToMoveOver);
+                            sidora.resources.performCopyOrMove("move",mouseOverObject.id, resourcesToUnassociate);
                           }
                         );
                       }
@@ -1349,16 +1349,18 @@ sidora.resources.performCopyOrMove = function(copyOrMove, toLocationId, resource
       jQuery(jq(pids[i])).addClass("is-being-moved");
       userFriendlyName = "Moving ";
       onSuccess = onSuccessfulMove;
+      queueAction = 'moveResource';
     }else{
       pidListForRequest = [droppedOn,droppedPid];
       userFriendlyName = "Copying ";
       onSuccess = onSuccessfulCopy;
+      queueAction = 'copyResource';
     }
     userFriendlyName += "<em>"+sidora.util.FriendlyNameDirect(droppedPid)+"</em>";
     userFriendlyName += " from <em>"+sidora.util.FriendlyNameDirect(fromParent)+"</em>";
     userFriendlyName += " to <em>"+sidora.util.FriendlyNameDirect(droppedOn)+"</em>";
     var requestUrl = Drupal.settings.basePath+'sidora/ajax_parts/'+action+'/'+droppedOn+'/'+droppedPid;
-    sidora.queue.Request(userFriendlyName, requestUrl, onSuccess, null, pidListForRequest);
+    sidora.queue.Request(userFriendlyName, requestUrl, onSuccess, null, pidListForRequest,queueAction,i+' of '+pids.length);
     console.log(userFriendlyName);
   }
   sidora.queue.Next();
@@ -2446,15 +2448,15 @@ sidora.resources.DeleteResourceBusinessLogic = function(onSuccess, onFailure){
   }
 }
 sidora.concept.DeleteConceptBusinessLogic = function(onSuccess, onFailure){
-  return sidora.util.deletePid(this.GetPid(), onSuccess, onFailure);
+  return sidora.util.deletePid(this.GetPid(), onSuccess, onFailure,'deleteConcept');
 }
 /*
  * Unassociate and delete orphan of the Pid
  */
-sidora.util.deletePid = function(pidOfInterest, onSuccess, onFailure){
+sidora.util.deletePid = function(pidOfInterest, onSuccess, onFailure,action=''){
   var unassociateFrom = sidora.concept.GetPid();
   if (unassociateFrom == pidOfInterest){
-    //This was "delete concept", find the current concept's parent
+	//This was "delete concept", find the current concept's parent
     var jst = jQuery("#forjstree").jstree(true);
     var checkSelectedArr = jst.get_selected();
     for (var i = 0; i < checkSelectedArr.length; i++){
@@ -2468,7 +2470,7 @@ sidora.util.deletePid = function(pidOfInterest, onSuccess, onFailure){
   var url = Drupal.settings.basePath+'sidora/ajax_parts/unassociate_delete_orphan/'+unassociateFrom+'/'+pidOfInterest;
   var userFriendlyToastName = "Remove <em>"+sidora.util.FriendlyNameDirect(pidOfInterest);
   userFriendlyToastName += "</em> from <em>"+sidora.util.FriendlyNameDirect(unassociateFrom)+"</em>";
-  sidora.queue.RequestPost(userFriendlyToastName,url,"",onSuccess,onFailure,[pidOfInterest,unassociateFrom]);
+  sidora.queue.RequestPost(userFriendlyToastName,url,"",onSuccess,onFailure,[pidOfInterest,unassociateFrom],action);
   sidora.queue.Next();
 }
 /*
@@ -2659,7 +2661,7 @@ sidora.manage.OpenCurrentConfig = function(){
           enableKeys: false,
           onFinish:  function(){
             jQuery("#submitObjProperties").click(function(){
-              sidora.queue.RequestPost(userFriendlyToastName+":<em>"+name+"</em> ("+pid+")",Drupal.settings.basePath+"sidora/manage/"+pid+"/save","label="+jQuery("#objPropLabel").val()+"&owner="+jQuery("#objPropOwner").val(),function(){},function(){},pid);
+              sidora.queue.RequestPost(userFriendlyToastName+":<em>"+name+"</em> ("+pid+")",Drupal.settings.basePath+"sidora/manage/"+pid+"/save","label="+jQuery("#objPropLabel").val()+"&owner="+jQuery("#objPropOwner").val(),function(){},function(){},pid,'manage');
               sidora.queue.Next();
             });
             jQuery("#addDatastream").click(function(){
@@ -2716,7 +2718,7 @@ sidora.manage.removeDatastream = function(pid,dsid){
           function(){
             sidora.manage.resetFrame();
           },
-          function(){},pid);
+          function(){},pid,'deleteDatastream');
         sidora.queue.Next();
         jQuery( this ).dialog( "close" );
       },
