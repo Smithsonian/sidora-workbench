@@ -6,11 +6,19 @@ jQuery().ready(function(){
     window.currentInfo.type = "EditMetadata";
     // need to send this to sidora queue done() to force a refresh after edit metadata is finished
   }else{  // code for create resource
-    window.currentInfo.type = "CreateResource";
-    window.currentInfo.parentPid = myLoc.split("/").splice(-4)[0];
-    window.currentInfo.model = myLoc.split("/").splice(-4)[1];
-    window.currentInfo.ontologyId = myLoc.split("/").splice(-4)[3];
-    window.currentInfo.formname = myLoc.split("/").splice(-4)[2];
+		if (myLoc.indexOf("batch") != -1){
+      window.currentInfo.type = "batchIngest";
+      window.currentInfo.parentPid = myLoc.split("/").splice(-6)[0];
+      window.currentInfo.model = myLoc.split("/").splice(-6)[1];
+      window.currentInfo.ontologyId = myLoc.split("/").splice(-6)[3];
+      window.currentInfo.formname = myLoc.split("/").splice(-6)[2];
+		}else{
+			window.currentInfo.type = "CreateResource";
+      window.currentInfo.parentPid = myLoc.split("/").splice(-4)[0];
+      window.currentInfo.model = myLoc.split("/").splice(-4)[1];
+      window.currentInfo.ontologyId = myLoc.split("/").splice(-4)[3];
+      window.currentInfo.formname = myLoc.split("/").splice(-4)[2];
+	  }
   }
   jQuery("body").css("padding-top","0px");
   jQuery(".form-submit[value=Ingest]").hide();
@@ -211,9 +219,14 @@ window.startBatch = function(){
         var friendlyName = " Edit MetaData of "+type+":"+(i+1)+" of "+window.batchRequests.length;
         sidora.queue.RequestPost(friendlyName,ajaxSettings.url,postData, onSuccess, function(){}, ajaxSettings.pidsOfInterest,'editMeta',i+' of '+window.batchRequests.length);
       }else{
-        var friendlyName = " Create "+currentInfo.formname+" Resource:"+(i+1)+" of "+window.batchRequests.length;
-        sidora.queue.RequestPost(friendlyName,window.location.href,postData, onSuccess, function(){}, currentInfo.parentPid,'createResource',i+' of '+window.batchRequests.length);
-      } 
+			  if (currentInfo.type == 'batchIngest'){
+          var friendlyName = " Submiting a batch ingest for "+currentInfo.formname;
+          sidora.queue.RequestPost(friendlyName,ajaxSettings.url,postData, onSuccess, function(){}, currentInfo.parentPid,'batchIngest');
+			  }else{	
+          var friendlyName = " Create "+currentInfo.formname+" Resource:"+(i+1)+" of "+window.batchRequests.length;
+          sidora.queue.RequestPost(friendlyName,window.location.href,postData, onSuccess, function(){}, currentInfo.parentPid,'createResource',i+' of '+window.batchRequests.length);
+        } 
+			}	
     }
     sidora.queue.Next();
     window.closeMyself();

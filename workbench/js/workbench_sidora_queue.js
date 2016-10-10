@@ -163,7 +163,47 @@ SidoraQueue.prototype.Done = function(completedItem, ajaxReturn){
     }
     this.NotificationWindow.Show(toShow, true);
   }else{
-    if (!completedItem.isSilent) this.NotificationWindow.Show(completedItem.userFriendlyName);
+    if (completedItem.action == 'batchIngest' && jsonString.indexOf("Request for batch ingest successfully received by backend. Request id is:") > -1){ 
+          console.log("Batch successfully submitted");
+					var requestArray = jsonString.split(':');
+					var requestID = requestArray[1];
+					console.log("Request id:"+requestID);
+					this.NotificationWindow.Show('Batch Ingest request successfully submitted. Request ID is ' + requestID);
+					// extract the request id and set an interval based function 
+					 (function poll(requestID) {
+				setTimeout(function(){
+				jQuery.ajax({
+        url: Drupal.settings.basePath+"sidora/ajax_parts/check_batch_status/"+requestID+"/",
+        type: "GET",
+        success: function(data) {
+            //ctr++;
+            console.log("current status of the batch:"+data);
+						sidora.queue.NotificationWindow.Show(data);
+						if ((data.indexOf('complete') > -1) && (data.indexOf('Parent pid is') > -1)){
+						 var parentPidArray = data.split('Parent pid is ');
+						 parentPid = parentPidArray[1];
+						 console.log('parent pid to refresh is ' + parentPid);
+						 if (sidora.concept.GetPid() == parentPid){
+						 	sidora.concept.LoadContent();
+	            sidora.util.refreshPidInTree();
+             }
+						 // extract the parent concept from the ajax return
+							//refresh the resource table for this concept
+						}else{
+							setTimeout(function() {poll(requestID)}, 5000);
+						}		
+        },
+        //dataType: "json",
+        timeout: 5000
+    });
+	},5000);
+})(requestID);
+				
+        /*{}else{
+          onFailureOfFormSubmit(formName, this, data);
+        }*/
+		}else{  
+		if (!completedItem.isSilent) this.NotificationWindow.Show(completedItem.userFriendlyName);
     //var processedResourceArray = completedItem.userFriendlyName.split(':');
     var processedItemCount = completedItem.requestStat;
     var executeOnceOnly = false;
@@ -185,9 +225,7 @@ SidoraQueue.prototype.Done = function(completedItem, ajaxReturn){
 	}	  
 	sidora.concept.LoadContent();
 	sidora.util.refreshPidInTree();
-        //if (processedResourceArray.length > 1){
         if (processedItemCount != ''){
-	  //var processedResourceCountArray = processedResourceArray[1].split(' of ');
           var processedResourceCountArray = processedItemCount.split(' of ');
 	  if ((processedResourceCountArray.length > 1) && (processedResourceCountArray[0] == processedResourceCountArray[1]-1)){  
             // trying to get the last item of the current queue
@@ -212,10 +250,12 @@ SidoraQueue.prototype.Done = function(completedItem, ajaxReturn){
         }    
             }
   }
-        } 
+        }
+				 
       }else if (sidora.resources.IsOnScreen(completedItem.pidsBeingProcessed[i])){
         sidora.concept.LoadContent();
       } 
+		}	
     }
   }
   console.log("done function of queue:"+completedItem.userFriendlyName);
