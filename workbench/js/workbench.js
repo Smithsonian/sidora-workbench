@@ -1642,6 +1642,7 @@ sidora.util.treeAdditionSingleItem = function(mainItem, htmlTree, onLoadComplete
     //Replace the name if the name of the item changed
     if (currChild.text != dfAnchor.text()) {
       jst.rename_node(currChild, dfAnchor.text());
+    }
     var a_attr_obj = {};
 		jQuery(jQuery(currRep).children("a").first()[0].attributes).each(function() {
        a_attr_obj[this.nodeName] = this.nodeValue;
@@ -1651,7 +1652,6 @@ sidora.util.treeAdditionSingleItem = function(mainItem, htmlTree, onLoadComplete
 		  jQuery("[pid='" + ccp + "']").attr(nodeName,nodeValue);
 			jst.get_node(currChild).a_attr[nodeName] = nodeValue;
     });
-    }
 		//Do not add children to items that are already filled in
     if (currChild.children.length == 0 || overwriteType == "changes") {
       //Go through the children of the representative DOM object from document fragment
