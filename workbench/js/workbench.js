@@ -1640,15 +1640,16 @@ sidora.util.treeAdditionSingleItem = function(mainItem, htmlTree, onLoadComplete
     //Find the current child representation in the document fragment
     var currRep = dfAnchor.parent();
     //Replace the name if the name of the item changed
-    if (currChild.text != dfAnchor.text()) {
-      jst.rename_node(currChild, dfAnchor.text());
+    var dfAnchorText = jQuery(dfAnchor[0]).text();
+    if (currChild.text != dfAnchorText) {
+      jst.rename_node(currChild, dfAnchorText);
     }
     var a_attr_obj = {};
 		jQuery(jQuery(currRep).children("a").first()[0].attributes).each(function() {
        a_attr_obj[this.nodeName] = this.nodeValue;
-    });   
-     a_attr_obj["href"] = currChild.a_attr.href;
-		 jQuery.each(a_attr_obj,function(nodeName,nodeValue){
+      });   
+      a_attr_obj["href"] = currChild.a_attr.href;
+		  jQuery.each(a_attr_obj,function(nodeName,nodeValue){
 		  jQuery("[pid='" + ccp + "']").attr(nodeName,nodeValue);
 			jst.get_node(currChild).a_attr[nodeName] = nodeValue;
     });
@@ -2455,7 +2456,6 @@ sidora.concept.DeleteConceptBusinessLogic = function(onSuccess, onFailure){
  */
 sidora.util.deletePid = function(pidOfInterest, onSuccess, onFailure, action){
   action = typeof action !== 'undefined' ? action : '';
-	requestStat = typeof requestStat !== 'undefined' ? requestStat : '';
   var unassociateFrom = sidora.concept.GetPid();
   if (unassociateFrom == pidOfInterest){
 	//This was "delete concept", find the current concept's parent

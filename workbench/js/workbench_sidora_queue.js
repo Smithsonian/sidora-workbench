@@ -120,7 +120,7 @@ SidoraQueue.prototype.Retry = function(pid) {
   Shadowbox.close();
   Shadowbox.open({
         content: Drupal.settings.basePath+"sidora/edit_metadata/"+pid+"&retry",
-	player:     "iframe",
+  player:     "iframe",
         title:      "Edit Metadata",
         options: {
         onFinish:  function(){
@@ -147,16 +147,16 @@ SidoraQueue.prototype.Done = function(completedItem, ajaxReturn){
     jsonString = ajaxReturn;
   }
   try{ jsonData = jQuery.parseJSON(jsonString); } catch (e){
-	  if (jsonString.indexOf("<h2 class=\"element-invisible\">Error message</h2")>0){
-	    var toShow = "Did not perform action:"+completedItem.userFriendlyName;
-	    if (completedItem.fullObject.userFriendlyName.indexOf("Edit MetaData")>0){
-	     this.completedFailedRequests.push({pid:completedItem.pidsBeingProcessed[0],form:jsonString})
-	      toShow += '<div class="messages error"><a rel="shadowbox; width=500; height=600; player=iframe" href="javascript:void(0)" id="retry_edit_metadata" class="' + completedItem.pidsBeingProcessed[0] + '" onClick = window.sidora.queue.Retry("'+completedItem.pidsBeingProcessed[0]+'");>Click here to view the errors and retry</a></div>';
-        	}
-		this.NotificationWindow.Show(toShow, true);
-		return;
-		}	
-	}
+    if (jsonString.indexOf("<h2 class=\"element-invisible\">Error message</h2")>0){
+      var toShow = "Did not perform action:"+completedItem.userFriendlyName;
+      if (completedItem.fullObject.userFriendlyName.indexOf("Edit MetaData")>0){
+       this.completedFailedRequests.push({pid:completedItem.pidsBeingProcessed[0],form:jsonString})
+        toShow += '<div class="messages error"><a rel="shadowbox; width=500; height=600; player=iframe" href="javascript:void(0)" id="retry_edit_metadata" class="' + completedItem.pidsBeingProcessed[0] + '" onClick = window.sidora.queue.Retry("'+completedItem.pidsBeingProcessed[0]+'");>Click here to view the errors and retry</a></div>';
+          }
+    this.NotificationWindow.Show(toShow, true);
+    return;
+    }  
+  }
   if (jsonData != null && jsonData.error){
     var toShow = "Did not perform action:"+completedItem.userFriendlyName;
     if (typeof(jsonData.error) == 'string') toShow += " - "+jsonData.error;
@@ -168,7 +168,6 @@ SidoraQueue.prototype.Done = function(completedItem, ajaxReturn){
     this.NotificationWindow.Show(toShow, true);
   }else{
     if (!completedItem.isSilent) this.NotificationWindow.Show(completedItem.userFriendlyName);
-    //var processedResourceArray = completedItem.userFriendlyName.split(':');
     var processedItemCount = completedItem.requestStat;
     var executeOnceOnly = false;
     for (var i = 0; i < completedItem.pidsBeingProcessed.length; i++){
@@ -182,41 +181,46 @@ SidoraQueue.prototype.Done = function(completedItem, ajaxReturn){
       if (completedItem.pidsBeingProcessed.length == '2') sidora.util.refreshNodeByID(completedItem.pidsBeingProcessed);
       //If there was an update to the Pid user is currently looking at then anything may have changed.  Reload it.
       if (sidora.concept.GetPid() == completedItem.pidsBeingProcessed[i]){
-	if ((completedItem.action == 'deleteConcept') && !(executeOnceOnly)){
-          window.location.href = sidora.util.getParentHref(window.location.href);
-	  sidora.UpdateTitleBasedOnNameInTree();
+        if ((completedItem.action == 'deleteConcept') && !(executeOnceOnly)){
+          parentLocation = sidora.util.getParentHref(window.location.href);
+          var jst = jQuery("#forjstree").jstree();
+          var parentLocationFromBasePath = parentLocation.substring(parentLocation.indexOf(Drupal.settings.basePath));
+          var itemSelectorForCurrentItemInTree = 'a[href=\"'+parentLocationFromBasePath+'\"]';
+          var selectThisNode = jst.get_node(itemSelectorForCurrentItemInTree);
+          jst.deselect_all();
+          jst.select_node(selectThisNode);
           executeOnceOnly = true;
-	}	  
-	sidora.concept.LoadContent();
-	sidora.util.refreshPidInTree();
-        //if (processedResourceArray.length > 1){
+        }    
+        sidora.concept.LoadContent();
+        sidora.util.refreshPidInTree();
         if (processedItemCount != ''){
-	  //var processedResourceCountArray = processedResourceArray[1].split(' of ');
           var processedResourceCountArray = processedItemCount.split(' of ');
-	  if ((processedResourceCountArray.length > 1) && (processedResourceCountArray[0] == processedResourceCountArray[1]-1)){  
+          if ((processedResourceCountArray.length > 1) && (processedResourceCountArray[0] == processedResourceCountArray[1]-1)){
             // trying to get the last item of the current queue
             sidora_util.writeCookie('Drupal.selectResource','1','30');
-      if (sidora_util.readCookie('Drupal.dtFilter') != ''){
-        if ((completedItem.fullObject.ajaxRequest.data.indexOf('islandora_ingest_form') > -1) && (completedItem.fullObject.ajaxRequest.data.indexOf('resource_model') > -1)){
-          var rmPattern = new RegExp('&resource_model=(.*)&');
-          var rmArray = rmPattern.exec(completedItem.fullObject.ajaxRequest.data);
-          if ((Array.isArray(rmArray))&& (rmArray.length >= 2) && (rmArray[1] != sidora_util.readCookie('Drupal.dtFilter'))){
-      if (!sidora.util.isConfirmShowing()){
-        sidora.util.Confirm("Resources Filter Warning","The resources you just added aren't visible right now because they are filtered out by the current resource filter. Click 'Reset' to if you want to view all resources, or close this window to leave the current filter.",
-                         function(){
-                           sidora_util.writeCookie('Drupal.dtFilter','','30');
-         jQuery('#sidora-resource-type-dropdown').val('');
-         sidora.resources.reloadDatatableBasedOnCurrentFilters();
-                         },
-       function(){},
-       'Reset'
-                      );
-      }
-    }
-        }    
+            if (sidora_util.readCookie('Drupal.dtFilter') != ''){
+              if ((completedItem.fullObject.ajaxRequest.data.indexOf('islandora_ingest_form') > -1) && (completedItem.fullObject.ajaxRequest.data.indexOf('resource_model') > -1)){
+                var rmPattern = new RegExp('&resource_model=(.*)&');
+                var rmArray = rmPattern.exec(completedItem.fullObject.ajaxRequest.data);
+                if ((Array.isArray(rmArray))&& (rmArray.length >= 2) && (rmArray[1] != sidora_util.readCookie('Drupal.dtFilter'))){
+                  if (!sidora.util.isConfirmShowing()){
+                    sidora.util.Confirm(
+                      "Resources Filter Warning",
+                      "The resources you just added aren't visible right now because they are filtered out by the current resource filter. Click 'Reset' to if you want to view all resources, or close this window to leave the current filter.",
+                      function(){
+                        sidora_util.writeCookie('Drupal.dtFilter','','30');
+                        jQuery('#sidora-resource-type-dropdown').val('');
+                        sidora.resources.reloadDatatableBasedOnCurrentFilters();
+                      },
+                      function(){},
+                      'Reset'
+                    );
+                  }
+                }
+              }    
             }
-  }
-        } 
+          }
+        } //Ends processedItemCount != ''
       }else if (sidora.resources.IsOnScreen(completedItem.pidsBeingProcessed[i])){
         sidora.concept.LoadContent();
       } 
@@ -280,7 +284,7 @@ SidoraQueue.prototype.NotificationWindow.Hide = function(){
 SidoraQueue.prototype.NotificationWindow.ResetError = function(queuedErrors){
   var nw = this;
   nw.showingError = queuedErrors;
-}	
+}  
 SidoraQueue.prototype.updateFooterWithRequestInProcess = function(){
   if (this.requestInProcess != null && !this.requestInProcess.isSilent){
     if (!jQuery("footer").is(":visible")) jQuery("footer").fadeIn();
