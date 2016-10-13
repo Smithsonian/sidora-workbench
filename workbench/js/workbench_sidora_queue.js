@@ -26,8 +26,10 @@ SidoraQueue.prototype.showMessage = function(message){
  * Also, when a concept is deleted, the window url needs to change to the parent pid so Sidora.Concept.LoadContent loads the metadata for the parent pid. The 
  * done funtion of Sidora queue checks the action property to accomplish this functionality.
 */ 
-SidoraQueue.prototype.RequestPost = function(userFriendlyName, ajaxRequestUrl, postData, doneFunction, failFunction, pidsBeingProcessed,action='',requestStat=''){
-  console.log("in RequestPost of queue : Requested post '"+userFriendlyName+"' to post to:"+ajaxRequestUrl);
+SidoraQueue.prototype.RequestPost = function(userFriendlyName, ajaxRequestUrl, postData, doneFunction, failFunction, pidsBeingProcessed, action, requestStat){
+  action = typeof action !== 'undefined' ? action : '';
+	requestStat = typeof requestStat !== 'undefined' ? requestStat : '';
+	console.log("in RequestPost of queue : Requested post '"+userFriendlyName+"' to post to:"+ajaxRequestUrl);
   if (typeof(pidsBeingProcessed) == 'string') pidsBeingProcessed = [pidsBeingProcessed];
   if (typeof(doneFunction) == 'undefined' || !jQuery.isFunction(doneFunction)) doneFunction = function(){};
   if (typeof(failFunction) == 'undefined' || !jQuery.isFunction(failFunction)) failFunction = function(){};
@@ -62,7 +64,9 @@ SidoraQueue.prototype.RequestPost = function(userFriendlyName, ajaxRequestUrl, p
 /*
  * Reminder: Request and RequestPost are handled differently
  */
-SidoraQueue.prototype.Request = function(userFriendlyName, ajaxRequestUrl, doneFunction, failFunction, pidsBeingProcessed,action='',requestStat=''){
+SidoraQueue.prototype.Request = function(userFriendlyName, ajaxRequestUrl, doneFunction, failFunction, pidsBeingProcessed, action, requestStat){
+  action = typeof action !== 'undefined' ? action : '';
+	requestStat = typeof requestStat !== 'undefined' ? requestStat : '';
   var myself = this;
   if (typeof(pidsBeingProcessed) == 'string') pidsBeingProcessed = [pidsBeingProcessed];
   if (typeof(doneFunction) == 'undefined' || !jQuery.isFunction(doneFunction)) doneFunction = function(){};
