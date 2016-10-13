@@ -2454,7 +2454,8 @@ sidora.concept.DeleteConceptBusinessLogic = function(onSuccess, onFailure){
 /*
  * Unassociate and delete orphan of the Pid
  */
-sidora.util.deletePid = function(pidOfInterest, onSuccess, onFailure,action=''){
+sidora.util.deletePid = function(pidOfInterest, onSuccess, onFailure, action){
+  action = typeof action !== 'undefined' ? action : '';
   var unassociateFrom = sidora.concept.GetPid();
   if (unassociateFrom == pidOfInterest){
 	//This was "delete concept", find the current concept's parent
