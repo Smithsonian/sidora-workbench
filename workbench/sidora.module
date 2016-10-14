@@ -5509,8 +5509,8 @@ function sidora_block_content_navigation(){
   // Some of the icons we use are from islandora xml forms, inform Javascript where to get those
   drupal_add_js(array('islandora_xml_forms' => array('basepath' => '/' . drupal_get_path('module','xml_forms') . '/')), 'setting');
   drupal_add_js(drupal_get_path('module','sidora') . '/js/workbench_sidora_queue.js');
-  drupal_add_js(drupal_get_path('module','sidora') . '/js/workbench.js');
   drupal_add_js(drupal_get_path('module','sidora') . '/js/workbench_util.js');
+  drupal_add_js(drupal_get_path('module','sidora') . '/js/workbench.js');
   drupal_add_js(drupal_get_path('module','sidora') . '/js/workbench_menus.js');
   drupal_add_js(drupal_get_path('module','sidora') . '/js/workbench_sidora_request.js');
   drupal_add_js(drupal_get_path('module','sidora') . '/js/paging.js'); // adds paging capability to resources
