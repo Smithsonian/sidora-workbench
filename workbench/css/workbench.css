@@ -1,3 +1,21 @@
+.bright-green {
+  background-color: #ccffcc
+}
+.bright-pink {
+  background-color: #ffdddd
+}
+.bright-yellow {
+  background-color: #ffffdd
+}
+#forjstree {
+  overflow: auto;
+  height: 100%;
+  min-height: 150px;
+}
+#fjt-holder {
+  overflow: hidden;
+}
+
 #page {
   margin-left: 0px;
   display: none; /* Get rid of the non-stylized information, will show at end of initialization */

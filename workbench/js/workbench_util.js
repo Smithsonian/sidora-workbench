@@ -273,6 +273,42 @@ jQuery.fn.countdown = function (callback, duration, message) {
     }, 1000);
 
 };
+/*
+ * Inject and remove injected styles
+ * Modified from injectStyles (since I needed to remove as well) from:
+https://css-tricks.com/snippets/javascript/inject-new-css-rules/
+ */
+function styleInject(rule, name) {
+var div = jQuery("<div />", {
+    html: '&shy;<style id="styleInject'+name+'">' + rule + '</style>'
+  }).children().appendTo("body"); 
+}
+function styleRemove(name) {
+  jQuery("styleInject"+name).remove();
+}
+/**
+ * Get proper location of Dom object on page
+ */
+function getOffset( el ) {
+    var _x = 0;
+    var _y = 0;
+    while( el && !isNaN( el.offsetLeft ) && !isNaN( el.offsetTop ) ) {
+        _x += el.offsetLeft - el.scrollLeft;
+        _y += el.offsetTop - el.scrollTop;
+        el = el.offsetParent;
+    }
+    return { top: _y, left: _x };
+}
+/**
+ * Clear the text selection of html elements (useful when dragging things across text)
+ */
+function clearSelection() {
+    if ( document.selection ) {
+        document.selection.empty();
+    } else if ( window.getSelection ) {
+        window.getSelection().removeAllRanges();
+    }
+}
 
 jQuery(document).ready(function(){
   var pp = sidora_util.ParentPid();

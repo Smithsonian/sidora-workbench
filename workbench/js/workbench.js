@@ -1002,10 +1002,29 @@ sidora.RelocateTreeOnPage = function(){
 			.attr('id','conceptTreeParent')
 			.append('<div id="iframeTreeOverlay" style="position:absolute;width:100%;height:100%;"></div>');
 	jQuery('#branding').css('margin-left',parseInt(jQuery('#fjt-holder').parent().outerWidth())+'px');												
- jQuery("#conceptResizable").find(".ui-resizable-e").css("background-color","#aaa").css("width","10px").css("right","0");
- sidora.ResizeToBrowser();
- sidora.ResizeTree(null,{element:jQuery("#conceptResizable")});
- sidora.stopResizeTree();
+  jQuery("#conceptResizable").find(".ui-resizable-e").css("background-color","#aaa").css("width","10px").css("right","0");
+  sidora.ResizeToBrowser();
+  sidora.ResizeTree(null,{element:jQuery("#conceptResizable")});
+  sidora.stopResizeTree();
+  //sidora.CreateSharedButton();
+  sidora.testColoring();
+}
+sidora.testColoring = function()
+{
+      var sp = new URLSearchParams(location.search);
+      var currentRoot = sp.get("nr");
+      if (currentRoot == null) return;
+  var jstreeIdSelected = null;
+  var jst = jQuery("#forjstree").jstree();
+  var existingTreeNodes = jst.get_json('#', {flat:true});
+  jQuery.each(existingTreeNodes,function(i,obj){
+    if (i % 3 < 2) {
+      obj.a_attr.class = "bright-green";
+    } else {
+      obj.a_attr.class = "bright-yellow";
+    }
+  });
+  jQuery("#forjstree a").addClass("bright-green")
 }
 sidora.ResizeTree = function (e, ui)
 {
@@ -1061,16 +1080,115 @@ sidora.stopResizeTree = function (e, ui)
 {
   jQuery("#iframeTreeOverlay").hide(); //Allow the cursor into the iframe
 };
+sidora.sharedWithMe = {
+  selector: null,
+  dragY: false
+};
+sidora.CreateShareTreeSection = function(sharedWithMeSelector){
+  sidora.sharedWithMe.selector = sharedWithMeSelector;
+  jQuery("#fjt-holder").append('<div id="shared-tree-divider" style="width: 100%;background: #aaa;height: 20px;cursor: ns-resize;text-align:center">&#x25BC; Shared &#x25BC;</div>');
+  var baseRule = "{position: absolute;left: -10px;background-image: none;height: 200px;overflow:auto;width: calc(100% + 10px);}";
+  styleInject(sharedWithMeSelector+baseRule,"SharedWithMe");
+  var hideRule = "{display:none}";
+  styleInject(sharedWithMeSelector+" > i, "+sharedWithMeSelector+" > a "+hideRule, "SharedWithMeRoot");
+  jQuery("#shared-tree-divider").mousedown(function(e){
+    sidora.sharedWithMe.dragY =  e.screenY;
+  });
+  jQuery("#fjt-holder").mousemove(function(e){
+    if (sidora.sharedWithMe.dragY){
+      var jsth = jQuery("#forjstree").height();
+      var njsth = jsth + (e.screenY - sidora.sharedWithMe.dragY);
+      var sharedSpaceAvailable = jQuery("#fjt-holder").height() - (njsth + jQuery("#shared-tree-divider").height());
+      if (
+        njsth >= parseInt(jQuery("#forjstree").css("min-height")) &&
+        sharedSpaceAvailable >= parseInt(jQuery("#forjstree").css("min-height"))
+        ) {
+        sidora.sharedWithMe.dragY = e.screenY;
+        jQuery("#forjstree").height(njsth);
+        jQuery(sidora.sharedWithMe.selector).height(sharedSpaceAvailable-10);
+      }
+      
+    }
+    sidora.sharedWithMeRelocate();
+    clearSelection();
+  });
+  jQuery("#fjt-holder").mouseleave(function(){ sidora.sharedWithMe.dragY = false; });
+  jQuery("#shared-tree-divider").mouseup(function(){ sidora.sharedWithMe.dragY = false; });
+  sidora.sharedWithMeRelocate();
+}
+sidora.sharedWithMeRelocate = function(){
+  if (sidora.sharedWithMe.selector == null) return;
+  if (jQuery("#fjt-holder").height() == jQuery("#forjstree").height()) {
+    swmLocation = (jQuery("#fjt-holder").height()-200);
+    jQuery("#forjstree").height(swmLocation-20);
+    jQuery(sidora.sharedWithMe.selector).css("top", swmLocation + "px");
+  } else {
+    swmLocation = (jQuery("#forjstree").height()+jQuery("#shared-tree-divider").height());
+    jQuery(sidora.sharedWithMe.selector).css("top", swmLocation + "px");
+  }
+}
+sidora.CreateSharedButton = function(){
+  jQuery('#conceptResizable').append('<input id="sharedWithMeButton" value="Shared With Me" class="form-submit sidora-form-finish" style="position: absolute;bottom: 10px;left: 30px;">');
+ 
+  var showSharedWithMe = function(sharedItems){ 
+
+    var title = "Shared With Me";
+    
+    var questionText = "Select one of the following workspaces.<br/>";
+    questionText += "<select class='form-select' id='project-pid-select'>";
+    questionText += "<option value=''>My Own Projects</option>";
+    var keys = Object.keys(sharedItems);
+    for(var i = 0; i < keys.length; i++) {
+      questionText += "<option value='"+keys[i]+"'>"+sharedItems[keys[i]]+"</option>";
+    }
+    questionText += "<select>";
+    var onConfirmation = function(){
+      var sp = new URLSearchParams(location.search);
+      var currentRoot = sp.get("nr");
+      if (currentRoot == null) currentRoot = '';
+      var selectedRootPid = jQuery("#project-pid-select").val();
+      if (currentRoot != selectedRootPid){
+        var newRoot = "?nr=" + selectedRootPid + "#";
+        if (selectedRootPid == '') {
+          newRoot = '';
+        }
+        var newURL = window.location.protocol + "//" + window.location.host + "/" + window.location.pathname + newRoot;
+        window.location = newURL;
+      }
+    };
+    var onCancel = function(){};
+    var confirmButtonText = "Switch...";
+    sidora.util.Confirm(title, questionText, onConfirmation, onCancel, confirmButtonText);
+  }
+
+  jQuery("#sharedWithMeButton").click(function(){
+    jQuery("#sharedWithMeButton").blur(); //Get rid of the text cursor if there
+    jQuery.ajax({
+      "dataType":"json",
+      "url":Drupal.settings.basePath+"sidora/ajax_parts/shared_with_me",
+      "success":function(data){
+        showSharedWithMe(data);
+      },
+      "error":function(){
+         console.log("Problem getting shared info");
+      }
+    });
+
+  });
+
+}
 sidora.ResizeToBrowser = function(){
   //jQuery("#sidora_content_concept_info").css("min-width",0);
   //jQuery("#concept_tabs").css("min-width",0);
   var newHeight = jQuery(window).height();
   newHeight -= (parseInt(jQuery("body").css("padding-top"))+10);
+  var contextChangeButtonHeight = 0; //50; // If share button is there get the size of the button
+  newHeight -= contextChangeButtonHeight; // The new context-change button for sharing
   if (jQuery("footer").is(":visible")){
     newHeight -= jQuery("footer").height();
   }
   jQuery("#fjt-holder").css("height",newHeight+"px");
-  jQuery("#conceptResizable").css("height",jQuery('#fjt-holder').height());
+  jQuery("#conceptResizable").css("height",jQuery('#fjt-holder').height()+contextChangeButtonHeight);
 	var tabsHeight = newHeight-50;
   jQuery("#concept_tabs").css("height",tabsHeight+"px");
   jQuery("#concept_tabs").css("width",parseInt(jQuery(window).width()-jQuery('#conceptResizable').outerWidth()-8)+"px");
@@ -1104,8 +1222,7 @@ sidora.ResizeToBrowser = function(){
   }
   jQuery("#rt").css("height",tableHeight+'px');
   jQuery("#rt").css("overflow",'auto');
-
-  
+  sidora.sharedWithMeRelocate();
 }
 /*
  * Checks to see if a user can communicate with the backend and redirects to user page if problem
@@ -2594,6 +2711,7 @@ sidora.resources.individualPanel.ResizeIt = function (e, ui)
     jQuery("#res_table_wrapper").css("margin-top","50px");
     jQuery("#sidora-resources-button-row").css("top","").css("left","");
   }
+  
 };
 /*
  * Resizes items on the resources pane once the user (or program) is done with dragging the splitter bar between the table and viewer
@@ -2721,7 +2839,7 @@ jQuery(function () {
        window.location.hash == "" && 
        (!window.location.pathname.startsWith(Drupal.settings.basePath) || !window.location.pathname.endsWith("/sidora/workbench/")) 
      ){
-    window.location = Drupal.settings.basePath + "sidora/workbench/#";
+    window.location = Drupal.settings.basePath + "sidora/workbench/" + window.location.search + "#";
   }
   else {
     window.sidora.InitiatePage();

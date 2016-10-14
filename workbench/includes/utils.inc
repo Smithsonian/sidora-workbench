@@ -163,6 +163,7 @@ function _sidora_pager_init($total, $limit = 10, $element = 0) {
 
 /**
  * Gets the root object for the given user.  Note this is for tree operations, not for user operations.
+ * For user operations, use sidora_get_user_object
  *
  * @param stdClass $account
  *   The user in quetion, defaults to the logged in user.
