@@ -1074,7 +1074,9 @@ sidora.ResizeToBrowser = function(){
   jQuery("#conceptResizable").css("height",jQuery('#fjt-holder').height());
 	var tabsHeight = newHeight-50;
   jQuery("#concept_tabs").css("height",tabsHeight+"px");
-  jQuery("#concept_tabs").css("width",parseInt(jQuery(window).width()-jQuery('#conceptResizable').outerWidth()-8)+"px");
+  var concept_tabsWidth = parseInt(jQuery(window).width()-jQuery('#conceptResizable').outerWidth()-8);
+	//if (concept
+	jQuery("#concept_tabs").css("width",parseInt(jQuery(window).width()-jQuery('#conceptResizable').outerWidth()-8)+"px");
   var tabContentHeight = tabsHeight - jQuery(".ui-tabs-nav").height();
   jQuery("#concept-resource-list").css("height",tabContentHeight);
   jQuery("#resourceResizable").css("height",'99%');
@@ -1445,6 +1447,11 @@ sidora.ResizeOnWindowResize = function(){
 	//var menuwidth = 360;
 	var menuwidth = jQuery("#fjt-holder").width() + 10;
   var newwidth = bodywidth-menuwidth;
+	if (newwidth < parseInt(jQuery('#sidora_content_concept_info').css('min-width'))){
+	  console.log("In resizeonwindowresize, the remaining width for concept info "+newwidth);
+		console.log("In resizeonwindowresize, the width of the tree "+menuwidth);
+		newwidth = parseInt(jQuery('#sidora_content_concept_info').css('min-width'));
+	}	
   jQuery("#sidora_content_concept_info").width(newwidth);
   var newMaxWidth = bodywidth - parseInt(jQuery('#sidora_content_concept_info').css('min-width'));
 	jQuery('#conceptResizable').resizable('option', 'maxWidth', newMaxWidth);
