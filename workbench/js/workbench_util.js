@@ -300,6 +300,21 @@ function getOffset( el ) {
     return { top: _y, left: _x };
 }
 /**
+ * Performs a certain action as soon (500ms interval check) as it appears
+ * selector - css / jQuery selector for item
+ * myFunction - calls this with the selector as the argument
+ *
+ */
+
+function performWhenDisplayedOnScreen(selector, myFunction) {
+  var intervalId = setInterval(function(){
+    if (jQuery(selector).length != 0) {
+      clearInterval(intervalId);
+      myFunction(selector);
+    }
+  },500);
+}
+/**
  * Clear the text selection of html elements (useful when dragging things across text)
  */
 function clearSelection() {

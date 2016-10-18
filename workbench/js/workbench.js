@@ -565,6 +565,7 @@ sidora.InitiateJSTree = function(){
       }
     }
     sidora.util.openToCurrentPathAndSelectItem(currentUrl);
+    if (typeof sidora.sharedWithMe !== 'undefined') sidora.sharedWithMe.CreateDefaultShareSection();
     //When you select a node, update the url in the browser, change the page title (not browser title) and load the concept content into the main window
     jQuery("#forjstree").unbind('select_node.jstree');
     jQuery('#forjstree').bind('select_node.jstree', function(e,data) {
@@ -1006,7 +1007,6 @@ sidora.RelocateTreeOnPage = function(){
   sidora.ResizeToBrowser();
   sidora.ResizeTree(null,{element:jQuery("#conceptResizable")});
   sidora.stopResizeTree();
-  //sidora.CreateSharedButton();
   sidora.testColoring();
 }
 sidora.testColoring = function()
@@ -1080,103 +1080,7 @@ sidora.stopResizeTree = function (e, ui)
 {
   jQuery("#iframeTreeOverlay").hide(); //Allow the cursor into the iframe
 };
-sidora.sharedWithMe = {
-  selector: null,
-  dragY: false
-};
-sidora.CreateShareTreeSection = function(sharedWithMeSelector){
-  sidora.sharedWithMe.selector = sharedWithMeSelector;
-  jQuery("#fjt-holder").append('<div id="shared-tree-divider" style="width: 100%;background: #aaa;height: 20px;cursor: ns-resize;text-align:center">&#x25BC; Shared &#x25BC;</div>');
-  var baseRule = "{position: absolute;left: -10px;background-image: none;height: 200px;overflow:auto;width: calc(100% + 10px);}";
-  styleInject(sharedWithMeSelector+baseRule,"SharedWithMe");
-  var hideRule = "{display:none}";
-  styleInject(sharedWithMeSelector+" > i, "+sharedWithMeSelector+" > a "+hideRule, "SharedWithMeRoot");
-  jQuery("#shared-tree-divider").mousedown(function(e){
-    sidora.sharedWithMe.dragY =  e.screenY;
-  });
-  jQuery("#fjt-holder").mousemove(function(e){
-    if (sidora.sharedWithMe.dragY){
-      var jsth = jQuery("#forjstree").height();
-      var njsth = jsth + (e.screenY - sidora.sharedWithMe.dragY);
-      var sharedSpaceAvailable = jQuery("#fjt-holder").height() - (njsth + jQuery("#shared-tree-divider").height());
-      if (
-        njsth >= parseInt(jQuery("#forjstree").css("min-height")) &&
-        sharedSpaceAvailable >= parseInt(jQuery("#forjstree").css("min-height"))
-        ) {
-        sidora.sharedWithMe.dragY = e.screenY;
-        jQuery("#forjstree").height(njsth);
-        jQuery(sidora.sharedWithMe.selector).height(sharedSpaceAvailable-10);
-      }
-      
-    }
-    sidora.sharedWithMeRelocate();
-    clearSelection();
-  });
-  jQuery("#fjt-holder").mouseleave(function(){ sidora.sharedWithMe.dragY = false; });
-  jQuery("#shared-tree-divider").mouseup(function(){ sidora.sharedWithMe.dragY = false; });
-  sidora.sharedWithMeRelocate();
-}
-sidora.sharedWithMeRelocate = function(){
-  if (sidora.sharedWithMe.selector == null) return;
-  if (jQuery("#fjt-holder").height() == jQuery("#forjstree").height()) {
-    swmLocation = (jQuery("#fjt-holder").height()-200);
-    jQuery("#forjstree").height(swmLocation-20);
-    jQuery(sidora.sharedWithMe.selector).css("top", swmLocation + "px");
-  } else {
-    swmLocation = (jQuery("#forjstree").height()+jQuery("#shared-tree-divider").height());
-    jQuery(sidora.sharedWithMe.selector).css("top", swmLocation + "px");
-  }
-}
-sidora.CreateSharedButton = function(){
-  jQuery('#conceptResizable').append('<input id="sharedWithMeButton" value="Shared With Me" class="form-submit sidora-form-finish" style="position: absolute;bottom: 10px;left: 30px;">');
- 
-  var showSharedWithMe = function(sharedItems){ 
 
-    var title = "Shared With Me";
-    
-    var questionText = "Select one of the following workspaces.<br/>";
-    questionText += "<select class='form-select' id='project-pid-select'>";
-    questionText += "<option value=''>My Own Projects</option>";
-    var keys = Object.keys(sharedItems);
-    for(var i = 0; i < keys.length; i++) {
-      questionText += "<option value='"+keys[i]+"'>"+sharedItems[keys[i]]+"</option>";
-    }
-    questionText += "<select>";
-    var onConfirmation = function(){
-      var sp = new URLSearchParams(location.search);
-      var currentRoot = sp.get("nr");
-      if (currentRoot == null) currentRoot = '';
-      var selectedRootPid = jQuery("#project-pid-select").val();
-      if (currentRoot != selectedRootPid){
-        var newRoot = "?nr=" + selectedRootPid + "#";
-        if (selectedRootPid == '') {
-          newRoot = '';
-        }
-        var newURL = window.location.protocol + "//" + window.location.host + "/" + window.location.pathname + newRoot;
-        window.location = newURL;
-      }
-    };
-    var onCancel = function(){};
-    var confirmButtonText = "Switch...";
-    sidora.util.Confirm(title, questionText, onConfirmation, onCancel, confirmButtonText);
-  }
-
-  jQuery("#sharedWithMeButton").click(function(){
-    jQuery("#sharedWithMeButton").blur(); //Get rid of the text cursor if there
-    jQuery.ajax({
-      "dataType":"json",
-      "url":Drupal.settings.basePath+"sidora/ajax_parts/shared_with_me",
-      "success":function(data){
-        showSharedWithMe(data);
-      },
-      "error":function(){
-         console.log("Problem getting shared info");
-      }
-    });
-
-  });
-
-}
 sidora.ResizeToBrowser = function(){
   //jQuery("#sidora_content_concept_info").css("min-width",0);
   //jQuery("#concept_tabs").css("min-width",0);
@@ -1222,7 +1126,9 @@ sidora.ResizeToBrowser = function(){
   }
   jQuery("#rt").css("height",tableHeight+'px');
   jQuery("#rt").css("overflow",'auto');
-  sidora.sharedWithMeRelocate();
+  if (typeof sidora.sharedWithMe !== 'undefined') {
+    sidora.sharedWithMe.Relocate();
+  }
 }
 /*
  * Checks to see if a user can communicate with the backend and redirects to user page if problem

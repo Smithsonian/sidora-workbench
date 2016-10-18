@@ -3712,6 +3712,8 @@ function sidora_allow($user_pid_or_drupal_user, $pid_or_fedora_object, $type_of_
 
   $pid = $object->id;
   $node = sidora_get_update_or_create_concept_node($pid);
+  $og_handled = array('view', 'update', 'delete');
+  /*
   $na = array();
   $na[] = node_access('create', $node);
   $na[] = node_access('view', $node);
@@ -3719,8 +3721,9 @@ function sidora_allow($user_pid_or_drupal_user, $pid_or_fedora_object, $type_of_
   $na[] = node_access('delete', $node);
 //  $og_nids = $node->og_group_ref;
   //var_dump($og_nids);
-  //var_dump($na); //BBB Will make workbench fail to load / redirect
-  if ($type_of_operation == 'view') return TRUE;
+  print "<pre>";
+  var_dump($na); //BBB Will make workbench fail to load / redirect
+  */
   //print $type_of_operation . $drupal_user->name . $object->owner;
   //hopefully this is a valid fedora object now
   //if the user is an administrator, they always have the rights
@@ -3731,7 +3734,10 @@ function sidora_allow($user_pid_or_drupal_user, $pid_or_fedora_object, $type_of_
   if (strtolower($object->owner) == strtolower($drupal_user->name) && $type_of_operation != 'manage'){
    return TRUE;
   }
-  
+  if (in_array($type_of_operation, $og_handled)) {
+    return node_access($type_of_operation, $node); 
+  }
+  if ($type_of_operation == 'view') return TRUE;
   return FALSE;
 }
 /*
@@ -5612,6 +5618,7 @@ function sidora_block_content_navigation(){
   drupal_add_js(drupal_get_path('module','sidora') . '/js/workbench_util.js');
   drupal_add_js(drupal_get_path('module','sidora') . '/js/workbench_menus.js');
   drupal_add_js(drupal_get_path('module','sidora') . '/js/workbench_sidora_request.js');
+  drupal_add_js(drupal_get_path('module','sidora') . '/js/workbench_sharing.js');
   drupal_add_js(drupal_get_path('module','sidora') . '/js/paging.js'); // adds paging capability to resources
   return $to_return;
 }

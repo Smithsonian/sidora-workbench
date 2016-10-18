@@ -15,6 +15,17 @@
 #fjt-holder {
   overflow: hidden;
 }
+.sharedWithMeMain {
+  position: absolute;
+  left: -10px;
+  background-image: none;
+  height: 200px;
+  overflow:auto;
+  width: calc(100% + 10px);
+}
+.sharedWithMeMain li a {
+  border-left: solid 6px #d80
+}
 
 #page {
   margin-left: 0px;
