@@ -2652,20 +2652,24 @@ if ($one == 'deletexsl'){
     print $modules;
 	}	
 	if ($one == 'batch_curl'){
-	  $post = array(
-	    'resourceZip' => '@'.drupal_realpath('public://').'/batch_ramlani.zip;type=application/zip',
-	    'contentModel' => 'si:generalImageCModel;type=text/plain',
-	    'metadata' => '@'.drupal_realpath('public://').'/batch.xml;type=application/xml',
-	    'association' => 'general-image-association;type=text/plain',
-			'titleField' => 'test title'
+	  global $base_url;
+		//var_dump($base_url);
+		//var_dump(drupal_realpath('public://'));
+		$post = array(
+	  'resourceZipFileURL' => drupal_realpath('public://') . '/batch_ramlani.zip',
+	  'contentModel' => 'si:generalImageCModel',
+	  'metadataFileURL' => drupal_realpath('public://') . '/batch.xml',
+		'titleField' => 'batch_ingest',
+		'resourceOwner' => 'ramlani'
 	  );
     $ch = curl_init();
     //curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-Type: multipart/form-data'));
-    curl_setopt($ch,CURLOPT_URL,'http://sidora0c.myquotient.net:8181/cxf/sidora/rest/batch/newBatchResource/si:390403?query=status');
+    curl_setopt($ch,CURLOPT_URL,'http://sidora0c.myquotient.net:8181/cxf/sidora/rest/batch/process/addResourceObjects/si:390662');
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
     curl_setopt($ch, CURLOPT_POSTFIELDS, $post);
-    //var_dump($post);
-    // execute!
+    var_dump($post);
+   var_dump($ch);
+		// execute!
     $response = curl_exec($ch);
     //var_dump(curl_getinfo($ch));
 		var_dump($response);
@@ -2861,17 +2865,17 @@ function sidora_process_batch_submit($form,&$form_state){
   $id_to_filename = cache_get("sidora:form_id_to_filename");
   $id_to_filename = $id_to_filename->data;
 	// Send the curl request here
-	// $curl_request_id = curl -v -H "Content-Type:multipart/form-data" -F "resourceZip=public://batch_ramlani.zip" -F "content-model=si:generalImageCModel" -X POST "http://sidora0c.myquotient.net:8181/cxf/sidora/rest/batch/newBatchResource/si:390403?query=status";
 	$post = array(
-	  'resourceZip' => '@'.drupal_realpath('public://').'/' . $id_to_filename[$form_build_id]['filename'] . ';type=application/zip',
+	  'resourceZipFileURL' => '@'.drupal_realpath('public://').'/' . $id_to_filename[$form_build_id]['filename'] . ';type=text/plain',
 	  'contentModel' => $association['content_model'] . ';type=text/plain',
-	  'metadata' => '@'.drupal_realpath('public://').'/batch.xml;type=application/xml',
-	  'association' => 'general-image-association;type=text/plain',
-		'titleField' => $label
+	  'metadataFileURL' => '@'.drupal_realpath('public://').'/batch.xml;type=text/plain',
+	  //'association' => 'general-image-association;type=text/plain',
+		'titleField' => $label,
+		'resourceOwner' => $user->name . ';type=text/plain'
 	);
   $ch = curl_init();
   //curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-Type: multipart/form-data'));
-  curl_setopt($ch,CURLOPT_URL,'http://sidora0c.myquotient.net:8181/cxf/sidora/rest/batch/newBatchResource/' . $id_to_creation_info[$form_build_id]['parent'] . '?query=status');
+  curl_setopt($ch,CURLOPT_URL,'http://sidora0c.myquotient.net:8181/cxf/sidora/rest/batch/process/addResourceObjects/' . $id_to_creation_info[$form_build_id]['parent'] . '?query=status');
   curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
   curl_setopt($ch, CURLOPT_POSTFIELDS, $post);
   $response = curl_exec($ch);
