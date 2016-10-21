@@ -33,9 +33,13 @@ sidora.sharedWithMe = {
 sidora.sharedWithMe.CreateDefaultShareSection = function(){
   performWhenDisplayedOnScreen("#j1_1",function(){
     var jst = jQuery("#forjstree").jstree();
-    var checkText = jst.get_node("j1_2").text;
-    if (checkText == '  Shared With Me') {
-      sidora.sharedWithMe.CreateShareTreeSection("#j1_2");
+    var rn = jst.get_node("j1_1");
+    for (i = 0; i < rn.children.length; i++) {
+      var checkText = jst.get_node(rn.children[i]).text;
+      if (checkText == '  Shared With Me') {
+        // BBB TODO: put in a better indicator to signify that this is the shared with me concept
+        sidora.sharedWithMe.CreateShareTreeSection("#"+rn.children[i]);
+      }
     }
   });
 }
