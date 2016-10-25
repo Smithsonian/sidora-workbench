@@ -2806,7 +2806,6 @@ function sidora_form_alter(&$form, &$form_state, $form_id){
   array_unshift($form['#submit'], 'sidora_form_submit_alter');
   $association = NULL;
   if ($form_id == 'xml_form_builder_ingest_form' || $form_id == 'islandora_ingest_form' || $form_id == 'xml_form_builder_datastream_form_metadata_form'){
- 	error_log("\nIn sidora_form_alter function, form id :".print_r($form_id,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
 	  error_log("\nIn sidora_form_alter function, form before adding fields :".print_r($form,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
 		if (array_key_exists('form_build_id', $_POST)){
       $submitted_form_id = $_POST['form_build_id'];
@@ -2825,15 +2824,23 @@ function sidora_form_alter(&$form, &$form_state, $form_id){
       '#description' => '',
       '#required' => false,
     );
-		if (isset($form['#action']) && (strpos($form['#action'],'batch') !== false)){
+		if ((isset($form['#action']) && (strpos($form['#action'],'batch') !== false)) || (isset($form_state['batch']))){
 			$form['#submit'][] = 'sidora_process_batch_submit'; 
 			unset($form['next']['#submit']);
 			$form['next']['#submit'][] = 'sidora_process_batch_submit';
 			$path = $form['#action'];
       $path = substr($path,0,strpos($path,'//batch'));
-	//error_log("\nIn sidora_form_alter function, form action :".print_r($path,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
+	error_log("\nIn sidora_form_alter function, form action :".print_r($path,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
       $form['#action'] = $path;
-			$form_state['batch'] = array(
+			$form['batch'] = array(
+         '#name' => 'batch',
+         '#type' => 'hidden',
+         '#title' => 'Apply batch',
+         '#description' => '',
+         '#required' => false,
+				 '#value' => 'batch',
+      );
+     		$form_state['batch'] = array(
          '#name' => 'batch',
          '#type' => 'hidden',
          '#title' => 'Apply batch',
@@ -2843,7 +2850,7 @@ function sidora_form_alter(&$form, &$form_state, $form_id){
       );
 
 		}	
-		 error_log("\nIn sidora_form_alter function, altered form :".print_r($form,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
+		// error_log("\nIn sidora_form_alter function, altered form :".print_r($form,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
   }
   switch ($form_id) {
     case 'user_login':
@@ -3168,7 +3175,7 @@ function sidora_create_resource_get_metadata_form_html($parent_pid, $model, $for
       'objects' => array($page),
       'parent' => $parent_pid,
 			'batch' => $batch,
-      ));
+    ));
     $id_to_creation_info = cache_get("sidora:form_id_to_creation_info");
     if (empty($id_to_creation_info)){ $id_to_creation_info = array(); }else{ $id_to_creation_info = $id_to_creation_info->data; }
     $creation_info = array();
@@ -3262,8 +3269,6 @@ function sidora_create_resource_get_metadata_form_html($parent_pid, $model, $for
 						'#required' => false,
 						'#value' => count($current_uploads),
 					);	
-					$form['#submit'][] = 'sidora_process_batch_submit';
-         // error_log("\nIn sidora_create_resource, form for batch :".print_r($form,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
 				}  
           drupal_array_set_nested_value($form,$form_copy_array['#array_parents'],$form_copy_array);
         }   
@@ -3281,6 +3286,7 @@ function sidora_create_resource_get_metadata_form_html($parent_pid, $model, $for
       $ontology_id = drupal_static('ontology_id');
       $creation_info['ontology_id'] = $ontology_id;
 			$creation_info['parent'] = $parent_pid;
+			if ($batch == 'batch') $creation_info['batch'] = count($current_uploads);
       $id_to_creation_info[$form['#build_id']] = $creation_info;
       cache_set("sidora:form_id_to_creation_info",$id_to_creation_info);
       $to_return .= drupal_render( $form);
