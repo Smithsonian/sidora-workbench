@@ -285,6 +285,12 @@ function sidora_menu() {
       'access arguments' => array('Create XML Forms'),
       'type' => MENU_CALLBACK,
 		),
+    'sidora/sharing_permissions' => array(
+      'title' => 'Sharing Permissions',
+      'page_callback' => 'drupal_get_form',
+      'page_arguments' => array('sidora_sharing_permissions_form'),
+      'access callback' => TRUE,
+    )
  );
 }
 
@@ -2082,6 +2088,11 @@ function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $ex
     }
     //TBD TODO
   }
+  if ($one == 'sharing_permission_form'){
+    $form = drupal_get_form('sidora_sharing_permissions_form');
+    $to_return = drupal_render($form);
+    return $to_return;
+  }
   if ($one == 'force_fedora_sync'){
     $the_return = sidora_update_node_from_fedora($two);
     var_dump($the_return);
@@ -3787,6 +3798,7 @@ function sidora_node_allow($type_of_operation, $node) {
   if ($type_of_operation == 'create') {
     // So there needs to be a node for the pid
     // Get the owner of the node ( $node->uid )
+    $drupal_user = sidora_get_drupal_user();
     $gids = og_get_groups_by_user($drupal_user);
     $groups = node_load_multiple($gids['node']);
     // Get the current user's groups
@@ -3811,6 +3823,106 @@ function sidora_node_allow($type_of_operation, $node) {
     return node_access($type_of_operation, $node);
   }
   return FALSE;
+}
+/**
+ * Encapsulating getting the group type in case we do not want to use the title as the discriminator later (like using actual permissions instead)
+ */
+function sidora_get_sidora_group_type($group){
+  if (sidora_endsWith($group->title,' Create')) return 'create';
+  if (sidora_endsWith($group->title,' View')) return 'view';
+  if (sidora_endsWith($group->title,' Edit')) return 'edit';
+  if (sidora_endsWith($group->title,' Delete')) return 'delete';
+}
+function theme_sidora_sharing_permissions(&$variables){
+  $form = $variables['form'];
+  $rows = $form['rows'];
+  $header = $form['#header'];
+
+  $content = array(
+    '#theme' => 'table',
+    '#header' => $header,
+    '#rows' => array(),
+  ); 
+
+  // Traverse each row.  @see element_chidren().
+  foreach (element_children($rows) as $row_index) {
+    $row = array();
+    // Traverse each column in the row.  @see element_children().
+    foreach (element_children($rows[$row_index]) as $col_index) {
+      // Render the column form element.
+      $row[] = drupal_render($rows[$row_index][$col_index]);
+    }
+    // Add the row to the table.
+    $content['#rows'][] = $row;
+  }
+
+  // Redner the table and return.
+  return drupal_render($content);
+}
+function sidora_sharing_permissions_form($form = array(), &$form_state) {
+  $form['table'] = array(
+    '#theme' => 'sidora_sharing_permissions',
+    '#header' => array(t('User'), t('Create'),t('View'),t('Edit'),t('Delete')),
+  );
+
+  $gids = og_get_all_group();
+  $groups = node_load_multiple($gids);
+  $selected_groups = array();
+  foreach($groups as $group){
+    if ($group->uid == 55){   //BBB TODO
+      $selected_groups[] = $group;
+    }
+  }
+  $member_to_group_association = array();
+  foreach($selected_groups as $group){
+    $members = og_get_group_members_properties($group, array(), 'members', 'node'); 
+    foreach($members as $member){
+      if (empty($member_to_group_association[$member])){
+        $member_to_group_association[$member] = array();
+      }
+      $member_to_group_association[$member][] = $group;
+    }
+  }
+  $rows = array();
+  foreach($member_to_group_association as $uid => $groups) {
+    // Fast ownership query, not loading entire user
+    $result = (db_query("SELECT name FROM users WHERE uid = :s", array(':s' => $uid)));
+    foreach($result as $indiv){
+      $username = $indiv->name;
+    }
+    $row = array(
+      'username' => array(
+        '#markup' => $username,
+      ),
+      'create' => array(
+        '#type' =>'checkbox',
+        '#default_value' => FALSE,
+      ),
+      'view' => array(
+        '#type' =>'checkbox',
+        '#default_value' => FALSE,
+      ),
+      'edit' => array(
+        '#type' =>'checkbox',
+        '#default_value' => FALSE,
+      ),
+      'delete' => array(
+        '#type' =>'checkbox',
+        '#default_value' => FALSE,
+      ),
+    );
+    foreach($groups as $group) {
+      $row[sidora_get_sidora_group_type($group)]['#default_value'] = TRUE;
+    }
+    $rows[$uid] = $row;
+  }
+  $form['table']['rows'] = $rows; //Tell the 
+
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Submit'),
+  );
+  return $form;
 }
 /*
  * hook_user_view shows user info for codebooks and exhibitions
@@ -6124,15 +6236,8 @@ function sidora_html_tree_from_query_results_tree($query_result_tree, $input_pat
     if ($input_path != '') $current_path .= ',';
     $current_path .= $pid;
     $resource_children_num = -1;
-    if (array_key_exists('k1',$t_element)) $resource_children_num = $t_element['k1']['value'];
+    if (array_key_exists('k0',$t_element)) $resource_children_num = $t_element['k0']['value'];
     $html_escaped_name = htmlspecialchars($t_element['t']['value']);
-
-      /*
-      $permission['create'] = sidora_allow(,$pid,'create');
-      $permission['view'] = sidora_allow($user,$pid,'view');
-      $permission['update'] = sidora_allow($user,$pid,'update');
-      $permission['delete'] = sidora_allow($user,$pid,'delete');
-    */
     $permissions = '';
     if (array_key_exists('crud',$t_element)) {
       if ($t_element['crud']['c']) $permissions .= 'c';
@@ -6148,7 +6253,7 @@ function sidora_html_tree_from_query_results_tree($query_result_tree, $input_pat
     if (array_key_exists('owner',$t_element)) {
       $owner_info = " owner='" . $t_element['owner']['value'] . "'";
     }
-    $to_return .= '<li><a href="' . base_path() . 'sidora/workbench/' . $url_params . '#' . $pid . '?path=' . $input_path . '" pid="' . $pid . '" fullname="' . $html_escaped_name . '" conceptchildren="' . $t_element['k0']['value'] . '" resourcechildren="' . $resource_children_num . '" permissions="' . $permissions . '"' . $nid_info . $owner_info . '>';
+    $to_return .= '<li><a href="' . base_path() . 'sidora/workbench/' . $url_params . '#' . $pid . '?path=' . $input_path . '" pid="' . $pid . '" fullname="' . $html_escaped_name . '" conceptchildren="' . count($t_element['children']) . '" resourcechildren="' . $resource_children_num . '" permissions="' . $permissions . '"' . $nid_info . $owner_info . '>';
     $to_return .= $t_element['t']['value'];
     if ($resource_children_num > 0) $to_return .= ' ('.$resource_children_num.')';
     $to_return .= '</a>';
@@ -6338,13 +6443,6 @@ function sidora_build_tree_from_nodes_by_pid($pid){
   return $to_return;
 }
 function sidora_build_tree_from_nodes($root_node_id, $max_depth = 3, $current_depth = 0, $resync_nodes_if_needed = TRUE){
-  /*
-  print "\n<br>BBB node_id:".$root_node_id." date:".date(DATE_RFC2822);
-  if ($root_node_id == 35) {
-    //BBB
-    debug_print_backtrace();
-  }
-  */
   $node = node_load($root_node_id);
   if ($resync_nodes_if_needed && !sidora_is_node_synced_with_fedora($node)) {
     sidora_update_node_from_fedora($node);
@@ -8518,13 +8616,19 @@ function sidora_generate_child_resource_pid_only_sparql_query($pid) {
 /*
  * Login dev by Gor
  */
-
+function sidora_preprocess_user_login(&$vars) {
+  $vars['content_attributes_array']['class'][] = 'content';
+  $vars['title_attributes_array']['class'][] = 'content';
+  $vars['attributes_array']['class'][] = 'content';
+  $vars['classes_array'] = array('content');
+  $vars['forgot_link'] = l(t('Forgot password?'),'user/password');
+}
 /**
  * Implements hook_theme().
  *
  * Defines the theming capabilities provided by this module.
  */
-function seven_theme() {
+function sidora_theme() {
   $themes = array (
     'user_login_form' => array(
       'render element' => 'form',
@@ -8576,12 +8680,15 @@ function seven_theme() {
        'preprocess functions' => array(
          'sidora_preprocess_user_pass'
        )
-     )
+    ),
+    'sidora_sharing_permissions' => array(
+      'render element' => 'form',
+    ),
   );
   return $themes;
 }
 
-function seven_status_messages(){
+function sidora_status_messages(){
   global $variables;
   $messages = (drupal_get_messages());
   foreach($messages as $message_type=>$message_group){
