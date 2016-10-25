@@ -287,10 +287,10 @@ function sidora_menu() {
 		),
     'sidora/sharing_permissions' => array(
       'title' => 'Sharing Permissions',
-      'page_callback' => 'drupal_get_form',
-      'page_arguments' => array('sidora_sharing_permissions_form'),
+      'page callback' => 'drupal_get_form',
+      'page arguments' => array('sidora_sharing_permissions_form'),
       'access callback' => TRUE,
-    )
+    ),
  );
 }
 
@@ -3833,18 +3833,18 @@ function sidora_get_sidora_group_type($group){
   if (sidora_endsWith($group->title,' Edit')) return 'edit';
   if (sidora_endsWith($group->title,' Delete')) return 'delete';
 }
+/*
+ * themes the sharing_permissions_form
+ */
 function theme_sidora_sharing_permissions(&$variables){
   $form = $variables['form'];
   $rows = $form['rows'];
   $header = $form['#header'];
-
   $content = array(
     '#theme' => 'table',
     '#header' => $header,
     '#rows' => array(),
   ); 
-
-  // Traverse each row.  @see element_chidren().
   foreach (element_children($rows) as $row_index) {
     $row = array();
     // Traverse each column in the row.  @see element_children().
@@ -3855,24 +3855,31 @@ function theme_sidora_sharing_permissions(&$variables){
     // Add the row to the table.
     $content['#rows'][] = $row;
   }
-
-  // Redner the table and return.
   return drupal_render($content);
 }
-function sidora_sharing_permissions_form($form = array(), &$form_state) {
-  $form['table'] = array(
-    '#theme' => 'sidora_sharing_permissions',
-    '#header' => array(t('User'), t('Create'),t('View'),t('Edit'),t('Delete')),
-  );
-
+/*
+ * Returns an array of group objects that are owned by the entered user id or current user if blank / null
+ */
+function sidora_get_owned_groups($uid = NULL) {
+  global $user;
+  if ($uid == NULL) {
+    $uid = $user->uid;
+  }
   $gids = og_get_all_group();
   $groups = node_load_multiple($gids);
   $selected_groups = array();
   foreach($groups as $group){
-    if ($group->uid == 55){   //BBB TODO
+    if ($group->uid == $uid){
       $selected_groups[] = $group;
     }
   }
+  return $selected_groups;
+}
+/**
+ * Returns an array of the form
+ * $returned[$uid] = array of groups they are a member of (from the input groups)
+ */
+function sidora_get_member_to_group_association($selected_groups) {
   $member_to_group_association = array();
   foreach($selected_groups as $group){
     $members = og_get_group_members_properties($group, array(), 'members', 'node'); 
@@ -3883,6 +3890,18 @@ function sidora_sharing_permissions_form($form = array(), &$form_state) {
       $member_to_group_association[$member][] = $group;
     }
   }
+  return $member_to_group_association;
+}
+/*
+ * Create the sharing permissions form
+ */
+function sidora_sharing_permissions_form($form = array(), &$form_state) {
+  $form['table'] = array(
+    '#theme' => 'sidora_sharing_permissions',
+    '#header' => array(t('User'), t('Create'),t('View'),t('Edit'),t('Delete')),
+  );
+  $selected_groups = sidora_get_owned_groups();
+  $member_to_group_association = sidora_get_member_to_group_association($selected_groups);
   $rows = array();
   foreach($member_to_group_association as $uid => $groups) {
     // Fast ownership query, not loading entire user
@@ -3891,38 +3910,113 @@ function sidora_sharing_permissions_form($form = array(), &$form_state) {
       $username = $indiv->name;
     }
     $row = array(
-      'username' => array(
+      "username_$uid" => array(
         '#markup' => $username,
       ),
-      'create' => array(
+      "create_$uid" => array(
         '#type' =>'checkbox',
         '#default_value' => FALSE,
       ),
-      'view' => array(
+      "view_$uid" => array(
         '#type' =>'checkbox',
         '#default_value' => FALSE,
       ),
-      'edit' => array(
+      "edit_$uid" => array(
         '#type' =>'checkbox',
         '#default_value' => FALSE,
       ),
-      'delete' => array(
+      "delete_$uid" => array(
         '#type' =>'checkbox',
         '#default_value' => FALSE,
       ),
     );
     foreach($groups as $group) {
-      $row[sidora_get_sidora_group_type($group)]['#default_value'] = TRUE;
+      $row[sidora_get_sidora_group_type($group) . "_$uid"]['#default_value'] = TRUE;
     }
     $rows[$uid] = $row;
   }
-  $form['table']['rows'] = $rows; //Tell the 
+  $row = array(
+    "username_new" => array(
+      '#type' => 'textfield',
+    ),
+    "create_new" => array(
+      '#type' =>'checkbox',
+      '#default_value' => FALSE,
+    ),
+    "view_new" => array(
+      '#type' =>'checkbox',
+      '#default_value' => FALSE,
+    ),
+    "edit_new" => array(
+      '#type' =>'checkbox',
+      '#default_value' => FALSE,
+    ),
+    "delete_new" => array(
+      '#type' =>'checkbox',
+      '#default_value' => FALSE,
+    ),
+  );
+  $rows[] = $row;
+  $form['table']['rows'] = $rows;
 
   $form['submit'] = array(
     '#type' => 'submit',
     '#value' => t('Submit'),
   );
   return $form;
+}
+/*
+ * Validation for the sharing permissions form
+ */
+function sidora_sharing_permissions_form_validate($form, &$form_state) {
+  if (!empty($form_state['values']['username_new'])){
+    $result = (db_query("SELECT uid FROM users WHERE name = :s", array(':s' => $form_state['values']['username_new'])));
+    foreach($result as $indiv){
+      $uid = $indiv->uid;
+    }
+    if (empty($uid)){ 
+      form_set_error('username_new', 'Enter a valid username.');
+    }
+    else {
+      $form_state['values']["create_$uid"] = $form_state['values']["create_new"];
+      $form_state['values']["view_$uid"] =   $form_state['values']["view_new"];
+      $form_state['values']["edit_$uid"] =   $form_state['values']["edit_new"];
+      $form_state['values']["delete_$uid"] = $form_state['values']["delete_new"];
+    }
+  }
+}
+/*
+ * Submit handler for the sharing permissions form
+ */
+function sidora_sharing_permissions_form_submit($form, &$form_state) {
+  $groups = sidora_get_owned_groups();
+  
+  $group_assoc = array();
+  foreach($groups as $group) {
+   $group_type = sidora_get_sidora_group_type($group);
+   $group_assoc[$group_type] = $group;
+  }
+  foreach($form_state['values'] as $gtu => $add_remove) {
+    // The index is made up of <group_type>_<user_id> so break it up to see what we should do
+    // the value is whether the group should contain that user, so either add or remove them
+    if (sidora_contains($gtu, '_')) {
+      $parts = explode('_',$gtu);
+      $type = $parts[0];
+      $uid = $parts[1];
+      if (is_numeric($uid) && array_key_exists($type, $group_assoc)) {
+        $group = $group_assoc[$type];
+        if ($add_remove) {
+          og_group('node', $group, array('entity' => $uid));
+        }
+        else {
+          og_ungroup('node', $group, 'user', $uid);
+        }
+      }
+      else {
+        print "no group for:".$type."BBB";
+      }
+    }
+  }
 }
 /*
  * hook_user_view shows user info for codebooks and exhibitions
