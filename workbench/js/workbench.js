@@ -1448,8 +1448,6 @@ sidora.ResizeOnWindowResize = function(){
 	var menuwidth = jQuery("#fjt-holder").width() + 10;
   var newwidth = bodywidth-menuwidth;
 	if (newwidth < parseInt(jQuery('#sidora_content_concept_info').css('min-width'))){
-	  console.log("In resizeonwindowresize, the remaining width for concept info "+newwidth);
-		console.log("In resizeonwindowresize, the width of the tree "+menuwidth);
 		newwidth = parseInt(jQuery('#sidora_content_concept_info').css('min-width'));
 	}	
   jQuery("#sidora_content_concept_info").width(newwidth);
@@ -2753,8 +2751,24 @@ jQuery(function () {
 });
 
 jQuery(window).resize(function() {
-  sidora.ResizeOnWindowResize();
-  sidora.ResizeToBrowser();
+  if ((parseInt(jQuery(window).width()) < (parseInt(jQuery("#conceptResizable").css("min-width"))+parseInt(jQuery("#sidora_content_concept_info").css("min-width")))) || (parseInt(jQuery("#concept_tabs").width()) < parseInt(jQuery("#sidora_content_concept_info").css("min-width")))){
+	  jQuery("#conceptResizable").css("width",parseInt(jQuery("#conceptResizable").css("min-width")));
+		sidora.ResizeTree(null,{element:jQuery("#conceptResizable")});
+		sidora.stopResizeTree(null,{element:jQuery("#conceptResizable")});
+		jQuery("#concept-meta,#concept-relationships,#concept-resource-list").css("min-width","1000px");
+		jQuery("#concept_tabs,#conceptResizable").css("position","absolute");
+	}
+	else{	
+	  if (parseInt(jQuery("#sidora_content_concept_info").width()) > 1000){
+		  jQuery("#concept-meta,#concept-relationships,#concept-resource-list").css("min-width","");
+			jQuery("#concept_tabs,#conceptResizable").css("position","fixed");
+			jQuery("#branding").css("position","relative");
+		}	
+	}	
+   //jQuery("#branding").css("padding-top",parseInt(jQuery("body").css("padding-top"))+10);
+	 //jQuery("#conceptResizable").css("top",parseInt(jQuery("body").height()));
+	  sidora.ResizeOnWindowResize();
+    sidora.ResizeToBrowser();
 });
 
 /*

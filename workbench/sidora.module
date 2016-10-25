@@ -5492,7 +5492,7 @@ function sidora_block_content_navigation(){
   $to_return .= '<div id="forjstree" root_pid="'.$root_pid.'">';
   $to_return .= sidora_html_string_tree($root_pid);
   $to_return .= '</div></div>';
-  //jQuery UI L&F
+ 	//jQuery UI L&F
   drupal_add_css(drupal_get_path('module','sidora').'/css/themes/smoothness/jquery-ui.min.css');
   //jsTree lib
   $jstree_loc = variable_get('sidora_js_lib_location_jstree', '');
