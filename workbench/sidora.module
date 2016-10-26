@@ -659,8 +659,17 @@ function sidora_islandora_object_ingested(AbstractObject $object){
     $is_concept = sidora_is_concept($object);
     $is_codebook = sidora_is_codebook($object);
     if ($is_concept){
+      // Create the Drupal node to go along with it
+      $info = array("label"=>$object->label,"concept_children"=>'',"resource_children"=>0);
+      $owner_id = sidora_get_default_owner_id_under_pid($parent);
+      $concept_node = sidora_create_concept_node($object->id, $info, TRUE, $owner_id);
+      // Update Drupal node of parent
+      $parent_node = sidora_get_concept_node($parent_pid);
+      sidora_update_concept_node_add_child($parent_node, $concept_node->nid);
+      
+      // Update Fedora parent
       $parent->relationships->add(FEDORA_RELS_EXT_URI, 'hasConcept', $object->id);
-      //clear THEIR parents out since the number in parens is held there
+      // clear THEIR parents out since the number in parens is held there
       $grandparents = sidora_get_parent_concepts($parent);
       foreach($grandparents as $grandparent_pid => $grandparent){ sidora_clear_tree_cache($grandparent_pid); }
     }else if ($is_codebook){
@@ -2081,6 +2090,35 @@ function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $ex
     return t("You must be an administrator or have an administrator set sidora_allow_all_to_debug in order to access this information");
   }
   if (!sidora_is_admin()) print t("Remember that nonadmins will NOT see output from dsm!");
+  if ($one == 'sidora_update_concept_node_add_child') {
+    $node = node_load($two);
+    $node = sidora_update_concept_node_add_child($node, $parent_pid);
+    var_dump($node);
+  }
+  if ($one == 'node_dump') {
+    $node = node_load($two);
+    var_dump($node);
+    exit();
+  }
+  if ($one == 'get_default_owner') {
+    print sidora_get_default_owner_id_under_pid($two);
+    print 'done';
+    exit();
+  }
+  if ($one == 'create_og_groups') {
+    global $user;
+    $owning_user = $user;
+    if (!empty($two) || $two !== 'two') {
+      $owning_user = user_load($two);
+    }
+    $type = 'create';
+    if (!empty($parent_pid) || $parent_pid == 'si:root') {
+      $type = $parent_pid;
+    }
+    $entity = sidora_create_sidora_group($owning_user, $type); 
+    var_dump($entity);
+    exit();
+  }
   if ($one == 'set_all_nodes_resync') {
     $resync_to = 0;
     if ($two == '1'){
@@ -3824,6 +3862,81 @@ function sidora_node_allow($type_of_operation, $node) {
   }
   return FALSE;
 }
+function sidora_create_sidora_group($owning_user, $type) {
+    $values = array(
+      'type' => 'og_crud_group',
+      'uid' => $owning_user->uid,
+      'status' => 1,
+      'comment' => 1,
+      'promote' => 0,
+      'og_roles_permissions' => array("und" => array( array("value" => TRUE))),
+    );
+    if ($type == 'view') {
+      $values['group_access'] = array("und" => array( array("value" => TRUE)));
+    }
+    $entity = entity_create('node', $values);
+    $wrapper = entity_metadata_wrapper('node', $entity);
+    $wrapper->title->set($owning_user->name . ' ' . ucfirst($type));
+    $my_body_content = '';
+    $wrapper->body->set(array('value' => $my_body_content));
+    $wrapper->body->summary->set('');
+
+    $wrapper->save(true);
+    entity_save('node', $entity);
+    $roles = og_roles('node','og_crud_group',$entity->vid);
+    // Get the member role id
+    $member_rid = NULL;
+    foreach($roles as $temp_rid => $name) {
+      if ($name == 'member') {
+        $member_rid = $temp_rid;
+      }
+    }
+    $new_permission_set = array();
+    switch ($type) {
+      case 'create':
+        $new_permission_set = array(
+          'create sidora_concept content' => 'create sidora_concept content',
+          "update own sidora_concept content" => 0,
+          "update any sidora_concept content" => 0,
+          "delete own sidora_concept content" => 0,
+          "delete any sidora_concept content" => 0,
+          "unsubscribe" => "unsubscribe",
+        );
+        break;
+      case 'view':
+        $new_permission_set = array(
+          'create sidora_concept content' => 0,
+          "update own sidora_concept content" => 0,
+          "update any sidora_concept content" => 0,
+          "delete own sidora_concept content" => 0,
+          "delete any sidora_concept content" => 0,
+          "unsubscribe" => "unsubscribe",
+        );
+        break;
+      case 'edit':
+        $new_permission_set = array(
+          'create sidora_concept content' => 0,
+          "update own sidora_concept content" => "update own sidora_concept content",
+          "update any sidora_concept content" => "update any sidora_concept content",
+          "delete own sidora_concept content" => 0,
+          "delete any sidora_concept content" => 0,
+          "unsubscribe" => "unsubscribe",
+        );
+        break;
+      case 'delete':
+        $new_permission_set = array(
+          'create sidora_concept content' => 0,
+          "update own sidora_concept content" => 0,
+          "update any sidora_concept content" => 0,
+          "delete own sidora_concept content" => "delete own sidora_concept content",
+          "delete any sidora_concept content" => "delete any sidora_concept content",
+          "unsubscribe" => "unsubscribe",
+        );
+        break;
+    }    
+    og_role_change_permissions($member_rid, $new_permission_set);
+    return $entity;
+}
 /**
  * Encapsulating getting the group type in case we do not want to use the title as the discriminator later (like using actual permissions instead)
  */
@@ -3832,6 +3945,7 @@ function sidora_get_sidora_group_type($group){
   if (sidora_endsWith($group->title,' View')) return 'view';
   if (sidora_endsWith($group->title,' Edit')) return 'edit';
   if (sidora_endsWith($group->title,' Delete')) return 'delete';
+  return NULL;
 }
 /*
  * themes the sharing_permissions_form
@@ -3990,7 +4104,6 @@ function sidora_sharing_permissions_form_validate($form, &$form_state) {
  */
 function sidora_sharing_permissions_form_submit($form, &$form_state) {
   $groups = sidora_get_owned_groups();
-  
   $group_assoc = array();
   foreach($groups as $group) {
    $group_type = sidora_get_sidora_group_type($group);
@@ -9533,17 +9646,19 @@ function sidora_update_node_from_fedora($pid_or_fedora_obj_or_nid_or_node){
       // Get the object
       $obj = sidora_obj($pid);
       // Get the node
-      $nid = sidora_get_concept_node_id($pid);
-      // Get the node
-      $node = node_load($nid);
+      $node = sidora_get_concept_node($pid);
+      // Get the nid
+      $nid = $node->nid;
     }
   }
   elseif ("IslandoraFedoraObject" == get_class($pid_or_fedora_obj_or_nid_or_node)){
     // Fedora object
     $obj = $pid_or_fedora_obj_or_nid_or_node;
     $pid = $obj->id;
-    $nid = sidora_get_concept_node_id($pid);
-    $node = node_load($nid);
+    // Get the node
+    $node = sidora_get_concept_node($pid);
+    // Get the nid
+    $nid = $node->nid;
   }
   else {
     // Node
@@ -9611,7 +9726,26 @@ function sidora_get_update_or_create_concept_node($pid, $info = NULL, $set_fedor
     return $node;
   }
 }
+/*
+ * Adds a child to the end of the child list
+ */
+function sidora_update_concept_node_add_child($node, $child_node_id) {
+  // Error on coming in with node not fully loaded, load it now
+  $node = node_load($node->nid); 
+  $node_wrapper = entity_metadata_wrapper('node', $node);
+  $new_concept_children = $child_node_id;
+  $existing_concept_children = $node_wrapper->field_sidora_concept_children->value();
+  if (!empty($existing_concept_children)) {
+    $new_concept_children = $existing_concept_children . ',' . $child_node_id;
+  }
+  $node_wrapper->field_sidora_concept_children->set($new_concept_children);
+  $node_wrapper->save(); 
+  return $node;
+}
 
+/*
+ * Updates an existing node with information
+ */
 function sidora_update_concept_node($node, $info, $set_fedora_sync = FALSE) {
   $node_wrapper = entity_metadata_wrapper('node', $node);
   $node_wrapper->field_fedora_label->set($info['label']);
@@ -9628,6 +9762,25 @@ function sidora_update_concept_node($node, $info, $set_fedora_sync = FALSE) {
   }
   $node_wrapper->save();
   return $node;
+}
+/**
+ * Retrieves concept node for this pid
+ */
+function sidora_get_concept_node($pid) {
+  $query = new EntityFieldQuery();
+  $query->entityCondition('entity_type', 'node')
+    ->entityCondition('bundle',  sidora_get_concept_content_type())
+    ->propertyCondition('status', 1)
+    ->fieldCondition('field_fedora_pid', 'value', $pid, '=')
+    ->addMetaData('account', user_load(1)); // Run the query as user 1.
+  $result = $query->execute();
+  if (sizeof($result) === 0){
+    return NULL;
+  }
+  foreach($result["node"] as $nid => $obj){
+    return $obj;
+  }
+  return NULL;
 }
 /**
  * Retrieves concept node for this pid
@@ -9651,8 +9804,17 @@ function sidora_get_concept_node_id($pid) {
 /**
  * Creates a concept node - does not check to see if a node already exists for this pid
  * REQUIRES an info to be passed in, even if empty array
+ * $info includes the following:
+ *   'label' => The label of the Fedora object
+ *   'concept_children' => a CSV of all of the NODE children of the node (NOT PIDS, NODE IDS)
+ *   'resource_children' => a number of resources for the Fedora object
+ * A Fresh Node of Fedora object that was just created:
+ * $info = array("label"=>'label',"concept_children"=>'',"resource_children"=>0);
+ * A node of a Fedora object that already existed:
+ * $info = array("label"=>'label',"concept_children"=>'88,89,92',"resource_children"=>7);
+ * 
  */
-function sidora_create_concept_node($pid, $info = NULL, $set_fedora_sync = FALSE){
+function sidora_create_concept_node($pid, $info = NULL, $set_fedora_sync = FALSE, $owner_id = 1){
   if ($info == NULL) {
     return NULL;
   }
@@ -9663,7 +9825,7 @@ function sidora_create_concept_node($pid, $info = NULL, $set_fedora_sync = FALSE
   $newNode->title = 'PID_' . $pid;
   node_object_prepare($newNode);
   $newNode->language = LANGUAGE_NONE;
-  $newNode->uid = 1;//{USER_ID};
+  $newNode->uid = $owner_id;
   $newNode->created = $time_now;
   $newNode->changed = $time_now;
   $newNode->status = 1;
@@ -9689,6 +9851,37 @@ function sidora_create_concept_node($pid, $info = NULL, $set_fedora_sync = FALSE
   // save node
   node_save($newNode);
   return $newNode;
+}
+/**
+ * Returns the owner id of the pid if the concept is a shared item, otherwise returns the current user's id
+ * 
+ */
+function sidora_get_default_owner_id_under_pid($pid){
+  global $user;
+  //Get the node that represents the pid
+  $node = sidora_get_concept_node($pid);
+  if (empty($node)) {
+    return $user->uid;
+  }
+
+  //If there is a node, check to see if it's in a share group
+  $node_groups = og_get_entity_groups('node', $node);
+ 
+  //If it is in a share group, return the node's owner
+  $owned_groups = sidora_get_owned_groups($node->uid);
+  $group_assoc = array();
+  foreach($owned_groups as $owned_group) {
+    $group_type = sidora_get_sidora_group_type($owned_group);
+    if (!empty($group_type)) {
+      foreach($node_groups['node'] as $membership_id => $node_group_group_id) {
+        if ($node_group_group_id == $owned_group->vid) {
+          return $owned_group->uid;
+        }
+      }
+    }
+  }
+  //If not in a share group, return the current user's id
+  return $user->uid;
 }
 /**
  * Creates a node type for concepts if one doesn't exist, and returns the "machine name" for the type
