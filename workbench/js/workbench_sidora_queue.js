@@ -170,6 +170,7 @@ SidoraQueue.prototype.Done = function(completedItem, ajaxReturn){
 					console.log("Request id:"+requestID);
 					this.NotificationWindow.Show('Batch Ingest request successfully submitted. Request ID is ' + requestID);
 					// extract the request id and set an interval based function 
+				
 					 (function poll(requestID) {
 				setTimeout(function(){
 				jQuery.ajax({

@@ -2659,7 +2659,7 @@ if ($one == 'deletexsl'){
 	  'resourceZipFileURL' => drupal_realpath('public://') . '/batch_ramlani.zip',
 	  'contentModel' => 'si:generalImageCModel',
 	  'metadataFileURL' => drupal_realpath('public://') . '/batch_ramlani.xml',
-		'titleField' => 'batch_102016',
+		'titleField' => 'batch_102516',
 		'sidoraDatastreamFileURL' => drupal_realpath('public://') . '/sidora_ramlani.xml',
 		'resourceOwner' => 'ramlani'
 	  );
@@ -2806,7 +2806,7 @@ function sidora_form_alter(&$form, &$form_state, $form_id){
   array_unshift($form['#submit'], 'sidora_form_submit_alter');
   $association = NULL;
   if ($form_id == 'xml_form_builder_ingest_form' || $form_id == 'islandora_ingest_form' || $form_id == 'xml_form_builder_datastream_form_metadata_form'){
-	  error_log("\nIn sidora_form_alter function, form before adding fields :".print_r($form,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
+	  //error_log("\nIn sidora_form_alter function, form before adding fields :".print_r($form,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
 		if (array_key_exists('form_build_id', $_POST)){
       $submitted_form_id = $_POST['form_build_id'];
       $association = sidora_find_association($form_state, $submitted_form_id);
@@ -2828,10 +2828,13 @@ function sidora_form_alter(&$form, &$form_state, $form_id){
 			$form['#submit'][] = 'sidora_process_batch_submit'; 
 			unset($form['next']['#submit']);
 			$form['next']['#submit'][] = 'sidora_process_batch_submit';
-			$path = $form['#action'];
-      $path = substr($path,0,strpos($path,'//batch'));
-	error_log("\nIn sidora_form_alter function, form action :".print_r($path,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
-      $form['#action'] = $path;
+			if (isset($form['hidden_next'])) {
+			 unset($form['hidden_next']['#submit']);
+			 $form['hidden_next']['#submit'][] = 'sidora_process_batch_submit';
+			} 
+			if (isset($form['#action']) && (strpos($form['#action'],'batch') !== false)){
+        $form['#action'] = substr($form['#action'],0,strpos($form['#action'],'//batch'));
+			}
 			$form['batch'] = array(
          '#name' => 'batch',
          '#type' => 'hidden',
@@ -2848,10 +2851,9 @@ function sidora_form_alter(&$form, &$form_state, $form_id){
          '#required' => false,
 				 '#value' => 'batch',
       );
-
+		 //error_log("\nIn sidora_form_alter function, altered form :".print_r($form,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
 		}	
-		// error_log("\nIn sidora_form_alter function, altered form :".print_r($form,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
-  }
+	}
   switch ($form_id) {
     case 'user_login':
     case 'user_login_block':
@@ -2884,16 +2886,18 @@ function sidora_process_batch_submit($form,&$form_state){
     $document = xml_form_builder_transform_metadata_datastream($document, $association['self_transform']);
   }
  	$batch_xml = trim($document->saveXML());
-	$targetDir = 'public://' . 'batch_' . $user->name . '.xml';
-	file_put_contents($targetDir,$batch_xml);
-	drupal_chmod($targetDir);
   $id_to_creation_info = cache_get("sidora:form_id_to_creation_info");
   $id_to_creation_info = $id_to_creation_info->data;
   $form_build_id = $form['#build_id'];
   $id_to_filename = cache_get("sidora:form_id_to_filename");
   $id_to_filename = $id_to_filename->data;
 	$creation_info = $id_to_creation_info[$form_build_id];
-	// Send the curl request here
+	$expl_filename = explode('files_',$id_to_filename[$form_build_id]['filename']);
+	$batch_id = substr($expl_filename[1],0,-4);
+	//error_log("\nIn sidora_process_batch_submit function, batch id :".print_r($batch_id,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
+	$targetDir = 'public://' . 'batch_' . $batch_id . '.xml';
+	file_put_contents($targetDir,$batch_xml);
+	drupal_chmod($targetDir);
   $all_meta_entered = filter_input(INPUT_POST, 'all_meta_entered', FILTER_SANITIZE_URL);
   if ($all_meta_entered != 'TRUE') $all_meta_entered = 'FALSE';
 	$sidora_xml = '<sidora>
@@ -2904,23 +2908,24 @@ function sidora_process_batch_submit($form,&$form_state){
 <initial_dsid>'.$association['dsid'].'</initial_dsid>
 <parent>'.$creation_info['parent'].'</parent>
 </sidora>';
-  $targetDir = 'public://' . 'sidora_' . $user->name . '.xml';
+  $targetDir = 'public://' . 'sidora_' . $batch_id . '.xml';
 	file_put_contents($targetDir,$sidora_xml);
 	drupal_chmod($targetDir);
 	$post = array(
 	  'resourceZipFileURL' => drupal_realpath('public://').'/' . $id_to_filename[$form_build_id]['filename'],
 	  'contentModel' => $association['content_model'],
-	  'metadataFileURL' => drupal_realpath('public://').'/batch_' . $user->name . '.xml',
+	  'metadataFileURL' => drupal_realpath('public://').'/batch_' . $batch_id . '.xml',
 		'titleField' => $label,
+		'sidoraDatastreamFileURL' => drupal_realpath('public://') . '/sidora_' . $batch_id . '.xml',
 		'resourceOwner' => $user->name
 		);
   $ch = curl_init();
-  //curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-Type: multipart/form-data'));
-  curl_setopt($ch,CURLOPT_URL,'http://sidora0c.myquotient.net:8181/cxf/sidora/rest/batch/process/addResourceObjects/' . $id_to_creation_info[$form_build_id]['parent']);
+  curl_setopt($ch, CURLOPT_URL, 'http://sidora0c.myquotient.net:8181/cxf/sidora/rest/batch/process/addResourceObjects/' . $id_to_creation_info[$form_build_id]['parent']);
   curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
   curl_setopt($ch, CURLOPT_POSTFIELDS, $post);
   $response = curl_exec($ch);
   curl_close($ch);
+	error_log("\nIn sidora_process_batch_submit function, response :".print_r($response,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
 	// save the curl request id to session along with the parent concept
 	if (strpos($response,'</CorrelationID></Batch>') !== false) {
 	 $xml_from_curl = simplexml_load_string($response);
@@ -2931,12 +2936,18 @@ function sidora_process_batch_submit($form,&$form_state){
 	     $session_key = 'sidora_batch_request_'.$user->name;
 	     $_SESSION[$session_key] = array();
 			 $_SESSION[$session_key]['request_id'] = $request_id;
+			 $_SESSION[$session_key][$request_id]['batch_id'] = $batch_id;
 	     $_SESSION[$session_key][$request_id]['Parent'] = $id_to_creation_info[$form_build_id]['parent'];
+	     error_log("\nIn sidora_process_batch_submit function, session :".print_r($_SESSION,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
 	     print "Request for batch ingest successfully received by backend. Request id is:".$request_id;
 			 drupal_exit();
 		 }
 		}
-	 }	 	 
+	 }
+	 else{
+	   print "Error in batch ingest request " . $response;
+		 drupal_exit();
+	}	  	 
 }
 /**
  * Helper to step through the entire form and remove actual validation, putting a red * in its place
@@ -3174,7 +3185,6 @@ function sidora_create_resource_get_metadata_form_html($parent_pid, $model, $for
       'models' => array($model),
       'objects' => array($page),
       'parent' => $parent_pid,
-			'batch' => $batch,
     ));
     $id_to_creation_info = cache_get("sidora:form_id_to_creation_info");
     if (empty($id_to_creation_info)){ $id_to_creation_info = array(); }else{ $id_to_creation_info = $id_to_creation_info->data; }
@@ -3194,12 +3204,16 @@ function sidora_create_resource_get_metadata_form_html($parent_pid, $model, $for
       $at_least_one_pic = $at_least_one_pic ||  sidora_is_displayable_image_with_convert($cu->filename) && ($batch != 'batch');
     }
     if ($batch == 'batch'){ // rename and move the uploaded files
-		  $batch_filename = '';
-			$batch_filename = sidora_upload_batch($current_uploads);
+		  $batch_uniqueId = '';
+			$batch_uniqueId = sidora_upload_batch($current_uploads);
+		  if ($batch_uniqueId == ''){
+		    drupal_set_message(t('An error occured while copying the files for batch ingest'),'error');
+			  return;
+			}	
 		}	
 		for ($form_total = 0; $form_total < count($current_uploads); $form_total++){
       if ($form_total > 0 && $batch == 'batch'){
-			  break;
+			  break;  // we need to create only one copy of the form for all the uploaded files
 			}	
 			$to_return .= '<div id="form-num-'.$form_total.'" class="sidora-ingest-form-holder ';
       if (!empty($current_uploads[$form_total]) && $at_least_one_pic){
@@ -3236,10 +3250,8 @@ function sidora_create_resource_get_metadata_form_html($parent_pid, $model, $for
         }
         $form_copy_array = $form;
         if (!empty($association['title_field'])){
-          //error_log("\nIn sidora_create_resource, batch :".print_r($batch,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
 					for ($title_total = 0; $title_total < count($association['title_field']); $title_total++){
             $form_copy_key = $association['title_field'][$title_total];
-            //error_log("\nIn sidora_create_resource, form copy key :".print_r($form_copy_key,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
             if (!empty($form_copy_key)) {
               if (array_key_exists($form_copy_key,$form_copy_array)){
                 $form_copy_array = $form_copy_array[$form_copy_key];
@@ -3251,8 +3263,6 @@ function sidora_create_resource_get_metadata_form_html($parent_pid, $model, $for
           $form_copy_array['#value'] = substr($filename,0,strpos($filename,'.'));
 				if ($batch == 'batch'){
 				  $form_copy_array['#value'] = '';
-					//$form_copy_array['#value'] = 'This will be set to the filename of the corresponding file for each object' ;
-					//$form_copy_array['#attributes'] = array('disabled' => 'TRUE');
 					$form['batch'] = array(
             '#name' => 'batch',
             '#type' => 'hidden',
@@ -3275,7 +3285,7 @@ function sidora_create_resource_get_metadata_form_html($parent_pid, $model, $for
         $id_to_filename = cache_get("sidora:form_id_to_filename");
         if (empty($id_to_filename)){ $id_to_filename = array(); }else{ $id_to_filename = $id_to_filename->data; }
 				$id_to_filename[$form['#build_id']] = array('filename' => $filename, 'filepath' => $current_uploads[$form_total]->filepath);
-        if ($batch == 'batch') $id_to_filename[$form['#build_id']] = array('filename' => $batch_filename, 'filepath' => $current_uploads[$form_total]->filepath);
+        if ($batch == 'batch') $id_to_filename[$form['#build_id']] = array('filename' => 'files_' . ($batch_uniqueId != '' ? $batch_uniqueId : uniqid($user->name)) . '.zip', 'filepath' => $current_uploads[$form_total]->filepath);
         cache_set("sidora:form_id_to_filename",$id_to_filename);
       }
       $id_to_creation_info = cache_get("sidora:form_id_to_creation_info");
@@ -3286,7 +3296,6 @@ function sidora_create_resource_get_metadata_form_html($parent_pid, $model, $for
       $ontology_id = drupal_static('ontology_id');
       $creation_info['ontology_id'] = $ontology_id;
 			$creation_info['parent'] = $parent_pid;
-			if ($batch == 'batch') $creation_info['batch'] = count($current_uploads);
       $id_to_creation_info[$form['#build_id']] = $creation_info;
       cache_set("sidora:form_id_to_creation_info",$id_to_creation_info);
       $to_return .= drupal_render( $form);
@@ -3425,7 +3434,6 @@ function sidora_codebook_upload_form_validate($form, &$form_state) {
       return;
     }
     $parser_os_file_path = drupal_realpath($file->destination);
-    error_log("\nIn sidora_codebook_uloadform_validate, parser os file path :".print_r($parser_os_file_path,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
 		$parser_drupal_file_path = NULL;
     $delete_parser_file = FALSE;
     if (strcasecmp($header_choice,'true') === 0) {
@@ -3451,9 +3459,9 @@ function sidora_codebook_upload_form_validate($form, &$form_state) {
           ));
           form_set_error('file',t("The demonstration file does not have data for the number of header rows chosen."));
           //Remove the original
-          //sidora_do_any_file_delete($parser_os_file_path);
+          sidora_do_any_file_delete($parser_os_file_path);
           //Remove the copy created for the parser
-          //sidora_do_any_file_delete($file_path);
+          sidora_do_any_file_delete($file_path);
           return;
         }
         $worksheet->removeRow(1 , $header_amount - 1);
@@ -3499,9 +3507,9 @@ function sidora_codebook_upload_form_validate($form, &$form_state) {
     } //Ends else of if ($file)
     if ($delete_parser_file) {
       //Remove the original copy
-      //sidora_do_any_file_delete($parser_drupal_file_path);
+      sidora_do_any_file_delete($parser_drupal_file_path);
       //Remove the resaved copy
-      //sidora_do_any_file_delete($parser_os_file_path);
+      sidora_do_any_file_delete($parser_os_file_path);
     }
   }
 }
@@ -5089,17 +5097,20 @@ function sidora_ajax_parts($call_type, $param1 = '', $param2 = '', $param3 = '')
 		//sleep(5);
 		$batch_done == 'false';
 		$session_key = 'sidora_batch_request_'.$user->name;
+		$batch_id = $_SESSION[$session_key][$request_id]['batch_id'];
 	  $parent_pid = $_SESSION[$session_key][$request_id]['Parent'];
     $ch = curl_init();
-    curl_setopt($ch,CURLOPT_URL,'http://sidora0c.myquotient.net:8181/cxf/sidora/rest/batch/newBatchResource/' . $parent_pid . '/' . $request_id);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+    curl_setopt($ch,CURLOPT_URL,'http://sidora0c.myquotient.net:8181/cxf/sidora/rest/batch/process/addResourceObjects/' . $parent_pid . '/' . $request_id);
+		curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
 	  $response = curl_exec($ch);
 	if (strpos($response,'</BatchDone></Batch>') !== false) {
 	 $xml_from_curl = simplexml_load_string($response);
 	 if ($xml_from_curl){
-		 if (($xml_from_curl->ParentPID == $parent_pid) && ($xml_from_curl->CorrelationID == $request_id)){
+	error_log("\nIn sidora_check_batch_status function, resources processed :".print_r($xml_from_curl->ResourcesProcessed,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
+		 if (($xml_from_curl->ParentPID == $parent_pid) && ($xml_from_curl->correlationId == $request_id)){
        $status = $xml_from_curl->ResourcesProcessed;
 			 $batch_done = $xml_from_curl->BatchDone;
+	error_log("\nIn sidora_check_batch_status function, batch done :".print_r($batch_done,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
 		 }
 		}
 	 }	 	 
@@ -9470,22 +9481,31 @@ function sidora_convert_entity($matches) {
 function sidora_upload_batch($upload_files_array) {
   global $user;
 	if (!empty($upload_files_array) && count($upload_files_array) > 0){
-	//  error_log("\nIn sidora_upload_batch function, upload files array :".print_r($upload_files_array,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
-	//  error_log("\nIn sidora_upload_batch function, session array :".print_r($_SESSION,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
-		$filename = 'batch' . '_' . $user->name . '.zip';
-		$archive_uri = 'public://' . $filename;
+		$unique_id = uniqid($user->name);
+		$domtree = new DOMDocument('1.0', 'UTF-8');
+		$domtree->formatOutput = TRUE;
+		$batch_id_xml = $domtree->createElement('batch_id',$unique_id);
+		$batch_id_xml = $domtree->appendChild($batch_id_xml);
+		$archive_uri = drupal_realpath('public://') . '/files_' . $unique_id . '.zip';
     $zip = new ZipArchive;
-    if ($zip->open(drupal_realpath($archive_uri), ZipArchive::CREATE) === TRUE) {
+    if ($zip->open($archive_uri, ZipArchive::CREATE) === TRUE) {
     foreach ($upload_files_array as $file){
-		  if (file_unmanaged_copy($file->filepath,'public://' . $file->filename)){
-        $zip->addFile(drupal_realpath($file->filepath), $file->filename);
+		  $unique_filename = uniqid() . '_' . $file->filename;
+			if (file_unmanaged_copy($file->filepath, 'public://' . $unique_filename)){
+        if ($zip->addFile(drupal_realpath($file->filepath), $unique_filename)){
+				 file_unmanaged_delete(drupal_realpath('public://') . '/' . $unique_filename);
+				} 
+				$filename_xml = $domtree->createElement('file', $unique_filename);
+				$filename_xml = $domtree->appendChild($filename_xml);
 			}else{
 			  return;
 			}	
 		}
       $zip->close();
 			drupal_chmod(drupal_realpath($archive_uri));
-      return $filename;
+			error_log("\nIn sidora_upload_batch function, domtree :".print_r($domtree,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
+			$domtree->save('public://' . 'files_' . $unique_id . '.xml');
+      return $unique_id;
     }
     else {
       return;
