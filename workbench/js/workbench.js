@@ -244,10 +244,17 @@ sidora.concept.LoadContentHelp.Resources.TableActionsSetup = function(){
  * Sets the visiblility of menu items on the concept menu.  Remember, this is UI only and is not to be used for security
  */
 sidora.concept.LoadContentHelp.Permissions = function(conceptOfInterest){
+  jQuery("#sharing-permissions").toggle(false);
+  jQuery("#concept-create").toggle(false);
+  jQuery("#deleteConcept").toggle(false);
+  jQuery("#editMetadataConcept").toggle(false);
+  jQuery("#editPermissionsConcept").toggle(false);
+  jQuery("#manageConcept").toggle(false);
   jQuery.ajax({
     dataType: "json",
     url: Drupal.settings.basePath+'sidora/info/'+conceptOfInterest+'/permission',
     success: function(permissions){
+      jQuery("#sharing-permissions").toggle(jQuery("#j1_1 >a").attr("pid") == sidora.concept.loadedContentPid);
       jQuery("#concept-create").toggle(permissions.create);
       jQuery("#deleteConcept").toggle(permissions.delete);
       jQuery("#editMetadataConcept").toggle(permissions.update); 
@@ -1399,6 +1406,7 @@ sidora.ontology.CreateConceptMenu = function(){
     },
     success: function (json_obj){
       window.sidora.ontology.tree = json_obj;
+      jQuery("#concept-file-menu").append("<li id='sharing-permissions'><a href='#' onclick='return false;'>Sharing Permissions</a></li>");
       jQuery("#concept-file-menu").append("<li id='concept-create'><a href='#' onclick='return false;'><input type='image' src='"+Drupal.settings.basePath+"sites/all/modules/islandora_xml_forms-7.x-1.7/elements/images/add.png' title='Create a new concept as a child of the highlighted concept.'>&nbsp;Add&nbsp;a&nbsp;new&nbsp;concept</a><ul>"+window.sidora.ontology._createSubmenu(window.sidora.ontology.tree)+"</ul></li>");
       resetMenu("concept-menu");
       jQuery("#concept-create").find("a").not(".ui-state-disabled").bind("click.createConcept",function(){
@@ -1422,6 +1430,16 @@ sidora.ontology.CreateConceptMenu = function(){
         }
         console.log(this);
       }).attr("onclick","return false;");
+      jQuery("#sharing-permissions").click(function(){
+        Shadowbox.open({
+          content:    Drupal.settings.basePath+"sidora/sharing_permissions",
+          player:     "iframe",
+          title:      "Edit Sharing Permissions",
+          options: {
+            onFinish:  function(){}
+          }
+        });
+      });
     }
   });
 };
