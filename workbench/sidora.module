@@ -2000,6 +2000,7 @@ function sidora_settings_object($ignore_list = array()){
   $exact_match[] = 'osd_proxy_resolver_url';
   $exact_match[] = 'account_request_email_to';
   $exact_match[] = 'account_request_email_from';
+	$exact_match[] = 'site_admin_email_to';
   $settings_holder = array();
   foreach($conf as $drupal_setting_index=>$drupal_setting){
     if (in_array($drupal_setting_index,$exact_match) && !in_array($drupal_setting_index,$ignore_list)){
@@ -3295,7 +3296,7 @@ function sidora_codebook_upload_form_validate($form, &$form_state) {
     }
     else {
       watchdog('SIdora_Tabular_Parse',t("File System Problem with creating a codebook:<br/>parser_os_file_path: %for_parser <br/>drupal_realpath(file): %drupal_rp <br/>This file has NOT been deleted and is not going to be deleted by Drupal. It must be handled on the OS level.",array('%for_parser' => $parser_os_file_path, '%drupal_rp' => drupal_realpath($file->destination))));
-      form_set_error('file',t("Unable to parse the uploaded file. Contact an administrator if you believe this file should be able to be parsed.  Please send a screenshot of this page, include the file you uploaded, and the time and date this occurred.  The administrator should check the Drupal log for 'SIdora_Tabular_Parse' for more information."));
+      form_set_error('file',t("Unable to parse the uploaded file. Contact an administrator" . (variable_get('site_admin_email_to', '') != ''?' at ' . variable_get('site_admin_email_to'):'') . " if you believe this file should be able to be parsed.  Please send a screenshot of this page, include the file you uploaded, and the time and date this occurred.  The administrator should check the Drupal log for 'SIdora_Tabular_Parse' for more information."));
       return;
     }
     // If the file passed validation:
@@ -3319,7 +3320,7 @@ function sidora_codebook_upload_form_validate($form, &$form_state) {
         var_dump($e);
         $exception_dump = ob_get_clean();
         watchdog('SIdora_Tabular_Parse',t("Problem with creating a codebook:<br/>") . $e->getMessage() . '<br>' . $exception_dump . t("URL:") . $url);
-        form_set_error('file',t("Unable to parse the uploaded file. Contact an administrator if you believe this file should be able to be parsed.  Please send a screenshot of this page, include the file you uploaded, and the time and date this occurred.  The administrator should check the Drupal log for 'SIdora_Tabular_Parse' for more information."));
+        form_set_error('file',t("Unable to parse the uploaded file. Contact an administrator" . (variable_get('site_admin_email_to', '') != ''?' at ' . variable_get('site_admin_email_to'):'') . " if you believe this file should be able to be parsed.  Please send a screenshot of this page, include the file you uploaded, and the time and date this occurred.  The administrator should check the Drupal log for 'SIdora_Tabular_Parse' for more information."));
         return;
       }
     } //Ends else of if ($file)
