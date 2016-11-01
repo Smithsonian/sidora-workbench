@@ -1411,7 +1411,7 @@ function sidora_get_parent_table($pid){
     } 
     if (!$concept_type) $concept_type = $form_name; 
     $row = array(
-      array('data' => $parent['label']),
+      array('data' => $parent['label'], 'ppid' => $parent['pid']),
       array('data' => $concept_type),
     );
     if (sizeof($parents) > 1) $row[] = array('data' => drupal_render($text_link));
@@ -6944,38 +6944,6 @@ function sidora_fill_concepts_children($query_result, $current_path = array()){
   }
   return $query_result;
 }
-function testing_sidora_fill_concepts_children($query_result, $current_path = array(), &$direct_children = NULL){
-  if (is_array($query_result)){
-    foreach ($query_result as $c_index=>$child){
-      $child_pid = $child['o']['value'];
-      $child_info = array(
-        'label' => $child['t']['value'],
-        'concept_children' => '',
-        'resource_children' => $child['resourcecount']['value'],
-        'owner' => $child['owner']['value'],
-      );
-      $node = sidora_get_update_or_create_concept_node($child_pid, $child_info);
-      if ($node !== NULL) {
-        $direct_children[] = $node->nid;
-      }
-      if (!in_array($child_pid,$current_path)){
-        $path_to_send = $current_path;
-        $path_to_send[] = $child_pid;
-        $results = _sidora_get_child_results_cache($child_pid);
-        $filled_children = array();
-        $query_result[$c_index]['children'] = sidora_fill_concepts_children($results, $path_to_send, $filled_children);
-        $child_info['concept_children'] = implode(',',$filled_children);
-        sidora_update_concept_node($node, $child_info);
-        print ("Updating $node->nid <br>"); //BBB
-        print ("<br>"); //BBB
-      }else{
-        $query_result[$c_index]['already_in_tree'] = true;
-      }
-    }
-  }
-  return $query_result;
-}
-
 /*
  * Pulls information from the cache or if missing from cache populates it and returns that data
  */
