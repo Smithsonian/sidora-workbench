@@ -511,6 +511,11 @@ sidora.util.loadTreeSectionsIfNeeded = function(data){
   var jst = jQuery("#forjstree").jstree(true);
   var openingPid = node.a_attr.pid;
   var currentChildrenPids = sidora.util.childrenPidsListedInUIByNode(node);
+  var swmIndex = currentChildrenPids.indexOf("shared-with-me");
+  if (swmIndex >= 0) {
+    // Don't check the pid of shared-with-me, it's a special value
+    currentChildrenPids.splice(swmIndex, 1);
+  }
   var childPidsCsv = currentChildrenPids.join();
   if (childPidsCsv.length > 0) {
     sidora.util.checkUIForInvalidPids(openingPid, childPidsCsv);
@@ -527,8 +532,11 @@ sidora.util.loadTreeSectionsIfNeeded = function(data){
       var doRetrieval = false;
       for (var ccc = 0; ccc < currentChildrenPids.length; ccc++ ){
         var numberOfChildrenThisShouldHave = parseInt(jst.get_node(node.children[ccc]).a_attr.conceptchildren);
-        var numberOfChildrenThisDoesHave = jst.get_node(node.children[ccc]).children.length;
+        var nodeOfInterest = jst.get_node(node.children[ccc]);
+        var numberOfChildrenThisDoesHave = nodeOfInterest.children.length;
         if (numberOfChildrenThisShouldHave > numberOfChildrenThisDoesHave) {
+          console.log(nodeOfInterest);
+          console.log("BBB should have:" + numberOfChildrenThisShouldHave + " but has: " + numberOfChildrenThisDoesHave);
           doRetrieval = true;
         }
       }

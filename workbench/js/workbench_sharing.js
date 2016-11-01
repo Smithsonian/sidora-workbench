@@ -43,9 +43,17 @@ sidora.sharedWithMe.CreateDefaultShareSection = function(){
     }
   });
 }
+sidora.sharedWithMe.ReopenCurrent = function() {
+  var jst = jQuery("#forjstree").jstree();
+  var pNode = jst.get_node(jst.get_node(jst.get_selected()[0]).parent);
+  jst.close_node(pNode);
+  jst.open_node(pNode);
+}
 sidora.sharedWithMe.CreateShareTreeSection = function(sharedWithMeSelector){
   // Our shared folder should come out as a child of the tree
   // Open the root, and the share, then make it so we can't close the root (which would close the share)
+  // If the divider already exists, don't readd
+  if (jQuery("#shared-tree-divider").length > 0) return;
   var jst = jQuery("#forjstree").jstree();
   jst.open_node("j1_1"); //Open root
   jst.open_node(sharedWithMeSelector); //Open Share
@@ -84,6 +92,9 @@ sidora.sharedWithMe.CreateShareTreeSection = function(sharedWithMeSelector){
   jQuery("#fjt-holder").mouseleave(function(){ sidora.sharedWithMe.dragY = false; });
   jQuery("#shared-tree-divider").mouseup(function(){ sidora.sharedWithMe.dragY = false; });
   sidora.sharedWithMe.Relocate();
+  // Reopening will force the current section to load, which it will not do on initial load since Shared With Me is a special case
+  // Otherwise, it will not display the "can open" icon next to the concept (since it loads without children)
+  sidora.sharedWithMe.ReopenCurrent();
 }
 sidora.sharedWithMe.Relocate = function(){
   if (sidora.sharedWithMe.selector == null) return;
