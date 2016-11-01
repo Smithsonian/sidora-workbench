@@ -2806,7 +2806,6 @@ function sidora_form_alter(&$form, &$form_state, $form_id){
   array_unshift($form['#submit'], 'sidora_form_submit_alter');
   $association = NULL;
   if ($form_id == 'xml_form_builder_ingest_form' || $form_id == 'islandora_ingest_form' || $form_id == 'xml_form_builder_datastream_form_metadata_form'){
-	  //error_log("\nIn sidora_form_alter function, form before adding fields :".print_r($form,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
 		if (array_key_exists('form_build_id', $_POST)){
       $submitted_form_id = $_POST['form_build_id'];
       $association = sidora_find_association($form_state, $submitted_form_id);
@@ -2825,6 +2824,7 @@ function sidora_form_alter(&$form, &$form_state, $form_id){
       '#required' => false,
     );
 		if ((isset($form['#action']) && (strpos($form['#action'],'batch') !== false)) || (isset($form_state['batch']))){
+			unset($form['#submit']);
 			$form['#submit'][] = 'sidora_process_batch_submit'; 
 			unset($form['next']['#submit']);
 			$form['next']['#submit'][] = 'sidora_process_batch_submit';
@@ -2851,7 +2851,6 @@ function sidora_form_alter(&$form, &$form_state, $form_id){
          '#required' => false,
 				 '#value' => 'batch',
       );
-		 //error_log("\nIn sidora_form_alter function, altered form :".print_r($form,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
 		}	
 	}
   switch ($form_id) {
@@ -2892,8 +2891,9 @@ function sidora_process_batch_submit($form,&$form_state){
   $id_to_filename = cache_get("sidora:form_id_to_filename");
   $id_to_filename = $id_to_filename->data;
 	$creation_info = $id_to_creation_info[$form_build_id];
-	$expl_filename = explode('files_',$id_to_filename[$form_build_id]['filename']);
-	$batch_id = substr($expl_filename[1],0,-4);
+	//$expl_filename = explode('files_',$id_to_filename[$form_build_id]['filename']);
+	//$batch_id = substr($expl_filename[1],0,-4);
+	$batch_id = $id_to_filename[$form_build_id]['filename'];
 	//error_log("\nIn sidora_process_batch_submit function, batch id :".print_r($batch_id,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
 	$targetDir = 'public://' . 'batch_' . $batch_id . '.xml';
 	file_put_contents($targetDir,$batch_xml);
@@ -2912,13 +2912,16 @@ function sidora_process_batch_submit($form,&$form_state){
 	file_put_contents($targetDir,$sidora_xml);
 	drupal_chmod($targetDir);
 	$post = array(
-	  'resourceZipFileURL' => drupal_realpath('public://').'/' . $id_to_filename[$form_build_id]['filename'],
+	  'resourceZipFileURL' => drupal_realpath('public://') . '/files_' . $batch_id . '.xml',
 	  'contentModel' => $association['content_model'],
 	  'metadataFileURL' => drupal_realpath('public://').'/batch_' . $batch_id . '.xml',
 		'titleField' => $label,
 		'sidoraDatastreamFileURL' => drupal_realpath('public://') . '/sidora_' . $batch_id . '.xml',
 		'resourceOwner' => $user->name
 		);
+	if ($association['content_model'] == 'si:datasetCModel'){
+	  $post['codebookPid'] = $user->data['recent_codebook_id'];
+	}	
   $ch = curl_init();
   curl_setopt($ch, CURLOPT_URL, 'http://sidora0c.myquotient.net:8181/cxf/sidora/rest/batch/process/addResourceObjects/' . $id_to_creation_info[$form_build_id]['parent']);
   curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
@@ -3285,7 +3288,7 @@ function sidora_create_resource_get_metadata_form_html($parent_pid, $model, $for
         $id_to_filename = cache_get("sidora:form_id_to_filename");
         if (empty($id_to_filename)){ $id_to_filename = array(); }else{ $id_to_filename = $id_to_filename->data; }
 				$id_to_filename[$form['#build_id']] = array('filename' => $filename, 'filepath' => $current_uploads[$form_total]->filepath);
-        if ($batch == 'batch') $id_to_filename[$form['#build_id']] = array('filename' => 'files_' . ($batch_uniqueId != '' ? $batch_uniqueId : uniqid($user->name)) . '.zip', 'filepath' => $current_uploads[$form_total]->filepath);
+        if ($batch == 'batch') $id_to_filename[$form['#build_id']] = array('filename' => $batch_uniqueId, 'filepath' => $current_uploads[$form_total]->filepath);
         cache_set("sidora:form_id_to_filename",$id_to_filename);
       }
       $id_to_creation_info = cache_get("sidora:form_id_to_creation_info");
@@ -9486,30 +9489,31 @@ function sidora_upload_batch($upload_files_array) {
 		$domtree->formatOutput = TRUE;
 		$batch_id_xml = $domtree->createElement('batch_id',$unique_id);
 		$batch_id_xml = $domtree->appendChild($batch_id_xml);
-		$archive_uri = drupal_realpath('public://') . '/files_' . $unique_id . '.zip';
-    $zip = new ZipArchive;
-    if ($zip->open($archive_uri, ZipArchive::CREATE) === TRUE) {
+		//$archive_uri = drupal_realpath('public://') . '/files_' . $unique_id . '.zip';
+    //$zip = new ZipArchive;
+    //if ($zip->open($archive_uri, ZipArchive::CREATE) === TRUE) {
     foreach ($upload_files_array as $file){
 		  $unique_filename = uniqid() . '_' . $file->filename;
 			if (file_unmanaged_copy($file->filepath, 'public://' . $unique_filename)){
-        if ($zip->addFile(drupal_realpath($file->filepath), $unique_filename)){
+        /*if ($zip->addFile(drupal_realpath($file->filepath), $unique_filename)){
 				 file_unmanaged_delete(drupal_realpath('public://') . '/' . $unique_filename);
-				} 
+				} */
 				$filename_xml = $domtree->createElement('file', $unique_filename);
 				$filename_xml = $domtree->appendChild($filename_xml);
 			}else{
 			  return;
 			}	
 		}
-      $zip->close();
-			drupal_chmod(drupal_realpath($archive_uri));
-			error_log("\nIn sidora_upload_batch function, domtree :".print_r($domtree,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
+   //   $zip->close();
+		//	drupal_chmod(drupal_realpath($archive_uri));
+		//	error_log("\nIn sidora_upload_batch function, domtree :".print_r($domtree,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
 			$domtree->save('public://' . 'files_' . $unique_id . '.xml');
+			drupal_chmod(drupal_realpath('public://') . '/files_' . $unique_id . '.xml');
       return $unique_id;
-    }
+  /*  }
     else {
       return;
-    }
+    }*/
 	}
 	return;	
 }		
