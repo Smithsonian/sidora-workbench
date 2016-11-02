@@ -24,6 +24,12 @@
   width: calc(100% + 10px);
 }
 .sharedWithMeMain li a {
+  border-left: solid 6px #ddd
+}
+.sharedWithMeMain li a.p_create,
+.sharedWithMeMain li a.p_update,
+.sharedWithMeMain li a.p_delete
+ {
   border-left: solid 6px #d80
 }
 

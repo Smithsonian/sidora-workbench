@@ -54,6 +54,19 @@ sidora.sharedWithMe.ReopenCurrent = function() {
     setTimeout(function(){jst.open_node(pNode);}, 200);
   }
 }
+sidora.sharedWithMe.AddColoring = function(){
+  var jst = jQuery("#forjstree").jstree();
+  jQuery(sidora.sharedWithMe.selector).addClass("sharedWithMeMain");
+  var dataNode = jst.get_node(sidora.sharedWithMe.selector);
+  if(dataNode.a_attr.class) {
+    if(dataNode.a_attr.class.indexOf('sharedWithMeMain') === -1) {
+      dataNode.a_attr.class += ' sharedWithMeMain';
+    }
+  }
+  else {
+    dataNode.a_attr.class = 'sharedWithMeMain';
+  }   
+}
 sidora.sharedWithMe.CreateShareTreeSection = function(sharedWithMeSelector){
   // Our shared folder should come out as a child of the tree
   // Open the root, and the share, then make it so we can't close the root (which would close the share)
@@ -70,7 +83,7 @@ sidora.sharedWithMe.CreateShareTreeSection = function(sharedWithMeSelector){
   var initialHeight = (readCookie('Drupal.sidoraSharedWithMeHeight') == '')?'200':readCookie('Drupal.sidoraSharedWithMeHeight');
   var baseRule = "{position: absolute;left: -10px;background-image: none;height: "+initialHeight+"px;overflow:auto;width: calc(100% + 10px);}";
   var allRules = baseRule;
-  jQuery(sharedWithMeSelector).addClass("sharedWithMeMain");
+  sidora.sharedWithMe.AddColoring();
   styleInject(sharedWithMeSelector+allRules,"SharedWithMe");
   var hideRule = "{display:none}";
   styleInject(sharedWithMeSelector+" > i, "+sharedWithMeSelector+" > a "+hideRule, "SharedWithMeRoot");

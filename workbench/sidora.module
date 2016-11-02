@@ -6128,31 +6128,41 @@ function sidora_html_tree_from_given_pid($root_pid = '', $root = NULL, $num_leve
     sidora_user_initialize($user);
     $root_pid = sidora_get_user_root_object();
   }
-  
-  if (empty($root)) {
-    $root = sidora_obj($root_pid);
+ 
+  if ($root_pid == 'shared-with-me') {
+    $root_label = '  Shared With Me';
+    $swm = sidora_get_shared_with_me();
+    if (!empty($swm)) {
+      $filled = $swm['children'];
+    }
   }
-  $root_label = '';
-  if (empty($root)) {
-     $root_label = t('Invalid object set as root');
-     $description = t('Invalid object set as root: %root_pid for user: %user_name %uid', 
-       array('%root_pid' => $root_pid, '%user_name' => $user->name, '%uid' => $user->uid));
-     sidora_add_fedora_assumption_problem_other($description);
-  }
-  else{
-     $root_label = $root->label;
-  }
-  /*
-  $results = _sidora_get_child_results_cache($root_pid);
-  $root_children_pids = array();
-  $filled = sidora_fill_concepts_children($results, array(), $root_children_pids); 
-  /* */ 
-  $filled = sidora_build_tree_from_nodes_by_pid($root_pid);
-  $filled = $filled[0]['children'];
-  if ($root_pid == sidora_get_user_root_object()) {
-    $shared_with_me = sidora_get_shared_with_me();
-    if (!empty($shared_with_me)) {
-      array_unshift($filled, $shared_with_me);
+  else { 
+    if (empty($root)) {
+      $root = sidora_obj($root_pid);
+    }
+    $root_label = '';
+    if (empty($root)) {
+       $root_label = t('Invalid object set as root');
+       $description = t('Invalid object set as root: %root_pid for user: %user_name %uid', 
+         array('%root_pid' => $root_pid, '%user_name' => $user->name, '%uid' => $user->uid));
+       sidora_add_fedora_assumption_problem_other($description);
+    }
+    else{
+       $root_label = $root->label;
+    }
+    /*
+    $results = _sidora_get_child_results_cache($root_pid);
+    $root_children_pids = array();
+    $filled = sidora_fill_concepts_children($results, array(), $root_children_pids); 
+    /* */ 
+    $filled = sidora_build_tree_from_nodes_by_pid($root_pid);
+    $filled = $filled[0]['children'];
+    if ($root_pid == sidora_get_user_root_object()) {
+      $shared_with_me = sidora_get_shared_with_me();
+      if (!empty($shared_with_me)) {
+        // The shared with me javascript now also relies on it being the first item in the tree
+        array_unshift($filled, $shared_with_me);
+      }
     }
   }
   /* */
@@ -6663,12 +6673,25 @@ function sidora_html_tree_from_query_results_tree($query_result_tree, $input_pat
       $current_path .= $pid;
       $resource_children_num = -1;
       if (array_key_exists('resourcecount',$t_element)) $resource_children_num = $t_element['resourcecount']['value'];
+      $classes_for_permissions = "";
       $permissions = '';
       if (array_key_exists('crud',$t_element)) {
-        if ($t_element['crud']['c']) $permissions .= 'c';
-        if ($t_element['crud']['r']) $permissions .= 'r';
-        if ($t_element['crud']['u']) $permissions .= 'u';
-        if ($t_element['crud']['d']) $permissions .= 'd';
+        if ($t_element['crud']['c']) {
+          $permissions .= 'c';
+          $classes_for_permissions .= ' p_create';
+        }
+        if ($t_element['crud']['r']) {
+          $permissions .= 'r';
+          $classes_for_permissions .= ' p_read';
+        }
+        if ($t_element['crud']['u']) {
+          $permissions .= 'u';
+          $classes_for_permissions .= ' p_update';
+        }
+        if ($t_element['crud']['d']) {
+          $permissions .= 'd';
+          $classes_for_permissions .= ' p_delete';
+        }
       }
       $nid_info = '';
       if (array_key_exists('nid',$t_element)) {
@@ -6678,7 +6701,7 @@ function sidora_html_tree_from_query_results_tree($query_result_tree, $input_pat
       if (array_key_exists('owner',$t_element)) {
         $owner_info = " owner='" . $t_element['owner']['value'] . "'";
       }
-      $to_return .= '<li><a href="' . base_path() . 'sidora/workbench/' . $url_params . '#' . $pid . '?path=' . $input_path . '" pid="' . $pid . '" fullname="' . $html_escaped_name . '" conceptchildren="' . count($t_element['children']) . '" resourcechildren="' . $resource_children_num . '" permissions="' . $permissions . '"' . $nid_info . $owner_info . '>';
+      $to_return .= '<li><a href="' . base_path() . 'sidora/workbench/' . $url_params . '#' . $pid . '?path=' . $input_path . '" pid="' . $pid . '" fullname="' . $html_escaped_name . '" conceptchildren="' . count($t_element['children']) . '" resourcechildren="' . $resource_children_num . '" class="' . $classes_for_permissions . '" permissions="' . $permissions . '"' . $nid_info . $owner_info . '>';
       $to_return .= $t_element['t']['value'];
       if ($resource_children_num > 0) $to_return .= ' ('.$resource_children_num.')';
       $to_return .= '</a>';
