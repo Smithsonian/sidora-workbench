@@ -261,6 +261,19 @@ function exhibition_config_get_config_data($pid){
   }
   return $row;
 }
+function exhibition_config_get_new_config_data($pid){
+  $result = db_query("Select ". //SELECT
+" state1 ".
+"FROM {exhibition_config_copy} where pid = :pid", array(':pid'=>$pid));
+  $row = array();
+  foreach ($result as $input){
+    foreach($input as $name=>$value){
+      $row[$name] = $value;
+    }
+  }
+  return $row;
+}
+
 /*
  * Returns nothing, does an exit
  * prints out each pid that has the input custom_url, should only be one if input configuration checked properly
@@ -544,6 +557,38 @@ function exhibition_config_form_submit($form, &$form_state) {
     );
     $output = $insert_query->execute();
     exhibition_config_save_visibility($pid,$existing_visibility_obj);
+		$state1_values = array(
+        'logo' => $form['top']['logo']['#value'],
+        'logo_width' => $form['top']['logo_width']['#value'],
+        'logo_height' => $form['top']['logo_height']['#value'],
+        'title' => $form['top']['title']['#value'],
+        'header_html' => $form['top']['header']['value']['#value'],
+        'css_script' => $my_css,
+        'footer_html' => $form['bottom']['footer']['value']['#value'],
+        'precontent_html' => $form['content_area']['precontent']['value']['#value'],
+        'postcontent_html' => $form['content_area']['postcontent']['value']['#value'],
+        'sidebar_left_html' => $form['content_area']['sidebar_left']['value']['#value'],
+        'sidebar_right_html' => $form['content_area']['sidebar_right']['value']['#value'],
+        'nav_location' => $form['content_area']['nav_location']['#value'],
+        'nav_type' => $form['content_area']['nav_type']['#value'],
+        'custom_url' => $form['custom_url']['#value'],
+        'link_bar_links' => $fullLinkSet,
+        'is_available' => $form['is_available']['#value'],
+        'use_parent_config' => empty($form['use_parent_config']['#value'])?'0':$form['use_parent_config']['#value'],
+		  );
+		 $fields = 
+      array(
+        'pid', 
+        'state1'
+				);
+    $insert_query = db_insert('exhibition_config_copy')->fields($fields);
+    $insert_query->values( 
+      array(
+        'pid' => $pid,
+        'state1' => serialize($state1_values),
+				)
+		);
+		$output = $insert_query->execute();	
     /*
     if ($form['use_current_config_for_children']['#value']){
       $full_pid_list = array();
@@ -706,6 +751,7 @@ function exhibition_config_form($form, $form_state){
   }
   $object = _exhibition_config_get_object($pid);
   $row = exhibition_config_get_config_data($pid);
+	$new_row = exhibition_config_get_new_config_data($pid);
   drupal_add_library('system', 'ui.resizable');
   drupal_add_library('system','ui.dialog');
   if (empty($row)) {
@@ -729,6 +775,11 @@ function exhibition_config_form($form, $form_state){
   }  //have everything's value as a blank
   $my_css = unserialize($row['css_script']);
   $links = unserialize($row['link_bar_links']);
+	error_log("\nIn exhibition_config_form, original config data:".print_r($row,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','exhibition_config')."/errorlog.txt");
+	error_log("\nIn exhibition_config_form, original css:".print_r($my_css,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','exhibition_config')."/errorlog.txt");
+	error_log("\nIn exhibition_config_form, original links:".print_r($links,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','exhibition_config')."/errorlog.txt");
+	error_log("\nIn exhibition_config_form, new serialized config data:".print_r(unserialize($new_row['state1']),true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','exhibition_config')."/errorlog.txt");
+
   $full = '
 <a href="javascript:void(0);" onclick="togglePreviewLocation();" title="Moves the sample between the top and side of the page.  You can also move your mouse between the sections and drag to change the sizes when the sample is on the right.">Toggle Sample Location</a><br/>
 <a href="javascript:void(0);" onclick="togglePreviewEditLinks();" title="Turns off the \'Edit\' quick links to get a better view of the sample, or turns them back on to quickly jump to a section to edit">Toggle Placeholder Text and Links</a><br/>';
@@ -2004,7 +2055,7 @@ Color Set:
   */
   $form['submit'] = array(
     '#type' => 'submit',
-    '#value' => 'Submit',
+    '#value' => 'Save',
     '#attributes' => array("id" => "confirm-save"),
   );
   return $form;
