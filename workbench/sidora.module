@@ -6115,7 +6115,7 @@ function sidora_html_tree_from_given_pid($root_pid = '', $root = NULL, $num_leve
   if ($root_pid == sidora_get_user_root_object()) {
     $shared_with_me = sidora_get_shared_with_me();
     if (!empty($shared_with_me)) {
-      $filled[] = $shared_with_me;
+      array_unshift($filled, $shared_with_me);
     }
   }
   /* */
