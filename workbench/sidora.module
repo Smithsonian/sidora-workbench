@@ -2656,12 +2656,19 @@ if ($one == 'deletexsl'){
 		//var_dump($base_url);
 		//var_dump(drupal_realpath('public://'));
 		$post = array(
+	  'resourceFileList' => '@' . drupal_realpath('public://') . '/files_ramlani581a220f7abf7.xml',
+	  'contentModel' => 'si:generalImageCModel',
+	  'ds_MODS' => '@' . drupal_realpath('public://').'/batch_ramlani581a220f7abf7.xml',
+		'titleField' => 'batch_11216',
+		'ds_Sidora' => '@' . drupal_realpath('public://') . '/sidora_ramlani581a220f7abf7.xml',
+		'resourceOwner' => 'ramlani'
+    /*
 	  'resourceZipFileURL' => drupal_realpath('public://') . '/batch_ramlani.zip',
 	  'contentModel' => 'si:generalImageCModel',
 	  'metadataFileURL' => drupal_realpath('public://') . '/batch_ramlani.xml',
 		'titleField' => 'batch_102516',
 		'sidoraDatastreamFileURL' => drupal_realpath('public://') . '/sidora_ramlani.xml',
-		'resourceOwner' => 'ramlani'
+		'resourceOwner' => 'ramlani'*/
 	  );
 		/*$post = array(
 	  'resourceZipFileURL' => '/opt/sidora/smx/Sidora-Batch-Test-Files/image-resources.zip',
@@ -2912,11 +2919,11 @@ function sidora_process_batch_submit($form,&$form_state){
 	file_put_contents($targetDir,$sidora_xml);
 	drupal_chmod($targetDir);
 	$post = array(
-	  'resourceZipFileURL' => drupal_realpath('public://') . '/files_' . $batch_id . '.xml',
+	  'resourceFileList' => '@' . drupal_realpath('public://') . '/files_' . $batch_id . '.xml',
 	  'contentModel' => $association['content_model'],
-	  'metadataFileURL' => drupal_realpath('public://').'/batch_' . $batch_id . '.xml',
+	  'ds_MODS' => '@' . drupal_realpath('public://').'/batch_' . $batch_id . '.xml',
 		'titleField' => $label,
-		'sidoraDatastreamFileURL' => drupal_realpath('public://') . '/sidora_' . $batch_id . '.xml',
+		'ds_Sidora' => '@' . drupal_realpath('public://') . '/sidora_' . $batch_id . '.xml',
 		'resourceOwner' => $user->name
 		);
 	if ($association['content_model'] == 'si:datasetCModel'){
@@ -9487,19 +9494,21 @@ function sidora_upload_batch($upload_files_array) {
 		$unique_id = uniqid($user->name);
 		$domtree = new DOMDocument('1.0', 'UTF-8');
 		$domtree->formatOutput = TRUE;
+		$batch_tag = $domtree->createElement('batch');
+		$batch_tag = $domtree->appendChild($batch_tag);
 		$batch_id_xml = $domtree->createElement('batch_id',$unique_id);
-		$batch_id_xml = $domtree->appendChild($batch_id_xml);
+		$batch_id_xml = $batch_tag->appendChild($batch_id_xml);
 		//$archive_uri = drupal_realpath('public://') . '/files_' . $unique_id . '.zip';
     //$zip = new ZipArchive;
     //if ($zip->open($archive_uri, ZipArchive::CREATE) === TRUE) {
     foreach ($upload_files_array as $file){
-		  $unique_filename = uniqid() . '_' . $file->filename;
+		  $unique_filename = $unique_id . '_' . $file->filename;
 			if (file_unmanaged_copy($file->filepath, 'public://' . $unique_filename)){
         /*if ($zip->addFile(drupal_realpath($file->filepath), $unique_filename)){
 				 file_unmanaged_delete(drupal_realpath('public://') . '/' . $unique_filename);
 				} */
 				$filename_xml = $domtree->createElement('file', $unique_filename);
-				$filename_xml = $domtree->appendChild($filename_xml);
+				$filename_xml = $batch_tag->appendChild($filename_xml);
 			}else{
 			  return;
 			}	
