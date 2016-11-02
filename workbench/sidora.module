@@ -652,6 +652,7 @@ function sidora_islandora_object_ingested(AbstractObject $object){
 <meta_requirements_fulfilled>'.$all_meta_entered.'</meta_requirements_fulfilled>
 <initial_dsid>'.$creation_info['dsid'].'</initial_dsid>
 <parent>'.$parent_pid.'</parent>
+<original_creator>'.$user->name.'</original_creator>
 </sidora>', 'SIDORA');
     }else{
       //Items like Codebooks have no creation info, this should only be items that were not created via the menu
