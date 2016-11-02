@@ -535,8 +535,6 @@ sidora.util.loadTreeSectionsIfNeeded = function(data){
         var nodeOfInterest = jst.get_node(node.children[ccc]);
         var numberOfChildrenThisDoesHave = nodeOfInterest.children.length;
         if (numberOfChildrenThisShouldHave > numberOfChildrenThisDoesHave) {
-          console.log(nodeOfInterest);
-          console.log("BBB should have:" + numberOfChildrenThisShouldHave + " but has: " + numberOfChildrenThisDoesHave);
           doRetrieval = true;
         }
       }
