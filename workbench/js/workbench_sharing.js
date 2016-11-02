@@ -45,9 +45,14 @@ sidora.sharedWithMe.CreateDefaultShareSection = function(){
 }
 sidora.sharedWithMe.ReopenCurrent = function() {
   var jst = jQuery("#forjstree").jstree();
-  var pNode = jst.get_node(jst.get_node(jst.get_selected()[0]).parent);
-  jst.close_node(pNode);
-  jst.open_node(pNode);
+  var pNodeSelector = jst.get_node(jst.get_selected()[0]).parent;
+  // Don't close the "shared with me" folder since it can't be reopened when it is hidden
+  if ("#" + pNodeSelector != sidora.sharedWithMe.selector) {
+    var pNode = jst.get_node(pNodeSelector);
+    jst.close_node(pNode);
+    //Give the close_node time to process
+    setTimeout(function(){jst.open_node(pNode);}, 200);
+  }
 }
 sidora.sharedWithMe.CreateShareTreeSection = function(sharedWithMeSelector){
   // Our shared folder should come out as a child of the tree
