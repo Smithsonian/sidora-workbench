@@ -3910,7 +3910,9 @@ function sidora_get_shared_with_me($drupal_user = NULL) {
   foreach($groups as $group){
     // Get the group owner
     $g_owner_id = $group->uid;
-    $potential_child_pid_owner_ids[] = $g_owner_id;
+    if ($g_owner_id != $user->uid) {
+      $potential_child_pid_owner_ids[] = $g_owner_id;
+    }
   }
   $child_pid_owner_ids = array_unique($potential_child_pid_owner_ids);
   $shared_with_me_children = array();
