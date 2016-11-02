@@ -2209,7 +2209,7 @@ function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $ex
     $date = date('m/d/Y h:i:s a', time());
     print $date . "\n";
     $updated_set = array();
-    $root_node = sidora_create_full_node_set($pid, 'Root', 0, $updated_set);
+    $root_node = sidora_create_full_node_set($pid, 'Root', 0, NULL, $updated_set);
     var_dump($root_node);
     $date = date('m/d/Y h:i:s a', time());
     print $date . "\n";
@@ -7698,7 +7698,7 @@ function sidora_fedora_sync() {
     $date = date('m/d/Y h:i:s a', time());
     print $date . "\n";
     $updated_set = array();
-    $root_node = sidora_create_full_node_set($pid, 'Root', 0, $updated_set);
+    $root_node = sidora_create_full_node_set($pid, 'Root', 0, NULL, $updated_set, filter_input(INPUT_GET, "max_depth", FILTER_SANITIZE_NUMBER_INT), filter_input(INPUT_GET, "max_count", FILTER_SANITIZE_NUMBER_INT));
     print "Root Node:\n";
     var_dump($root_node);
     print "Full Set of Updated Items:\n";
@@ -7828,14 +7828,17 @@ function sidora_is_node_synced_with_fedora($node) {
 /**
  * Recursively create the tree based on the query information returned
  */
-function sidora_create_full_node_set($pid, $label, $num_resources, &$already_updated, $max_depth = 100, $max_count = 1200, $path = array()) {
+function sidora_create_full_node_set($pid, $label, $num_resources, $owner_username, &$already_updated, $max_depth = 100, $max_count = 1200, $path = array()) {
+  if ($max_depth == 0) { $max_depth = 100; }
+  if ($max_count == 0) { $max_count = 1200; }
+  //print "\n Max depth: $max_depth , current depth: " . count($path) . " Max count: $max_count, current count: " . count($already_updated) . "\n";
   //print "\n===============================================";
   print "\n path:" . implode(" " , $path) . " $pid";
   flush();
 
 
   $depth_count = count($path);
-  if (count($depth_count) > $max_depth){
+  if ($depth_count > $max_depth){
     // Create the node as a placeholder, but do not fill in the information or children
     // Placeholders require an empty array of information
     $node = sidora_get_update_or_create_concept_node($pid, array());
@@ -7867,7 +7870,7 @@ function sidora_create_full_node_set($pid, $label, $num_resources, &$already_upd
       $self_child = TRUE;
     }
     else {
-      $child_node = sidora_create_full_node_set($child_pid, $child['t']['value'], $child['resourcecount']['value'], $already_updated, $max_depth, $max_count, $path);
+      $child_node = sidora_create_full_node_set($child_pid, $child['t']['value'], $child['resourcecount']['value'], $child['owner']['value'], $already_updated, $max_depth, $max_count, $path);
       if ($child_node !== NULL) {
         $child_nids[] = $child_node->nid;
         $already_updated[] = $child_pid;
@@ -7880,10 +7883,12 @@ function sidora_create_full_node_set($pid, $label, $num_resources, &$already_upd
   if (count($child_nids) == 0){
     print "\n========= $pid is leaf";
   }
+  print "\nPID: $pid owned by: $owner_username \n";
   $info = array(
     'label' => $label,
     'concept_children' => implode(',',$child_nids),
-    'resource_children' => $num_resources
+    'resource_children' => $num_resources,
+    'owner' => $owner_username,
   );
   $node = sidora_get_update_or_create_concept_node($pid, $info, TRUE);
   /*

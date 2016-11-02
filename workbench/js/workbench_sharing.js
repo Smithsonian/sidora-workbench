@@ -62,7 +62,8 @@ sidora.sharedWithMe.CreateShareTreeSection = function(sharedWithMeSelector){
 
   sidora.sharedWithMe.selector = sharedWithMeSelector;
   jQuery("#fjt-holder").append('<div id="shared-tree-divider" style="width: 100%;background: #aaa;height: 20px;cursor: ns-resize;text-align:center">&#x25BC; Shared &#x25BC;</div>');
-  var baseRule = "{position: absolute;left: -10px;background-image: none;height: 200px;overflow:auto;width: calc(100% + 10px);}";
+  var initialHeight = (readCookie('Drupal.sidoraSharedWithMeHeight') == '')?'200':readCookie('Drupal.sidoraSharedWithMeHeight');
+  var baseRule = "{position: absolute;left: -10px;background-image: none;height: "+initialHeight+"px;overflow:auto;width: calc(100% + 10px);}";
   var allRules = baseRule;
   jQuery(sharedWithMeSelector).addClass("sharedWithMeMain");
   styleInject(sharedWithMeSelector+allRules,"SharedWithMe");
@@ -88,6 +89,7 @@ sidora.sharedWithMe.CreateShareTreeSection = function(sharedWithMeSelector){
     }
     sidora.sharedWithMe.Relocate();
     clearSelection();
+    writeCookie('Drupal.sidoraSharedWithMeHeight',jQuery(".sharedWithMeMain").height(),30);
   });
   jQuery("#fjt-holder").mouseleave(function(){ sidora.sharedWithMe.dragY = false; });
   jQuery("#shared-tree-divider").mouseup(function(){ sidora.sharedWithMe.dragY = false; });
@@ -99,7 +101,8 @@ sidora.sharedWithMe.CreateShareTreeSection = function(sharedWithMeSelector){
 sidora.sharedWithMe.Relocate = function(){
   if (sidora.sharedWithMe.selector == null) return;
   if (jQuery("#fjt-holder").height() == jQuery("#forjstree").height()) {
-    swmLocation = (jQuery("#fjt-holder").height()-200);
+    var initialHeight = (readCookie('Drupal.sidoraSharedWithMeHeight') == '')?'200':readCookie('Drupal.sidoraSharedWithMeHeight');
+    swmLocation = (jQuery("#fjt-holder").height()-parseInt(initialHeight));
     jQuery("#forjstree").height(swmLocation-20);
     jQuery(sidora.sharedWithMe.selector).css("top", swmLocation + "px");
   } else {
