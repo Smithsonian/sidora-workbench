@@ -2110,6 +2110,9 @@ function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $ex
     return t("You must be an administrator or have an administrator set sidora_allow_all_to_debug in order to access this information");
   }
   if (!sidora_is_admin()) print t("Remember that nonadmins will NOT see output from dsm!");
+  if ($one == 'put_my_stuff_in_og') {
+    sidora_sharing_put_all_owned_concepts_into_owned_groups();
+  }
   if ($one == 'load_entities'){
     // 
     $query = new EntityFieldQuery();
@@ -3848,6 +3851,9 @@ function sidora_allow($user_pid_or_drupal_user, $pid_or_fedora_object, $type_of_
     }
     // Do not create a node for it, we don't create nodes for resources and this may be a resource
   }
+  else if (is_string($pid_or_fedora_object)){
+    $object = sidora_obj($pid_or_fedora_object);
+  }
   else {
     $object = $pid_or_fedora_object;
   }
@@ -3870,6 +3876,7 @@ function sidora_allow($user_pid_or_drupal_user, $pid_or_fedora_object, $type_of_
   if (!empty($node) && in_array($type_of_operation, $og_handled)) {
     return sidora_node_allow($type_of_operation, $node); 
   }
+  module_load_include('inc', 'sidora', 'includes/utils');
   $is_resource = sidora_is_resource($object);
   // If it's a resource: check to see if the specified user has access to the owner's main node
   // TBD: When this is concept-by-concept sharing this must be changed to check the direct parent
@@ -4186,6 +4193,43 @@ function sidora_get_owned_concepts_pids($username) {
   }
   return $out;
 }
+function sidora_sharing_create_or_get_owned_groups($for_uid = NULL) {
+  $owned_groups = sidora_get_owned_groups();
+  // If the user has no owned groups, create the groups
+  if (empty($owned_groups)) {
+    if ($for_uid == NULL) {
+      global $user;
+      $for_uid = $user->uid;
+    }
+    $newly_created_groups = sidora_create_all_groups_for_user($for_uid);
+    // Also put all their stuff into the new groups
+    return sidora_sharing_put_all_owned_concepts_into_owned_groups($for_uid, $newly_created_groups);
+  }
+  else {
+    return $owned_groups;
+  }
+}
+function sidora_sharing_put_all_owned_concepts_into_owned_groups($for_uid = NULL, $use_these_groups = NULL) {
+  if ($for_uid == NULL) {
+    global $user;
+    $for_uid = $user->uid;
+  }
+  $owned_groups = ($use_these_groups == NULL) ? sidora_sharing_create_or_get_owned_groups($for_uid) : $use_these_groups;
+  $query = new EntityFieldQuery();
+  $query->entityCondition('entity_type', 'node')
+    ->entityCondition('bundle',  sidora_get_concept_content_type())
+    ->propertyCondition('status', 1)
+    ->propertyCondition('uid', $for_uid)
+    ->fieldCondition('field_fedora_label', 'value', '', '!=')
+    ->addMetaData('account', user_load(1));
+  $result = $query->execute();
+  foreach($result["node"] as $nid => $obj){
+    foreach($owned_groups as $owned_group) {
+      og_group('node', $owned_group, array('entity_type' => 'node', 'entity' => $nid));
+    }
+  }
+  return $owned_groups;
+}
 /*
  * Create the sharing permissions form
  */
@@ -4194,14 +4238,7 @@ function sidora_sharing_permissions_form($form = array(), &$form_state) {
     '#theme' => 'sidora_sharing_permissions',
     '#header' => array(t('User'), t('Create'),t('View'),t('Edit'),t('Delete')),
   );
-  $selected_groups = sidora_get_owned_groups();
-  // If the user has no owned groups, create the groups
-  if (empty($selected_groups)) {
-    global $user;
-    sidora_create_all_groups_for_user($user);
-    // BBB TODO add all of their content to the groups
-    $selected_groups = sidora_get_owned_groups();
-  }
+  $selected_groups = sidora_sharing_create_or_get_owned_groups();
   $member_to_group_association = sidora_get_member_to_group_association($selected_groups);
   $rows = array();
   foreach($member_to_group_association as $uid => $groups) {
