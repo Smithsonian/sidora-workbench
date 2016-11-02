@@ -9507,7 +9507,7 @@ function sidora_upload_batch($upload_files_array) {
         /*if ($zip->addFile(drupal_realpath($file->filepath), $unique_filename)){
 				 file_unmanaged_delete(drupal_realpath('public://') . '/' . $unique_filename);
 				} */
-				$filename_xml = $domtree->createElement('file', $unique_filename);
+				$filename_xml = $domtree->createElement('file', drupal_realpath('public://') . '/' . $unique_filename);
 				$filename_xml = $batch_tag->appendChild($filename_xml);
 			}else{
 			  return;
