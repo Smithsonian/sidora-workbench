@@ -1235,6 +1235,17 @@ function sidora_edit_metadata($object_id_string = '', $dsid = '', $form_name = '
     var_dump($object->models);
   }
 	$tform = drupal_get_form('xml_form_builder_datastream_form_metadata_form',$object,$association);
+  // If the user is not allowed to update it, then don't allow the system to call the submit handlers that would do the updates and do not provide information that would allow user to bypass
+  if (!sidora_allow($user,$object_id,'update')) {
+    $tform['update']['#submit'] = array();
+    $tform['#submit'] = array();
+    $tform['#form_id'] = 'do_not_allow_update_xml_form';
+    $tform['#build_id'] = 'do_not_allow_update_xml_form';
+    $tform['form_build_id'] = array();
+    $tform['form_token'] = array();
+    $tform['submit'] = array();
+    unset($tform['update']);
+  }
   $tform['pid'] = array(
   '#type' => 'hidden',
   '#name' => 'Pid',
@@ -1299,6 +1310,11 @@ function sidora_edit_metadata($object_id_string = '', $dsid = '', $form_name = '
   $to_return .= "</div>";
 	}
   drupal_add_js(drupal_get_path('module','sidora').'/js/workbench_uploader.js',array('weight' => '1000000', 'group' => JS_THEME));
+  // Next line says don't let them submit the form by pressing enter
+  drupal_add_js(
+    'jQuery(document).ready(function(){jQuery("form").bind("keypress keydown keyup", function(e){  if(e.keyCode == 13 && e.target.tagName != "TEXTAREA") { e.preventDefault(); }});  })',
+    array('type' => 'inline', 'weight' => '1000000', 'group' => JS_THEME)
+  );
   return $to_return;
 }
 /*
@@ -4097,7 +4113,7 @@ function theme_sidora_sharing_permissions(&$variables){
     // Add the row to the table.
     $content['#rows'][] = $row;
   }
-  return drupal_render($content);
+  return t('Giving a user create, edit, or delete permission will allow the user to view the content, even if view is not checked.') . drupal_render($content);
 }
 /*
  * Returns an array of group objects that are owned by the entered user id or current user if blank / null
@@ -5311,7 +5327,7 @@ function sidora_block_view($delta = ''){
           <ul id="resource-menu">
             <li><a href="#" onclick="return false;">Resources</a>
               <ul id="resource-files-menu">
-                <li><a href="#" onclick="return false;" id="delete-resource">Delete Selected</a>
+                <li id="delete-resource"><a href="#" onclick="return false;">Delete Selected</a>
               </ul>
             </li>
             <li><a href="#" onclick="return false;">Edit</a>

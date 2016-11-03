@@ -29,8 +29,15 @@ jQuery().ready(function(){
   jQuery(".sidora-form-next").last().addClass("form-button-disabled");
   jQuery(".sidora-form-prev:eq(1)").addClass("form-button-disabled");
   jQuery(".sidora-form-next:eq(-2)").addClass("form-button-disabled");
-  jQuery(".top-panel").append("<input value=\"Finish\" class='form-submit sidora-form-finish' style='float:right;'></input>");
-  jQuery(".bottom-panel").append("<input value=\"Finish\" class='form-submit sidora-form-finish' style='float:right;'></input>");
+  // Only add the Finish buttons if the form is submittable
+  if (jQuery(".form-submit[value=Ingest], .form-submit[value=Submit], .form-submit[value=Update]").length > 0) {
+    jQuery(".top-panel").append("<input value=\"Finish\" class='form-submit sidora-form-finish' style='float:right;'></input>");
+    jQuery(".bottom-panel").append("<input value=\"Finish\" class='form-submit sidora-form-finish' style='float:right;'></input>");
+  }
+  else {
+    // Don't bother showing the unusable submitting buttons anyway
+    jQuery(".form-submit").hide();
+  }
   jQuery(".sidora-form-prev").not(".form-button-disabled").click(function(e){ 
     window.showPrev();  
     jQuery(".form-submit[value=Update]").hide();

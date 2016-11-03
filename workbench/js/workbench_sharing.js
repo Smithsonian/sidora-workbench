@@ -107,7 +107,7 @@ sidora.sharedWithMe.CreateShareTreeSection = function(sharedWithMeSelector){
     }
     sidora.sharedWithMe.Relocate();
     clearSelection();
-    writeCookie('Drupal.sidoraSharedWithMeHeight',jQuery(".sharedWithMeMain").height(),30);
+    writeCookie('Drupal.sidoraSharedWithMeHeight',jQuery("#fjt-holder").height() - jQuery("#forjstree").height(),30);
   });
   jQuery("#fjt-holder").mouseleave(function(){ sidora.sharedWithMe.dragY = false; });
   jQuery("#shared-tree-divider").mouseup(function(){ sidora.sharedWithMe.dragY = false; });

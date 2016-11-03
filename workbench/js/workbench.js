@@ -259,7 +259,9 @@ sidora.concept.LoadContentHelp.Permissions = function(conceptOfInterest){
       jQuery("#deleteConcept").toggle(permissions.delete);
       jQuery("#editMetadataConcept").toggle(permissions.update); 
       jQuery("#editPermissionsConcept").toggle(permissions.permission); 
-      jQuery("#manageConcept").toggle(permissions.manage); 
+      jQuery("#manageConcept").toggle(permissions.manage);
+      // Resource permissions currently tied to concept permissions
+      jQuery("#delete-resource").toggle(permissions.delete);
     }
   });
 }
