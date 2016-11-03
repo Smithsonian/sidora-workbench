@@ -55,17 +55,6 @@
     z-index: 10000;
 }
 
-/*
-.ui-icon, .ui-widget-content .ui-icon {
-  right: 10px; 
-}
-.ui-menu {
-  width: 200px;
-}
-.ui-widget ul.ui-widget {
-  margin-left: -9px; 
-}
-*/
 /* The > mark on the menu system - move it in */
 #concept-create{
  margin: 0;
@@ -82,11 +71,9 @@ dl {
 dt {
   font-weight: bold;
 }
-/*
-#concept-meta-menu, #resource-meta-menu {
-  float:left;
+#concept-file-menu > li {
+  min-width:150px;
 }
-*/
 #concept-create-menu .ui-menu .ui-menu-item , 
 #concept-meta-menu .ui-menu .ui-menu-item , 
 #resource-meta-menu .ui-menu .ui-menu-item,
@@ -102,8 +89,6 @@ li a input {
   position:relative;
 }
 .sidora-menu li{
- /* commented by RA 3/10/15 to test concept dropdown menus widths. added border top and bottom instead */
- /* border: 1px solid #aaa; */
   border-bottom: 1px solid #aaa;
   border-top: 1px solid #aaa;
   z-index: 1;
@@ -128,15 +113,6 @@ li a input {
   margin-left:5px;
   margin-bottom: 5px;
 }
-/*
-#resource-create-menu {
-    width: 170px;
-    display: inline-block;
-    right: -10px;
-    position: absolute;
-    top: -10px;
-}
-*/
 #resource-meta {
   border-left: 1px solid grey;
   border-bottom: 1px solid grey;
@@ -266,11 +242,6 @@ button.ui-button-text-only .ui-button-text {
 #concept_tabs, #sidora_content_concept_info {
   min-width: 822px;
 }
-/*
-#resource-create-menu li {
-  padding: 0;
-}
-*/
 #resourceInformationPane {
   min-width: 400px;
 }
