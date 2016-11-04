@@ -10164,7 +10164,7 @@ function sidora_get_update_or_create_concept_node($pid, $info = NULL, $set_fedor
 /*
  * Removes a child to the from the child list
  */
-function sidora_update_concept_node_remove_child($node, $child_node_id == NULL) {
+function sidora_update_concept_node_remove_child($node, $child_node_id = NULL) {
   $node_wrapper = entity_metadata_wrapper('node', $node);
   // If the child is null, then it was a resource, subtract one resource from the resource count
   if (empty($child_node_id)) {

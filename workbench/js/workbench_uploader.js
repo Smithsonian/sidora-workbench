@@ -30,7 +30,7 @@ jQuery().ready(function(){
   jQuery(".sidora-form-prev:eq(1)").addClass("form-button-disabled");
   jQuery(".sidora-form-next:eq(-2)").addClass("form-button-disabled");
   // Only add the Finish buttons if the form is submittable
-  if (jQuery(".form-submit[value=Ingest], .form-submit[value=Submit], .form-submit[value=Update]").length > 0) {
+  if (jQuery(".form-submit[value=Ingest], .form-submit[value=Submit], .form-submit[value=Update], #create-resource-upload").length > 0) {
     jQuery(".top-panel").append("<input value=\"Finish\" class='form-submit sidora-form-finish' style='float:right;'></input>");
     jQuery(".bottom-panel").append("<input value=\"Finish\" class='form-submit sidora-form-finish' style='float:right;'></input>");
   }
