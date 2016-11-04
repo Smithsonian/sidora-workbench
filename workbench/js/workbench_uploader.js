@@ -35,8 +35,19 @@ jQuery().ready(function(){
     jQuery(".bottom-panel").append("<input value=\"Finish\" class='form-submit sidora-form-finish' style='float:right;'></input>");
   }
   else {
-    // Don't bother showing the unusable submitting buttons anyway
+    // Don't bother showing the unusable submitting buttons
     jQuery(".form-submit").hide();
+    // Don't show the green + buttons to add list items
+    jQuery("input[type=image]").hide();
+    // Don't show the red - buttons or allow remove clicks to remove list items
+    jQuery(".remove-tag").hide();
+    jQuery(".edit-tag").attr("onclick","");
+    // Text fields read only
+    jQuery("input").attr("readonly","readonly");
+    // Text areas read only
+    jQuery("textarea").attr("readonly","readonly");
+    // Don't allow closing of tabs (would cause drupal error message)
+    jQuery(".ui-icon-close").css("background-image","none").css("cursor","default").unbind("click")
   }
   jQuery(".sidora-form-prev").not(".form-button-disabled").click(function(e){ 
     window.showPrev();  

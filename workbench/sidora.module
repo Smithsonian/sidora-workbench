@@ -4253,6 +4253,7 @@ function sidora_sharing_put_all_owned_concepts_into_owned_groups($for_uid = NULL
  * Create the sharing permissions form
  */
 function sidora_sharing_permissions_form($form = array(), &$form_state) {
+  global $user;
   $form['table'] = array(
     '#theme' => 'sidora_sharing_permissions',
     '#header' => array(t('User'), t('Create'),t('View'),t('Edit'),t('Delete')),
@@ -4261,32 +4262,35 @@ function sidora_sharing_permissions_form($form = array(), &$form_state) {
   $member_to_group_association = sidora_get_member_to_group_association($selected_groups);
   $rows = array();
   foreach($member_to_group_association as $uid => $groups) {
-    $username = sidora_get_username_from_uid($uid);
-    $row = array(
-      "username_$uid" => array(
-        '#markup' => $username,
-      ),
-      "create_$uid" => array(
-        '#type' =>'checkbox',
-        '#default_value' => FALSE,
-      ),
-      "view_$uid" => array(
-        '#type' =>'checkbox',
-        '#default_value' => FALSE,
-      ),
-      "edit_$uid" => array(
-        '#type' =>'checkbox',
-        '#default_value' => FALSE,
-      ),
-      "delete_$uid" => array(
-        '#type' =>'checkbox',
-        '#default_value' => FALSE,
-      ),
-    );
-    foreach($groups as $group) {
-      $row[sidora_get_sidora_group_type($group) . "_$uid"]['#default_value'] = TRUE;
+    // Do not include yourself in the list of users
+    if ($uid != $user->uid) { 
+      $username = sidora_get_username_from_uid($uid);
+      $row = array(
+        "username_$uid" => array(
+          '#markup' => $username,
+        ),
+        "create_$uid" => array(
+          '#type' =>'checkbox',
+          '#default_value' => FALSE,
+        ),
+        "view_$uid" => array(
+          '#type' =>'checkbox',
+          '#default_value' => FALSE,
+        ),
+        "edit_$uid" => array(
+          '#type' =>'checkbox',
+          '#default_value' => FALSE,
+        ),
+        "delete_$uid" => array(
+          '#type' =>'checkbox',
+          '#default_value' => FALSE,
+        ),
+      );
+      foreach($groups as $group) {
+        $row[sidora_get_sidora_group_type($group) . "_$uid"]['#default_value'] = TRUE;
+      }
+      $rows[$uid] = $row;
     }
-    $rows[$uid] = $row;
   }
   $row = array(
     "username_new" => array(
