@@ -268,11 +268,11 @@ function exhibition_config_get_new_config_data($pid){
 " FROM {exhibition_config_copy} where pid = :pid", array(':pid'=>$pid));
   $row = array();
   foreach ($result as $input){
-	//error_log("\nIn exhibition_config_get_new_config_data, query result set:".print_r($input,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','exhibition_config')."/errorlog.txt");
 	  foreach($input as $name=>$value){
       $row[$name] = $value;
     }
   }
+	error_log("\nIn exhibition_config_get_new_config_data, query result set:".print_r($row,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','exhibition_config')."/errorlog.txt");
   return $row;
 }
 function exhibition_config_load_last_published($pid){
@@ -509,7 +509,7 @@ function exhibition_config_form_submit($form, &$form_state) {
     $fullLinkSet = array('names'=>$link_names, 'urls'=>$link_urls);  //validate already said these were okay
     $fls_serialized = $fullLinkSet;
     $existing_visibility_obj = exhibition_config_load_visibility($pid); 
-   if ($form['publish-exhibition']['#value'] != '1'){
+   if ($form['publish_status']['#value'] != '1'){
 		 $last_published_config = exhibition_config_load_last_published($pid);
 		} 
 		/*$delete_result = db_delete("{exhibition_config}")->condition('pid', $pid)->execute();
@@ -559,6 +559,7 @@ function exhibition_config_form_submit($form, &$form_state) {
     );
     $output = $insert_query->execute();
     exhibition_config_save_visibility($pid,$existing_visibility_obj);*/
+		$delete_result = db_delete("{exhibition_config_copy}")->condition('pid', $pid)->execute();
 		$last_edited_values = array(
         'logo' => $form['top']['logo']['#value'],
         'logo_width' => $form['top']['logo_width']['#value'],
@@ -584,7 +585,7 @@ function exhibition_config_form_submit($form, &$form_state) {
         'last_edited',
 				'last_published',
 				);
-		 if ($form['publish-exhibition']['#value'] == '1'){
+		 if ($form['publish_status']['#value'] == '1'){
 		  $last_published_config = serialize($last_edited_values);
 		 } 
     $insert_query = db_insert('exhibition_config_copy')->fields($fields);
@@ -758,7 +759,7 @@ function exhibition_config_form($form, $form_state){
     return;
   }
   $object = _exhibition_config_get_object($pid);
-  $row = exhibition_config_get_config_data($pid);
+  //$row = exhibition_config_get_config_data($pid);
 	$new_row = exhibition_config_get_new_config_data($pid);
   $row = unserialize($new_row['last_edited']);
 	drupal_add_library('system', 'ui.resizable');
@@ -775,18 +776,22 @@ function exhibition_config_form($form, $form_state){
     $row['postcontent_html'] = '';
     $row['sidebar_right_html'] = '';
     $row['footer_html'] = '';
-    $row['is_available'] = '';
+    //$row['is_available'] = '';
     $row['custom_url'] = '';
     $row['logo_width'] = '';
     $row['logo_height'] = '';
     $row['nav_location'] = '';
     $row['nav_type'] = '';
   }  //have everything's value as a blank
-  $my_css = $row['css_script'];
-  $links = $row['link_bar_links'];
-	$row['is_available'] = FALSE;
-	if (isset($row['last_published']) && ($row['last_published'] == $row['last_edited'])){
-	  $row['is_available'] = TRUE;
+  //$my_css = $row['css_script'];
+  //$links = $row['link_bar_links'];
+	$row['is_published'] = FALSE;
+	$row['last_published'] = FALSE;
+	if ((isset($new_row['last_published'])) && ($new_row['last_published'] != '')) {
+	  $row['is_published'] = TRUE;
+	  if ($new_row['last_published'] == $row['last_edited']){
+	    $row['last_published'] = TRUE;
+		}
 	}	
   //error_log("\nIn exhibition_config_form, is available:".print_r($row['is_available'],true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','exhibition_config')."/errorlog.txt");
 	//error_log("\nIn exhibition_config_form, new serialized config data:".print_r($row,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','exhibition_config')."/errorlog.txt");
@@ -794,7 +799,7 @@ function exhibition_config_form($form, $form_state){
   $full = '
 <a href="javascript:void(0);" onclick="togglePreviewLocation();" title="Moves the sample between the top and side of the page.  You can also move your mouse between the sections and drag to change the sizes when the sample is on the right.">Toggle Sample Location</a><br/>
 <a href="javascript:void(0);" onclick="togglePreviewEditLinks();" title="Turns off the \'Edit\' quick links to get a better view of the sample, or turns them back on to quickly jump to a section to edit">Toggle Placeholder Text and Links</a><br/>';
-  if ($row['is_available']) {
+  if ($row['is_published']) {
     $full .= '
 <a href="javascript:void(0);" onclick="window.open(\''.
 variable_get('si_exhibition_website_location', '').
@@ -1642,11 +1647,11 @@ for(var i=0, len=els.length; i<len; ++i){
     '#title' => t('Islandora PID'),
     '#default_value' => $pid,
   );
-  $form['is_available'] = array(
+  $form['is_published'] = array(
     '#type' => 'hidden',
-    '#title' => t('Show publicly'),
-    '#default_value' => $row['is_available'],
-    '#description' => t('This must be true to view the exhibition, otherwise the exhibition is hidden (default).'),
+    '#title' => t('Has this exhibition been published with the latest changes?'),
+    '#default_value' => $row['is_published'],
+    '#description' => t('Has this exhibition been published at all or with the latest changes?'),
   );
 	$form['publish_status'] = array(
 	  '#type' => 'hidden',
@@ -1659,7 +1664,7 @@ for(var i=0, len=els.length; i<len; ++i){
       '#markup' => t('<p> <a target="_blank" href="'.base_path().'exhibition_config/visibility/'.$pid.'">Configure Visibility</a> (which concepts and resources are shown)</p>'),
     );
   $customUrl = '';
-  if ($row['is_available']) {
+  if ($row['is_published']) {
     $customUrl = $row['custom_url'];
     if (!empty($customUrl)){
       $savedUrlFullPath = variable_get('si_exhibition_friendly_website_location','').$customUrl;
@@ -2082,7 +2087,7 @@ Color Set:
     '#value' => 'Save',
     '#attributes' => array("id" => "confirm-save"),
   );
-	if ($new_row['last_published'] == ''){
+	if (!($row['is_published']) || !($row['last_published'])){
 	  $form['publish'] = array(
 		  '#type' => 'button',
 			'#value' => 'Publish',
