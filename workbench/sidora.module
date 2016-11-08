@@ -293,14 +293,20 @@ function sidora_menu() {
  * management UI
  */
 function sidora_management_ingest($pid, $dsid, $label = NULL, $mimeType = NULL){
+	error_log("\nIn sidora_management_ingest function, pid :".print_r($pid,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
   $object = sidora_obj($pid);
+	error_log("\nIn sidora_management_ingest function, original object :".print_r($object,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
   if (empty($obj)){ return; }
   $datastream = isset($object[$dsid]) ? $object[$dsid] : $object->constructDatastream($dsid);
   if ($label !== NULL) $datastream->label = $label; //don't use empty() since we want to set it to empty string '' if user wants to
   if ($mimeType !== NULL) $datastream->mimeType = $mimeType;
   $current_uploads = sidora_create_resource_get_current_uploads();
+	error_log("\nIn sidora_management_ingest function, current uploads :".print_r($current_uploads,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
   $datastream->setContentFromFile($current_uploads[0]->filepath);
-  $object->ingestDatastream($datastream);
+  //$object->ingestDatastream($datastream);
+	error_log("\nIn sidora_management_ingest function, object ingest :".print_r($object->ingestDatastream($datastream),true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
+	error_log("\nIn sidora_management_ingest function, object :".print_r($object,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
+
 }
 /*
  * Set Drupal to be ready to upload a file using the multiple uploader plupload and 
@@ -377,7 +383,8 @@ function sidora_management_panel($pid, $show_or_save = 'show', $dsid_to_remove =
     $mime_detect = new MimeDetect();
     $current_uploads = sidora_create_resource_get_current_uploads();
     $mimeType = $mime_detect->getMimeType($current_uploads[0]->filepath);
-    sidora_management_ingest($pid, $identifier, $label, $mimeType);
+    error_log("\nIn sidora_management_panel function, mimetype :".print_r($mimeType,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
+		sidora_management_ingest($pid, $identifier, $label, $mimeType);
     $to_return = 'complete';
     return $to_return;
   }
@@ -2655,13 +2662,14 @@ if ($one == 'deletexsl'){
 	  global $base_url;
 		//var_dump($base_url);
 		//var_dump(drupal_realpath('public://'));
-		$post = array(
-	  'resourceFileList' => '@' . drupal_realpath('public://') . '/files_ramlani581a220f7abf7.xml',
-	  'contentModel' => 'si:generalImageCModel',
-	  'ds_MODS' => '@' . drupal_realpath('public://').'/batch_ramlani581a220f7abf7.xml',
-		'titleField' => 'batch_11216',
-		'ds_Sidora' => '@' . drupal_realpath('public://') . '/sidora_ramlani581a220f7abf7.xml',
-		'resourceOwner' => 'ramlani'
+	$post = array(
+	  'resourceFileList' => file_create_url('public://' . '/files_ramlani5820cd731d34f.xml'),
+	  'contentModel' => $association['content_model'],
+	  'ds_MODS' => file_create_url('public://' . '/batch_ramlani5820cd731d34f.xml'),
+		'titleField' => $label,
+		'ds_Sidora' => file_create_url('public://' . '/sidora_ramlani5820cd731d34f.xml'),
+		'resourceOwner' => $user->name
+		);
     /*
 	  'resourceZipFileURL' => drupal_realpath('public://') . '/batch_ramlani.zip',
 	  'contentModel' => 'si:generalImageCModel',
@@ -2669,7 +2677,6 @@ if ($one == 'deletexsl'){
 		'titleField' => 'batch_102516',
 		'sidoraDatastreamFileURL' => drupal_realpath('public://') . '/sidora_ramlani.xml',
 		'resourceOwner' => 'ramlani'*/
-	  );
 		/*$post = array(
 	  'resourceZipFileURL' => '/opt/sidora/smx/Sidora-Batch-Test-Files/image-resources.zip',
 	  'contentModel' => 'si:generalImageCModel',
@@ -2680,8 +2687,8 @@ if ($one == 'deletexsl'){
 	  );*/
 		$ch = curl_init();
 		//curl -v -H "Content-Type:multipart/form-data" -F "resourceZipFileURL=/opt/sidora/smx/Sidora-Batch-Test-Files/image-resources.zip;type=text/plain" -F "contentModel=si:generalImageCModel" -F "metadataFileURL=/opt/sidora/smx/Sidora-Batch-Test-Files/metadataWithTitle.xml;type=text/plain" -F "sidoraDatastreamFileURL=/opt/sidora/smx/Sidora-Batch-Test-Files/sidora-datastream.xml;type=text/plain" -F "titleField=test-title" -F "resourceOwner=ramlani;type=text/plain" -X POST http://localhost:8181/cxf/sidora/rest/batch/process/addResourceObjects/si:390403
-    //curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-Type: multipart/form-data'));
-    curl_setopt($ch,CURLOPT_URL,'http://sidora0c.myquotient.net:8181/cxf/sidora/rest/batch/process/addResourceObjects/si:390662');
+    //curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-Type: text/xml'));
+    curl_setopt($ch,CURLOPT_URL,'http://sidora0c.myquotient.net:8181/cxf/sidora/rest/batch/process/addResourceObjects/si:391843');
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
     curl_setopt($ch, CURLOPT_POSTFIELDS, $post);
     var_dump($post);
@@ -2919,18 +2926,20 @@ function sidora_process_batch_submit($form,&$form_state){
 	file_put_contents($targetDir,$sidora_xml);
 	drupal_chmod($targetDir);
 	$post = array(
-	  'resourceFileList' => '@' . drupal_realpath('public://') . '/files_' . $batch_id . '.xml',
+	  'resourceFileList' => file_create_url('public://' . '/files_' . $batch_id . '.xml'),
 	  'contentModel' => $association['content_model'],
-	  'ds_MODS' => '@' . drupal_realpath('public://').'/batch_' . $batch_id . '.xml',
+	  'ds_metadata' => file_create_url('public://' . '/batch_' . $batch_id . '.xml'),
 		'titleField' => $label,
-		'ds_Sidora' => '@' . drupal_realpath('public://') . '/sidora_' . $batch_id . '.xml',
+		'ds_sidora' => file_create_url('public://' . '/sidora_' . $batch_id . '.xml'),
 		'resourceOwner' => $user->name
 		);
+	$url_suffix = '';
 	if ($association['content_model'] == 'si:datasetCModel'){
-	  $post['codebookPid'] = $user->data['recent_codebook_id'];
+	  $url_suffix = "?codebookPID=" . $user->data['recent_codebook_id'];
+	  error_log("\nIn sidora_process_batch_submit function, url suffix for codebook :".print_r($url_suffix,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
 	}	
   $ch = curl_init();
-  curl_setopt($ch, CURLOPT_URL, 'http://sidora0c.myquotient.net:8181/cxf/sidora/rest/batch/process/addResourceObjects/' . $id_to_creation_info[$form_build_id]['parent']);
+  curl_setopt($ch, CURLOPT_URL, 'http://sidora0c.myquotient.net:8181/cxf/sidora/rest/batch/process/addResourceObjects/' . $id_to_creation_info[$form_build_id]['parent'] . $url_suffix);
   curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
   curl_setopt($ch, CURLOPT_POSTFIELDS, $post);
   $response = curl_exec($ch);
@@ -5113,6 +5122,7 @@ function sidora_ajax_parts($call_type, $param1 = '', $param2 = '', $param3 = '')
     curl_setopt($ch,CURLOPT_URL,'http://sidora0c.myquotient.net:8181/cxf/sidora/rest/batch/process/addResourceObjects/' . $parent_pid . '/' . $request_id);
 		curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
 	  $response = curl_exec($ch);
+	error_log("\nIn sidora_check_batch_status function, curl response :".print_r($response,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
 	if (strpos($response,'</BatchDone></Batch>') !== false) {
 	 $xml_from_curl = simplexml_load_string($response);
 	 if ($xml_from_curl){

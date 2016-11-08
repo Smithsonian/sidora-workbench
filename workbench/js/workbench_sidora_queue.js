@@ -191,13 +191,13 @@ SidoraQueue.prototype.Done = function(completedItem, ajaxReturn){
 						 // extract the parent concept from the ajax return
 							//refresh the resource table for this concept
 						}else{
-							setTimeout(function() {poll(requestID)}, 5000);
+							setTimeout(function() {poll(requestID)}, 2000);
 						}		
         },
         //dataType: "json",
-        timeout: 5000
+        timeout: 2000
     });
-	},5000);
+	},2000);
 })(requestID);
 				
         /*{}else{
