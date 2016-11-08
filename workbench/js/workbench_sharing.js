@@ -55,6 +55,7 @@ sidora.sharedWithMe.ReopenCurrent = function() {
   }
 }
 sidora.sharedWithMe.AddColoring = function(){
+  /*
   var jst = jQuery("#forjstree").jstree();
   jQuery(sidora.sharedWithMe.selector).addClass("sharedWithMeMain");
   var dataNode = jst.get_node(sidora.sharedWithMe.selector);
@@ -65,7 +66,17 @@ sidora.sharedWithMe.AddColoring = function(){
   }
   else {
     dataNode.a_attr.class = 'sharedWithMeMain';
-  }   
+  }
+  */   
+  var swmBaseRule = sidora.sharedWithMe.selector + "{position: absolute;left: -10px;background-image: none;height: 200px;overflow:auto;width: calc(100% + 10px);}";
+  var swmLinkRule = sidora.sharedWithMe.selector + " li a {border-left: solid 6px #ddd}";
+  var swmPermissionColorRule = sidora.sharedWithMe.selector + " li a.p_create, ";
+  swmPermissionColorRule = swmPermissionColorRule + sidora.sharedWithMe.selector + " li a.p_update, ";
+  swmPermissionColorRule = swmPermissionColorRule + sidora.sharedWithMe.selector + " li a.p_delete ";
+  swmPermissionColorRule = swmPermissionColorRule + sidora.sharedWithMe.selector + "{border-left: solid 6px #d80}";
+  var swmColorRules = swmBaseRule + " " + swmLinkRule + " " + swmPermissionColorRule;
+  styleInject(swmColorRules,"SharedWithMeColoring");
+
 }
 sidora.sharedWithMe.CreateShareTreeSection = function(sharedWithMeSelector){
   // Our shared folder should come out as a child of the tree

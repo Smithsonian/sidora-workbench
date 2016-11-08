@@ -4184,8 +4184,6 @@ function sidora_add_all_owned_concepts_to_owned_groups($user_or_username_or_uid)
     $username = $user->name;
   }
   $pids = sidora_get_owned_concepts_pids($username);
-  var_dump($pids); //BBB
-  
 }
 /**
  * Returns an array of pids belonging to concepts that the username (string case insensitive) owns in Fedora
@@ -5697,7 +5695,7 @@ function sidora_ajax_lock($pid, $operation = 'obtain'){
 function sidora_move($move_from_id, $copy_to_id, $pid, $show_output = TRUE){
   global $user;
   if (
-       !sidora_allow($user, $pid, 'read') || 
+       !sidora_allow($user, $pid, 'view') || 
        !sidora_allow($user, $copy_to_id, 'update') ||
        !sidora_allow($user, $move_from_id, 'update')
       ){
@@ -5948,11 +5946,13 @@ function sidora_unassociate_delete_if_orphaned($remove_from_pid, $pid_to_remove,
 function sidora_copy($copy_to_id, $pid, $show_output = TRUE){
   global $user;
   if (
-       !sidora_allow($user, $pid, 'read') || 
+       !sidora_allow($user, $pid, 'view') || 
        !sidora_allow($user, $copy_to_id, 'update')
       ){
     $to_output['error'] = TRUE;
     $to_output['description'] = t("Logged in user does not have permissions for updating the target concept");
+    $to_output['perm1'] = t("read: %up", array('%up' => sidora_allow($user, $pid, 'view')?"T":"F"));
+    $to_output['perm2'] = t("update: %up", array('%up' => sidora_allow($user, $copy_to_id, 'update')?"T":"F"));
     $to_output['code'] = "sc1";
     if ($show_output){
       print json_encode($to_output);
@@ -6036,6 +6036,15 @@ function sidora_copy($copy_to_id, $pid, $show_output = TRUE){
     }else{
       return $to_output;
     }
+  }
+  // Update Drupal node of parent
+  $child_nodes = sidora_get_concept_node($pid);
+  if (!empty($child_nodes)) {
+    $parent_pid = $copy_to_id;
+    $parent_nodes = sidora_get_concept_node($parent_pid);
+    $parent_node = array_shift(array_values($parent_nodes)); 
+    $child_node = array_shift(array_values($child_nodes)); 
+    sidora_update_concept_node_add_child($parent_node, $child_node->nid);
   }
   sidora_clear_tree_cache($copy_to_id);
   if ($show_output){
@@ -6732,10 +6741,16 @@ function sidora_html_tree_from_query_results_tree($query_result_tree, $input_pat
         $nid_info = " nid='" . $t_element['nid'] . "'";
       }
       $owner_info = '';
+      $classes_for_ownership = "";
       if (array_key_exists('owner',$t_element)) {
         $owner_info = " owner='" . $t_element['owner']['value'] . "'";
+        global $user;
+        if (strtolower( $t_element['owner']['value'] ) != strtolower($user->name)) {
+          $classes_for_ownership = " not-owned";
+        }
       }
-      $to_return .= '<li><a href="' . base_path() . 'sidora/workbench/' . $url_params . '#' . $pid . '?path=' . $input_path . '" pid="' . $pid . '" fullname="' . $html_escaped_name . '" conceptchildren="' . count($t_element['children']) . '" resourcechildren="' . $resource_children_num . '" class="' . $classes_for_permissions . '" permissions="' . $permissions . '"' . $nid_info . $owner_info . '>';
+      
+      $to_return .= '<li><a href="' . base_path() . 'sidora/workbench/' . $url_params . '#' . $pid . '?path=' . $input_path . '" pid="' . $pid . '" fullname="' . $html_escaped_name . '" conceptchildren="' . count($t_element['children']) . '" resourcechildren="' . $resource_children_num . '" class="' . $classes_for_permissions . $classes_for_ownership . '" permissions="' . $permissions . '"' . $nid_info . $owner_info . '>';
       $to_return .= $t_element['t']['value'];
       if ($resource_children_num > 0) $to_return .= ' ('.$resource_children_num.')';
       $to_return .= '</a>';
@@ -6946,8 +6961,8 @@ function sidora_build_tree_from_nodes($root_node_id, $max_depth = 3, $current_de
     $to_return['t'] = array();
     $to_return['t']['value'] = $node->field_fedora_label[$node->language][0]['value'];
     $to_return['resourcecount'] = array();
-    if (!empty($node->field_sidora_resource_children) && !empty($node->field_sidora_resource_children[$node->language])) {
-      $to_return['resourcecount']['value'] = $node->field_sidora_resource_children[$node->language][0]['value'];
+    if (!empty($node->field_sidora_resource_child_coun) && !empty($node->field_sidora_resource_child_coun[$node->language])) {
+      $to_return['resourcecount']['value'] = $node->field_sidora_resource_child_coun[$node->language][0]['value'];
     }
     else {
       $to_return['resourcecount']['value'] = 0;
@@ -7875,8 +7890,8 @@ function sidora_fedora_sync() {
           $concept_children = count(explode(',',htmlspecialchars($node->field_sidora_concept_children['und'][0]['value'])));
         }
         $resource_children = 'Unset';
-        if (array_key_exists('und',$node->field_sidora_resource_children)){
-          $resource_children = htmlspecialchars($node->field_sidora_resource_children['und'][0]['value']);
+        if (array_key_exists('und',$node->field_sidora_resource_child_coun)){
+          $resource_children = htmlspecialchars($node->field_sidora_resource_child_coun['und'][0]['value']);
         }
         $readable_sync_time = 'Unset (Will sync when used)';
         if (array_key_exists('und',$node->field_sidora_fedora_sync)){
@@ -10168,9 +10183,9 @@ function sidora_update_concept_node_remove_child($node, $child_node_id = NULL) {
   $node_wrapper = entity_metadata_wrapper('node', $node);
   // If the child is null, then it was a resource, subtract one resource from the resource count
   if (empty($child_node_id)) {
-    $existing_resource_children = $node_wrapper->field_sidora_resource_children->value();
+    $existing_resource_children = $node_wrapper->field_sidora_resource_child_coun->value();
     $new_resource_children = ((int)$existing_resource_children) - 1;
-    $node_wrapper->field_sidora_resource_children->set($new_resource_children);
+    $node_wrapper->field_sidora_resource_child_coun->set($new_resource_children);
   }
   else {
     $new_concept_children = $child_node_id;
@@ -10194,9 +10209,9 @@ function sidora_update_concept_node_add_child($node, $child_node_id = NULL) {
   $node_wrapper = entity_metadata_wrapper('node', $node);
   // If the child is null, then it was a resource, add one resource from the resource count
   if (empty($child_node_id)) {
-    $existing_resource_children = $node_wrapper->field_sidora_resource_children->value();
+    $existing_resource_children = $node_wrapper->field_sidora_resource_child_coun->value();
     $new_resource_children = ((int)$existing_resource_children) + 1;
-    $node_wrapper->field_sidora_resource_children->set($new_resource_children);
+    $node_wrapper->field_sidora_resource_child_coun->set($new_resource_children);
   }
   else {
     $new_concept_children = $child_node_id;
@@ -10238,7 +10253,7 @@ function sidora_update_concept_node($node, $info, $set_fedora_sync = FALSE) {
     $node_wrapper->field_sidora_concept_children->set($info['concept_children']);
   }
   if (array_key_exists('resource_children',$info)) {
-    $node_wrapper->field_sidora_resource_children->set($info['resource_children']);
+    $node_wrapper->field_sidora_resource_child_coun->set($info['resource_children']);
   }
   if ($set_fedora_sync) {
     $node_wrapper->field_sidora_fedora_sync->set(strtotime("now"));
@@ -10342,7 +10357,7 @@ function sidora_create_concept_node($pid, $info = NULL, $set_fedora_sync = FALSE
   if (!empty($info)){
     $newNode->field_fedora_label[$newNode->language][]['value'] = $info['label'];
     $newNode->field_sidora_concept_children[$newNode->language][]['value'] = $info['concept_children'];
-    $newNode->field_sidora_resource_children[$newNode->language][]['value'] = $info['resource_children'];
+    $newNode->field_sidora_resource_child_coun[$newNode->language][]['value'] = $info['resource_children'];
   }
   
   if ($set_fedora_sync) {

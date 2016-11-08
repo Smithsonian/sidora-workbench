@@ -32,6 +32,9 @@
  {
   border-left: solid 6px #d80
 }
+li a.not-owned {
+  border-left: solid 6px #66d
+}
 
 #page {
   margin-left: 0px;
