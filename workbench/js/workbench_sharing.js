@@ -55,19 +55,6 @@ sidora.sharedWithMe.ReopenCurrent = function() {
   }
 }
 sidora.sharedWithMe.AddColoring = function(){
-  /*
-  var jst = jQuery("#forjstree").jstree();
-  jQuery(sidora.sharedWithMe.selector).addClass("sharedWithMeMain");
-  var dataNode = jst.get_node(sidora.sharedWithMe.selector);
-  if(dataNode.a_attr.class) {
-    if(dataNode.a_attr.class.indexOf('sharedWithMeMain') === -1) {
-      dataNode.a_attr.class += ' sharedWithMeMain';
-    }
-  }
-  else {
-    dataNode.a_attr.class = 'sharedWithMeMain';
-  }
-  */   
   var swmBaseRule = sidora.sharedWithMe.selector + "{position: absolute;left: -10px;background-image: none;height: 200px;overflow:auto;width: calc(100% + 10px);}";
   var swmLinkRule = sidora.sharedWithMe.selector + " li a {border-left: solid 6px #ddd}";
   var swmPermissionColorRule = sidora.sharedWithMe.selector + " li a.p_create, ";
@@ -76,7 +63,6 @@ sidora.sharedWithMe.AddColoring = function(){
   swmPermissionColorRule = swmPermissionColorRule + sidora.sharedWithMe.selector + "{border-left: solid 6px #d80}";
   var swmColorRules = swmBaseRule + " " + swmLinkRule + " " + swmPermissionColorRule;
   styleInject(swmColorRules,"SharedWithMeColoring");
-
 }
 sidora.sharedWithMe.CreateShareTreeSection = function(sharedWithMeSelector){
   // Our shared folder should come out as a child of the tree
@@ -127,6 +113,39 @@ sidora.sharedWithMe.CreateShareTreeSection = function(sharedWithMeSelector){
   // Otherwise, it will not display the "can open" icon next to the concept (since it loads without children)
   sidora.sharedWithMe.ReopenCurrent();
 }
+sidora.sharedWithMe.ResizeOnWindowResize = function(){
+  var outerContainerHeight = jQuery("#fjt-holder").height();
+  var topSectionHeight = jQuery("#forjstree").height();
+  var dividerHeight = jQuery("#shared-tree-divider").height();
+  var bottomSectionHeight =  jQuery(sidora.sharedWithMe.selector).height();
+  if (
+    outerContainerHeight == null ||
+    topSectionHeight == null ||
+    dividerHeight == null ||
+    bottomSectionHeight == null
+  ){
+    //The elements aren't there so don't do anything
+    return;
+  }
+  // the "top" tree's min size is also what we use to determine bottom min size
+  var minimumHeight = parseInt(jQuery("#forjstree").css("min-height"));
+  var suggestedNewBottomHeight = outerContainerHeight - (topSectionHeight + dividerHeight);
+  var suggestedNewTopHeight = outerContainerHeight - (bottomSectionHeight + dividerHeight);
+  // Remove space from the shared section first
+  // But if we can't then try taking space from the top section
+  if (suggestedNewBottomHeight > minimumHeight) {
+    jQuery(sidora.sharedWithMe.selector).height(suggestedNewBottomHeight);
+    jQuery(sidora.sharedWithMe.selector).css("top",(topSectionHeight + dividerHeight)+"px");
+  }
+  else if (suggestedNewTopHeight > minimumHeight) {
+    jQuery("#forjstree").height(suggestedNewTopHeight);
+    jQuery(sidora.sharedWithMe.selector).css("top",(suggestedNewTopHeight + dividerHeight)+"px");
+  }
+ 
+}
+jQuery(window).resize(function() {
+  sidora.sharedWithMe.ResizeOnWindowResize();
+});
 sidora.sharedWithMe.Relocate = function(){
   if (sidora.sharedWithMe.selector == null) return;
   if (jQuery("#fjt-holder").height() == jQuery("#forjstree").height()) {

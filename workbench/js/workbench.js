@@ -106,10 +106,9 @@ sidora.concept.LoadContentHelp.Resources.TableLoad = function(conceptOfInterest)
     //Edit metadata and delete are only available per resource (no batch yet) so disable them if not exactly one left
     if (pids.length != 1){
    //   jQuery("#edit-resource-metadata-menu").addClass("ui-state-disabled");
-      jQuery("#manage-resource").addClass("ui-state-disabled");
+      jQuery("#manage-resource, #edit-resource-metadata-menu, #view-resource-metadata, #resource-open-window, #resource-download").addClass("ui-state-disabled");
     }else{
-      jQuery("#edit-resource-metadata-menu").removeClass("ui-state-disabled");
-      jQuery("#manage-resource").removeClass("ui-state-disabled");
+      jQuery("#manage-resource, #edit-resource-metadata-menu, #view-resource-metadata, #resource-open-window, #resource-download").removeClass("ui-state-disabled");
     }
   }); //End onclick
     table.on( 'length', function ( e, settings, len ) {
@@ -254,6 +253,7 @@ sidora.concept.LoadContentHelp.Permissions = function(conceptOfInterest){
     dataType: "json",
     url: Drupal.settings.basePath+'sidora/info/'+conceptOfInterest+'/permission',
     success: function(permissions){
+      sidora.concept.permissions = permissions;
       jQuery("#sharing-permissions").toggle(jQuery("#j1_1 >a").attr("pid") == sidora.concept.loadedContentPid);
       jQuery("#concept-create").toggle(permissions.create);
       jQuery("#deleteConcept").toggle(permissions.delete);
@@ -262,6 +262,10 @@ sidora.concept.LoadContentHelp.Permissions = function(conceptOfInterest){
       jQuery("#manageConcept").toggle(permissions.manage);
       // Resource permissions currently tied to concept permissions
       jQuery("#delete-resource").toggle(permissions.delete);
+      jQuery("#edit-resource-metadata-menu").toggle(permissions.update);
+      // The "view metadata" is the view-equivalent of edit, don't show both
+      jQuery("#view-resource-metadata").toggle(!permissions.update);
+        
     }
   });
 }
@@ -2208,84 +2212,6 @@ sidora.concept.DeleteConcept = function(){
     });
 }
 /*
- * NON-FUNCTIONAL placeholder to give a visual representation of what the permissions panel will look like
- */
-sidora.concept.ShowPermissions = function(){
-  jQuery('#showPermissions').remove();
-  jQuery("body").append("<div id='showPermissions' style='display:none;' title='Permissions'>"+sidora.GetPermissionsHtml()+"</div>");
-  jQuery("#showPermissions").dialog({
-    resizable: false,
-    width: 650,
-    modal: true,
-    buttons: {
-      Save: function() {
-        jQuery( this ).dialog( "close" );
-      },
-      Cancel: function() {
-        jQuery( this ).dialog( "close" );
-      }
-    }
-  });
-}
-/*
- * NON-FUNCTIONAL placeholder to give a visual representation of what the permissions panel will look like
- */
-sidora.GetPermissionsHtml = function(){
-  var toReturn = "";
-  toReturn += '<table class="permissions-table">';
-  toReturn += '<tbody><tr>';
-  toReturn += '<th>Remove</th>';
-  toReturn += '<th>Group / User</th>';
-  toReturn += '<th>View</th>';
-  toReturn += '<th>Edit</th>';
-  toReturn += '<th>Delete</th>';
-  toReturn += '<th>Create Children</th>';
-  toReturn += '  </tr>';
-  toReturn += '';
-  toReturn += '<tr class="odd">';
-  toReturn += '<td></td>';
-  toReturn += '<td>Logged In Users</td>';
-  toReturn += '<td><input type="checkbox" checked="checked"></td>';
-  toReturn += '<td><input type="checkbox"></td>';
-  toReturn += '<td><input type="checkbox"></td>';
-  toReturn += '<td><input type="checkbox"></td>';
-  toReturn += '</tr>';
-  toReturn += '<tr class="odd">';
-  toReturn += '<td><input type="image" src="'+Drupal.settings.basePath+'sites/all/modules/islandora_xml_forms-7.x/elements/images/minus_small.png" title="Remove special permissions."></td>';
-  toReturn += '<td>Camera Trap Members</td>';
-  toReturn += '<td><input type="checkbox" checked="checked"></td>';
-  toReturn += '<td><input type="checkbox" checked="checked"></td>';
-  toReturn += '<td><input type="checkbox"></td>';
-  toReturn += '<td><input type="checkbox" checked="checked"></td>';
-  toReturn += '</tr>';
-  toReturn += '<tr class="odd">';
-  toReturn += '<td><input type="image" src="'+Drupal.settings.basePath+'sites/all/modules/islandora_xml_forms-7.x/elements/images/minus_small.png" title="Remove special permissions."></td>';
-  toReturn += '<td>Smithsonian Employees</td>';
-  toReturn += '<td><input type="checkbox"></td>';
-  toReturn += '<td><input type="checkbox"></td>';
-  toReturn += '<td><input type="checkbox"></td>';
-  toReturn += '<td><input type="checkbox"></td>';
-  toReturn += '</tr>';
-  toReturn += '<tr class="odd">';
-  toReturn += '<td></td>';
-  toReturn += '<td>Everyone</td>';
-  toReturn += '<td><input type="checkbox"></td>';
-  toReturn += '<td><input type="checkbox"></td>';
-  toReturn += '<td><input type="checkbox"></td>';
-  toReturn += '<td><input type="checkbox"></td>';
-  toReturn += '</tr>';
-  toReturn += '</tbody></table>';
-  toReturn += '<span>Add Login / Group: </span>';
-  toReturn += '<input type="text" size="45"/>';
-  toReturn += ' <input type="image" src="'+Drupal.settings.basePath+'sites/all/modules/islandora_xml_forms-7.x-1.7/elements/images/add.png" title="Add the login / group to the list">';
-  toReturn += '';
-  toReturn += '';
-  toReturn += '';
-  toReturn += '';
-  toReturn += '';
-  return toReturn;
-}
-/*
  * Confirm with the user that they want the resource unassociated / deleted and performs the unassociate/delete
  */
 sidora.resources.DeleteResource = function(){
@@ -2369,15 +2295,15 @@ sidora.resources.individualPanel.Create = function() {
     var resourceName = sidora.resources.individualPanel.resourceOfInterest.name;
     sidora.manage.Open(resourcePid, resourceName, "Manage Resource", "Update resource information");
   });
-  jQuery('#edit-resource-metadata-menu').unbind('click');
-  jQuery('#edit-resource-metadata-menu').click(function(){
+  jQuery('#edit-resource-metadata-menu, #view-resource-metadata').unbind('click');
+  jQuery('#edit-resource-metadata-menu, #view-resource-metadata').click(function(){
   var pids = sidora.resources.getHighlighted();
   var pids_array = sidora.resources.getHighlighted();
   pids = pids_array.join("&");
     Shadowbox.open({
       content:    Drupal.settings.basePath+"sidora/edit_metadata/"+pids+"",
       player:     "iframe",
-      title:      "Edit Metadata",
+      title:      "Resource Metadata",
       options: {
         onFinish:  function(){
           //Allow the frame to go fullscreen if needed

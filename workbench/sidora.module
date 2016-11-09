@@ -4742,7 +4742,7 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
     case 'meta':
       module_load_include('inc', 'sidora', 'includes/utils');
       $object = sidora_obj($pid);
-      if (empty($object)){
+      if (empty($object) || !sidora_allow($user, $pid, 'view')){
         print t('Object not found');
         drupal_exit();
       }
@@ -5348,8 +5348,9 @@ function sidora_block_view($delta = ''){
             </li>
             <li><a href="#" onclick="return false;">View</a>
               <ul>
-                <li><a href="#" onclick="return false;" id="resource-open-window">Open&nbsp;in&nbsp;New&nbsp;Window</a></li>
-                <li><a href="#" onclick="return false;" id="resource-download">Download</a></li>
+                <li><a href="#" onclick="return false;" id="view-resource-metadata" class="ui-state-disabled" style="display:none">View&nbsp;Metadata</a></li>
+                <li><a href="#" onclick="return false;" id="resource-open-window" class="ui-state-disabled">Open&nbsp;in&nbsp;New&nbsp;Window</a></li>
+                <li><a href="#" onclick="return false;" id="resource-download" class="ui-state-disabled">Download</a></li>
               </ul>
             </li>
           </ul>
