@@ -41,6 +41,12 @@ sidora.sharedWithMe.CreateDefaultShareSection = function(){
         sidora.sharedWithMe.CreateShareTreeSection("#"+rn.children[i]);
       }
     }
+    jQuery(document).on('dnd_stop.vakata', function (e, data) {
+      sidora.sharedWithMe.DndStop(e,data);
+    });
+    jQuery(document).on('dnd_start.vakata', function (e, data) {
+      sidora.sharedWithMe.DndStart(e,data);
+    });
   });
 }
 sidora.sharedWithMe.ReopenCurrent = function() {
@@ -105,6 +111,7 @@ sidora.sharedWithMe.CreateShareTreeSection = function(sharedWithMeSelector){
     sidora.sharedWithMe.Relocate();
     clearSelection();
     writeCookie('Drupal.sidoraSharedWithMeHeight',jQuery("#fjt-holder").height() - jQuery("#forjstree").height(),30);
+    jQuery("#swm-top-overlay").height(jQuery("#forjstree").height());
   });
   jQuery("#fjt-holder").mouseleave(function(){ sidora.sharedWithMe.dragY = false; });
   jQuery("#shared-tree-divider").mouseup(function(){ sidora.sharedWithMe.dragY = false; });
@@ -141,7 +148,7 @@ sidora.sharedWithMe.ResizeOnWindowResize = function(){
     jQuery("#forjstree").height(suggestedNewTopHeight);
     jQuery(sidora.sharedWithMe.selector).css("top",(suggestedNewTopHeight + dividerHeight)+"px");
   }
- 
+  jQuery("#swm-top-overlay").height(jQuery("#forjstree").height());
 }
 jQuery(window).resize(function() {
   sidora.sharedWithMe.ResizeOnWindowResize();
@@ -157,4 +164,45 @@ sidora.sharedWithMe.Relocate = function(){
     swmLocation = (jQuery("#forjstree").height()+jQuery("#shared-tree-divider").height());
     jQuery(sidora.sharedWithMe.selector).css("top", swmLocation + "px");
   }
+}
+sidora.sharedWithMe.CreateOverlayForShared = function() {
+  var swm = jQuery(sidora.sharedWithMe.selector);
+  swm.append("<div id='swm-bottom-overlay' style='position:absolute;top:0;width:100%;left:0;height:100%;background-color:rgba(50,50,50,0.5);'></div>");
+}
+sidora.sharedWithMe.CreateOverlayForMain = function() {
+  var fjt = jQuery("#forjstree");
+  fjt.append("<div id='swm-top-overlay' style='position:absolute;top:0;width:100%;left:0;height:"+fjt.height()+"px;background-color:rgba(50,50,50,0.5);'></div>");
+}
+sidora.sharedWithMe.RemoveOverlays = function() {
+  jQuery("#swm-top-overlay, #swm-bottom-overlay").remove();
+}
+sidora.sharedWithMe.DndStart = function(e,data){
+  var selected = jQuery("#forjstree").jstree(true).get_selected();
+  var actualItemDragged = jQuery(".jstree-hovered").closest("li").attr("id");
+  var draggedObjects = { "id" : actualItemDragged };
+  var indexInArray = jQuery.inArray(draggedObjects.id,selected);
+  if (indexInArray == -1) selected = [draggedObjects.id];
+  
+  var hideTop = false;
+  var hideBottom = false;
+  var swmDividerBcr = jQuery("#shared-tree-divider")[0].getBoundingClientRect()
+  for (var i = 0; i < selected.length; i++) {
+    var toCheck = jQuery("#" + selected[i]);
+    var toCheckBcr = toCheck[0].getBoundingClientRect();
+    if (toCheckBcr.top > swmDividerBcr.bottom) {
+      hideTop = true;
+    }
+    if (toCheckBcr.bottom < swmDividerBcr.top) {
+      hideBottom = true;
+    }
+  }
+  if (hideTop) {
+    sidora.sharedWithMe.CreateOverlayForMain();
+  }
+  if (hideBottom) {
+    sidora.sharedWithMe.CreateOverlayForShared();
+  }
+}
+sidora.sharedWithMe.DndStop = function(e,data){
+  sidora.sharedWithMe.RemoveOverlays();
 }

@@ -4954,7 +4954,8 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
         //if the user is able to create under this concept, give them a create menu
         global $user;
         if (!sidora_allow($user, $pid, 'create')){
-            $to_output = '';
+          print '{}';
+          drupal_exit();
         }else{
           print variable_get('sidora_resource_ontology_json','');
           drupal_exit();
