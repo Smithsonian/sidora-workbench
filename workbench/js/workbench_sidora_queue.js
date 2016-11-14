@@ -95,7 +95,9 @@ SidoraQueue.prototype.Fail = function(completedItem, ajaxReturn){
   this.NotificationWindow.Show("FAILED: " + completedItem.userFriendlyName);
   console.log("fail:"+ajaxReturn[0].status);
   if (ajaxReturn[0].status == '500'){
-    this.NotificationWindow.Show("Error code 500 returned. Contact site administrator",true);
+    var site_admin = '';
+		if (Drupal.settings.site_admin_email != "") site_admin = " at " + Drupal.settings.site_admin_email;
+		this.NotificationWindow.Show("Error code 500 returned. Contact site administrator" + site_admin,true);
   /*  jQuery("body").append("<div id='ajaxErrors' style='display:none;' title='"+completedItem.userFriendlyName+"'><p>The Server has returned an error code of 500.</p><p>"+completedItem.userFriendlyName+" has failed</p><p>Please contact the Site Administrator</p></div>");
     jQuery("#ajaxErrors").dialog({
        height: 300,
