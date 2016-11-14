@@ -1703,13 +1703,18 @@ sidora.util.treeAdditionSingleItem = function(mainItem, htmlTree, onLoadComplete
       jst.rename_node(currChild, dfAnchorText);
     }
     var a_attr_obj = {};
-		jQuery(jQuery(currRep).children("a").first()[0].attributes).each(function() {
-       a_attr_obj[this.nodeName] = this.nodeValue;
-      });   
-      a_attr_obj["href"] = currChild.a_attr.href;
-		  jQuery.each(a_attr_obj,function(nodeName,nodeValue){
+		jQuery(jQuery(currRep).children("a").first()[0].attributes).each(
+      function() {
+       // jstree puts in its own classes and we dont want to overwrite those for now
+       if (this.nodeName != 'class') {
+         a_attr_obj[this.nodeName] = this.nodeValue;
+       }
+      }
+    );   
+    a_attr_obj["href"] = currChild.a_attr.href;
+		jQuery.each(a_attr_obj,function(nodeName,nodeValue){
 		  jQuery("[pid='" + ccp + "']").attr(nodeName,nodeValue);
-			jst.get_node(currChild).a_attr[nodeName] = nodeValue;
+		  jst.get_node(currChild).a_attr[nodeName] = nodeValue;
     });
 		//Do not add children to items that are already filled in
     if (currChild.children.length == 0 || overwriteType == "changes") {

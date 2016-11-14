@@ -37,6 +37,7 @@ sidora.sharedWithMe.CreateDefaultShareSection = function(){
     for (i = 0; i < rn.children.length; i++) {
       var checkText = jst.get_node(rn.children[i]).text;
       if (checkText == '  Shared With Me') {
+        jst.open_node(jst.get_node(rn.children[i]));
         // BBB TODO: put in a better indicator to signify that this is the shared with me concept
         sidora.sharedWithMe.CreateShareTreeSection("#"+rn.children[i]);
       }
@@ -83,7 +84,8 @@ sidora.sharedWithMe.CreateShareTreeSection = function(sharedWithMeSelector){
 
   sidora.sharedWithMe.selector = sharedWithMeSelector;
   jQuery("#fjt-holder").append('<div id="shared-tree-divider" style="width: 100%;background: #aaa;height: 20px;cursor: ns-resize;text-align:center">&#x25BC; Shared &#x25BC;</div>');
-  var initialHeight = (readCookie('Drupal.sidoraSharedWithMeHeight') == '')?'200':readCookie('Drupal.sidoraSharedWithMeHeight');
+  var initialHeight = (sidora_util.readCookie('Drupal.sidoraSharedWithMeHeight') == '')?'200':sidora_util.readCookie('Drupal.sidoraSharedWithMeHeight');
+  initialHeight = initialHeight - jQuery("#shared-tree-divider").height();
   var baseRule = "{position: absolute;left: -10px;background-image: none;height: "+initialHeight+"px;overflow:auto;width: calc(100% + 10px);}";
   var allRules = baseRule;
   sidora.sharedWithMe.AddColoring();
@@ -110,7 +112,7 @@ sidora.sharedWithMe.CreateShareTreeSection = function(sharedWithMeSelector){
     }
     sidora.sharedWithMe.Relocate();
     clearSelection();
-    writeCookie('Drupal.sidoraSharedWithMeHeight',jQuery("#fjt-holder").height() - jQuery("#forjstree").height(),30);
+    sidora_util.writeCookie('Drupal.sidoraSharedWithMeHeight',jQuery("#fjt-holder").height() - jQuery("#forjstree").height(),30);
     jQuery("#swm-top-overlay").height(jQuery("#forjstree").height());
   });
   jQuery("#fjt-holder").mouseleave(function(){ sidora.sharedWithMe.dragY = false; });
@@ -156,10 +158,12 @@ jQuery(window).resize(function() {
 sidora.sharedWithMe.Relocate = function(){
   if (sidora.sharedWithMe.selector == null) return;
   if (jQuery("#fjt-holder").height() == jQuery("#forjstree").height()) {
-    var initialHeight = (readCookie('Drupal.sidoraSharedWithMeHeight') == '')?'200':readCookie('Drupal.sidoraSharedWithMeHeight');
-    swmLocation = (jQuery("#fjt-holder").height()-parseInt(initialHeight));
-    jQuery("#forjstree").height(swmLocation-20);
+    var initialHeight = (sidora_util.readCookie('Drupal.sidoraSharedWithMeHeight') == '')?'200':sidora_util.readCookie('Drupal.sidoraSharedWithMeHeight');
+    var fjth = (jQuery("#fjt-holder").height()-parseInt(initialHeight));
+    jQuery("#forjstree").height(fjth);
+    var swmLocation = fjth + jQuery("#shared-tree-divider").height();
     jQuery(sidora.sharedWithMe.selector).css("top", swmLocation + "px");
+    styleInject(sidora.sharedWithMe.selector+"{top:"+swmLocation+"px}","SharedWithMeInitialLocation");
   } else {
     swmLocation = (jQuery("#forjstree").height()+jQuery("#shared-tree-divider").height());
     jQuery(sidora.sharedWithMe.selector).css("top", swmLocation + "px");
