@@ -293,19 +293,14 @@ function sidora_menu() {
  * management UI
  */
 function sidora_management_ingest($pid, $dsid, $label = NULL, $mimeType = NULL){
-	error_log("\nIn sidora_management_ingest function, pid :".print_r($pid,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
   $object = sidora_obj($pid);
-	error_log("\nIn sidora_management_ingest function, original object :".print_r($object,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
-  if (empty($obj)){ return; }
+  if (empty($object)){ return; }
   $datastream = isset($object[$dsid]) ? $object[$dsid] : $object->constructDatastream($dsid);
   if ($label !== NULL) $datastream->label = $label; //don't use empty() since we want to set it to empty string '' if user wants to
   if ($mimeType !== NULL) $datastream->mimeType = $mimeType;
   $current_uploads = sidora_create_resource_get_current_uploads();
-	error_log("\nIn sidora_management_ingest function, current uploads :".print_r($current_uploads,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
   $datastream->setContentFromFile($current_uploads[0]->filepath);
-  //$object->ingestDatastream($datastream);
-	error_log("\nIn sidora_management_ingest function, object ingest :".print_r($object->ingestDatastream($datastream),true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
-	error_log("\nIn sidora_management_ingest function, object :".print_r($object,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
+  $object->ingestDatastream($datastream);
 
 }
 /*
@@ -2719,6 +2714,11 @@ if ($one == 'deletexsl'){
 		 }
 		}
 	}	
+	if ($one == 'sanitize_filename'){
+	  $two = 'Maid with the Flaxen Hair.mp3'; 
+		echo 'original : ' . $two;
+	  echo 'sanitized : ' . sidora_toAscii($two);
+	}
   //This ends the testing function and should also indicate the end of liberal use of the dsm function
 }
 /*
@@ -2884,6 +2884,14 @@ function sidora_form_alter(&$form, &$form_state, $form_id){
 }
 function sidora_process_batch_submit($form,&$form_state){
  	global $user;
+  module_load_include('inc', 'xml_form_builder', 'includes/associations');
+  $id_to_creation_info = cache_get("sidora:form_id_to_creation_info");
+  $id_to_creation_info = $id_to_creation_info->data;
+  $form_build_id = $form['#build_id'];
+  $id_to_filename = cache_get("sidora:form_id_to_filename");
+  $id_to_filename = $id_to_filename->data;
+	$creation_info = $id_to_creation_info[$form_build_id];
+	$batch_id = $id_to_filename[$form_build_id]['filename'];
   $step_storage = $form_state['islandora']['step_storage']['xml_form_builder_metadata_step'];
   $association = $step_storage['association'];
   $xml_form = new XMLForm($form_state);
@@ -2897,17 +2905,26 @@ function sidora_process_batch_submit($form,&$form_state){
   $run_transforms = !variable_get('xml_form_builder_use_default_dc_xslts', FALSE);
   if (isset($association['self_transform']) && $association['self_transform'] != 'No Transform' && $run_transforms) {
     $document = xml_form_builder_transform_metadata_datastream($document, $association['self_transform']);
+    $document->preserveWhiteSpace = TRUE;
+    $document->formatOutput = TRUE;
+ 	  error_log("\nIn sidora_process_batch_submit function, document :".print_r($document,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
   }
- 	$batch_xml = trim($document->saveXML());
-  $id_to_creation_info = cache_get("sidora:form_id_to_creation_info");
-  $id_to_creation_info = $id_to_creation_info->data;
-  $form_build_id = $form['#build_id'];
-  $id_to_filename = cache_get("sidora:form_id_to_filename");
-  $id_to_filename = $id_to_filename->data;
-	$creation_info = $id_to_creation_info[$form_build_id];
-	//$expl_filename = explode('files_',$id_to_filename[$form_build_id]['filename']);
-	//$batch_id = substr($expl_filename[1],0,-4);
-	$batch_id = $id_to_filename[$form_build_id]['filename'];
+	$batch_xml = trim($document->saveXML());
+  $created_dc = FALSE;
+	$transform = '';
+ if ($run_transforms) {
+		$transform = xml_form_builder_get_transform_file($association['transform']);
+ 	error_log("\nIn sidora_process_batch_submit function, transform file :".print_r($transform,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
+		if ($transform != ''){
+		$document = xml_form_builder_transform_mods_collection_hack($document);
+		$transformed_dc_doc = xml_form_builder_transform_document($transform, $document);
+		$created_dc = $transformed_dc_doc->saveXML();
+		$targetDir = 'public://' . 'dc_' . $batch_id . '.xml';
+	  file_put_contents($targetDir,$created_dc);
+	  drupal_chmod($targetDir);
+		}
+  }
+	error_log("\nIn sidora_process_batch_submit function, created_dc :".print_r($created_dc,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
 	//error_log("\nIn sidora_process_batch_submit function, batch id :".print_r($batch_id,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
 	$targetDir = 'public://' . 'batch_' . $batch_id . '.xml';
 	file_put_contents($targetDir,$batch_xml);
@@ -2934,10 +2951,16 @@ function sidora_process_batch_submit($form,&$form_state){
 		'resourceOwner' => $user->name
 		);
 	$url_suffix = '';
+	  error_log("\nIn sidora_process_batch_submit function, curl post data :".print_r($post,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
 	if ($association['content_model'] == 'si:datasetCModel'){
 	  $url_suffix = "?codebookPID=" . $user->data['recent_codebook_id'];
+	}
+	else{
+	  if (($created_dc) && ($transform != '')){
+	  $url_suffix = "?ds_dc=" . file_create_url('public://' . '/dc_' . $batch_id . '.xml');
 	  error_log("\nIn sidora_process_batch_submit function, url suffix for codebook :".print_r($url_suffix,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
 	}	
+  }	
   $ch = curl_init();
   curl_setopt($ch, CURLOPT_URL, 'http://sidora0c.myquotient.net:8181/cxf/sidora/rest/batch/process/addResourceObjects/' . $id_to_creation_info[$form_build_id]['parent'] . $url_suffix);
   curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
@@ -9502,33 +9525,62 @@ function sidora_upload_batch($upload_files_array) {
   global $user;
 	if (!empty($upload_files_array) && count($upload_files_array) > 0){
 		$unique_id = uniqid($user->name);
+		$fields = 
+      array(
+        'batch_id', 
+        'owner',
+        'Created'
+				);
+    $insert_query = db_insert('batch_ingest')->fields($fields);
+    $insert_query->values( 
+      array(
+        'batch_id' => $unique_id,
+        'owner' => $user->name,
+        'Created' => date('Y-m-d H:i:s')
+			)
+    );
+    $output = $insert_query->execute();
+		//error_log("\nIn sidora_upload_batch function, output :".print_r($output,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
 		$domtree = new DOMDocument('1.0', 'UTF-8');
 		$domtree->formatOutput = TRUE;
 		$batch_tag = $domtree->createElement('batch');
 		$batch_tag = $domtree->appendChild($batch_tag);
 		$batch_id_xml = $domtree->createElement('batch_id',$unique_id);
 		$batch_id_xml = $batch_tag->appendChild($batch_id_xml);
+		$files_array = array();
 		//$archive_uri = drupal_realpath('public://') . '/files_' . $unique_id . '.zip';
     //$zip = new ZipArchive;
     //if ($zip->open($archive_uri, ZipArchive::CREATE) === TRUE) {
     foreach ($upload_files_array as $file){
-		  $unique_filename = $unique_id . '_' . $file->filename;
+			$unique_filename = sidora_toAscii($unique_id . '_' . $file->filename);
+			//error_log("\nIn sidora_upload_batch function, sanitized filename :".print_r($unique_filename,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
 			if (file_unmanaged_copy($file->filepath, 'public://' . $unique_filename)){
         /*if ($zip->addFile(drupal_realpath($file->filepath), $unique_filename)){
 				 file_unmanaged_delete(drupal_realpath('public://') . '/' . $unique_filename);
 				} */
 				$filename_xml = $domtree->createElement('file', file_create_url('public://' . '/' . $unique_filename));
 				$filename_xml = $batch_tag->appendChild($filename_xml);
+				$files[] = array('original' => $file->filename,'ingest' => $unique_filename);
 			}else{
 			  return;
 			}	
 		}
+			//error_log("\nIn sidora_upload_batch function, serialized filelist :".print_r(serialize($files),true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
    //   $zip->close();
 		//	drupal_chmod(drupal_realpath($archive_uri));
-		//	error_log("\nIn sidora_upload_batch function, domtree :".print_r($domtree,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
+			//error_log("\nIn sidora_upload_batch function, files array :".print_r($files,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
 			$domtree->save('public://' . 'files_' . $unique_id . '.xml');
 			drupal_chmod(drupal_realpath('public://') . '/files_' . $unique_id . '.xml');
+			if ($output){
+			  $update_query = db_update('batch_ingest')
+      ->fields(array(
+        'filenames' => serialize($files),
+				'status' => 'copied files',
+      ))
+      ->condition('batch_id', $unique_id, '=');
+      $num_updated = $update_query->execute();
       return $unique_id;
+			}
   /*  }
     else {
       return;
@@ -9536,3 +9588,21 @@ function sidora_upload_batch($upload_files_array) {
 	}
 	return;	
 }		
+/**
+ * Clean the filenames in batch ingest before sending them to the 
+ * back-end via curl request. If not sanitized prior to sending,
+ * Fedora REST wasn't able to handle filenames with spaces.
+ * Code originally from http://cubiq.org/the-perfect-php-clean-url-generator
+ */
+function sidora_toAscii($str,$delimiter='_') {
+  setlocale(LC_ALL, 'en_US.UTF8');
+	$clean = iconv('UTF-8', 'ASCII//TRANSLIT', $str);
+  //var_dump($clean);
+	$clean = preg_replace("/[^a-zA-Z0-9.\/_|+ -]/", '', $clean);
+  //var_dump($clean);
+	$clean = strtolower(trim($clean, '-'));
+  //var_dump($clean);
+	$clean = preg_replace("/[\/_|+ -]+/", $delimiter, $clean);
+  //var_dump($clean);
+	return $clean;
+}
