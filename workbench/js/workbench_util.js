@@ -118,6 +118,51 @@ sidora_util.ajaxUrl = function(count){
   var baseUrl = window.location.href.substr(0,pidsInUrl);
   return baseUrl+pidsBeingProcessedArray[count];
 }
+
+/**
+ * Intended to block clicking on new items and show the "loading" cursor, but no z-index given
+ */
+sidora_util.clickBlocker = {};
+sidora_util.clickBlocker.block = function(showOrHide) {
+  if (showOrHide !== 'hide' && showOrHide !== false && jQuery("#click_blocker").length < 1) {
+    jQuery(".content").append("<div id='click_blocker' style='position:absolute;top:0px;left:0px;width:100%;height:100%;cursor:wait;'></div>");
+    sidora_util.clickBlocker.started = (new Date()).getTime();
+  } else {
+    sidora_util.clickBlocker.ended = (new Date()).getTime();
+    if (typeof(sidora_util.clickBlocker.started) != 'undefined' && (sidora_util.clickBlocker.ended - sidora_util.clickBlocker.started > 1)){
+      jQuery("#click_blocker").css("background","rgba(0,200,0,0.05)").fadeOut("normal",function(){jQuery(this).remove();});
+    } else {
+      jQuery("#click_blocker").remove();
+    }
+  }
+}
+sidora_util.clickBlocker.unblock = function(){this.block(false);}
+sidora_util.writeCookie = function(name,value,days) {
+    var date, expires;
+    if (days) {
+        date = new Date();
+        date.setTime(date.getTime()+(days*24*60*60*1000));
+        expires = "; expires=" + date.toGMTString();
+            }else{
+        expires = "";
+    }
+    document.cookie = name + "=" + value + expires;
+}
+sidora_util.readCookie = function(name) {
+    var i, c, ca, nameEQ = name + "=";
+    ca = document.cookie.split(';');
+    for(var i=0;i < ca.length;i++) {
+        c = ca[i];
+        while (c.charAt(0)==' ') {
+            c = c.substring(1,c.length);
+        }
+        if (c.indexOf(nameEQ) == 0) {
+            return c.substring(nameEQ.length,c.length);
+        }
+    }
+    return '';
+}
+
 fixXmlFormsBehavior = function() {
   if (!(Drupal && Drupal.behaviors && Drupal.behaviors.xmlFormElementTabs && Drupal.behaviors.xmlFormElementTabs.tabs)){
     return;
@@ -212,20 +257,20 @@ fixXmlFormFieldpanelBehavior = function() {
   if (!(Drupal && Drupal.behaviors && Drupal.behaviors.islandora_form_fieldpanel && Drupal.behaviors.islandora_form_fieldpanel.attach)){
     return;
   }
-	Drupal.behaviors.sidora = {
+  Drupal.behaviors.sidora = {
     attach: function (context) {
       var paneNames = []; 
-			jQuery(".islandora-form-fieldpanel-pane").each(function(){ paneNames.push(jQuery(this).find("input").attr("name"));})
+      jQuery(".islandora-form-fieldpanel-pane").each(function(){ paneNames.push(jQuery(this).find("input").attr("name"));})
       jQuery.each(paneNames, function( paneIndex, paneName) { 
-			  var matches = [];
+        var matches = [];
         paneName.replace(/\[(.*?)\]/, function(g0,g1){matches.push(g1);}); 
-			  if (!isNaN(matches[0])) { 
-			    jQuery('[name="'+paneName+'"]').parent().parent().children('.ui-fieldpane-move-down-button').css('display','none');
-				  jQuery('[name="'+paneName+'"]').parent().parent().children('.ui-fieldpane-move-up-button').css('display','none');
-			  }
-			})
-		}
-	}
+        if (!isNaN(matches[0])) { 
+          jQuery('[name="'+paneName+'"]').parent().parent().children('.ui-fieldpane-move-down-button').css('display','none');
+          jQuery('[name="'+paneName+'"]').parent().parent().children('.ui-fieldpane-move-up-button').css('display','none');
+        }
+      })
+    }
+  }
 }
 /* Simple countdown originally from:
 http://stackoverflow.com/questions/2064186/how-can-i-make-a-jquery-countdown
@@ -261,6 +306,83 @@ jQuery(document).ready(function(){
     sidora_util.lock.KeepAlive();
   }
   fixXmlFormsBehavior();
-	fixXmlFormFieldpanelBehavior();
+  fixXmlFormFieldpanelBehavior();
+  jQuery(document).ajaxSend(function(){
+    //Don't block on renew calls
+    if (!arguments[2].url.endsWith("/renew")){
+      sidora_util.clickBlocker.block();
+    }
+  });
+  jQuery(document).ajaxComplete(function(){
+    //ALL current AJAX calls have completed, including the lock renews
+    if (!arguments[2].url.endsWith("/renew")){
+      sidora_util.clickBlocker.block(false);
+    }
+  });
 });
+//https://gist.github.com/djKianoosh/7090542
+// Some common IE shims... indexOf, startsWith, trim
 
+/*
+  Really? IE8 Doesn't have .indexOf
+*/
+if (!Array.prototype.indexOf) {
+  Array.prototype.indexOf = function (searchElement /*, fromIndex */ ) {
+    "use strict";
+    if (this === null) {
+      throw new TypeError();
+    }
+    var t = Object(this);
+    var len = t.length >>> 0;
+
+    if (len === 0) {
+      return -1;
+    }
+    var n = 0;
+    if (arguments.length > 1) {
+      n = Number(arguments[1]);
+      if (n != n) { // shortcut for verifying if it's NaN
+        n = 0;
+      } else if (n !== 0 && n != Infinity && n != -Infinity) {
+        n = (n > 0 || -1) * Math.floor(Math.abs(n));
+      }
+    }
+    if (n >= len) {
+      return -1;
+    }
+    var k = n >= 0 ? n : Math.max(len - Math.abs(n), 0);
+    for (; k < len; k++) {
+      if (k in t && t[k] === searchElement) {
+        return k;
+      }
+    }
+    return -1;
+  };
+}
+
+/*
+  IE Doesn't have a .startsWith either?
+*/
+if (!String.prototype.startsWith) {
+  String.prototype.startsWith = function (str){
+    return this.lastIndexOf(str, 0) === 0;
+  };
+}
+// IE < 9 doesn't have a trim() for strings
+if (!String.prototype.trim) {
+  String.prototype.trim = function () {
+    return this.replace(/^\s+|\s+$/g, '');
+  };
+}
+// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/endsWith#Polyfill
+if (!String.prototype.endsWith) {
+  String.prototype.endsWith = function(searchString, position) {
+      var subjectString = this.toString();
+      if (typeof position !== 'number' || !isFinite(position) || Math.floor(position) !== position || position > subjectString.length) {
+        position = subjectString.length;
+      }
+      position -= searchString.length;
+      var lastIndex = subjectString.lastIndexOf(searchString, position);
+      return lastIndex !== -1 && lastIndex === position;
+  };
+}

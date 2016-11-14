@@ -49,11 +49,36 @@ jQuery().ready(function(){
     });
     jQuery(".sidora-form-finish").click(function(e){ 
       var toIterate = jQuery(".sidora-ingest-form-holder");
-      for (var i = 0; i < toIterate.length; i++){
-        var formId = jQuery(toIterate[i]).find("form").attr('id');
-        window.prepIslandoraFormForSubmit(formId, updateCodebookComplete);
+      var toSubmit = true;
+	for (var i = 0; i < toIterate.length; i++){
+          if ((jQuery(toIterate[i]).find("form").find("[name='form_name']").length > 0) && (jQuery(toIterate[i]).find("form").find("[name='form_name']").val().toLowerCase().indexOf('codebook') != -1)) {
+            var needVals = jQuery(".form-required").closest("div").find("input[type=text], textarea").filter(function(){return this.value == "";});
+            if (needVals.length >0){
+	      toSubmit = false;
+	      if (jQuery(".messages.error").length == 0){
+	        if (jQuery(".messages.status").length == 0){
+		  jQuery("#content").find(".element-invisible").after('<div id = "console" class="clearfix"><div class = "messages error"></div></div>');
+		}
+		else{
+		 jQuery(".messages.status").after('<div class = "messages error"></div>');
+		} 	
+	      }
+       	      for (var x = 0; x < needVals.length; x++){
+                var label = jQuery("label[for='"+jQuery(needVals[i]).attr('id')+"']").html();
+	        jQuery(".messages").filter(".error").html(label + ' is required');
+		jQuery(needVals[i]).addClass('error');
+              } 
+	    }else{
+	       var formId = jQuery(toIterate[i]).find("form").attr('id');
+               window.prepIslandoraFormForSubmit(formId, updateCodebookComplete);
+	    }	
+	  }else{
+	    var formId = jQuery(toIterate[i]).find("form").attr('id');
+            window.prepIslandoraFormForSubmit(formId, updateCodebookComplete);
+          }
       }
-      window.startBatch();
+      if (toSubmit)
+	window.startBatch();
     });
   }else{
     jQuery(".sidora-form-finish").click(function(e){ window.submitAll(); });
@@ -104,29 +129,54 @@ window.showNext=function(){
  */
 window.submitAll=function(){
   var toIterate = jQuery(".sidora-ingest-form-holder");
+  var toSubmit = true;
   for (var i = 0; i < toIterate.length; i++){
-    var formId = jQuery(toIterate[i]).find("form").attr('id');
-    if (formId.search('islandora-ingest-form') != '-1'){
-      var toConsole = function(){console.log('finished');};  // create resource success function
-      window.prepIslandoraFormForSubmit(formId, toConsole );
+    if ((jQuery(toIterate[i]).find("form").find("[name='form_name']").length > 0) && (jQuery(toIterate[i]).find("form").find("[name='form_name']").val().toLowerCase().indexOf('codebook') != -1)) {
+      var needVals = jQuery(".form-required").closest("div").find("input[type=text], textarea").filter(function(){return this.value == "";});
+      if (needVals.length >0){
+        toSubmit = false;	
+	if (jQuery(".messages.error").length == 0){
+	  if (jQuery(".messages.status").length == 0){
+	    jQuery("#content").find(".element-invisible").after('<div id = "console" class="clearfix"><div class = "messages error"></div></div>');
+	  }
+	  else{
+	    jQuery(".messages.status").after('<div class = "messages error"></div>');
+	  } 	
+	}
+	for (var x = 0; x < needVals.length; x++){
+          var label = jQuery("label[for='"+jQuery(needVals[i]).attr('id')+"']").html();
+	  jQuery(".messages").filter(".error").html(label + ' is required');
+	  jQuery(needVals[i]).addClass('error');
+        } 
+      }else{
+        var formId = jQuery(toIterate[i]).find("form").attr('id');
+        window.prepIslandoraFormForSubmit(formId, updateCodebookComplete);
+      }	
     }else{
-			var toConsole = function(){sidora.concept.forceRefreshOnNextLoadContent = true;sidora.concept.LoadContent();};
-      var onFailure = function(){jQuery("#edit-update").click();};
-			var sidora = window.parent.sidora;
-			if (typeof(sidora.queue) != "undefined"){
-			  sidora.queue.completedFailedRequests = sidora.queue.completedFailedRequests.filter(function( obj ) {
+      var formId = jQuery(toIterate[i]).find("form").attr('id');
+      if (formId.search('islandora-ingest-form') != '-1'){
+				var toConsole = function(){console.log('finished');};  // create resource success function
+        window.prepIslandoraFormForSubmit(formId, toConsole );
+      }else{
+	var toConsole = function(){sidora.concept.forceRefreshOnNextLoadContent = true;sidora.concept.LoadContent();sidora.util.refreshPidInTree();};
+        var onFailure = function(){jQuery("#edit-update").click();};
+	var sidora = window.parent.sidora;
+	if (typeof(sidora.queue) != "undefined"){
+	  sidora.queue.completedFailedRequests = sidora.queue.completedFailedRequests.filter(function( obj ) {
           return obj.pid !== jQuery("[name='Pid']").val();
-        });
-			  window.parent.jQuery('#queueMessage').find('.notification-window-message').find('a[class="' + jQuery("[name='Pid']").val() + '"]').parent().remove();
-				if (sidora.queue.completedFailedRequests.length == 0){
-				  window.parent.jQuery('#queueMessage').fadeOut('fast');
-					sidora.queue.NotificationWindow.ResetError(false);
-				}	
-			}	
+          });
+          window.parent.jQuery('#queueMessage').find('.notification-window-message').find('a[class="' + jQuery("[name='Pid']").val() + '"]').parent().remove();
+	  if (sidora.queue.completedFailedRequests.length == 0){
+	    window.parent.jQuery('#queueMessage').fadeOut('fast');
+	    sidora.queue.NotificationWindow.ResetError(false);
+	  }	
+	}	
       window.prepIslandoraFormForSubmit(formId, toConsole, onFailure);
     } 
   }
-  window.startBatch();
+ }
+ if (toSubmit)
+   window.startBatch();
 }
 
 /**
@@ -145,7 +195,7 @@ window.startBatch = function(){
     for (var i = 0; i < window.batchRequests.length; i++){
       var ajaxSettings = window.batchRequests[i];
       var postData = ajaxSettings.data;
-      var ccSuccess = oldSuccess;
+      var ccSuccess = ajaxSettings.success;
       var onSuccess = function(){console.log("FINISH! "+friendlyName);};
       //var onSuccess = ajaxSettings.success;
 			if (currentInfo.type == 'EditMetadata'){
@@ -155,10 +205,10 @@ window.startBatch = function(){
           type = "Concept";
         }
         var friendlyName = " Edit MetaData of "+type+":"+(i+1)+" of "+window.batchRequests.length;
-        sidora.queue.RequestPost(friendlyName,ajaxSettings.url,postData, onSuccess, function(){}, ajaxSettings.pidsOfInterest);
+        sidora.queue.RequestPost(friendlyName,ajaxSettings.url,postData, onSuccess, function(){}, ajaxSettings.pidsOfInterest,'editMeta',i+' of '+window.batchRequests.length);
       }else{
         var friendlyName = " Create "+currentInfo.formname+" Resource:"+(i+1)+" of "+window.batchRequests.length;
-        sidora.queue.RequestPost(friendlyName,window.location.href,postData, onSuccess, function(){}, currentInfo.parentPid);
+        sidora.queue.RequestPost(friendlyName,window.location.href,postData, onSuccess, function(){}, currentInfo.parentPid,'createResource',i+' of '+window.batchRequests.length);
       } 
     }
     sidora.queue.Next();
@@ -266,15 +316,15 @@ window.prepIslandoraFormForSubmit = function(formName, onSuccessfulFormSubmit, o
     }
   }
   if (jQuery("#create-resource-form").length){
-    ajaxSettings = ({
+      ajaxSettings = ({
       type: "POST",
       url: window.location,
       //url: Drupal.settings.basePath+"/pure",
       //url: window.location.origin+Drupal.settings.basePath+'sidora/test/edit_metadata',
       data: jQuery("#"+formName).serialize()+"&ingest=Ingest",
-      success: function( data ) {
-        if (data.indexOf(")"+" has been ingested") > 0){ //it would trigger success off of reading this inline JS, so break it up
-          onSuccessfulFormSubmit(formName, this, data);
+      success: function(xhr,data ) {
+	if (data[0].indexOf(")"+" has been ingested") > 0){ //it would trigger success off of reading this inline JS, so break it up
+	  onSuccessfulFormSubmit.apply(formName, this, data);
         }else{
           onFailureOfFormSubmit(formName, this, data);
         }
@@ -286,17 +336,17 @@ window.prepIslandoraFormForSubmit = function(formName, onSuccessfulFormSubmit, o
       var ajaxUrl = sidora_util.ajaxUrl(jQuery("#"+formName).attr("count"));
     }else{
       if (window.location.href.indexOf('retry') > 0) {
-			 var ajaxUrl = sidora_util.ajaxUrl(0);
-			}else{  
-			 var ajaxUrl = window.location.href;
-			} 
+        var ajaxUrl = sidora_util.ajaxUrl(0);
+      }else{  
+        var ajaxUrl = window.location.href;
+      } 
     }
     ajaxSettings = ({
       type: "POST",
       url: ajaxUrl,
       data: jQuery("#"+formName).serialize()+"&op=Submit&update=Update",
       success: function( data ) {
-         if (data.indexOf("<h2 class=\"element-invisible\">Error message</h2")>0){
+         if (data.indexOf("<h2 class=\"element-invisible\">Error message</h2") != -1){
            //If not successful, reload the page so that the user can see why
            // store this error/failure in a queue message area with the proper SID to process after end of the current queue
            
@@ -333,4 +383,3 @@ window.reference_createCodebook = function(){
     jQuery("#ifh").css("opacity","");
   },1000);
 }
-

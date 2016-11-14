@@ -541,6 +541,22 @@ tr.removed.odd {
       '#collapsed' => TRUE,
       'items' => $legacy_item_fieldset,
  );
+  $form['site_administrator_contact'] = array(
+     'fieldset' => array(
+      '#type' => 'fieldset',
+      '#title' => 'Site administrator email',
+      '#description' => t(''),
+      '#collapsible' => TRUE,
+      '#collapsed' => TRUE,
+      'site_admin_email_to' => array(
+        '#type' => 'textfield',
+        '#title' => t('Send admin troubleshooting emails to'),
+        '#default_value' => variable_get('site_admin_email_to', ''),
+        '#description' => t('All admin emails are sent to this email address.'),
+      ),
+    ),
+  );
+	
   $form['sidora_allow_all_to_debug'] = array(
      '#type' => 'textfield',
      '#title' => t('Allow all users access to debug'),

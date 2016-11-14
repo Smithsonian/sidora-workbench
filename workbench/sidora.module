@@ -44,6 +44,10 @@ function sidora_init(){
   if (request_path() == 'system/ajax'){
     module_load_include('inc', 'xml_forms', 'builder/includes/datastream.form'); 
   }
+
+  // Production is not on PHP 5.3.6 (currently 5.3.3) and some of Islandora uses 5.3.6 defined constants that are complained about
+  defined('DEBUG_BACKTRACE_PROVIDE_OBJECT') or define('DEBUG_BACKTRACE_PROVIDE_OBJECT', TRUE);
+  defined('DEBUG_BACKTRACE_IGNORE_ARGS') or define('DEBUG_BACKTRACE_IGNORE_ARGS', TRUE);
 }
 
 /**
@@ -532,10 +536,6 @@ function sidora_resource_viewer($pid) {
     print t('<br/>The possible models that this resource uses:');
     $models = $obj->models;
     print '<br/>'.implode('<br/>',$models);
-    //Next line is for on-the-fly checking and should be left in for when problems happen in production.
-    //Do an "inspect element" or just view source to see this data
-    print '<br/><div style="display:none">Possible viewers:<br/>'.implode('<br/>',$viewers).'</div>';
-    
   }
   else {
     sidora_resource_version_viewer_display($pid,$viewer_config['dsid'],$viewer_config['viewer_id'],'0');
@@ -696,6 +696,7 @@ function sidora_islandora_object_ingested(AbstractObject $object){
 function sidora_islandora_object_modified(AbstractObject $object){
   //drupal_set_message("Sidora Object Modified");
   sidora_clear_tree_cache($object->id);
+
 }
 /**
  * Implements hook_islandora_datastream_modified
@@ -714,7 +715,7 @@ function sidora_islandora_datastream_modified(AbstractObject $object, AbstractDa
   //manipulate it as they desire.  This is NOT a security problem, the user would be allowed to perform these actions.
   //However, it would be a user directly manipulating data in a way that is
   //not fully supported by the Workbench.
-  if ($datastream->mimetype == 'text/xml' && $datastream->id != 'SIDORA' && $datastream->id != 'DC' && $datastream->id != 'RELS-EXT'){
+  if ((strpos($datastream->mimetype,'xml') !== false) && $datastream->id != 'SIDORA' && $datastream->id != 'DC' && $datastream->id != 'RELS-EXT'){
     $all_meta_entered = filter_input(INPUT_POST, 'all_meta_entered', FILTER_SANITIZE_URL);
     $form_name = filter_input(INPUT_POST, 'form_name', FILTER_SANITIZE_URL);
 		if (!empty($object['SIDORA'])){
@@ -1197,7 +1198,7 @@ function sidora_edit_metadata($object_id_string = '', $dsid = '', $form_name = '
     print "models:";
     var_dump($object->models);
   }
-  $tform = drupal_get_form('xml_form_builder_datastream_form_metadata_form',$object,$association);
+	$tform = drupal_get_form('xml_form_builder_datastream_form_metadata_form',$object,$association);
   $tform['pid'] = array(
   '#type' => 'hidden',
   '#name' => 'Pid',
@@ -1216,7 +1217,7 @@ function sidora_edit_metadata($object_id_string = '', $dsid = '', $form_name = '
     drupal_add_js('window.isConcept = true;',array('type' => 'inline', 'weight' => '1000000', 'group' => JS_THEME));
   else
     drupal_add_js('window.isConcept = false;',array('type' => 'inline', 'weight' => '1000000', 'group' => JS_THEME));
-  $pic_shown = FALSE;
+	$pic_shown = FALSE;
   if (!$is_concept){
     if ($association['content_model'] == "si:codebookCModel") {
       $codebook_used_on = (sidora_get_where_codebook_used($object));
@@ -1999,6 +2000,7 @@ function sidora_settings_object($ignore_list = array()){
   $exact_match[] = 'osd_proxy_resolver_url';
   $exact_match[] = 'account_request_email_to';
   $exact_match[] = 'account_request_email_from';
+	$exact_match[] = 'site_admin_email_to';
   $settings_holder = array();
   foreach($conf as $drupal_setting_index=>$drupal_setting){
     if (in_array($drupal_setting_index,$exact_match) && !in_array($drupal_setting_index,$ignore_list)){
@@ -2783,7 +2785,6 @@ function sidora_form_alter(&$form, &$form_state, $form_id){
         $association_step_storage['association'] = $association; 
       }
     }
-
 		remove_validation_for_this_and_children($form);
     $form['all_meta_entered'] = array(
       '#name' => 'all_meta_entered',
@@ -3125,7 +3126,24 @@ function sidora_create_resource_get_metadata_form_html($parent_pid, $model, $for
       $creation_info['ontology_id'] = $ontology_id;
       $id_to_creation_info[$form['#build_id']] = $creation_info;
       cache_set("sidora:form_id_to_creation_info",$id_to_creation_info);
-      $to_return .= drupal_render( $form);
+      $resource_types = array(
+        'si:imageCModel' => 'images',
+	'si:generalImageCModel' => 'images',
+        'si:fieldbookCModel' => 'pdf', 
+        'si:datasetCModel' => 'csv',
+        'islandora:sp-audioCModel' => 'audio',
+        'islandora:sp_videoCModel' => 'video'
+      );
+      $form['resource_model'] = array(
+      '#name' => 'resource_model',
+      '#type' => 'hidden',
+      '#title' => 'Model',
+      '#description' => '',
+      '#required' => false,
+      '#value' => isset($resource_types[$model])?$resource_types[$model]:''
+    );
+
+	$to_return .= drupal_render( $form);
       $to_return .= "<div id='bottom-panel' class='bottom-panel' style='position:absolute; bottom:0; left:0; width:100%;'></div></div>";
     }
   }
@@ -3304,7 +3322,7 @@ function sidora_codebook_upload_form_validate($form, &$form_state) {
     }
     else {
       watchdog('SIdora_Tabular_Parse',t("File System Problem with creating a codebook:<br/>parser_os_file_path: %for_parser <br/>drupal_realpath(file): %drupal_rp <br/>This file has NOT been deleted and is not going to be deleted by Drupal. It must be handled on the OS level.",array('%for_parser' => $parser_os_file_path, '%drupal_rp' => drupal_realpath($file->destination))));
-      form_set_error('file',t("Unable to parse the uploaded file. Contact an administrator if you believe this file should be able to be parsed.  Please send a screenshot of this page, include the file you uploaded, and the time and date this occurred.  The administrator should check the Drupal log for 'SIdora_Tabular_Parse' for more information."));
+      form_set_error('file',t("Unable to parse the uploaded file. Contact an administrator" . (variable_get('site_admin_email_to', '') != ''?' at ' . variable_get('site_admin_email_to'):'') . " if you believe this file should be able to be parsed.  Please send a screenshot of this page, include the file you uploaded, and the time and date this occurred.  The administrator should check the Drupal log for 'SIdora_Tabular_Parse' for more information."));
       return;
     }
     // If the file passed validation:
@@ -3328,7 +3346,7 @@ function sidora_codebook_upload_form_validate($form, &$form_state) {
         var_dump($e);
         $exception_dump = ob_get_clean();
         watchdog('SIdora_Tabular_Parse',t("Problem with creating a codebook:<br/>") . $e->getMessage() . '<br>' . $exception_dump . t("URL:") . $url);
-        form_set_error('file',t("Unable to parse the uploaded file. Contact an administrator if you believe this file should be able to be parsed.  Please send a screenshot of this page, include the file you uploaded, and the time and date this occurred.  The administrator should check the Drupal log for 'SIdora_Tabular_Parse' for more information."));
+        form_set_error('file',t("Unable to parse the uploaded file. Contact an administrator" . (variable_get('site_admin_email_to', '') != ''?' at ' . variable_get('site_admin_email_to'):'') . " if you believe this file should be able to be parsed.  Please send a screenshot of this page, include the file you uploaded, and the time and date this occurred.  The administrator should check the Drupal log for 'SIdora_Tabular_Parse' for more information."));
         return;
       }
     } //Ends else of if ($file)
@@ -4131,9 +4149,9 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
           header("Content-Disposition: attachment; filename=\"$filename\"");
         }
         if ($formatted == 'html'){
-          $datastream_content = str_replace('&nbsp;',"&#160;",$datastream_content); //XSL transforms won't go through with &nspb; as an element
-          //but islandora inserts that into some areas, specifically dc:identifier was the problem that necessitated this replacer
-          print '<div class="metadata-table">'.sidora_metadata_to_html_table_transform($datastream_content, $xsl_file).'</div>';
+          $converted = sidora_html_convert_entities($datastream_content);
+          //convert all the html entites to xml
+          print '<div class="metadata-table">'.sidora_metadata_to_html_table_transform($converted, $xsl_file).'</div>';
         }else{
           print $datastream_content;
           drupal_exit();
@@ -5501,7 +5519,7 @@ function sidora_block_content_navigation(){
   $to_return .= '<div id="forjstree" root_pid="'.$root_pid.'">';
   $to_return .= sidora_html_string_tree($root_pid);
   $to_return .= '</div></div>';
-  //jQuery UI L&F
+ 	//jQuery UI L&F
   drupal_add_css(drupal_get_path('module','sidora').'/css/themes/smoothness/jquery-ui.min.css');
   //jsTree lib
   $jstree_loc = variable_get('sidora_js_lib_location_jstree', '');
@@ -5517,9 +5535,10 @@ function sidora_block_content_navigation(){
   drupal_add_css(drupal_get_path('module','sidora') . '/css/workbench.css', array('weight' => 10000, 'group' => CSS_THEME));
   // Some of the icons we use are from islandora xml forms, inform Javascript where to get those
   drupal_add_js(array('islandora_xml_forms' => array('basepath' => '/' . drupal_get_path('module','xml_forms') . '/')), 'setting');
+  drupal_add_js(array('site_admin_email' => variable_get('site_admin_email_to', '')), 'setting');
   drupal_add_js(drupal_get_path('module','sidora') . '/js/workbench_sidora_queue.js');
-  drupal_add_js(drupal_get_path('module','sidora') . '/js/workbench.js');
   drupal_add_js(drupal_get_path('module','sidora') . '/js/workbench_util.js');
+  drupal_add_js(drupal_get_path('module','sidora') . '/js/workbench.js');
   drupal_add_js(drupal_get_path('module','sidora') . '/js/workbench_menus.js');
   drupal_add_js(drupal_get_path('module','sidora') . '/js/workbench_sidora_request.js');
   drupal_add_js(drupal_get_path('module','sidora') . '/js/paging.js'); // adds paging capability to resources
@@ -6231,7 +6250,7 @@ function sidora_metadata_to_html_table_transform($xml, $xsl_file){
   $doc->loadXML($xsl_string);
   $xsl->importStyleSheet($doc);
   if (strpos($xml, "<?xml version") === FALSE){
-    $docToLoad = ('<?xml version="1.0" encoding="UTF-8"?>'.$xml);
+    $docToLoad = ('<?xml version="1.0" encoding="UTF-8"?' . '>' . $xml);
   }else{
     $docToLoad = $xml;
   }
@@ -8968,3 +8987,281 @@ function sidora_drupal_goto_alter(&$path, &$options, &$http_response_code) {
   */
 }
 
+
+
+/**
+ * html_convert_entities($string) -- convert named HTML entities to 
+ * XML-compatible numeric entities.
+ * Code originally from: http://inanimatt.com/php-convert-entities.php
+ */
+
+function sidora_html_convert_entities($string) {
+  return preg_replace_callback('/&([a-zA-Z][a-zA-Z0-9]+);/', 
+                               'sidora_convert_entity', $string);
+}
+
+/**
+ * Swap HTML named entity with its numeric equivalent. If the entity
+ * isn't in the lookup table, this function returns a blank, which
+ * destroys the character in the output - this is probably the 
+ * desired behaviour when producing XML.
+ * Code originally from: http://inanimatt.com/php-convert-entities.php
+ */
+function sidora_convert_entity($matches) {
+  static $table = array('quot'    => '&#34;',
+                        'amp'      => '&#38;',
+                        'lt'       => '&#60;',
+                        'gt'       => '&#62;',
+                        'OElig'    => '&#338;',
+                        'oelig'    => '&#339;',
+                        'Scaron'   => '&#352;',
+                        'scaron'   => '&#353;',
+                        'Yuml'     => '&#376;',
+                        'circ'     => '&#710;',
+                        'tilde'    => '&#732;',
+                        'ensp'     => '&#8194;',
+                        'emsp'     => '&#8195;',
+                        'thinsp'   => '&#8201;',
+                        'zwnj'     => '&#8204;',
+                        'zwj'      => '&#8205;',
+                        'lrm'      => '&#8206;',
+                        'rlm'      => '&#8207;',
+                        'ndash'    => '&#8211;',
+                        'mdash'    => '&#8212;',
+                        'lsquo'    => '&#8216;',
+                        'rsquo'    => '&#8217;',
+                        'sbquo'    => '&#8218;',
+                        'ldquo'    => '&#8220;',
+                        'rdquo'    => '&#8221;',
+                        'bdquo'    => '&#8222;',
+                        'dagger'   => '&#8224;',
+                        'Dagger'   => '&#8225;',
+                        'permil'   => '&#8240;',
+                        'lsaquo'   => '&#8249;',
+                        'rsaquo'   => '&#8250;',
+                        'euro'     => '&#8364;',
+                        'fnof'     => '&#402;',
+                        'Alpha'    => '&#913;',
+                        'Beta'     => '&#914;',
+                        'Gamma'    => '&#915;',
+                        'Delta'    => '&#916;',
+                        'Epsilon'  => '&#917;',
+                        'Zeta'     => '&#918;',
+                        'Eta'      => '&#919;',
+                        'Theta'    => '&#920;',
+                        'Iota'     => '&#921;',
+                        'Kappa'    => '&#922;',
+                        'Lambda'   => '&#923;',
+                        'Mu'       => '&#924;',
+                        'Nu'       => '&#925;',
+                        'Xi'       => '&#926;',
+                        'Omicron'  => '&#927;',
+                        'Pi'       => '&#928;',
+                        'Rho'      => '&#929;',
+                        'Sigma'    => '&#931;',
+                        'Tau'      => '&#932;',
+                        'Upsilon'  => '&#933;',
+                        'Phi'      => '&#934;',
+                        'Chi'      => '&#935;',
+                        'Psi'      => '&#936;',
+                        'Omega'    => '&#937;',
+                        'alpha'    => '&#945;',
+                        'beta'     => '&#946;',
+                        'gamma'    => '&#947;',
+                        'delta'    => '&#948;',
+                        'epsilon'  => '&#949;',
+                        'zeta'     => '&#950;',
+                        'eta'      => '&#951;',
+                        'theta'    => '&#952;',
+                        'iota'     => '&#953;',
+                        'kappa'    => '&#954;',
+                        'lambda'   => '&#955;',
+                        'mu'       => '&#956;',
+                        'nu'       => '&#957;',
+                        'xi'       => '&#958;',
+                        'omicron'  => '&#959;',
+                        'pi'       => '&#960;',
+                        'rho'      => '&#961;',
+                        'sigmaf'   => '&#962;',
+                        'sigma'    => '&#963;',
+                        'tau'      => '&#964;',
+                        'upsilon'  => '&#965;',
+                        'phi'      => '&#966;',
+                        'chi'      => '&#967;',
+                        'psi'      => '&#968;',
+                        'omega'    => '&#969;',
+                        'thetasym' => '&#977;',
+                        'upsih'    => '&#978;',
+                        'piv'      => '&#982;',
+                        'bull'     => '&#8226;',
+                        'hellip'   => '&#8230;',
+                        'prime'    => '&#8242;',
+                        'Prime'    => '&#8243;',
+                        'oline'    => '&#8254;',
+                        'frasl'    => '&#8260;',
+                        'weierp'   => '&#8472;',
+                        'image'    => '&#8465;',
+                        'real'     => '&#8476;',
+                        'trade'    => '&#8482;',
+                        'alefsym'  => '&#8501;',
+                        'larr'     => '&#8592;',
+                        'uarr'     => '&#8593;',
+                        'rarr'     => '&#8594;',
+                        'darr'     => '&#8595;',
+                        'harr'     => '&#8596;',
+                        'crarr'    => '&#8629;',
+                        'lArr'     => '&#8656;',
+                        'uArr'     => '&#8657;',
+                        'rArr'     => '&#8658;',
+                        'dArr'     => '&#8659;',
+                        'hArr'     => '&#8660;',
+                        'forall'   => '&#8704;',
+                        'part'     => '&#8706;',
+                        'exist'    => '&#8707;',
+                        'empty'    => '&#8709;',
+                        'nabla'    => '&#8711;',
+                        'isin'     => '&#8712;',
+                        'notin'    => '&#8713;',
+                        'ni'       => '&#8715;',
+                        'prod'     => '&#8719;',
+                        'sum'      => '&#8721;',
+                        'minus'    => '&#8722;',
+                        'lowast'   => '&#8727;',
+                        'radic'    => '&#8730;',
+                        'prop'     => '&#8733;',
+                        'infin'    => '&#8734;',
+                        'ang'      => '&#8736;',
+                        'and'      => '&#8743;',
+                        'or'       => '&#8744;',
+                        'cap'      => '&#8745;',
+                        'cup'      => '&#8746;',
+                        'int'      => '&#8747;',
+                        'there4'   => '&#8756;',
+                        'sim'      => '&#8764;',
+                        'cong'     => '&#8773;',
+                        'asymp'    => '&#8776;',
+                        'ne'       => '&#8800;',
+                        'equiv'    => '&#8801;',
+                        'le'       => '&#8804;',
+                        'ge'       => '&#8805;',
+                        'sub'      => '&#8834;',
+                        'sup'      => '&#8835;',
+                        'nsub'     => '&#8836;',
+                        'sube'     => '&#8838;',
+                        'supe'     => '&#8839;',
+                        'oplus'    => '&#8853;',
+                        'otimes'   => '&#8855;',
+                        'perp'     => '&#8869;',
+                        'sdot'     => '&#8901;',
+                        'lceil'    => '&#8968;',
+                        'rceil'    => '&#8969;',
+                        'lfloor'   => '&#8970;',
+                        'rfloor'   => '&#8971;',
+                        'lang'     => '&#9001;',
+                        'rang'     => '&#9002;',
+                        'loz'      => '&#9674;',
+                        'spades'   => '&#9824;',
+                        'clubs'    => '&#9827;',
+                        'hearts'   => '&#9829;',
+                        'diams'    => '&#9830;',
+                        'nbsp'     => '&#160;',
+                        'iexcl'    => '&#161;',
+                        'cent'     => '&#162;',
+                        'pound'    => '&#163;',
+                        'curren'   => '&#164;',
+                        'yen'      => '&#165;',
+                        'brvbar'   => '&#166;',
+                        'sect'     => '&#167;',
+                        'uml'      => '&#168;',
+                        'copy'     => '&#169;',
+                        'ordf'     => '&#170;',
+                        'laquo'    => '&#171;',
+                        'not'      => '&#172;',
+                        'shy'      => '&#173;',
+                        'reg'      => '&#174;',
+                        'macr'     => '&#175;',
+                        'deg'      => '&#176;',
+                        'plusmn'   => '&#177;',
+                        'sup2'     => '&#178;',
+                        'sup3'     => '&#179;',
+                        'acute'    => '&#180;',
+                        'micro'    => '&#181;',
+                        'para'     => '&#182;',
+                        'middot'   => '&#183;',
+                        'cedil'    => '&#184;',
+                        'sup1'     => '&#185;',
+                        'ordm'     => '&#186;',
+                        'raquo'    => '&#187;',
+                        'frac14'   => '&#188;',
+                        'frac12'   => '&#189;',
+                        'frac34'   => '&#190;',
+                        'iquest'   => '&#191;',
+                        'Agrave'   => '&#192;',
+                        'Aacute'   => '&#193;',
+                        'Acirc'    => '&#194;',
+                        'Atilde'   => '&#195;',
+                        'Auml'     => '&#196;',
+                        'Aring'    => '&#197;',
+                        'AElig'    => '&#198;',
+                        'Ccedil'   => '&#199;',
+                        'Egrave'   => '&#200;',
+                        'Eacute'   => '&#201;',
+                        'Ecirc'    => '&#202;',
+                        'Euml'     => '&#203;',
+                        'Igrave'   => '&#204;',
+                        'Iacute'   => '&#205;',
+                        'Icirc'    => '&#206;',
+                        'Iuml'     => '&#207;',
+                        'ETH'      => '&#208;',
+                        'Ntilde'   => '&#209;',
+                        'Ograve'   => '&#210;',
+                        'Oacute'   => '&#211;',
+                        'Ocirc'    => '&#212;',
+                        'Otilde'   => '&#213;',
+                        'Ouml'     => '&#214;',
+                        'times'    => '&#215;',
+                        'Oslash'   => '&#216;',
+                        'Ugrave'   => '&#217;',
+                        'Uacute'   => '&#218;',
+                        'Ucirc'    => '&#219;',
+                        'Uuml'     => '&#220;',
+                        'Yacute'   => '&#221;',
+                        'THORN'    => '&#222;',
+                        'szlig'    => '&#223;',
+                        'agrave'   => '&#224;',
+                        'aacute'   => '&#225;',
+                        'acirc'    => '&#226;',
+                        'atilde'   => '&#227;',
+                        'auml'     => '&#228;',
+                        'aring'    => '&#229;',
+                        'aelig'    => '&#230;',
+                        'ccedil'   => '&#231;',
+                        'egrave'   => '&#232;',
+                        'eacute'   => '&#233;',
+                        'ecirc'    => '&#234;',
+                        'euml'     => '&#235;',
+                        'igrave'   => '&#236;',
+                        'iacute'   => '&#237;',
+                        'icirc'    => '&#238;',
+                        'iuml'     => '&#239;',
+                        'eth'      => '&#240;',
+                        'ntilde'   => '&#241;',
+                        'ograve'   => '&#242;',
+                        'oacute'   => '&#243;',
+                        'ocirc'    => '&#244;',
+                        'otilde'   => '&#245;',
+                        'ouml'     => '&#246;',
+                        'divide'   => '&#247;',
+                        'oslash'   => '&#248;',
+                        'ugrave'   => '&#249;',
+                        'uacute'   => '&#250;',
+                        'ucirc'    => '&#251;',
+                        'uuml'     => '&#252;',
+                        'yacute'   => '&#253;',
+                        'thorn'    => '&#254;',
+                        'yuml'     => '&#255;'
+
+                        );
+  // Entity not found? Destroy it.
+  return isset($table[$matches[1]]) ? $table[$matches[1]] : '';
+}

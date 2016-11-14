@@ -55,16 +55,15 @@ sidora.concept.LoadContentHelp.Resources ={};
  * Calls for the table setup information
  */
 sidora.concept.LoadContentHelp.Resources.TableLoad = function(conceptOfInterest){
- // var dtPageLength = parseInt(readCookie('Drupal.pageLength'));
   sidora.resources.dataTable = jQuery('#res_table').dataTable({
      "oLanguage": {
        "sLengthMenu": "Show _MENU_"
      },
      'sPaginationType': "input",
      'lengthMenu':[5,10,50,100],
-     'pageLength': (readCookie('Drupal.pageLength') == '')?parseInt('5'):parseInt(readCookie('Drupal.pageLength')),
+     'pageLength': (sidora_util.readCookie('Drupal.pageLength') == '')?parseInt('5'):parseInt(sidora_util.readCookie('Drupal.pageLength')),
      'search': {
-       'search': ((readCookie('Drupal.dtFilter') == '')?'all':readCookie('Drupal.dtFilter')) + '\n' + '' + '\n' + ((readCookie('Drupal.sortOn') == '')?'':readCookie('Drupal.sortOn')) + '\n' + ((readCookie('Drupal.sortOrder') == '')?'':readCookie('Drupal.sortOrder')),
+       'search': ((sidora_util.readCookie('Drupal.dtFilter') == '')?'all':sidora_util.readCookie('Drupal.dtFilter')) + '\n' + '' + '\n' + ((sidora_util.readCookie('Drupal.sortOn') == '')?'':sidora_util.readCookie('Drupal.sortOn')) + '\n' + ((sidora_util.readCookie('Drupal.sortOrder') == '')?'':sidora_util.readCookie('Drupal.sortOrder')),
       },
      'processing': true,
      'serverSide': true,
@@ -113,7 +112,7 @@ sidora.concept.LoadContentHelp.Resources.TableLoad = function(conceptOfInterest)
     }
   }); //End onclick
     table.on( 'length', function ( e, settings, len ) {
-      writeCookie('Drupal.pageLength',parseInt(len),'30')
+      sidora_util.writeCookie('Drupal.pageLength',parseInt(len),'30')
     } );
 }
 /*
@@ -141,8 +140,8 @@ sidora.concept.LoadContentHelp.Resources.TableActionsSetup = function(){
     jQuery('#sidora-resources-page-count').html(' of '+info.pages );
     if (sidora.resources.individualPanel.resourceOfInterest){
       jQuery(this).find(jq(sidora.resources.individualPanel.resourceOfInterest.pid)).trigger("click");
-      if (readCookie('Drupal.selectResource') == '1'){
-        writeCookie('Drupal.selectResource','0','30');
+      if (sidora_util.readCookie('Drupal.selectResource') == '1'){
+        sidora_util.writeCookie('Drupal.selectResource','0','30');
         jQuery('#res_table tbody').children('tr:first').trigger('click');
       }    
     }
@@ -193,16 +192,16 @@ sidora.concept.LoadContentHelp.Resources.TableActionsSetup = function(){
     );
   });
   jQuery('#res_table_filter').after('<select id=\"sidora-resource-type-dropdown\" class="form-select" name=\"search\"><option value=\"\">All</option><option value=\"images\">Image</option><option value=\"pdf\">Digitized Text</option><option value=\"csv\">Tabular Dataset</option><option value=\"audio\">Audio</option><option value=\"video\">Video</option></select><input type="text" name="titleFilter" id="titleFilter" style="border: solid 1px lightblue;">');
-  if (readCookie('Drupal.dtFilter') != ''){
-    jQuery("#sidora-resource-type-dropdown").val(readCookie('Drupal.dtFilter'));
+  if (sidora_util.readCookie('Drupal.dtFilter') != ''){
+    jQuery("#sidora-resource-type-dropdown").val(sidora_util.readCookie('Drupal.dtFilter'));
   }   
   jQuery('#titleFilter').after(' <div id="sidora-resource-sort">  Sort: '+'<select id=\"sidora-resource-sort-dropdown\" class="form-select" name=\"sort\"><option value=\"title\">Title</option><option value=\"model\">Model</option><option value=\"created\" selected=\"selected\">Created</option></select></div>');
   jQuery('#sidora-resource-sort-dropdown').after('  <select id=\"sidora-resource-sortorder-dropdown\" class="form-select" name=\"sortorder\"><option value=\"ASC\">Ascending</option><option value=\"DESC\" selected=\"selected\">Descending</option></select>');
-  if (readCookie('Drupal.sortOn') != ''){
-    jQuery('#sidora-resource-sort-dropdown').val(readCookie('Drupal.sortOn'));
+  if (sidora_util.readCookie('Drupal.sortOn') != ''){
+    jQuery('#sidora-resource-sort-dropdown').val(sidora_util.readCookie('Drupal.sortOn'));
   }
-  if (readCookie('Drupal.sortOrder') != ''){
-    jQuery("#sidora-resource-sortorder-dropdown").val(readCookie('Drupal.sortOrder'));
+  if (sidora_util.readCookie('Drupal.sortOrder') != ''){
+    jQuery("#sidora-resource-sortorder-dropdown").val(sidora_util.readCookie('Drupal.sortOrder'));
   }     
   jQuery("#res_table_length select").addClass("form-select");
   sidora.resources.reloadDatatableBasedOnCurrentFilters = function(){
@@ -210,8 +209,8 @@ sidora.concept.LoadContentHelp.Resources.TableActionsSetup = function(){
     jQuery('#res_table_filter input').val(changeTo);
     var recentSearchVal = jQuery("#titleFilter").val();
     changeTo += "\n"+recentSearchVal;
-    var sortOn = (readCookie('Drupal.sortOn') != '')?readCookie('Drupal.sortOn'):jQuery('#sidora-resource-sort-dropdown').val();
-    var sortOrder = (readCookie('Drupal.sortOrder') != '')?readCookie('Drupal.sortOrder'):jQuery('#sidora-resource-sortorder-dropdown').val();
+    var sortOn = (sidora_util.readCookie('Drupal.sortOn') != '')?sidora_util.readCookie('Drupal.sortOn'):jQuery('#sidora-resource-sort-dropdown').val();
+    var sortOrder = (sidora_util.readCookie('Drupal.sortOrder') != '')?sidora_util.readCookie('Drupal.sortOrder'):jQuery('#sidora-resource-sortorder-dropdown').val();
     changeTo += "\n"+sortOn+"\n"+sortOrder;
     window.sidora.resources.dataTable.DataTable().search(changeTo).draw();
     window.sidora.util.resourceSearchLastSearchVal = recentSearchVal;
@@ -228,15 +227,15 @@ sidora.concept.LoadContentHelp.Resources.TableActionsSetup = function(){
     },3000); //Start the search if there is no key press for 3 seconds
   });
   jQuery('#sidora-resource-type-dropdown').change(function(){
-    writeCookie('Drupal.dtFilter',jQuery('#sidora-resource-type-dropdown').val(),'30')
+    sidora_util.writeCookie('Drupal.dtFilter',jQuery('#sidora-resource-type-dropdown').val(),'30')
     sidora.resources.reloadDatatableBasedOnCurrentFilters();
   });
   jQuery('#sidora-resource-sort-dropdown').change(function(){
-   writeCookie('Drupal.sortOn',jQuery('#sidora-resource-sort-dropdown').val(),'30')
+   sidora_util.writeCookie('Drupal.sortOn',jQuery('#sidora-resource-sort-dropdown').val(),'30')
    sidora.resources.reloadDatatableBasedOnCurrentFilters();
    });
   jQuery('#sidora-resource-sortorder-dropdown').change(function(){
-   writeCookie('Drupal.sortOrder',jQuery('#sidora-resource-sortorder-dropdown').val(),'30')
+   sidora_util.writeCookie('Drupal.sortOrder',jQuery('#sidora-resource-sortorder-dropdown').val(),'30')
    sidora.resources.reloadDatatableBasedOnCurrentFilters();
    });
 }
@@ -490,6 +489,14 @@ sidora.util.openToCurrentPathAndSelectItem = function(currentUrl){
   sidora.util.loadTreeSectionsIfNeeded(selectThisNode);
   jst.select_node(selectThisNode); 
 }
+sidora.util.throbberize = function() {
+  //Prep the UI for children incoming
+  if (jQuery("#forjstree a").not("[conceptchildren=0]").parent(".jstree-leaf").length > 0){
+    jQuery("#forjstree a").not("[conceptchildren=0]").parent(".jstree-leaf").children("i")
+      .css("background","url(../../misc/throbber.gif) no-repeat 6px -14px");
+    jQuery("#forjstree a").not("[conceptchildren=0]").parent(".jstree-leaf").removeClass("jstree-leaf")
+  }
+}
 /*
  * Given a node, loads its grandchildren if needed and checks the validation status of grandchildren
  * @param data - jstree node or item that has a node attribute containing a jstree node
@@ -507,10 +514,7 @@ sidora.util.loadTreeSectionsIfNeeded = function(data){
   var childPidsCsv = currentChildrenPids.join();
   if (childPidsCsv.length > 0) {
     sidora.util.checkUIForInvalidPids(openingPid, childPidsCsv);
-    //Prep the UI for children incoming
-    jQuery("#forjstree a").not("[conceptchildren=0]").parent(".jstree-leaf")
-      .removeClass("jstree-leaf")
-      .addClass("jstree-closed");
+    sidora.util.throbberize();
     //load the next section of the tree
     if (currentChildrenPids.length > 0){
       //Only load information if the currentChildren have children that are not listed
@@ -594,7 +598,7 @@ sidora.InitiateJSTree = function(){
         sidora.concept.LoadContentHelp.Relationships();
       }, 
       sidora.util.createFunctionRefreshTree(moveToPid)
-      , [moveToPid,toMovePid]);
+      , [moveToPid,toMovePid],'copyConcept');
       sidora.queue.incomingRequestsAreSilent = false;
       sidora.queue.Next();
     });
@@ -622,7 +626,7 @@ sidora.InitiateJSTree = function(){
         sidora.concept.LoadContentHelp.Relationships();
       },
       sidora.util.createFunctionRefreshTree(moveFromPid)
-      , [toMovePid,moveFromPid]);
+      , [toMovePid,moveFromPid],'unassociate');
       sidora.queue.incomingRequestsAreSilent = false;
       sidora.queue.Next();
     });
@@ -654,7 +658,7 @@ sidora.InitiateJSTree = function(){
         sidora.concept.LoadContentHelp.Relationships();
       },
       sidora.util.createFunctionRefreshTree([moveToPid,moveFromPid])
-      , [moveToPid,toMovePid,moveFromPid]);
+      , [moveToPid,toMovePid,moveFromPid],'moveConcept');
       sidora.queue.incomingRequestsAreSilent = false;
       sidora.queue.Next();
     });
@@ -755,7 +759,7 @@ sidora.InitiateJSTree = function(){
                           "Move Resources",
                           "<h4>All items selected for move already exist on the target.</h4>"+showTextForUnassociate,
                           function(){
-                            sidora.resources.performCopyOrMove("move",mouseOverObject.id, resourcesToMoveOver);
+                            sidora.resources.performCopyOrMove("move",mouseOverObject.id, resourcesToUnassociate);
                           }
                         );
                       }
@@ -1070,7 +1074,9 @@ sidora.ResizeToBrowser = function(){
   jQuery("#conceptResizable").css("height",jQuery('#fjt-holder').height());
 	var tabsHeight = newHeight-50;
   jQuery("#concept_tabs").css("height",tabsHeight+"px");
-  jQuery("#concept_tabs").css("width",parseInt(jQuery(window).width()-jQuery('#conceptResizable').outerWidth()-8)+"px");
+  var concept_tabsWidth = parseInt(jQuery(window).width()-jQuery('#conceptResizable').outerWidth()-8);
+	//if (concept
+	jQuery("#concept_tabs").css("width",parseInt(jQuery(window).width()-jQuery('#conceptResizable').outerWidth()-8)+"px");
   var tabContentHeight = tabsHeight - jQuery(".ui-tabs-nav").height();
   jQuery("#concept-resource-list").css("height",tabContentHeight);
   jQuery("#resourceResizable").css("height",'99%');
@@ -1345,16 +1351,18 @@ sidora.resources.performCopyOrMove = function(copyOrMove, toLocationId, resource
       jQuery(jq(pids[i])).addClass("is-being-moved");
       userFriendlyName = "Moving ";
       onSuccess = onSuccessfulMove;
+      queueAction = 'moveResource';
     }else{
       pidListForRequest = [droppedOn,droppedPid];
       userFriendlyName = "Copying ";
       onSuccess = onSuccessfulCopy;
+      queueAction = 'copyResource';
     }
     userFriendlyName += "<em>"+sidora.util.FriendlyNameDirect(droppedPid)+"</em>";
     userFriendlyName += " from <em>"+sidora.util.FriendlyNameDirect(fromParent)+"</em>";
     userFriendlyName += " to <em>"+sidora.util.FriendlyNameDirect(droppedOn)+"</em>";
     var requestUrl = Drupal.settings.basePath+'sidora/ajax_parts/'+action+'/'+droppedOn+'/'+droppedPid;
-    sidora.queue.Request(userFriendlyName, requestUrl, onSuccess, null, pidListForRequest);
+    sidora.queue.Request(userFriendlyName, requestUrl, onSuccess, null, pidListForRequest,queueAction,i+' of '+pids.length);
     console.log(userFriendlyName);
   }
   sidora.queue.Next();
@@ -1439,6 +1447,9 @@ sidora.ResizeOnWindowResize = function(){
 	//var menuwidth = 360;
 	var menuwidth = jQuery("#fjt-holder").width() + 10;
   var newwidth = bodywidth-menuwidth;
+	if (newwidth < parseInt(jQuery('#sidora_content_concept_info').css('min-width'))){
+		newwidth = parseInt(jQuery('#sidora_content_concept_info').css('min-width'));
+	}	
   jQuery("#sidora_content_concept_info").width(newwidth);
   var newMaxWidth = bodywidth - parseInt(jQuery('#sidora_content_concept_info').css('min-width'));
 	jQuery('#conceptResizable').resizable('option', 'maxWidth', newMaxWidth);
@@ -1624,7 +1635,105 @@ sidora.util.reorderTreeChildrenAlphabetical = function(node) {
   });
   jst.pureUIChange = false;
 }
+sidora.util.treeAdditionSingleItem = function(mainItem, htmlTree, onLoadComplete, overwriteType, jst, documentFragment, currChild){
+  var ccp = currChild.a_attr.pid;
+  var dfAnchor = jQuery(documentFragment).children().find("[pid='"+ccp+"']");
+  //If the document fragment does not include the child then that concept was removed
+  if (dfAnchor.length == 0) {
+    //TBD remove this
+  } else {
+    //Find the current child representation in the document fragment
+    var currRep = dfAnchor.parent();
+    //Replace the name if the name of the item changed
+    var dfAnchorText = jQuery(dfAnchor[0]).text();
+    if (currChild.text != dfAnchorText) {
+      jst.rename_node(currChild, dfAnchorText);
+    }
+    var a_attr_obj = {};
+		jQuery(jQuery(currRep).children("a").first()[0].attributes).each(function() {
+       a_attr_obj[this.nodeName] = this.nodeValue;
+      });   
+      a_attr_obj["href"] = currChild.a_attr.href;
+		  jQuery.each(a_attr_obj,function(nodeName,nodeValue){
+		  jQuery("[pid='" + ccp + "']").attr(nodeName,nodeValue);
+			jst.get_node(currChild).a_attr[nodeName] = nodeValue;
+    });
+		//Do not add children to items that are already filled in
+    if (currChild.children.length == 0 || overwriteType == "changes") {
+      //Go through the children of the representative DOM object from document fragment
+      var repChildren = currRep.children("ul").children("li");
+      //Set up the functions so that the onLoadComplete will be called after all of the nodes are added
+      var myCounter = { numReturned: 0, numNeeded: repChildren.length};
+      var olcCheck = function(mc,olc){
+         return function(){
+           mc.numReturned++;
+           if (mc.numReturned == mc.numNeeded) { olc(); }
+         };
+      };
+      var individualReturnFunction = olcCheck(myCounter, onLoadComplete);
+      //If want to do changes, remove any existing children that were not in the document fragment
+      //console.log("gci start:"+ new Date(new Date().getTime()) + " len:"+currChild.children.length);
+      for (var grandchildIndex = 0; grandchildIndex < currChild.children.length; grandchildIndex++){
+        var currTreeGrandchild = jst.get_node(currChild.children[grandchildIndex]);
+        var isFound = false;
+        for (var repChildIndex = 0; repChildIndex < repChildren.length; repChildIndex++){
+          var currRepChild = repChildren[repChildIndex];
+          if (jQuery(currRepChild).children("a").attr("pid") == currTreeGrandchild.a_attr.pid) {
+            isFound = true;
+          }
+        }
+        if (!isFound) {
+          jst.pureUIChange = true;
+          jst.delete_node(currTreeGrandchild.id);
+          jst.pureUIChange = false;
+        }
+      }
+      //console.log("rci start:"+ new Date(new Date().getTime()) + " len:"+repChildren.length);
+      var ctgMap = [];
+      for (var grandchildIndex = 0; grandchildIndex < currChild.children.length; grandchildIndex++){
+        var currTreeGrandchild = jst.get_node(currChild.children[grandchildIndex]);
+        ctgMap[currTreeGrandchild.a_attr.pid] = currTreeGrandchild.id;
+      }
+      for (var repChildIndex = 0; repChildIndex < repChildren.length; repChildIndex++) {
+        //Create node in the current child to copy the elements found in the document fragment
+        var currRepChild = repChildren[repChildIndex];
 
+        //Dont add a child that's already there
+        var crcPid = jQuery(currRepChild).children("a").attr("pid");
+        var isFound = ctgMap[crcPid];
+       
+        var a_attr_obj = {};
+        jQuery(jQuery(currRepChild).children("a").first()[0].attributes).each(function() {
+          a_attr_obj[this.nodeName] = this.nodeValue;
+        });
+        //The information coming back from the ajax call will not have the path through the tree
+        //and since the concept listed can be in multiple places, the path to the concepts
+        //must pull information from the existing tree for the current path we've used
+        var prependHrefPath = "?path=" + currChild.a_attr.href.split("?path=")[1] + ',';
+        var currRepHrefPathParts = jQuery(currRepChild).children("a").attr("href").split("?path=");
+        newHrefPath = currRepHrefPathParts[0] + prependHrefPath + currRepHrefPathParts[1];
+        a_attr_obj['href'] = newHrefPath;
+        if (!isFound) {
+          var newNodeId = jQuery("#forjstree").jstree(
+                          "create_node", 
+                          currChild,
+                          { "text" : jQuery(currRepChild).children("a").first()[0].text, "a_attr":a_attr_obj }, 
+                          0,
+                          individualReturnFunction,
+                          true
+                        );
+        }else{
+          jst.rename_node(isFound, jQuery(currRepChild).children("a").first()[0].text);
+          jQuery(a_attr_obj).each(function(){
+            jst.get_node(isFound).a_attr[this.nodeName] = this.nodeValue;
+          });
+        }
+      }//Ends repChildIndex
+      //console.log("complete :"+ new Date(new Date().getTime()));
+    }//Ends (currChild.children.length == 0 || overwriteType == "changes")
+    sidora.util.reorderTreeChildrenAlphabetical(currChild);
+  }//Ends dfAnchor.length not zero
+}
 sidora.util.treeAddition = function(htmlTree, onLoadComplete, overwriteType){
   if (typeof(onLoadComplete) != 'function') {
     onLoadComplete = function(){}
@@ -1646,91 +1755,9 @@ sidora.util.treeAddition = function(htmlTree, onLoadComplete, overwriteType){
     //Go through the children
     for (var micIndex = 0; micIndex < miChildrenIds.length; micIndex++) {
       var currChild = jst.get_node(miChildrenIds[micIndex]);
-      var ccp = currChild.a_attr.pid;
-      var dfAnchor = jQuery(documentFragment).children().find("[pid='"+ccp+"']");
-      //If the document fragment does not include the child then that concept was removed
-      if (dfAnchor.length == 0) {
-        //TBD remove this
-      } else {
-        //Find the current child representation in the document fragment
-        var currRep = dfAnchor.parent();
-        //Replace the name if the name of the item changed
-        if (currChild.text != dfAnchor.text()) {
-          jst.rename_node(currChild, dfAnchor.text());
-        }
-        
-   
-        //Do not add children to items that are already filled in
-        if (currChild.children.length == 0 || overwriteType == "changes") {
-          //Go through the children of the representative DOM object from document fragment
-          var repChildren = currRep.children("ul").children("li");
-          //Set up the functions so that the onLoadComplete will be called after all of the nodes are added
-          var myCounter = { numReturned: 0, numNeeded: repChildren.length};
-          var olcCheck = function(mc,olc){
-             return function(){
-               mc.numReturned++;
-               if (mc.numReturned == mc.numNeeded) { olc(); }
-             };
-          };
-          var individualReturnFunction = olcCheck(myCounter, onLoadComplete);
-          //If want to do changes, remove any existing children that were not in the document fragment
-          for (var grandchildIndex = 0; grandchildIndex < currChild.children.length; grandchildIndex++){
-            var currTreeGrandchild = jst.get_node(currChild.children[grandchildIndex]);
-            var isFound = false;
-            for (var repChildIndex = 0; repChildIndex < repChildren.length; repChildIndex++){
-              var currRepChild = repChildren[repChildIndex];
-              if (jQuery(currRepChild).children("a").attr("pid") == currTreeGrandchild.a_attr.pid) {
-                isFound = true;
-              }
-            }
-            if (!isFound) {
-              jst.pureUIChange = true;
-              jst.delete_node(currTreeGrandchild.id);
-              jst.pureUIChange = false;
-            }
-          }
-          for (var repChildIndex = 0; repChildIndex < repChildren.length; repChildIndex++) {
-            //Create node in the current child to copy the elements found in the document fragment
-            var currRepChild = repChildren[repChildIndex];
-
-            //Dont add a child that's already there
-            var isFound = false;
-            for (var grandchildIndex = 0; grandchildIndex < currChild.children.length; grandchildIndex++){
-              var currTreeGrandchild = jst.get_node(currChild.children[grandchildIndex]);
-              if (jQuery(currRepChild).children("a").attr("pid") == currTreeGrandchild.a_attr.pid) {
-                isFound = currTreeGrandchild.id;
-              }
-            }
-            var a_attr_obj = {};
-            jQuery(jQuery(currRepChild).children("a").first()[0].attributes).each(function() {
-              a_attr_obj[this.nodeName] = this.nodeValue;
-            });
-            //The information coming back from the ajax call will not have the path through the tree
-            //and since the concept listed can be in multiple places, the path to the concepts
-            //must pull information from the existing tree for the current path we've used
-            var prependHrefPath = "?path=" + currChild.a_attr.href.split("?path=")[1] + ',';
-            var currRepHrefPathParts = jQuery(currRepChild).children("a").attr("href").split("?path=");
-            newHrefPath = currRepHrefPathParts[0] + prependHrefPath + currRepHrefPathParts[1];
-            a_attr_obj['href'] = newHrefPath;
-            if (!isFound) {
-              var newNodeId = jQuery("#forjstree").jstree(
-                              "create_node", 
-                              currChild,
-                              { "text" : jQuery(currRepChild).children("a").first()[0].text, "a_attr":a_attr_obj }, 
-                              0,
-                              individualReturnFunction,
-                              true
-                            );
-            }else{
-              jst.rename_node(isFound, jQuery(currRepChild).children("a").first()[0].text);
-              jQuery(a_attr_obj).each(function(){
-                jst.get_node(isFound).a_attr[this.nodeName] = this.nodeValue;
-              });
-            }
-          }//Ends repChildIndex
-        }//Ends (currChild.children.length == 0 || overwriteType == "changes")
-        sidora.util.reorderTreeChildrenAlphabetical(currChild);
-      }//Ends dfAnchor.length not zero
+      setTimeout(sidora.util.treeAdditionSingleItem.bind(null, mainItem,htmlTree, onLoadComplete, overwriteType, jst, documentFragment, currChild ),
+        10 * (micIndex)
+      );
     }//Ends micIndex
   });//Ends mainItems each
 }//Ends treeAddition function
@@ -1849,6 +1876,7 @@ sidora.util.refreshConceptChildrenNumberDirect = function(pid, number_of_childre
     jst.rename_node("#"+toUpdateId, newFullName);
     jst.get_node(toUpdateId).a_attr.resourcechildren = ""+number_of_children;
   }
+	jQuery("[pid='" + pid +"']").attr('resourcechildren',""+number_of_children)
 }
 /*
  * Directly changes the number in parenthesis on the UI of the tree by the input DOM id
@@ -2426,15 +2454,16 @@ sidora.resources.DeleteResourceBusinessLogic = function(onSuccess, onFailure){
   }
 }
 sidora.concept.DeleteConceptBusinessLogic = function(onSuccess, onFailure){
-  return sidora.util.deletePid(this.GetPid(), onSuccess, onFailure);
+  return sidora.util.deletePid(this.GetPid(), onSuccess, onFailure,'deleteConcept');
 }
 /*
  * Unassociate and delete orphan of the Pid
  */
-sidora.util.deletePid = function(pidOfInterest, onSuccess, onFailure){
+sidora.util.deletePid = function(pidOfInterest, onSuccess, onFailure, action){
+  action = typeof action !== 'undefined' ? action : '';
   var unassociateFrom = sidora.concept.GetPid();
   if (unassociateFrom == pidOfInterest){
-    //This was "delete concept", find the current concept's parent
+	//This was "delete concept", find the current concept's parent
     var jst = jQuery("#forjstree").jstree(true);
     var checkSelectedArr = jst.get_selected();
     for (var i = 0; i < checkSelectedArr.length; i++){
@@ -2448,7 +2477,7 @@ sidora.util.deletePid = function(pidOfInterest, onSuccess, onFailure){
   var url = Drupal.settings.basePath+'sidora/ajax_parts/unassociate_delete_orphan/'+unassociateFrom+'/'+pidOfInterest;
   var userFriendlyToastName = "Remove <em>"+sidora.util.FriendlyNameDirect(pidOfInterest);
   userFriendlyToastName += "</em> from <em>"+sidora.util.FriendlyNameDirect(unassociateFrom)+"</em>";
-  sidora.queue.RequestPost(userFriendlyToastName,url,"",onSuccess,onFailure,[pidOfInterest,unassociateFrom]);
+  sidora.queue.RequestPost(userFriendlyToastName,url,"",onSuccess,onFailure,[pidOfInterest,unassociateFrom],action);
   sidora.queue.Next();
 }
 /*
@@ -2639,7 +2668,7 @@ sidora.manage.OpenCurrentConfig = function(){
           enableKeys: false,
           onFinish:  function(){
             jQuery("#submitObjProperties").click(function(){
-              sidora.queue.RequestPost(userFriendlyToastName+":<em>"+name+"</em> ("+pid+")",Drupal.settings.basePath+"sidora/manage/"+pid+"/save","label="+jQuery("#objPropLabel").val()+"&owner="+jQuery("#objPropOwner").val(),function(){},function(){},pid);
+              sidora.queue.RequestPost(userFriendlyToastName+":<em>"+name+"</em> ("+pid+")",Drupal.settings.basePath+"sidora/manage/"+pid+"/save","label="+jQuery("#objPropLabel").val()+"&owner="+jQuery("#objPropOwner").val(),function(){},function(){},pid,'manage');
               sidora.queue.Next();
             });
             jQuery("#addDatastream").click(function(){
@@ -2696,7 +2725,7 @@ sidora.manage.removeDatastream = function(pid,dsid){
           function(){
             sidora.manage.resetFrame();
           },
-          function(){},pid);
+          function(){},pid,'deleteDatastream');
         sidora.queue.Next();
         jQuery( this ).dialog( "close" );
       },
@@ -2722,6 +2751,22 @@ jQuery(function () {
 });
 
 jQuery(window).resize(function() {
+  if ((parseInt(jQuery(window).width()) < (parseInt(jQuery("#conceptResizable").css("min-width"))+parseInt(jQuery("#sidora_content_concept_info").css("min-width")))) || (parseInt(jQuery("#concept_tabs").width()) < parseInt(jQuery("#sidora_content_concept_info").css("min-width")))){
+    jQuery("#conceptResizable").css("width",parseInt(jQuery("#conceptResizable").css("min-width")));
+    sidora.ResizeTree(null,{element:jQuery("#conceptResizable")});
+    sidora.stopResizeTree(null,{element:jQuery("#conceptResizable")});
+    jQuery("#concept-meta,#concept-relationships,#concept-resource-list").css("min-width","1000px");
+    jQuery("#concept_tabs,#conceptResizable").css("position","absolute");
+  }
+  else{	
+    if (parseInt(jQuery("#sidora_content_concept_info").width()) > 1000){
+      jQuery("#concept-meta,#concept-relationships,#concept-resource-list").css("min-width","");
+      jQuery("#concept_tabs,#conceptResizable").css("position","fixed");
+      jQuery("#branding").css("position","relative");
+    }	
+  }	
+   //jQuery("#branding").css("padding-top",parseInt(jQuery("body").css("padding-top"))+10);
+ //jQuery("#conceptResizable").css("top",parseInt(jQuery("body").height()));
   sidora.ResizeOnWindowResize();
   sidora.ResizeToBrowser();
 });
@@ -2751,31 +2796,9 @@ function getNewPid( jsonString ) {
   var pidArray = pidString.split(":");
   return (pidArray[1]+":"+pidArray[2]);
 } 
-function writeCookie(name,value,days) {
-    var date, expires;
-    if (days) {
-        date = new Date();
-        date.setTime(date.getTime()+(days*24*60*60*1000));
-        expires = "; expires=" + date.toGMTString();
-            }else{
-        expires = "";
-    }
-    document.cookie = name + "=" + value + expires;
-}
-function readCookie(name) {
-    var i, c, ca, nameEQ = name + "=";
-    ca = document.cookie.split(';');
-    for(var i=0;i < ca.length;i++) {
-        c = ca[i];
-        while (c.charAt(0)==' ') {
-            c = c.substring(1,c.length);
-        }
-        if (c.indexOf(nameEQ) == 0) {
-            return c.substring(nameEQ.length,c.length);
-        }
-    }
-    return '';
-}
 sidora.reloadPage = function(){
   window.location.reload();
+}
+sidora.util.refreshPidInTree = function(){
+sidora.util.RefreshTree(null,sidora.concept.GetPid());
 }

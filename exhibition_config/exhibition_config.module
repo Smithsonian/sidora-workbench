@@ -2163,7 +2163,8 @@ function exhibition_permission_form($form, $form_state){
   'future_children_show_preview' => 'Show Preview',
   'future_children_allow_download' => 'Show Download');
   $saved_visibility = exhibition_config_load_visibility($pid);
-  $existing_visibility = array();
+
+	$existing_visibility = array();
   //flatten_tree takes an array of children, but the root object is not a child of anything, so pop it in an array
   exhibition_config_flatten_tree(array($saved_visibility),$existing_visibility,$visibility_settings,$pid);
   $modulepath = drupal_get_path('module', 'exhibition_config');
@@ -2578,7 +2579,7 @@ function exhibition_config_islandora_datastream_ingested(AbstractObject $object,
  * and update the supporting visibility entries
  */
 function exhibition_config_islandora_datastream_modified(AbstractObject $object, AbstractDatastream $datastream) {
-  if ($datastream->id == 'RELS-EXT') {
+  if (($datastream->id == 'RELS-EXT') || ((strpos($datastream->mimetype,'xml') !== false) && $datastream->id != 'SIDORA' && $datastream->id != 'DC')) {
     $pid_that_changed = $object->id;
     $ec_query = db_select('exhibition_config', 'ec')
       ->fields('ec');
@@ -2596,7 +2597,11 @@ function exhibition_config_islandora_datastream_modified(AbstractObject $object,
        
       //dsm('This is in the visibility for:'.$exhibition_root_line->pid);
       $existing_visibility_obj = exhibition_config_load_visibility($exhibition_root_line->pid); 
-      $new_visibility = exhibition_config_reset_visibility($existing_visibility_obj, $pid_that_changed);
+			if ($datastream->id == 'RELS-EXT'){
+        $new_visibility = exhibition_config_reset_visibility($existing_visibility_obj, $pid_that_changed);
+			}else{
+			  $new_visibility = exhibition_config_update_label($pid_that_changed,$object->label,$existing_visibility_obj);	
+			}	
       exhibition_config_save_visibility($exhibition_root_line->pid,$new_visibility);
     }
   }
@@ -2804,3 +2809,14 @@ function exhibition_config_delete($pid = '') {
  print '{ "error": false, "num_deleted": ' . $num_deleted . '}';
  drupal_exit();
 }
+function exhibition_config_update_label($pid_to_update,$new_label,$visibility_array){
+  if ($visibility_array['pid'] == $pid_to_update) {
+	  $visibility_array['label'] = $new_label;
+	}
+	if (isset($visibility_array['children']) && is_array($visibility_array['children']) && (count($visibility_array['children']) >0)){
+	  foreach ($visibility_array['children'] as $key=>$child){
+		  $visibility_array['children'][$key] = exhibition_config_update_label($pid_to_update,$new_label,$child);
+		}
+	}
+	return $visibility_array;
+}		
