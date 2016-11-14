@@ -69,7 +69,7 @@ jQuery().ready(function(){
     }
     var postData = jQuery("#islandora-ingest-form").serialize()+"&ingest=Ingest";
     if (typeof(sidora) != "undefined"){
-      sidora.queue.RequestPost("Create Concept",window.location.href,postData, ccSuccess, function(){}, "");
+      sidora.queue.RequestPost("Create Concept",window.location.href,postData, ccSuccess, function(){}, "","createConcept");
       sidora.queue.Next();
       sidora.CloseIFrame("","concept create");
     }else{

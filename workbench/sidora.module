@@ -2058,6 +2058,7 @@ function sidora_settings_object($ignore_list = array()){
   $exact_match[] = 'osd_proxy_resolver_url';
   $exact_match[] = 'account_request_email_to';
   $exact_match[] = 'account_request_email_from';
+	$exact_match[] = 'site_admin_email_to';
   $settings_holder = array();
   foreach($conf as $drupal_setting_index=>$drupal_setting){
     if (in_array($drupal_setting_index,$exact_match) && !in_array($drupal_setting_index,$ignore_list)){
@@ -3305,7 +3306,24 @@ function sidora_create_resource_get_metadata_form_html($parent_pid, $model, $for
       $creation_info['ontology_id'] = $ontology_id;
       $id_to_creation_info[$form['#build_id']] = $creation_info;
       cache_set("sidora:form_id_to_creation_info",$id_to_creation_info);
-      $to_return .= drupal_render( $form);
+      $resource_types = array(
+        'si:imageCModel' => 'images',
+	'si:generalImageCModel' => 'images',
+        'si:fieldbookCModel' => 'pdf', 
+        'si:datasetCModel' => 'csv',
+        'islandora:sp-audioCModel' => 'audio',
+        'islandora:sp_videoCModel' => 'video'
+      );
+      $form['resource_model'] = array(
+      '#name' => 'resource_model',
+      '#type' => 'hidden',
+      '#title' => 'Model',
+      '#description' => '',
+      '#required' => false,
+      '#value' => isset($resource_types[$model])?$resource_types[$model]:''
+    );
+
+	$to_return .= drupal_render( $form);
       $to_return .= "<div id='bottom-panel' class='bottom-panel' style='position:absolute; bottom:0; left:0; width:100%;'></div></div>";
     }
   }
@@ -3484,7 +3502,7 @@ function sidora_codebook_upload_form_validate($form, &$form_state) {
     }
     else {
       watchdog('SIdora_Tabular_Parse',t("File System Problem with creating a codebook:<br/>parser_os_file_path: %for_parser <br/>drupal_realpath(file): %drupal_rp <br/>This file has NOT been deleted and is not going to be deleted by Drupal. It must be handled on the OS level.",array('%for_parser' => $parser_os_file_path, '%drupal_rp' => drupal_realpath($file->destination))));
-      form_set_error('file',t("Unable to parse the uploaded file. Contact an administrator if you believe this file should be able to be parsed.  Please send a screenshot of this page, include the file you uploaded, and the time and date this occurred.  The administrator should check the Drupal log for 'SIdora_Tabular_Parse' for more information."));
+      form_set_error('file',t("Unable to parse the uploaded file. Contact an administrator" . (variable_get('site_admin_email_to', '') != ''?' at ' . variable_get('site_admin_email_to'):'') . " if you believe this file should be able to be parsed.  Please send a screenshot of this page, include the file you uploaded, and the time and date this occurred.  The administrator should check the Drupal log for 'SIdora_Tabular_Parse' for more information."));
       return;
     }
     // If the file passed validation:
@@ -3508,7 +3526,7 @@ function sidora_codebook_upload_form_validate($form, &$form_state) {
         var_dump($e);
         $exception_dump = ob_get_clean();
         watchdog('SIdora_Tabular_Parse',t("Problem with creating a codebook:<br/>") . $e->getMessage() . '<br>' . $exception_dump . t("URL:") . $url);
-        form_set_error('file',t("Unable to parse the uploaded file. Contact an administrator if you believe this file should be able to be parsed.  Please send a screenshot of this page, include the file you uploaded, and the time and date this occurred.  The administrator should check the Drupal log for 'SIdora_Tabular_Parse' for more information."));
+        form_set_error('file',t("Unable to parse the uploaded file. Contact an administrator" . (variable_get('site_admin_email_to', '') != ''?' at ' . variable_get('site_admin_email_to'):'') . " if you believe this file should be able to be parsed.  Please send a screenshot of this page, include the file you uploaded, and the time and date this occurred.  The administrator should check the Drupal log for 'SIdora_Tabular_Parse' for more information."));
         return;
       }
     } //Ends else of if ($file)
@@ -6249,7 +6267,7 @@ function sidora_block_content_navigation(){
   $to_return .= '<div id="forjstree" root_pid="'.$root_pid.'">';
   $to_return .= sidora_html_tree_from_given_pid($root_pid, NULL, 3, $send_params);
   $to_return .= '</div></div>';
-  //jQuery UI L&F
+ 	//jQuery UI L&F
   drupal_add_css(drupal_get_path('module','sidora').'/css/themes/smoothness/jquery-ui.min.css');
   //jsTree lib
   $jstree_loc = variable_get('sidora_js_lib_location_jstree', '');
@@ -6265,9 +6283,10 @@ function sidora_block_content_navigation(){
   drupal_add_css(drupal_get_path('module','sidora') . '/css/workbench.css', array('weight' => 10000, 'group' => CSS_THEME));
   // Some of the icons we use are from islandora xml forms, inform Javascript where to get those
   drupal_add_js(array('islandora_xml_forms' => array('basepath' => '/' . drupal_get_path('module','xml_forms') . '/')), 'setting');
+  drupal_add_js(array('site_admin_email' => variable_get('site_admin_email_to', '')), 'setting');
   drupal_add_js(drupal_get_path('module','sidora') . '/js/workbench_sidora_queue.js');
-  drupal_add_js(drupal_get_path('module','sidora') . '/js/workbench.js');
   drupal_add_js(drupal_get_path('module','sidora') . '/js/workbench_util.js');
+  drupal_add_js(drupal_get_path('module','sidora') . '/js/workbench.js');
   drupal_add_js(drupal_get_path('module','sidora') . '/js/workbench_menus.js');
   drupal_add_js(drupal_get_path('module','sidora') . '/js/workbench_sidora_request.js');
   drupal_add_js(drupal_get_path('module','sidora') . '/js/workbench_sharing.js');
