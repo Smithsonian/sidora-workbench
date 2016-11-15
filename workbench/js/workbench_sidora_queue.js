@@ -195,7 +195,7 @@ SidoraQueue.prototype.Done = function(completedItem, ajaxReturn){
 						}		
         },
         //dataType: "json",
-        timeout: 2000
+        timeout: 5000
     });
 	},2000);
 })(requestID);

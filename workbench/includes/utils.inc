@@ -1309,4 +1309,34 @@ function sidora_mail($from = 'default_from', $to, $subject, $message) {
     return FALSE;
   }
 }
+// function to convert a PHP array to valid xml file
+function array_to_xml( $data, &$xml_data, &$domtree ) {
+  foreach( $data as $key => $value ) {
+    if( is_numeric($key) ){
+      $key = 'item'.$key; //dealing with <0/>..<n/> issues
+    }
+    if( is_array($value) ) {
+      $subnode = $domtree->createElement($key);
+			$subnode = $xml_data->appendChild($subnode);
+      array_to_xml($value, $subnode,$domtree);
+    } else {
+       $subnode = $domtree->createElement("$key",htmlspecialchars("$value"));
+			 $xml_data->appendChild($subnode);
+    }
+  }
+}
+/**
+ * Clean the filenames in batch ingest before sending them to the 
+ * back-end via curl request. If not sanitized prior to sending,
+ * Fedora REST wasn't able to handle filenames with spaces.
+ * Code originally from http://cubiq.org/the-perfect-php-clean-url-generator
+ */
+function sidora_toAscii($str,$delimiter='_') {
+  setlocale(LC_ALL, 'en_US.UTF8');
+	$clean = iconv('UTF-8', 'ASCII//TRANSLIT', $str);
+	$clean = preg_replace("/[^a-zA-Z0-9.\/_|+ -]/", '', $clean);
+	$clean = strtolower(trim($clean, '-'));
+	$clean = preg_replace("/[\/_|+ -]+/", $delimiter, $clean);
+	return $clean;
+}
 ?>
