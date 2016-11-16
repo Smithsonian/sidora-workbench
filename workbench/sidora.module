@@ -2134,6 +2134,64 @@ function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $ex
     return t("You must be an administrator or have an administrator set sidora_allow_all_to_debug in order to access this information");
   }
   if (!sidora_is_admin()) print t("Remember that nonadmins will NOT see output from dsm!");
+  if ($one == 'run_sparql_mod_query') {
+    $query = 'SELECT ?pid ?mod ?label ?created FROM <#ri>
+  WHERE {
+         {
+         ?pid <info:fedora/fedora-system:def/model#state> <info:fedora/fedora-system:def/model#Active> .
+         ?pid <info:fedora/fedora-system:def/view#lastModifiedDate> ?mod .
+         ?pid <info:fedora/fedora-system:def/model#createdDate> ?created .
+         ?pid <info:fedora/fedora-system:def/model#label> ?label .
+         FILTER (?mod > "2016-05-23T10:20:13+05:30"^^xsd:dateTime)
+        }
+      } LIMIT 10';
+    $query = 'PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+SELECT ?pid ?mod ?label ?created FROM <#ri>
+  WHERE {
+         {
+         ?pid <info:fedora/fedora-system:def/model#state> <info:fedora/fedora-system:def/model#Active> .
+         ?pid <info:fedora/fedora-system:def/view#lastModifiedDate> ?mod .
+         ?pid <info:fedora/fedora-system:def/model#createdDate> ?created .
+         ?pid <info:fedora/fedora-system:def/model#label> ?label .
+         FILTER (xsd:dateTime(?mod) > \'2014-05-23T10:20:13+05:30\'^^xsd:dateTime))
+        }
+      } LIMIT 1';
+    $query = 'PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+SELECT ?pid ?mod ?label ?created FROM <#ri>
+  WHERE {
+         {
+         ?pid <info:fedora/fedora-system:def/model#state> <info:fedora/fedora-system:def/model#Active> .
+         ?pid <info:fedora/fedora-system:def/view#lastModifiedDate> ?mod .
+         ?pid <info:fedora/fedora-system:def/model#createdDate> ?created .
+         ?pid <info:fedora/fedora-system:def/model#label> ?label
+        }
+      } LIMIT 1';
+    $query = 'PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+SELECT ?pid ?mod ?label ?created FROM <#ri>
+  WHERE {
+         {
+         ?pid <info:fedora/fedora-system:def/model#state> <info:fedora/fedora-system:def/model#Active> .
+         ?pid <info:fedora/fedora-system:def/view#lastModifiedDate> ?mod .
+         ?pid <info:fedora/fedora-system:def/model#createdDate> ?created .
+         ?pid <info:fedora/fedora-system:def/model#label> ?label .
+         FILTER (xsd:dateTime(?mod) > xsd:dateTime(\'2014-06-08T14:16:45.398Z\'))
+        }
+      } LIMIT 1';
+    $tuque = islandora_get_tuque_connection();
+    if ($tuque) {
+      try{
+      $ri = $tuque->repository->ri;
+      $results = $ri->sparqlQuery($query);
+      var_dump($results);
+      }catch(Exception $e){
+        var_dump($e);
+      }
+    }
+    else {
+     print 'no tuque';
+    }
+    exit();
+  }
   if ($one == 'put_my_stuff_in_og') {
     sidora_sharing_put_all_owned_concepts_into_owned_groups();
   }
