@@ -1550,16 +1550,16 @@ function sidora_create_codebook_from_url($url, $codebook_label, $header_amount =
   global $user;
   module_load_include('inc', 'islandora', 'includes/utilities');
   module_load_include('inc', 'islandora', 'includes/ingest.form');
-	try
-	{
-	  $tuque = islandora_get_tuque_connection();
+  try
+  {
+    $tuque = islandora_get_tuque_connection();
     $codebook = $tuque->repository->constructObject(islandora_get_namespace('si:root'));
-  }catch(Exception $e){
-	  return t('The Fedora repository server is currently unavailable. Please contact the site administrator %email',
-      array('%email' => (variable_get('site_admin_email_to', '') != ''?' at ' . variable_get('site_admin_email_to'):''))
+   }catch(Exception $e){
+     return t('The Fedora repository server is currently unavailable. Please contact the site administrator %email',
+       array('%email' => (variable_get('site_admin_email_to', '') != ''?' at ' . variable_get('site_admin_email_to'):''))
     );
   }
-	$codebook->owner = $user->name;
+  $codebook->owner = $user->name;
   $codebook->label = $codebook_label;
   $codebook->models = 'si:codebookCModel';
   $datastream_id = 'DDI';
@@ -2678,11 +2678,11 @@ function sidora_create_concept($parent_pid = 'si:root', $model = 'si:collectionC
   }
   drupal_add_js(drupal_get_path('module','sidora').'/js/workbench_util.js',array('weight' => '1000000', 'group' => JS_THEME));
   try
-	{
-	  $tuque = islandora_get_tuque_connection();
+  {
+    $tuque = islandora_get_tuque_connection();
     $page = $tuque->repository->constructObject(islandora_get_namespace('si:root'));//$parent_pid));//'si:root'));//$object->id));
   }catch(Exception $e){
-	  return t('The Fedora repository server is currently unavailable. Please contact the site administrator %email',
+    return t('The Fedora repository server is currently unavailable. Please contact the site administrator %email',
       array('%email' => (variable_get('site_admin_email_to', '') != ''?' at ' . variable_get('site_admin_email_to'):''))
     );
   }
@@ -3027,14 +3027,14 @@ function sidora_create_resource_get_metadata_form_html($parent_pid, $model, $for
   $to_return .= "<div id='create-resource-form'>";
   if (count($current_uploads) == 0 || empty($current_uploads)){  //if no files
     $to_return .= '<div id="form-num-0" class="sidora-ingest-form-holder"><div id="top-panel" class="top-panel" style="left:0; width:100%; height:30px;"></div>';
-    try {
-		  $page = $tuque->repository->constructObject(islandora_get_namespace('si:root'));
-		}catch(Exception $e){
-	    return t('The Fedora repository server is currently unavailable. Please contact the site administrator %email',
+  try {
+    $page = $tuque->repository->constructObject(islandora_get_namespace('si:root'));
+  }catch(Exception $e){
+    return t('The Fedora repository server is currently unavailable. Please contact the site administrator %email',
        array('%email' => (variable_get('site_admin_email_to', '') != ''?' at ' . variable_get('site_admin_email_to'):''))
      );
     }
-		$form = drupal_get_form('islandora_ingest_form', array(
+    $form = drupal_get_form('islandora_ingest_form', array(
       'models' => array($model),
       'objects' => array($page),
       'parent' => $parent_pid,
@@ -3072,10 +3072,10 @@ function sidora_create_resource_get_metadata_form_html($parent_pid, $model, $for
         $to_return .= "</div>";
       }
       try
-			{
-			  $page = $tuque->repository->constructObject(islandora_get_namespace('si:root'));
+      {
+        $page = $tuque->repository->constructObject(islandora_get_namespace('si:root'));
       }catch(Exception $e){
-	      return t('The Fedora repository server is currently unavailable. Please contact the site administrator %email',
+        return t('The Fedora repository server is currently unavailable. Please contact the site administrator %email',
          array('%email' => (variable_get('site_admin_email_to', '') != ''?' at ' . variable_get('site_admin_email_to'):''))
         );
       }
@@ -3323,9 +3323,9 @@ function sidora_codebook_upload_form_validate($form, &$form_state) {
     }
     else {
       watchdog('SIdora_Tabular_Parse',t("File System Problem with creating a codebook:<br/>parser_os_file_path: %for_parser <br/>drupal_realpath(file): %drupal_rp <br/>This file has NOT been deleted and is not going to be deleted by Drupal. It must be handled on the OS level.",array('%for_parser' => $parser_os_file_path, '%drupal_rp' => drupal_realpath($file->destination))));
-			form_set_error('file',t("Unable to parse the uploaded file. Contact an administrator %email if you believe this file should be able to be parsed.  Please send a screenshot of this page, include the file you uploaded, and the time and date this occurred.  The administrator should check the Drupal log for 'SIdora_Tabular_Parse' for more information.",
-			  array('%email' => (variable_get('site_admin_email_to', '') != ''?' at ' . variable_get('site_admin_email_to'):'')))
-			);
+      form_set_error('file',t("Unable to parse the uploaded file. Contact an administrator %email if you believe this file should be able to be parsed.  Please send a screenshot of this page, include the file you uploaded, and the time and date this occurred.  The administrator should check the Drupal log for 'SIdora_Tabular_Parse' for more information.",
+         array('%email' => (variable_get('site_admin_email_to', '') != ''?' at ' . variable_get('site_admin_email_to'):'')))
+      );
       return;
     }
     // If the file passed validation:
@@ -3349,13 +3349,13 @@ function sidora_codebook_upload_form_validate($form, &$form_state) {
         var_dump($e);
         $exception_dump = ob_get_clean();
         watchdog('SIdora_Tabular_Parse',t("Problem with creating a codebook:<br/>%message <br/> %exception_dump",
-				        array('%message' => substr($e->getMessage(),0,256),
-								      '%exception_dump' => substr($exception_dump,0,256))) . 
-								t("URL: %url", array('%url' => $url))
-								);
+          array('%message' => substr($e->getMessage(),0,256),
+	        '%exception_dump' => substr($exception_dump,0,256))) . 
+	t("URL: %url", array('%url' => $url))
+       );
         form_set_error('file',t("Unable to parse the uploaded file. Contact an administrator %email if you believe this file should be able to be parsed.  Please send a screenshot of this page, include the file you uploaded, and the time and date this occurred.  The administrator should check the Drupal log for 'SIdora_Tabular_Parse' for more information.",
-				  array('%email' => (variable_get('site_admin_email_to', '') != ''?' at ' . variable_get('site_admin_email_to'):'')))
-				);
+	 array('%email' => (variable_get('site_admin_email_to', '') != ''?' at ' . variable_get('site_admin_email_to'):'')))
+	);
         return;
       }
     } //Ends else of if ($file)

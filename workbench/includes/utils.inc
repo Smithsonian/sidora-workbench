@@ -68,7 +68,7 @@ function sidora_update_relationship_choose_exit($uri, $predicate, $recipient, $r
       case '404':
         if (!isset($description)) { // Couldn't reach the repository.
           drupal_set_message(t('The Fedora repository server is currently unavailable. Please contact the site administrator %email',
-		             array('%email' => (variable_get('site_admin_email_to', '') != ''?' at ' . variable_get('site_admin_email_to'):''))), 'error', FALSE);
+	    array('%email' => (variable_get('site_admin_email_to', '') != ''?' at ' . variable_get('site_admin_email_to'):''))), 'error', FALSE);
         }
         drupal_not_found();
         break;
@@ -78,7 +78,7 @@ function sidora_update_relationship_choose_exit($uri, $predicate, $recipient, $r
         break;
       default:
         drupal_set_message(t('An error occured when attempting to access the fedora repository. Please contact the site administrator %email',
-				  array('%email' => (variable_get('site_admin_email_to', '') != ''?' at ' . variable_get('site_admin_email_to'):''))), 'error', FALSE);
+	  array('%email' => (variable_get('site_admin_email_to', '') != ''?' at ' . variable_get('site_admin_email_to'):''))), 'error', FALSE);
         $message = '%type: !message in %function (line %line of %file).';
         $backtrace = $e->getTrace();
         $caller = $backtrace[1];
