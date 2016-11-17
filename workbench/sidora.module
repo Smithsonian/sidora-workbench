@@ -3349,10 +3349,10 @@ function sidora_codebook_upload_form_validate($form, &$form_state) {
         var_dump($e);
         $exception_dump = ob_get_clean();
         watchdog('SIdora_Tabular_Parse',t("Problem with creating a codebook:<br/>%message <br/> %exception_dump",
-          array('%message' => substr($e->getMessage(),0,256),
-	        '%exception_dump' => substr($exception_dump,0,256))) . 
-	t("URL: %url", array('%url' => $url))
-       );
+				        array('%message' => substr($e->getMessage(),0,1024),
+								      '%exception_dump' => substr($exception_dump,0,1024))) . 
+								t("URL: %url", array('%url' => $url))
+								);
         form_set_error('file',t("Unable to parse the uploaded file. Contact an administrator %email if you believe this file should be able to be parsed.  Please send a screenshot of this page, include the file you uploaded, and the time and date this occurred.  The administrator should check the Drupal log for 'SIdora_Tabular_Parse' for more information.",
 	 array('%email' => (variable_get('site_admin_email_to', '') != ''?' at ' . variable_get('site_admin_email_to'):'')))
 	);
