@@ -239,6 +239,13 @@ function sidora_menu() {
       'access arguments' => array('administer site configuration'),
       'type' => MENU_CALLBACK,
    ),
+   'admin/sidora/check_user_projects' => array(
+      'title' => 'SIdora Check User Projects Against Fedora Repo',
+      'description' => 'Determine if the children si:user-projects is out of sync with the Drupal users',
+      'page callback' => 'sidora_check_user_projects',
+      'access arguments' => array('administer site configuration'),
+      'type' => MENU_CALLBACK,
+   ),
    'sidora/workbench/contact_us' => array(
       'title' => 'Contact Us',
       'description' => 'Contact Us',
@@ -2074,6 +2081,63 @@ function sidora_autologout_prevent(){
   }
   
 }
+function sidora_check_user_projects(){
+  $users = entity_load('user');
+  $header = array(array('data' => 'username', 'width' => '30%'),array('data' => 'islandora_pid', 'width' => '20%'),'label');
+  $rows_proper_users = array();
+  $rows_users_without_pids = array();
+  $rows_users_with_invalid_pids = array();
+  $rows_overused_pids = array();
+  $rows_unused_pids = array();
+  $in_use_pids = array();
+  $overused_pids = array();
+  foreach($users as $account) {
+    if (is_array($account->data) && array_key_exists('islandora_user_pid',$account->data)) {
+      $pid = $account->data['islandora_user_pid'];
+      $obj = sidora_obj($pid);
+      if (empty($obj)) {
+        $rows_users_with_invalid_pids[] = array(l($account->name, 'user/' . $account->uid),$pid,'');
+      }
+      else {
+        $rows_proper_users[] = array(l($account->name, 'user/' . $account->uid),$pid,$obj->label);
+      }
+      if (empty($in_use_pids[$pid])) {
+        $in_use_pids[$pid] = array(l($account->name, 'user/' . $account->uid));
+      }
+      else {
+        $in_use_pids[$pid][] = l($account->name, 'user/' . $account->uid);
+        if (empty($obj)) {
+          $overused_pids[$pid] = '<div class="messages warning">' . t('Invalid object') . '</div>';
+        }
+        else {
+          $overused_pids[$pid] = $obj->label;
+        }
+      }
+    }
+    else {
+      if (!empty($account->uid)){
+        $rows_users_without_pids[] = array(l($account->name, 'user/' . $account->uid),t('No Pid assigned'),'');
+      }
+    }
+  }
+  foreach($overused_pids as $pid => $label) {
+      $rows_overused_pids[] = array(implode($in_use_pids[$pid], ', '),$pid,$label);
+  }
+
+  $cr = _sidora_get_child_results_cache('si:user-projects');
+  foreach($cr as $child) {
+    $pid = $child['o']['value'];
+    if (empty($in_use_pids[$pid])) {
+      $rows_unused_pids[] =  array('No User Found', $pid , $child['t']['value']);
+    }
+  }
+  $to_return = t('Configured Users') . theme('table',array('header' => $header, 'rows' => $rows_proper_users));
+  $to_return .= t('Users without Pids') . theme('table',array('header' => $header, 'rows' => $rows_users_without_pids));
+  $to_return .= t('Users with Invalid Pids') . theme('table',array('header' => $header, 'rows' => $rows_users_with_invalid_pids));
+  $to_return .= t('Overused Pids') . theme('table',array('header' => $header, 'rows' => $rows_overused_pids));
+  $to_return .= t('Unused Pids in si:user-projects') . theme('table',array('header' => $header, 'rows' => $rows_unused_pids));
+  return $to_return;
+}
 /**
  * Used only for testing purposes.  Should not be called by the main application
  */
@@ -2083,6 +2147,7 @@ function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $ex
     return t("You must be an administrator or have an administrator set sidora_allow_all_to_debug in order to access this information");
   }
   if (!sidora_is_admin()) print t("Remember that nonadmins will NOT see output from dsm!");
+
 
   if ($one == 'file_check'){
     $temp_dir = file_directory_temp();
