@@ -783,13 +783,13 @@ function exhibition_config_form($form, $form_state){
     $row['nav_location'] = '';
     $row['nav_type'] = '';
   }  //have everything's value as a blank
-  //$my_css = $row['css_script'];
-  //$links = $row['link_bar_links'];
+  $my_css = $row['css_script'];
+  $links = $row['link_bar_links'];
 	$row['is_published'] = FALSE;
 	$row['last_published'] = FALSE;
 	if ((isset($new_row['last_published'])) && ($new_row['last_published'] != '')) {
 	  $row['is_published'] = TRUE;
-	  if ($new_row['last_published'] == $row['last_edited']){
+	  if ($new_row['last_published'] == $new_row['last_edited']){
 	    $row['last_published'] = TRUE;
 		}
 	}	
