@@ -4037,6 +4037,25 @@ function sidora_get_shared_with_me($drupal_user = NULL) {
   );
   return $shared_with_me;
 }
+function sidora_get_groups_by_user(){
+  static $groups = NULL;
+  if (empty($groups)) {
+    $drupal_user = sidora_get_drupal_user();
+    $gids = og_get_groups_by_user($drupal_user);
+    $groups = node_load_multiple($gids['node']);
+  }
+  return $groups;
+}
+function sidora_node_access($node, $op, $account) {
+  if (
+    !empty($node->type) &&
+    $node->type == "sidora_concept" && 
+    empty($account->uid
+  )) {
+    return NODE_ACCESS_DENY;
+  }
+  return NODE_ACCESS_IGNORE;
+}
 /**
  * Determine permissions based on node
  */
@@ -4047,9 +4066,7 @@ function sidora_node_allow($type_of_operation, $node) {
   if ($type_of_operation == 'create') {
     // So there needs to be a node for the pid
     // Get the owner of the node ( $node->uid )
-    $drupal_user = sidora_get_drupal_user();
-    $gids = og_get_groups_by_user($drupal_user);
-    $groups = node_load_multiple($gids['node']);
+    $groups = sidora_get_groups_by_user();
     // Get the current user's groups
     foreach($groups as $group){
       if ($group->uid == $node->uid) {
@@ -4236,12 +4253,17 @@ function sidora_get_member_to_group_association($selected_groups) {
  * Helper function to quickly get the username of a uid without loading the full user
  */
 function sidora_get_username_from_uid($uid) {
+  static $uid_ia = array();
+  if (empty($uid_ia[$uid])){
     // Fast ownership query, not loading entire user
-  $result = (db_query("SELECT name FROM users WHERE uid = :s", array(':s' => $uid)));
-  foreach($result as $indiv){
-    return $indiv->name;
+    $result = (db_query("SELECT name FROM users WHERE uid = :s", array(':s' => $uid)));
+    foreach($result as $indiv){
+      $uid_ia[$uid] = $indiv->name;
+      return $indiv->name;
+    }
+    $uid_ia[$uid] = NULL;
   }
-  return NULL;
+  return $uid_ia[$uid];
 }
 /*
  * Calls to get the concepts that are owned by the user
@@ -5547,6 +5569,8 @@ function sidora_ajax_parts($call_type, $param1 = '', $param2 = '', $param3 = '')
     return sidora_ontology_object();
   }
   if ($call_type == 'tree'){
+    ini_set('max_execution_time',60);
+    ini_set('memory_limit','512M');
     return sidora_html_tree_for_ajax($param1, $param2);
   }
   if ($call_type == 'unassociate_delete_orphan'){
@@ -6249,7 +6273,6 @@ function sidora_html_tree_from_given_pid($root_pid = '', $root = NULL, $num_leve
     sidora_user_initialize($user);
     $root_pid = sidora_get_user_root_object();
   }
- 
   if ($root_pid == 'shared-with-me') {
     $root_label = '  Shared With Me';
     $swm = sidora_get_shared_with_me();
@@ -6276,7 +6299,10 @@ function sidora_html_tree_from_given_pid($root_pid = '', $root = NULL, $num_leve
     $root_children_pids = array();
     $filled = sidora_fill_concepts_children($results, array(), $root_children_pids); 
     /* */ 
-    $filled = sidora_build_tree_from_nodes_by_pid($root_pid);
+    $filled = sidora_build_tree_from_nodes_by_pid($root_pid, $num_levels);
+    if (empty($filled[0])) {
+      return 'Invalid';
+    }
     $filled = $filled[0]['children'];
     if ($root_pid == sidora_get_user_root_object()) {
       $shared_with_me = sidora_get_shared_with_me();
@@ -7013,17 +7039,17 @@ function sidora_pid_set_locked($pid, $set_locked_to_user = '', $obtain_lock = fa
     return FALSE;
   }
 }
-function sidora_build_tree_from_nodes_by_pid($pid){
+function sidora_build_tree_from_nodes_by_pid($pid, $max_depth = 3, $preload_nodes = TRUE){
   $nids = sidora_get_concept_node_id($pid);
   if (count($nids) <= 0){
     return '';
   }
   $nid = $nids[0];
   $to_return = array();
-  $to_return[] = sidora_build_tree_from_nodes($nid);
+  $to_return[] = sidora_build_tree_from_nodes($nid, $max_depth, 0, TRUE, $preload_nodes);
   return $to_return;
 }
-function sidora_build_tree_from_nodes($root_node_id, $max_depth = 3, $current_depth = 0, $resync_nodes_if_needed = TRUE){
+function sidora_build_tree_from_nodes($root_node_id, $max_depth = 3, $current_depth = 0, $resync_nodes_if_needed = TRUE, $preload_nodes = TRUE){
   $to_return = array();
   $node = node_load($root_node_id);
   if ($resync_nodes_if_needed && !sidora_is_node_synced_with_fedora($node)) {
@@ -7056,6 +7082,10 @@ function sidora_build_tree_from_nodes($root_node_id, $max_depth = 3, $current_de
     // Load each child
     if (!empty($node->field_sidora_concept_children) && !empty($node->field_sidora_concept_children[$node->language])) {
       $children = explode(',',$node->field_sidora_concept_children[$node->language][0]['value']);
+      if ($current_depth < $max_depth && $preload_nodes) {
+        // Put all of these in memory for quicker recall later
+        node_load_multiple($children);
+      }
     }
     else {
       $children = array();
@@ -7065,9 +7095,13 @@ function sidora_build_tree_from_nodes($root_node_id, $max_depth = 3, $current_de
     if ($current_depth <= $max_depth){
       foreach($children as $child) {
         if (!empty($child)) {
-          $child_node = sidora_build_tree_from_nodes($child, $max_depth, $current_depth + 1);
-          if (!empty($child_node)) {
-            $to_return['children'][] = $child_node;
+          if ($current_depth == $max_depth) {
+            $to_return['children'][] = NULL;
+          } else {
+            $child_node = sidora_build_tree_from_nodes($child, $max_depth, $current_depth + 1);
+            if (!empty($child_node)) {
+              $to_return['children'][] = $child_node;
+            }
           }
         }
       }
@@ -8017,6 +8051,7 @@ function sidora_is_node_synced_with_fedora($node) {
  * Recursively create the tree based on the query information returned
  */
 function sidora_create_full_node_set($pid, $label, $num_resources, $owner_username, &$already_updated, $max_depth = 100, $max_count = 1200, $path = array()) {
+  ini_set('max_execution_time',60);
   if ($max_depth == 0) { $max_depth = 100; }
   if ($max_count == 0) { $max_count = 1200; }
   //print "\n Max depth: $max_depth , current depth: " . count($path) . " Max count: $max_count, current count: " . count($already_updated) . "\n";
@@ -8071,7 +8106,7 @@ function sidora_create_full_node_set($pid, $label, $num_resources, $owner_userna
   if (count($child_nids) == 0){
     print "\n========= $pid is leaf";
   }
-  print "\nPID: $pid owned by: $owner_username \n";
+  print "\nPID: $pid owned by: $owner_username Count: " . count($already_updated) ."\n";
   $info = array(
     'label' => $label,
     'concept_children' => implode(',',$child_nids),
