@@ -1310,7 +1310,7 @@ function sidora_mail($from = 'default_from', $to, $subject, $message) {
   }
 }
 // function to convert a PHP array to valid xml file
-function array_to_xml( $data, &$xml_data, &$domtree ) {
+function sidora_array_to_xml( $data, &$xml_data, &$domtree ) {
   foreach( $data as $key => $value ) {
     if( is_numeric($key) ){
       $key = 'item'.$key; //dealing with <0/>..<n/> issues
@@ -1318,12 +1318,13 @@ function array_to_xml( $data, &$xml_data, &$domtree ) {
     if( is_array($value) ) {
       $subnode = $domtree->createElement($key);
 			$subnode = $xml_data->appendChild($subnode);
-      array_to_xml($value, $subnode,$domtree);
+      sidora_array_to_xml($value, $subnode,$domtree);
     } else {
        $subnode = $domtree->createElement("$key",htmlspecialchars("$value"));
 			 $xml_data->appendChild($subnode);
     }
   }
+
 }
 /**
  * Clean the filenames in batch ingest before sending them to the 

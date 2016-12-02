@@ -1,0 +1,53 @@
+<?php
+function sidora_install() {
+}
+function sidora_schema(){
+}
+/**
+ * Update from the original Exhibition config, enable the ability to hold visibility information
+ */
+function exhibition_config_update_7100() {
+  $schema['sidora_batch_ingest'] = array(
+    'description' => t('Stores information for batch ingests'),
+    'fields' => array(
+      'batch_id' => array(
+        'type' => 'varchar',
+        'length' => '100',
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'owner' => array(
+        'type' => 'varchar',
+        'length' => '30',
+      ),
+      'Created' => array(
+        'type' => 'datetime',
+      ),
+      'count' => array(
+        'type' => 'int',
+      ),
+      'resource_type' => array(
+        'type' => 'varchar',
+        'length' => '50',
+      ),
+      'filenames' => array(
+        'type' => 'longtext',
+      ),
+      'corelation_id' => array(
+        'type' => 'varchar',
+        'size' => '100',
+      ),
+      'status' => array(
+        'type' => 'longtext',
+      ),
+    ),
+  );
+  db_create_table('sidora_batch_ingest', $schema['sidora_batch_ingest']);
+}
+    
+/*
+* Implementation of hook_uninstall().
+*/
+function sidora_uninstall() {
+  db_query('DROP TABLE {sidora_batch_ingest}');
+}
