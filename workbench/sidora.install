@@ -6,7 +6,7 @@ function sidora_schema(){
 /**
  * Update from the original Exhibition config, enable the ability to hold visibility information
  */
-function exhibition_config_update_7100() {
+function sidora_update_7100() {
   $schema['sidora_batch_ingest'] = array(
     'description' => t('Stores information for batch ingests'),
     'fields' => array(
