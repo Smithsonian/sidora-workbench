@@ -2596,11 +2596,12 @@ function exhibition_config_reset_visibility($vis_obj, $pid_that_requires_update,
       $repo = si_exhibition_get_repo();
       $curr_child_object = $repo->getObject($curr_child_pid);
       $models_to_remove = array("fedora-system:FedoraObject-3.0","si:resourceCModel","si:collectionCModel");
+      $model_array = array_diff($curr_child_object->models,$models_to_remove);
       $new_vis_obj = array(
         "pid" => $curr_child_info['pid'],
         "label" => $curr_child_info['title'],
         "type" => $curr_child_info['type'],
-        "model" => array_pop(array_diff($curr_child_object->models,$models_to_remove)),
+        "model" => array_pop($model_array),
       );
       if ($curr_child_info['type'] == 'Resource'){
         $new_vis_obj['show_name'] = !(empty($vis_obj['future_children_show_name']));
