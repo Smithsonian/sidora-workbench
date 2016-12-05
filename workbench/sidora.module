@@ -7907,20 +7907,60 @@ function sidora_generate_child_resource_sparql_query($pid, array $resource_types
         LIMIT {$limit}";
   return $query;
 }
+function sidora_fedora_create_partial_node_set(
+  $root_pid,
+  $root_label,
+  $root_num_resources,
+  $owner_username,
+  $max_depth = 999999,
+  $max_count = 999999999
+){
+  $updated_set = array();
+  $root_node = sidora_create_full_node_set(
+    $root_pid,
+    $root_label,
+    $root_num_resources,
+    NULL,
+    $updated_set,
+    $max_depth,
+    $max_count
+  );
+  return $root_node; 
+}
 function sidora_fedora_sync() {
   $nid = filter_input(INPUT_GET, 'nid');
   $command = filter_input(INPUT_GET, 'command');
   $show_table = filter_input(INPUT_GET, 'show_table');
   $batch_start = filter_input(INPUT_GET, 'batch_start');
   $batch_end = filter_input(INPUT_GET, 'batch_end');
+  $root_pid = filter_input(INPUT_GET, "root_pid");
+  $root_label = filter_input(INPUT_GET, "root_label");
+  $root_resource_count = filter_input(INPUT_GET, "root_resource_count", FILTER_SANITIZE_NUMBER_INT);
+  $max_depth = filter_input(INPUT_GET, "max_depth", FILTER_SANITIZE_NUMBER_INT);
+  $max_count = filter_input(INPUT_GET, "max_count", FILTER_SANITIZE_NUMBER_INT);
   $table_html = '';
   if ($command == 'update_and_create_nodes_from_queries') {
-    $pid = 'si:root';
+    if (empty($root_pid)) {
+      $root_pid = 'si:root';
+    }
+    if (empty($root_label)) {
+      $root_label = 'Root';
+    }
+    if (empty($root_resource_count)) {
+      $root_resource_count = 0;
+    }
     print '<pre>';
+    print "\nroot_pid:\t$root_pid";
+    print "\nroot_label:\t$root_label";
+    print "\nroot_resource_count:\t$root_resource_count";
+    print "\ncommand:\t$command";
+    print "\nmax_depth:\t$max_depth";
+    print "\nmax_count:\t$max_count";
+    print "\n";
+    $table_html = '';
     $date = date('m/d/Y h:i:s a', time());
     print $date . "\n";
-    $updated_set = array();
-    $root_node = sidora_create_full_node_set($pid, 'Root', 0, NULL, $updated_set, filter_input(INPUT_GET, "max_depth", FILTER_SANITIZE_NUMBER_INT), filter_input(INPUT_GET, "max_count", FILTER_SANITIZE_NUMBER_INT));
+    $root_node =  sidora_fedora_create_partial_node_set($root_pid,$root_label,$root_resource_count,NULL,$max_depth,$max_count);
     print "Root Node:\n";
     var_dump($root_node);
     print "Full Set of Updated Items:\n";
