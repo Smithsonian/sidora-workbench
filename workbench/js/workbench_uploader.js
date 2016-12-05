@@ -6,19 +6,19 @@ jQuery().ready(function(){
     window.currentInfo.type = "EditMetadata";
     // need to send this to sidora queue done() to force a refresh after edit metadata is finished
   }else{  // code for create resource
-		if (myLoc.indexOf("batch") != -1){
+     if (myLoc.indexOf("batch") != -1){
       window.currentInfo.type = "batchIngest";
       window.currentInfo.parentPid = myLoc.split("/").splice(-6)[0];
       window.currentInfo.model = myLoc.split("/").splice(-6)[1];
       window.currentInfo.ontologyId = myLoc.split("/").splice(-6)[3];
       window.currentInfo.formname = myLoc.split("/").splice(-6)[2];
-		}else{
-			window.currentInfo.type = "CreateResource";
+     }else{
+      window.currentInfo.type = "CreateResource";
       window.currentInfo.parentPid = myLoc.split("/").splice(-4)[0];
       window.currentInfo.model = myLoc.split("/").splice(-4)[1];
       window.currentInfo.ontologyId = myLoc.split("/").splice(-4)[3];
       window.currentInfo.formname = myLoc.split("/").splice(-4)[2];
-	  }
+     }
   }
   jQuery("body").css("padding-top","0px");
   jQuery(".form-submit[value=Ingest]").hide();
@@ -339,41 +339,10 @@ window.prepIslandoraFormForSubmit = function(formName, onSuccessfulFormSubmit, o
 		ajaxSettings = ({
       type: "POST",
       url: ajaxUrl,
-      //url: Drupal.settings.basePath+"/pure",
-      //url: window.location.origin+Drupal.settings.basePath+'sidora/test/edit_metadata',
       data: jQuery("#"+formName).serialize()+"&ingest=Ingest",
       success: function(xhr,data ) {
-        /*alert("in success of batch");
-				if (data[0].indexOf("batch ingest successfully received by backend. Request id is:") > -1){ //it would trigger success off of reading this inline JS, so break it up
-          console.log("Batch successful");
-					console.log(data[0]);*/
 					console.log(onSuccessfulFormSubmit.toString())
 					onSuccessfulFormSubmit.apply(formName,this, data);
-					// extract the request id and set an interval based function 
-					/* (function poll(request_id) {
-				setTimeout(function(){
-				$.ajax({
-        url: "/sidora_ajax/check_batch_status/"+request_id",
-        type: "GET",
-        success: function(data) {
-            console.log("current status of the batch:+data);
-						notificationwindow.show(data);
-						if (data.indexOf('complete') > -1){
-						  extract the parent concept from the ajax return
-							refresh the resource table for this concept
-						}else{
-						  setTimeout(function() {poll(request_id)}, 5000);
-						}		
-        },
-        dataType: "json",
-        timeout: 5000
-    });
-	},5000);
-})();
-				*/	
-        /*}else{
-          onFailureOfFormSubmit(formName, this, data);
-        }*/
       },
       dataType: "text"
     });//ends ajax settings
