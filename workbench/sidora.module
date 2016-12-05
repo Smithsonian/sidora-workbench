@@ -193,6 +193,13 @@ function sidora_menu() {
       'access callback' => 'user_is_logged_in',
       'type' => MENU_CALLBACK,
     ),
+    'sidora/pid_expired' => array(
+      'title' => 'PID Expiration Interface',
+      'description' => 'Inform Workbench that this PID has been updated externally and will need reloading before being shown',
+      'page callback' => 'sidora_fedora_queue_sync_external_call',
+      'access callback' => TRUE,
+      'type' => MENU_CALLBACK,
+    ),
     'sidora/resource_viewer' => array(
       'title' => 'Resource Viewer',
       'description' => 'return the resource in the designated view style',
@@ -6890,9 +6897,9 @@ function sidora_clear_tree_cache($pid = ''){
 }
 /*
  * For any object that has been updated, keep an indicator of changed
- * THIS WILL NEED TO BE PER USER WHEN VIEW PERMISSIONS become involved
  */
 function sidora_recently_updated($pid) {
+  sidora_fedora_queue_sync($pid);
   sidora_recently_updated_clear_old();
   $cache_name = "sidora:recent_updates";
   $recent_updates_cache = cache_get($cache_name);
@@ -7907,6 +7914,38 @@ function sidora_generate_child_resource_sparql_query($pid, array $resource_types
         LIMIT {$limit}";
   return $query;
 }
+function sidora_fedora_queue_sync_external_call($csv_pids = NULL) {
+  $stes = variable_get("sidora_trusted_external_servers","");
+  $allowed = array_map('trim' , explode(',' , $stes));
+  // Intentionally not checking for X-Forwarded-For
+  $the_ip = filter_var( $_SERVER['REMOTE_ADDR'], FILTER_VALIDATE_IP, FILTER_FLAG_IPV4 );
+  if (in_array($the_ip, $allowed)) {
+    if ($csv_pids === NULL && isset($_POST['csv_pids'])) {
+      $csv_pids = $_POST['csv_pids'];
+    }
+    $pids = explode(",",$csv_pids);
+    print '<pre>';
+    foreach($pids as $pid) {
+      print "\nClearing cache for:" . $pid;
+      sidora_clear_tree_cache($pid);
+    }
+    print '</pre>';
+  }
+  else {
+    watchdog('sidora',"Attempt to queue sync from server that wasn't in list: $the_ip -  Current ip list: $stes");
+    return MENU_NOT_FOUND;
+  }
+}
+function sidora_fedora_queue_sync($pid_or_nid) {
+  $nid = $pid_or_nid;
+  if (sidora_contains($pid_or_nid,':')){
+    $nid = sidora_quick_pid_to_node_id($pid_or_nid); 
+  }
+  $node = node_load($nid);
+  $node_wrapper = entity_metadata_wrapper('node', $node);
+  $node_wrapper->field_sidora_fedora_sync->set('0');
+  $node_wrapper->save();
+}
 function sidora_fedora_create_partial_node_set(
   $root_pid,
   $root_label,
@@ -7996,10 +8035,7 @@ function sidora_fedora_sync() {
           }
         }
         if ($command == 'queue') {
-          $node = node_load($nid);
-          $node_wrapper = entity_metadata_wrapper('node', $node);
-          $node_wrapper->field_sidora_fedora_sync->set('0');
-          $node_wrapper->save();
+          sidora_fedora_queue_sync($nid);
         }
       }
       $num++;
@@ -8016,10 +8052,7 @@ function sidora_fedora_sync() {
       }
     }
     if ($command == 'queue') {
-      $node = node_load($nid);
-      $node_wrapper = entity_metadata_wrapper('node', $node);
-      $node_wrapper->field_sidora_fedora_sync->set('0');
-      $node_wrapper->save();
+      sidora_fedora_queue_sync($nid);
     }
   }
   if (!empty($show_table)) {
@@ -8167,7 +8200,7 @@ function sidora_create_full_node_set($pid, $label, $num_resources, $owner_userna
 /*
  * Return a quick pid to node without doing a node DB lookup, or add to list
  */
-function sidora_quick_pid_to_node($pid, $node_id = ''){
+function sidora_quick_pid_to_node_id($pid, $node_id = ''){
   static $ptn = array();
   if (empty($node_id)){
     if (isset($ptn[$pid])) {
