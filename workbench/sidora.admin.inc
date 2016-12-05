@@ -541,6 +541,22 @@ tr.removed.odd {
       '#collapsed' => TRUE,
       'items' => $legacy_item_fieldset,
  );
+  $form['site_administrator_contact'] = array(
+     'fieldset' => array(
+      '#type' => 'fieldset',
+      '#title' => 'Site administrator email',
+      '#description' => t(''),
+      '#collapsible' => TRUE,
+      '#collapsed' => TRUE,
+      'site_admin_email_to' => array(
+        '#type' => 'textfield',
+        '#title' => t('Send admin troubleshooting emails to'),
+        '#default_value' => variable_get('site_admin_email_to', ''),
+        '#description' => t('All admin emails are sent to this email address.'),
+      ),
+    ),
+  );
+	
   $form['sidora_allow_all_to_debug'] = array(
      '#type' => 'textfield',
      '#title' => t('Allow all users access to debug'),
@@ -576,9 +592,10 @@ tr.removed.odd {
   );
   $form['#attributes'] = array('OnSubmit' => 'formPreSubmit();');
   $form['sidora_links'] = array(
-    '#markup' => '<ul id="sidora-admin-links"><h2>Administrative Links</h2>
-<li><a href="config_transfer">Config Transfer</a> Download or upload a SIdora configuration</li>
-<li><a href="fedora_object_issues">Fedora Object Issues</a> Check to see if any object issues have been found by the workbench (Malformed objects list)</li>
+    '#markup' => '<ul id="sidora-admin-links"><h2>' . t('Administrative Links') .'</h2>
+<li><a href="config_transfer">' . t('Config Transfer') . '</a>' . t(' Download or upload a SIdora configuration') . '</li>
+<li><a href="fedora_object_issues">' . t('Fedora Object Issues') . '</a>' . t(' Check object issues have been found by the workbench (Malformed objects list)') . '</li>
+<li><a href="check_user_projects">' . t('Check User Projects') . '</a>' . t(' Check if the children of si:user-projects is out of sync with the Drupal users') . '</li>
 </ul>
 <script>
 

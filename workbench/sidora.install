@@ -22,6 +22,7 @@ function sidora_update_7100() {
       ),
       'Created' => array(
         'type' => 'datetime',
+				'mysql_type' => 'datetime',
       ),
       'count' => array(
         'type' => 'int',
@@ -31,14 +32,16 @@ function sidora_update_7100() {
         'length' => '50',
       ),
       'filenames' => array(
-        'type' => 'longtext',
+        'type' => 'text',
+	'size' => 'big',
       ),
       'corelation_id' => array(
         'type' => 'varchar',
         'size' => '100',
       ),
       'status' => array(
-        'type' => 'longtext',
+        'type' => 'text',
+	'size' => 'big'
       ),
     ),
   );

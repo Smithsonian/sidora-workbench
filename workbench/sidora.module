@@ -239,6 +239,13 @@ function sidora_menu() {
       'access arguments' => array('administer site configuration'),
       'type' => MENU_CALLBACK,
    ),
+   'admin/sidora/check_user_projects' => array(
+      'title' => 'SIdora Check User Projects Against Fedora Repo',
+      'description' => 'Determine if the children si:user-projects is out of sync with the Drupal users',
+      'page callback' => 'sidora_check_user_projects',
+      'access arguments' => array('administer site configuration'),
+      'type' => MENU_CALLBACK,
+   ),
    'sidora/workbench/contact_us' => array(
       'title' => 'Contact Us',
       'description' => 'Contact Us',
@@ -1172,7 +1179,7 @@ function sidora_edit_metadata($object_id_string = '', $dsid = '', $form_name = '
   $object_id = $object_id_array[$resource_count];
   if (!sidora_obtain_lock($object_id)){
     $to_return = '';
-    $to_return .= t('The object ' . $object_id . ' is currently locked by another user').'</div>';
+    $to_return .= t('The object %object is currently locked by another user', array('%object' => $object_id)).'</div>';
     return $to_return;
   }
   $to_return .= '<div id="form-num-'.$resource_count.'" class="sidora-ingest-form-holder">';
@@ -1550,8 +1557,15 @@ function sidora_create_codebook_from_url($url, $codebook_label, $header_amount =
   global $user;
   module_load_include('inc', 'islandora', 'includes/utilities');
   module_load_include('inc', 'islandora', 'includes/ingest.form');
-  $tuque = islandora_get_tuque_connection();
-  $codebook = $tuque->repository->constructObject(islandora_get_namespace('si:root'));
+  try
+  {
+    $tuque = islandora_get_tuque_connection();
+    $codebook = $tuque->repository->constructObject(islandora_get_namespace('si:root'));
+   }catch(Exception $e){
+     return t('The Fedora repository server is currently unavailable. Please contact the site administrator %email',
+       array('%email' => (variable_get('site_admin_email_to', '') != ''?' at ' . variable_get('site_admin_email_to'):''))
+    );
+  }
   $codebook->owner = $user->name;
   $codebook->label = $codebook_label;
   $codebook->models = 'si:codebookCModel';
@@ -2000,6 +2014,7 @@ function sidora_settings_object($ignore_list = array()){
   $exact_match[] = 'osd_proxy_resolver_url';
   $exact_match[] = 'account_request_email_to';
   $exact_match[] = 'account_request_email_from';
+	$exact_match[] = 'site_admin_email_to';
   $settings_holder = array();
   foreach($conf as $drupal_setting_index=>$drupal_setting){
     if (in_array($drupal_setting_index,$exact_match) && !in_array($drupal_setting_index,$ignore_list)){
@@ -2066,6 +2081,63 @@ function sidora_autologout_prevent(){
   }
   
 }
+function sidora_check_user_projects(){
+  $users = entity_load('user');
+  $header = array(array('data' => 'username', 'width' => '30%'),array('data' => 'islandora_pid', 'width' => '20%'),'label');
+  $rows_proper_users = array();
+  $rows_users_without_pids = array();
+  $rows_users_with_invalid_pids = array();
+  $rows_overused_pids = array();
+  $rows_unused_pids = array();
+  $in_use_pids = array();
+  $overused_pids = array();
+  foreach($users as $account) {
+    if (is_array($account->data) && array_key_exists('islandora_user_pid',$account->data)) {
+      $pid = $account->data['islandora_user_pid'];
+      $obj = sidora_obj($pid);
+      if (empty($obj)) {
+        $rows_users_with_invalid_pids[] = array(l($account->name, 'user/' . $account->uid),$pid,'');
+      }
+      else {
+        $rows_proper_users[] = array(l($account->name, 'user/' . $account->uid),$pid,$obj->label);
+      }
+      if (empty($in_use_pids[$pid])) {
+        $in_use_pids[$pid] = array(l($account->name, 'user/' . $account->uid));
+      }
+      else {
+        $in_use_pids[$pid][] = l($account->name, 'user/' . $account->uid);
+        if (empty($obj)) {
+          $overused_pids[$pid] = '<div class="messages warning">' . t('Invalid object') . '</div>';
+        }
+        else {
+          $overused_pids[$pid] = $obj->label;
+        }
+      }
+    }
+    else {
+      if (!empty($account->uid)){
+        $rows_users_without_pids[] = array(l($account->name, 'user/' . $account->uid),t('No Pid assigned'),'');
+      }
+    }
+  }
+  foreach($overused_pids as $pid => $label) {
+      $rows_overused_pids[] = array(implode($in_use_pids[$pid], ', '),$pid,$label);
+  }
+
+  $cr = _sidora_get_child_results_cache('si:user-projects');
+  foreach($cr as $child) {
+    $pid = $child['o']['value'];
+    if (empty($in_use_pids[$pid])) {
+      $rows_unused_pids[] =  array('No User Found', $pid , $child['t']['value']);
+    }
+  }
+  $to_return = t('Configured Users') . theme('table',array('header' => $header, 'rows' => $rows_proper_users));
+  $to_return .= t('Users without Pids') . theme('table',array('header' => $header, 'rows' => $rows_users_without_pids));
+  $to_return .= t('Users with Invalid Pids') . theme('table',array('header' => $header, 'rows' => $rows_users_with_invalid_pids));
+  $to_return .= t('Overused Pids') . theme('table',array('header' => $header, 'rows' => $rows_overused_pids));
+  $to_return .= t('Unused Pids in si:user-projects') . theme('table',array('header' => $header, 'rows' => $rows_unused_pids));
+  return $to_return;
+}
 /**
  * Used only for testing purposes.  Should not be called by the main application
  */
@@ -2075,6 +2147,7 @@ function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $ex
     return t("You must be an administrator or have an administrator set sidora_allow_all_to_debug in order to access this information");
   }
   if (!sidora_is_admin()) print t("Remember that nonadmins will NOT see output from dsm!");
+
 
   if ($one == 'file_check'){
     $temp_dir = file_directory_temp();
@@ -2659,8 +2732,15 @@ function sidora_create_concept($parent_pid = 'si:root', $model = 'si:collectionC
     return $to_return;
   }
   drupal_add_js(drupal_get_path('module','sidora').'/js/workbench_util.js',array('weight' => '1000000', 'group' => JS_THEME));
-  $tuque = islandora_get_tuque_connection();
-  $page = $tuque->repository->constructObject(islandora_get_namespace('si:root'));//$parent_pid));//'si:root'));//$object->id));
+  try
+  {
+    $tuque = islandora_get_tuque_connection();
+    $page = $tuque->repository->constructObject(islandora_get_namespace('si:root'));//$parent_pid));//'si:root'));//$object->id));
+  }catch(Exception $e){
+    return t('The Fedora repository server is currently unavailable. Please contact the site administrator %email',
+      array('%email' => (variable_get('site_admin_email_to', '') != ''?' at ' . variable_get('site_admin_email_to'):''))
+    );
+  }
   $page->owner = $user->name;
   $page->label = 'New Concept'; //Label of object if no label gets put into place
   $page->models = 'si:collectionCModel';//parent of the models being sent?
@@ -3114,7 +3194,13 @@ function sidora_create_resource_get_metadata_form_html($parent_pid, $model, $for
   $to_return .= "<div id='create-resource-form'>";
   if (count($current_uploads) == 0 || empty($current_uploads)){  //if no files
     $to_return .= '<div id="form-num-0" class="sidora-ingest-form-holder"><div id="top-panel" class="top-panel" style="left:0; width:100%; height:30px;"></div>';
+  try {
     $page = $tuque->repository->constructObject(islandora_get_namespace('si:root'));
+  }catch(Exception $e){
+    return t('The Fedora repository server is currently unavailable. Please contact the site administrator %email',
+       array('%email' => (variable_get('site_admin_email_to', '') != ''?' at ' . variable_get('site_admin_email_to'):''))
+     );
+    }
     $form = drupal_get_form('islandora_ingest_form', array(
       'models' => array($model),
       'objects' => array($page),
@@ -3162,7 +3248,14 @@ function sidora_create_resource_get_metadata_form_html($parent_pid, $model, $for
         }
         $to_return .= "</div>";
       }
-      $page = $tuque->repository->constructObject(islandora_get_namespace('si:root'));
+      try
+      {
+        $page = $tuque->repository->constructObject(islandora_get_namespace('si:root'));
+      }catch(Exception $e){
+        return t('The Fedora repository server is currently unavailable. Please contact the site administrator %email',
+         array('%email' => (variable_get('site_admin_email_to', '') != ''?' at ' . variable_get('site_admin_email_to'):''))
+        );
+      }
       $page->owner = $user->name;
       $page->label = ''; //Label of object if no label gets put into place
       $page->models = 'si:resourceCModel';//parent of the models being sent?
@@ -3394,7 +3487,9 @@ function sidora_codebook_upload_form_validate($form, &$form_state) {
     }
     else {
       watchdog('SIdora_Tabular_Parse',t("File System Problem with creating a codebook:<br/>parser_os_file_path: %for_parser <br/>drupal_realpath(file): %drupal_rp <br/>This file has NOT been deleted and is not going to be deleted by Drupal. It must be handled on the OS level.",array('%for_parser' => $parser_os_file_path, '%drupal_rp' => drupal_realpath($file->destination))));
-      form_set_error('file',t("Unable to parse the uploaded file. Contact an administrator if you believe this file should be able to be parsed.  Please send a screenshot of this page, include the file you uploaded, and the time and date this occurred.  The administrator should check the Drupal log for 'SIdora_Tabular_Parse' for more information."));
+      form_set_error('file',t("Unable to parse the uploaded file. Contact an administrator %email if you believe this file should be able to be parsed.  Please send a screenshot of this page, include the file you uploaded, and the time and date this occurred.  The administrator should check the Drupal log for 'SIdora_Tabular_Parse' for more information.",
+         array('%email' => (variable_get('site_admin_email_to', '') != ''?' at ' . variable_get('site_admin_email_to'):'')))
+      );
       return;
     }
     // If the file passed validation:
@@ -3417,8 +3512,14 @@ function sidora_codebook_upload_form_validate($form, &$form_state) {
         ob_start();
         var_dump($e);
         $exception_dump = ob_get_clean();
-        watchdog('SIdora_Tabular_Parse',t("Problem with creating a codebook:<br/>") . $e->getMessage() . '<br>' . $exception_dump . t("URL:") . $url);
-        form_set_error('file',t("Unable to parse the uploaded file. Contact an administrator if you believe this file should be able to be parsed.  Please send a screenshot of this page, include the file you uploaded, and the time and date this occurred.  The administrator should check the Drupal log for 'SIdora_Tabular_Parse' for more information."));
+        watchdog('SIdora_Tabular_Parse',t("Problem with creating a codebook:<br/>%message <br/> %exception_dump",
+				        array('%message' => substr($e->getMessage(),0,1024),
+								      '%exception_dump' => substr($exception_dump,0,1024))) . 
+								t("URL: %url", array('%url' => $url))
+								);
+        form_set_error('file',t("Unable to parse the uploaded file. Contact an administrator %email if you believe this file should be able to be parsed.  Please send a screenshot of this page, include the file you uploaded, and the time and date this occurred.  The administrator should check the Drupal log for 'SIdora_Tabular_Parse' for more information.",
+	 array('%email' => (variable_get('site_admin_email_to', '') != ''?' at ' . variable_get('site_admin_email_to'):'')))
+	);
         return;
       }
     } //Ends else of if ($file)
@@ -5668,7 +5769,7 @@ function sidora_block_content_navigation(){
   $to_return .= '<div id="forjstree" root_pid="'.$root_pid.'">';
   $to_return .= sidora_html_string_tree($root_pid);
   $to_return .= '</div></div>';
-  //jQuery UI L&F
+ 	//jQuery UI L&F
   drupal_add_css(drupal_get_path('module','sidora').'/css/themes/smoothness/jquery-ui.min.css');
   //jsTree lib
   $jstree_loc = variable_get('sidora_js_lib_location_jstree', '');
@@ -5684,9 +5785,10 @@ function sidora_block_content_navigation(){
   drupal_add_css(drupal_get_path('module','sidora') . '/css/workbench.css', array('weight' => 10000, 'group' => CSS_THEME));
   // Some of the icons we use are from islandora xml forms, inform Javascript where to get those
   drupal_add_js(array('islandora_xml_forms' => array('basepath' => '/' . drupal_get_path('module','xml_forms') . '/')), 'setting');
+  drupal_add_js(array('site_admin_email' => variable_get('site_admin_email_to', '')), 'setting');
   drupal_add_js(drupal_get_path('module','sidora') . '/js/workbench_sidora_queue.js');
-  drupal_add_js(drupal_get_path('module','sidora') . '/js/workbench.js');
   drupal_add_js(drupal_get_path('module','sidora') . '/js/workbench_util.js');
+  drupal_add_js(drupal_get_path('module','sidora') . '/js/workbench.js');
   drupal_add_js(drupal_get_path('module','sidora') . '/js/workbench_menus.js');
   drupal_add_js(drupal_get_path('module','sidora') . '/js/workbench_sidora_request.js');
   drupal_add_js(drupal_get_path('module','sidora') . '/js/paging.js'); // adds paging capability to resources
@@ -9077,7 +9179,7 @@ function sidora_import_xml_form($form, array &$form_state, $form_name) {
     '#value' => $form_name,
   );
 	$return['header'] = array(
-	  '#markup' => t('Importing XML template for ' . $form_name),
+	  '#markup' => t('Importing XML template for %form', array('%form' => $form_name)),
 	);	
   $return['file'] = array(
       '#type' => 'file',
@@ -9114,7 +9216,7 @@ function sidora_import_xml_form_submit(array $form, array &$form_state) {
       $object->name = $form_name;
       $object->form = $xml_definition->saveXML();
       if (drupal_write_record('xml_forms', $object, 'name') !== FALSE) {
-			  drupal_set_message(t('XML imported successfully into ' . $form_name),'status');
+			  drupal_set_message(t('XML imported successfully into %form', array('%form' => $form_name)),'status');
 			}	
 		}else{
 		  drupal_set_message(t('Valid XML template not uploaded'), 'warning');
