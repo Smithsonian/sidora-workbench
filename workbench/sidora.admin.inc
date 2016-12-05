@@ -576,18 +576,18 @@ tr.removed.odd {
       '#description' => t(''),
       '#collapsible' => TRUE,
       '#collapsed' => TRUE,
-			'sidora_batch_ingest_url' => array(
-			  '#type' => 'textfield',
-				'#title' => t('Batch Metadata URL'),
-				'#default_value' => variable_get('sidora_batch_ingest_url', ''),
-				'#description' => t('The location of endpoint for initiating a batch ingest. Valid entry looks like this: http://&lt;server&gt;:&lt;port&gt;/batch/process/'),
-			),	
-			'sidora_batch_status_url' => array(
-			  '#type' => 'textfield',
-				'#title' => t('Batch Status URL'),
-				'#default_value' => variable_get('sidora_batch_status_url', ''),
-				'#description' => t('The location of endpoint for checking the status of a batch ingest. Valid entry looks like this: http://&lt;server&gt;:&lt;port&gt;/batch/newBatchResource/'),
-			),	
+      'sidora_batch_ingest_url' => array(
+        '#type' => 'textfield',
+        '#title' => t('Batch Metadata URL'),
+        '#default_value' => variable_get('sidora_batch_ingest_url', ''),
+        '#description' => t('The location of endpoint for initiating a batch ingest. Valid entry looks like this: http://&lt;server&gt;:&lt;port&gt;/batch/process/'),
+      ),	
+      'sidora_batch_status_url' => array(
+        '#type' => 'textfield',
+	'#title' => t('Batch Status URL'),
+	'#default_value' => variable_get('sidora_batch_status_url', ''),
+	'#description' => t('The location of endpoint for checking the status of a batch ingest. Valid entry looks like this: http://&lt;server&gt;:&lt;port&gt;/batch/newBatchResource/'),
+     ),	
     ),
   );
   $form['#attributes'] = array('OnSubmit' => 'formPreSubmit();');

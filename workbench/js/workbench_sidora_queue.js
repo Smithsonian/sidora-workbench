@@ -250,45 +250,14 @@ SidoraQueue.prototype.Done = function(completedItem, ajaxReturn){
           jst.deselect_all();
           jst.select_node(selectThisNode);
           executeOnceOnly = true;
-<<<<<<< HEAD
-        }    
-        sidora.concept.LoadContent();
-        sidora.util.refreshPidInTree();
-=======
 	}	  
 	sidora.concept.LoadContent();
 	sidora.util.refreshPidInTree();
->>>>>>> SID-665
         if (processedItemCount != ''){
           var processedResourceCountArray = processedItemCount.split(' of ');
           if ((processedResourceCountArray.length > 1) && (processedResourceCountArray[0] == processedResourceCountArray[1]-1)){
             // trying to get the last item of the current queue
             sidora_util.writeCookie('Drupal.selectResource','1','30');
-<<<<<<< HEAD
-            if (sidora_util.readCookie('Drupal.dtFilter') != ''){
-              if ((completedItem.fullObject.ajaxRequest.data.indexOf('islandora_ingest_form') > -1) && (completedItem.fullObject.ajaxRequest.data.indexOf('resource_model') > -1)){
-                var rmPattern = new RegExp('&resource_model=(.*)&');
-                var rmArray = rmPattern.exec(completedItem.fullObject.ajaxRequest.data);
-                if ((Array.isArray(rmArray))&& (rmArray.length >= 2) && (rmArray[1] != sidora_util.readCookie('Drupal.dtFilter'))){
-                  if (!sidora.util.isConfirmShowing()){
-                    sidora.util.Confirm(
-                      "Resources Filter Warning",
-                      "The resources you just added aren't visible right now because they are filtered out by the current resource filter. Click 'Reset' to if you want to view all resources, or close this window to leave the current filter.",
-                      function(){
-                        sidora_util.writeCookie('Drupal.dtFilter','','30');
-                        jQuery('#sidora-resource-type-dropdown').val('');
-                        sidora.resources.reloadDatatableBasedOnCurrentFilters();
-                      },
-                      function(){},
-                      'Reset'
-                    );
-                  }
-                }
-              }    
-            }
-          }
-        } //Ends processedItemCount != ''
-=======
       if (sidora_util.readCookie('Drupal.dtFilter') != ''){
         if ((completedItem.fullObject.ajaxRequest.data.indexOf('islandora_ingest_form') > -1) && (completedItem.fullObject.ajaxRequest.data.indexOf('resource_model') > -1)){
           var rmPattern = new RegExp('&resource_model=(.*)&');
@@ -311,7 +280,6 @@ SidoraQueue.prototype.Done = function(completedItem, ajaxReturn){
   }
   }
 				 
->>>>>>> SID-665
       }else if (sidora.resources.IsOnScreen(completedItem.pidsBeingProcessed[i])){
         sidora.concept.LoadContent();
       } 
