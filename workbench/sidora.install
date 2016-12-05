@@ -22,7 +22,7 @@ function sidora_update_7100() {
       ),
       'Created' => array(
         'type' => 'datetime',
-				'mysql_type' => 'datetime',
+	'mysql_type' => 'datetime',
       ),
       'count' => array(
         'type' => 'int',
@@ -37,7 +37,7 @@ function sidora_update_7100() {
       ),
       'corelation_id' => array(
         'type' => 'varchar',
-        'size' => '100',
+        'length' => '100',
       ),
       'status' => array(
         'type' => 'text',
