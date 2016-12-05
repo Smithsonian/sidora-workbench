@@ -6415,7 +6415,7 @@ function sidora_find_association(array &$form_state, $form_build_id = ''){
   return $association;
 }
 /*
- * This is the hook_islandoira_ingest_steps_alter that performs the bypass mentioned in the comment of 
+ * This is the hook_islandora_ingest_steps_alter that performs the bypass mentioned in the comment of 
  * sidora_find_association
  */
 function sidora_islandora_ingest_steps_alter(array &$steps, array &$form_state) {
