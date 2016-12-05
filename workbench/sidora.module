@@ -513,7 +513,7 @@ jQuery(document).ready(function(){
 * Attempts to load the item to get output as a JPEG
 * $content - the original file content
 * $output_to_browser - if TRUE then outputs direct to browser or gives message that there is not available view
-&                    - if FALSE then returns whether or not the item can be output as JPEG
+*                    - if FALSE then returns whether or not the item can be output as JPEG
 */
 function sidora_direct_jpg_output($content, $output_to_browser = TRUE){
   $tempfilename = tempnam('','Sidora_temp_pic_');
@@ -579,6 +579,37 @@ function sidora_codebook_autocomplete($s1){
 function sidora_title_callback(){
   return 'SIdora Workbench';
 }
+function sidora_reprocess_build_id($build_id){
+  
+}
+function sidora_object_creation_info($submitted_form_id = NULL, $key = NULL, $value = NULL) {
+  if (empty($submitted_form_id)) {
+    if (array_key_exists('form_build_id', $_POST)){
+      $submitted_form_id = $_POST['form_build_id'];
+    }
+  }
+  $creation_info = array();
+  $id_to_creation_info = cache_get("sidora:form_id_to_creation_info");
+  if (empty($id_to_creation_info)){ 
+    $id_to_creation_info = array(); // so additional checks no longer has to ask if this array exists
+  }else{ 
+    $id_to_creation_info = $id_to_creation_info->data; 
+  }
+  if (array_key_exists($submitted_form_id, $id_to_creation_info)){ 
+    $creation_info = $id_to_creation_info[$submitted_form_id];
+  }
+  if (empty($key)){
+    return $creation_info;
+  }
+  if ($value === NULL){
+    if (empty($creation_info[$key])) return NULL;
+    return $creation_info[$key];
+  }
+  $creation_info[$key] = $value;
+  $id_to_creation_info[$submitted_form_id] = $creation_info;
+  cache_set("sidora:form_id_to_creation_info",$id_to_creation_info);
+  return $creation_info;
+}
 /**
  * Implementation for hook_islandora_object_ingested
  * Uses information set into the page load to determine what to do with the object
@@ -593,6 +624,14 @@ function sidora_title_callback(){
  * this info in Sidora datastream.
  */
 function sidora_islandora_object_ingested(AbstractObject $object){
+  sidora_after_ingest_processing($object);
+  $creation_info = sidora_object_creation_info();
+  dsm($creation_info);
+}
+/**
+ * Split out the SIdora processing from the hook, so it can be called apart from the hook
+ */
+function sidora_after_ingest_processing(AbstractObject $object){
   global $user;
   module_load_include('inc', 'islandora', 'includes/utilities');
   module_load_include('inc', 'islandora', 'includes/ingest.form');
@@ -612,6 +651,7 @@ function sidora_islandora_object_ingested(AbstractObject $object){
   $file_location = '';
   if (array_key_exists('form_build_id', $_POST)){
     $submitted_form_id = $_POST['form_build_id'];
+    $creation_info = sidora_object_creation_info($submitted_form_id, 'pid', $object->id);
     if (array_key_exists($submitted_form_id, $id_to_filename)){ //Wont be on concepts or non-file upload forms
       $file_location = $id_to_filename[$submitted_form_id]['filepath'];
       $file_name = $id_to_filename[$submitted_form_id]['filename'];
@@ -624,19 +664,9 @@ function sidora_islandora_object_ingested(AbstractObject $object){
         }
       }
     }
-  }
-  $id_to_creation_info = cache_get("sidora:form_id_to_creation_info");
-  if (empty($id_to_creation_info)){ 
-    $id_to_creation_info = array(); // so additional checks no longer has to ask if this array exists
-  }else{ 
-    $id_to_creation_info = $id_to_creation_info->data; 
-  }
-  if (array_key_exists('form_build_id', $_POST)){
-    $submitted_form_id = $_POST['form_build_id'];
     $all_meta_entered = filter_input(INPUT_POST, 'all_meta_entered', FILTER_SANITIZE_URL);
     if ($all_meta_entered != 'TRUE') $all_meta_entered = 'FALSE';
-    if (array_key_exists($submitted_form_id, $id_to_creation_info)){ 
-      $creation_info = $id_to_creation_info[$submitted_form_id];
+    if (!empty($creation_info)){
       $dsids = sidora_get_proper_dsid($creation_info['model'],$creation_info['form']);
       $creation_info['dsid'] = (empty($dsids))?'':$dsids[0];
       sidora_update_datastream($object, '<sidora>
@@ -675,7 +705,6 @@ function sidora_islandora_object_ingested(AbstractObject $object){
     }else{
       $parent->relationships->add(FEDORA_RELS_EXT_URI, 'hasResource', $object->id);
       $tuque = islandora_get_tuque_connection();
-      $apim = $tuque->repository->api->m;
       // if its a video, set the mime type for OBJ explicitly
       if ($creation_info['model'] == 'islandora:sp_videoCModel'){
         $file_mime_type = '';
@@ -696,6 +725,7 @@ function sidora_islandora_object_ingested(AbstractObject $object){
     }
     sidora_clear_tree_cache($object->id);
   }
+  sidora_object_creation_info(NULL,'complete',TRUE);
 }
 /**
  * Implements hook_islandora_object_modified
