@@ -230,7 +230,7 @@ jQuery(document).ready(function(){
   });
  /* Delete XSL button - Lets user delete XSL files - Functionality added by ***REMOVED*** on 3/18/15 */
   // add jquery to the delete xsl button
-	jQuery("#dxsl-button").click(function(){
+  jQuery("#dxsl-button").click(function(){
  //   var delete_xslWin = window.open(Drupal.settings.basePath+"sidora/delete_xsl","XSL_DELETE","width=\'100%\',height=\'100%\',0,status=0,");
     Shadowbox.open({
       content:    Drupal.settings.basePath+"sidora/delete_xsl",
@@ -242,7 +242,7 @@ jQuery(document).ready(function(){
     });
 
  });
-	jQuery("#anr-button").click(function(){
+  jQuery("#anr-button").click(function(){
     var tableRow = \'<tr><td>'.$form_names_dd.'</td><td>'.$model_names_dd.'</td><td><input type="textfield" class="form-text" /></td><td><select class="xsl-names-dd form-select">\'+jQuery(".xsl-names-dd")[0].innerHTML.replace(\'selected="selected"\',"")+\'</select></td><td><input type="button" class="form-submit remove-row" value="Remove"/></td></tr>\';
     jQuery(".sfc-table tbody").append(tableRow);
     recolorTable();
@@ -311,8 +311,8 @@ tr.removed.odd {
   $add_new_row_button = '<input id="anr-button" type="button" class="form-submit" value="Add New Row to Configure"/>';
   $sfc_label = '<label>Metadata Form XSL Configuration</label>';
   // create the delete xsl files button
-	$remove_xsl_file_button = '<input id="dxsl-button" type="button" class="form-submit" value="Remove a XSL File"/>';
-	
+  $remove_xsl_file_button = '<input id="dxsl-button" type="button" class="form-submit" value="Remove a XSL File"/>';
+  
   $form['xsl_form_config'] = array(
       '#type' => 'hidden',
       '#default_value' => variable_get('xsl_form_config', ''),
@@ -322,34 +322,34 @@ tr.removed.odd {
 
   $models = array();
   $model = 'not_a_content_model';
-	$models[] = array(
-		'#type' => 'fieldset',
-		'#title' => 'Items that are not content models',
+  $models[] = array(
+    '#type' => 'fieldset',
+    '#title' => 'Items that are not content models',
     '#description' => t('If the DSID does not exist for the object, the display will not be attempted.'),
-		'resource_viewer_dsid_'.$model => array(
-			'#type' => 'textfield',
-			'#title' => t('DSID'),
-			'#default_value' => variable_get('resource_viewer_dsid_'.$model,'DC'),
-		),
-		'resource_viewer_viewer_'.$model => array(
-			'#type' => 'select',
-			'#title' => t('Viewer'),
-			'#options' => array(
+    'resource_viewer_dsid_'.$model => array(
+      '#type' => 'textfield',
+      '#title' => t('DSID'),
+      '#default_value' => variable_get('resource_viewer_dsid_'.$model,'DC'),
+    ),
+    'resource_viewer_viewer_'.$model => array(
+      '#type' => 'select',
+      '#title' => t('Viewer'),
+      '#options' => array(
         //remember to change this and the one below it when adding a new type
-				'direct' => t('Direct stream to browser (actual image / binary / text)'),
-				'web_view' => t('Direct stream to browser for web viewable items, download message for others'),
+        'direct' => t('Direct stream to browser (actual image / binary / text)'),
+        'web_view' => t('Direct stream to browser for web viewable items, download message for others'),
         'pdfjs' => t('PDF to HTML5 via Javascript (pdf.js)'),
         'flexpaper_pdf' => t('Flexpaper / Convert to flexpaper / direct stream to browser'),
-				'IDS' => t('Smithsonian IDS Viewer'),
+        'IDS' => t('Smithsonian IDS Viewer'),
         'OpenSeaDragon' => t('OpenSeaDragon'),
         'PHPExcel' => t('PHPExcel'),
-				'none' => t('None - no display available'),
-				'never' => t('Never set'),
-			),
-			'#default_value' => variable_get('resource_viewer_viewer_'.$model,'never'),
-		),
+        'none' => t('None - no display available'),
+        'never' => t('Never set'),
+      ),
+      '#default_value' => variable_get('resource_viewer_viewer_'.$model,'never'),
+    ),
     //TODO: make both this and the looped additions to use the same code instead of copy/paste
-	);
+  );
 
   foreach($model_names as $model => $name){
     $models[] = array(
@@ -357,26 +357,26 @@ tr.removed.odd {
       '#title' => $name,
       'resource_viewer_dsid_'.$model => array(
         '#type' => 'textfield',
-				'#title' => t('DSID'),
-				'#default_value' => variable_get('resource_viewer_dsid_'.$model,'OBJ'),
+        '#title' => t('DSID'),
+        '#default_value' => variable_get('resource_viewer_dsid_'.$model,'OBJ'),
       ),
       'resource_viewer_viewer_'.$model => array(
         '#type' => 'select',
-				'#title' => t('Viewer'),
+        '#title' => t('Viewer'),
         '#options' => array(
           'direct' => t('Direct stream to browser (actual image / binary / text)'),
-				  'web_view' => t('Direct stream to browser for web viewable items, download message for others'),
-					'JW Audio Player' => t('JW Player for audio'),
+          'web_view' => t('Direct stream to browser for web viewable items, download message for others'),
+          'JW Audio Player' => t('JW Player for audio'),
           'pdfjs' => t('PDF to HTML5 via Javascript (pdf.js)'),
           'flexpaper_pdf' => t('Flexpaper / Convert to flexpaper / direct stream to browser'),
-					'JW Video Player' => t('JW Player for video'),
-					'IDS' => t('Smithsonian IDS Viewer'),
+          'JW Video Player' => t('JW Player for video'),
+          'IDS' => t('Smithsonian IDS Viewer'),
           'OpenSeaDragon' => t('OpenSeaDragon'),
           'PHPExcel' => t('PHPExcel'),
-					'none' => t('None - no display available'),
+          'none' => t('None - no display available'),
           'never' => t('Never set'),
         ),
-				'#default_value' => variable_get('resource_viewer_viewer_'.$model,'never'),
+        '#default_value' => variable_get('resource_viewer_viewer_'.$model,'never'),
       ),
     );
 
@@ -442,32 +442,32 @@ tr.removed.odd {
     );
 */
   _sidora_admin_settings_add_viewer_configs($form);
-	$form['sidora_js_libs'] = array(
+  $form['sidora_js_libs'] = array(
      'fieldset' => array(
       '#type' => 'fieldset',
       '#title' => 'Javascript Libraries (Non-viewer related)',
       '#description' => t(''),
       '#collapsible' => TRUE,
       '#collapsed' => TRUE,
-			'sidora_js_lib_location_jstree' => array(
-			  '#type' => 'textfield',
-				'#title' => t('jstree'),
-				'#default_value' => variable_get('sidora_js_lib_location_jstree', ''),
-				'#description' => t('This should be an http / https location containing jstree.js and themes/default/style.min.css.  jsTree can be downloaded from https://github.com/vakata/jstree or http://jstree.com'),
+      'sidora_js_lib_location_jstree' => array(
+        '#type' => 'textfield',
+        '#title' => t('jstree'),
+        '#default_value' => variable_get('sidora_js_lib_location_jstree', ''),
+        '#description' => t('This should be an http / https location containing jstree.js and themes/default/style.min.css.  jsTree can be downloaded from https://github.com/vakata/jstree or http://jstree.com'),
         '#attributes' => array('size' => 120),
         '#maxlength' => 1024,
-			),	
-			'sidora_js_lib_location_plupload' => array(
-			  '#type' => 'textfield',
-				'#title' => t('PL Upload'),
-				'#default_value' => variable_get('sidora_js_lib_location_plupload', ''),
-				'#description' => t('This should be an http / https location containing plupload.full.min.js, jqueryui.plupload/jquery.ui.plupload.js, and jquery.ui.plupload/css/jquery.ui.plupload.css.  Pluplup can be downloaded from http://www.pulupload.com'),
+      ),  
+      'sidora_js_lib_location_plupload' => array(
+        '#type' => 'textfield',
+        '#title' => t('PL Upload'),
+        '#default_value' => variable_get('sidora_js_lib_location_plupload', ''),
+        '#description' => t('This should be an http / https location containing plupload.full.min.js, jqueryui.plupload/jquery.ui.plupload.js, and jquery.ui.plupload/css/jquery.ui.plupload.css.  Pluplup can be downloaded from http://www.pulupload.com'),
         '#attributes' => array('size' => 120),
         '#maxlength' => 1024,
-			),	
+      ),  
     ),
   );
-	$form['account_request'] = array(
+  $form['account_request'] = array(
      'fieldset' => array(
       '#type' => 'fieldset',
       '#title' => 'New Account Request',
@@ -480,59 +480,59 @@ tr.removed.odd {
         '#default_value' => variable_get('account_request_email_to', ''),
         '#description' => t('New account requests are sent to this email address.'),
       ),
-			'account_request_email_from' => array(
-			  '#type' => 'textfield',
-				'#title' => t('Send New Account Request Emails from'),
-				'#default_value' => variable_get('account_request_email_from', ''),
-				'#description' => t('New account requests will be sent from this email address.'),
-			),	
+      'account_request_email_from' => array(
+        '#type' => 'textfield',
+        '#title' => t('Send New Account Request Emails from'),
+        '#default_value' => variable_get('account_request_email_from', ''),
+        '#description' => t('New account requests will be sent from this email address.'),
+      ),  
     ),
   );
-	$form['codebook_parser'] = array(
+  $form['codebook_parser'] = array(
      'fieldset' => array(
       '#type' => 'fieldset',
       '#title' => 'Codebook Parser',
       '#description' => t(''),
       '#collapsible' => TRUE,
       '#collapsed' => TRUE,
-			'sidora_codebook_parser_url' => array(
-			  '#type' => 'textfield',
-				'#title' => t('Codebook Parser URL'),
-				'#default_value' => variable_get('sidora_codebook_parser_url', ''),
-				'#description' => t('The location of codebook parser. Valid entry looks like this: http://&lt;server&gt;:&lt;port&gt;/codebook/?'),
-			),	
+      'sidora_codebook_parser_url' => array(
+        '#type' => 'textfield',
+        '#title' => t('Codebook Parser URL'),
+        '#default_value' => variable_get('sidora_codebook_parser_url', ''),
+        '#description' => t('The location of codebook parser. Valid entry looks like this: http://&lt;server&gt;:&lt;port&gt;/codebook/?'),
+      ),  
     ),
   );
   $legacy_items = array(
-	  'person' => 'Person',
-		'research_project' => 'Research Project',
-		'expedition' => 'Expedition',
-		'research_site_or_area' => 'Research Site or Area',
-		'camera_trap_deployment' => 'Camera Trap Deployment',
-		'archaeology_site' => 'Archaeology Site',
-		'camera_trap_plot' => 'Camera Trap Plot',
-		'field_book_collection' => 'Field Book Collection',
-		'cultural_heritage_entity_or_object' => 'Cultural Heritage Entity or Object',
-		'camera_trap_image' => 'Camera Trap Image',
-		'general_image' => 'General Image',
-		'pdf' => 'Digitized Text PDF',
-		'tabular_data_set_object' => 'Tabular Data Set Object'
-		);
+    'person' => 'Person',
+    'research_project' => 'Research Project',
+    'expedition' => 'Expedition',
+    'research_site_or_area' => 'Research Site or Area',
+    'camera_trap_deployment' => 'Camera Trap Deployment',
+    'archaeology_site' => 'Archaeology Site',
+    'camera_trap_plot' => 'Camera Trap Plot',
+    'field_book_collection' => 'Field Book Collection',
+    'cultural_heritage_entity_or_object' => 'Cultural Heritage Entity or Object',
+    'camera_trap_image' => 'Camera Trap Image',
+    'general_image' => 'General Image',
+    'pdf' => 'Digitized Text PDF',
+    'tabular_data_set_object' => 'Tabular Data Set Object'
+    );
   $form_names = array('None' => 'Not Set');
-	foreach($names as $form_info){ 
-	  $form_name = $form_info['name'];
-	  $form_names[$form_name] = $form_name;
-	}
-	foreach($legacy_items as $item => $name){
-		$legacy_item_fieldset[] = array(
-		  '#type' => 'fieldset',
-			'#title' => t($name),
-			'sidora_legacy_' . $item . '_form' => array(
-			  '#type' => 'select',
-			  '#options' => $form_names,
-			  '#default_value' => variable_get('sidora_legacy_'.$item.'_form', ''),
-			),	
-			);
+  foreach($names as $form_info){ 
+    $form_name = $form_info['name'];
+    $form_names[$form_name] = $form_name;
+  }
+  foreach($legacy_items as $item => $name){
+    $legacy_item_fieldset[] = array(
+      '#type' => 'fieldset',
+      '#title' => t($name),
+      'sidora_legacy_' . $item . '_form' => array(
+        '#type' => 'select',
+        '#options' => $form_names,
+        '#default_value' => variable_get('sidora_legacy_'.$item.'_form', ''),
+      ),  
+      );
   }
     $form['legacy_items_form_config'] = array(
       '#type' => 'fieldset',
@@ -556,22 +556,22 @@ tr.removed.odd {
       ),
     ),
   );
-	$form['external_access'] = array(
+  $form['external_access'] = array(
      'fieldset' => array(
       '#type' => 'fieldset',
       '#title' => 'External Servers',
       '#description' => t('These are the IPs of servers which are allowed to tell workbench that an update is needed on specified pids'),
       '#collapsible' => TRUE,
       '#collapsed' => TRUE,
-			'sidora_trusted_external_servers' => array(
-			  '#type' => 'textfield',
-				'#title' => t('Server IPs (comma seperated)'),
-				'#default_value' => variable_get('sidora_trusted_external_servers', ''),
-				'#description' => t('Server IPs (comma seperated)'),
-			),	
+      'sidora_trusted_external_servers' => array(
+        '#type' => 'textfield',
+        '#title' => t('Server IPs (comma seperated)'),
+        '#default_value' => variable_get('sidora_trusted_external_servers', ''),
+        '#description' => t('Server IPs (comma seperated)'),
+      ),  
     ),
   );
-	
+  
   $form['sidora_allow_all_to_debug'] = array(
      '#type' => 'textfield',
      '#title' => t('Allow all users access to debug'),
