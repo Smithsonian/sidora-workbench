@@ -4105,6 +4105,9 @@ function sidora_create_all_groups_for_user($owning_user) {
  * Creates a specified group for the input type for this user.  Assumes the group does not exist
  */
 function sidora_create_sidora_group($owning_user, $type) {
+    if (is_integer($owning_user) || is_string($owning_user)) {
+      $owning_user = user_load(intval($owning_user));
+    }
     $values = array(
       'type' => 'og_crud_group',
       'uid' => $owning_user->uid,
