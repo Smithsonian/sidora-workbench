@@ -468,7 +468,7 @@ tr.removed.odd {
     ),
   );
   $form['account_request'] = array(
-     'fieldset' => array(
+    'fieldset' => array(
       '#type' => 'fieldset',
       '#title' => 'New Account Request',
       '#description' => t(''),
@@ -489,7 +489,7 @@ tr.removed.odd {
     ),
   );
   $form['codebook_parser'] = array(
-     'fieldset' => array(
+    'fieldset' => array(
       '#type' => 'fieldset',
       '#title' => 'Codebook Parser',
       '#description' => t(''),
@@ -534,15 +534,15 @@ tr.removed.odd {
       ),  
       );
   }
-    $form['legacy_items_form_config'] = array(
-      '#type' => 'fieldset',
-      '#title' => 'Configure forms used by legacy items',
-      '#collapsible' => TRUE,
-      '#collapsed' => TRUE,
-      'items' => $legacy_item_fieldset,
- );
+  $form['legacy_items_form_config'] = array(
+    '#type' => 'fieldset',
+    '#title' => 'Configure forms used by legacy items',
+    '#collapsible' => TRUE,
+    '#collapsed' => TRUE,
+    'items' => $legacy_item_fieldset,
+  );
   $form['site_administrator_contact'] = array(
-     'fieldset' => array(
+    'fieldset' => array(
       '#type' => 'fieldset',
       '#title' => 'Site administrator email',
       '#description' => t(''),
@@ -557,7 +557,7 @@ tr.removed.odd {
     ),
   );
   $form['external_access'] = array(
-     'fieldset' => array(
+    'fieldset' => array(
       '#type' => 'fieldset',
       '#title' => 'External Servers',
       '#description' => t('These are the IPs of servers which are allowed to tell workbench that an update is needed on specified pids'),
@@ -573,10 +573,10 @@ tr.removed.odd {
   );
   
   $form['sidora_allow_all_to_debug'] = array(
-     '#type' => 'textfield',
-     '#title' => t('Allow all users access to debug'),
-     '#default_value' => variable_get('sidora_allow_all_to_debug',''),
-     '#description' => t('If set to "ALL" then all users have access to built-in sidora debug information.  Otherwise only administrators have access.'), //This was not stored as a "role" because we want to be able to give it to any user at the time the debugging happens then turn it off completely.  "ALL" here will give access to the sidora_testing functionality. In the future there may be different strings which give additional granularity
+    '#type' => 'textfield',
+    '#title' => t('Allow all users access to debug'),
+    '#default_value' => variable_get('sidora_allow_all_to_debug',''),
+    '#description' => t('If set to "ALL" then all users have access to built-in sidora debug information.  Otherwise only administrators have access.'), //This was not stored as a "role" because we want to be able to give it to any user at the time the debugging happens then turn it off completely.  "ALL" here will give access to the sidora_testing functionality. In the future there may be different strings which give additional granularity
   );
   $form['sidora_disable_locking_by_pid'] = array(
     '#type' => 'checkbox',
