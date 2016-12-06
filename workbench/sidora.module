@@ -193,6 +193,13 @@ function sidora_menu() {
       'access callback' => 'user_is_logged_in',
       'type' => MENU_CALLBACK,
     ),
+    'sidora/pid_expired' => array(
+      'title' => 'PID Expiration Interface',
+      'description' => 'Inform Workbench that this PID has been updated externally and will need reloading before being shown',
+      'page callback' => 'sidora_fedora_queue_sync_external_call',
+      'access callback' => TRUE,
+      'type' => MENU_CALLBACK,
+    ),
     'sidora/resource_viewer' => array(
       'title' => 'Resource Viewer',
       'description' => 'return the resource in the designated view style',
@@ -6418,7 +6425,7 @@ function sidora_find_association(array &$form_state, $form_build_id = ''){
   return $association;
 }
 /*
- * This is the hook_islandoira_ingest_steps_alter that performs the bypass mentioned in the comment of 
+ * This is the hook_islandora_ingest_steps_alter that performs the bypass mentioned in the comment of 
  * sidora_find_association
  */
 function sidora_islandora_ingest_steps_alter(array &$steps, array &$form_state) {
@@ -6893,9 +6900,9 @@ function sidora_clear_tree_cache($pid = ''){
 }
 /*
  * For any object that has been updated, keep an indicator of changed
- * THIS WILL NEED TO BE PER USER WHEN VIEW PERMISSIONS become involved
  */
 function sidora_recently_updated($pid) {
+  sidora_fedora_queue_sync($pid);
   sidora_recently_updated_clear_old();
   $cache_name = "sidora:recent_updates";
   $recent_updates_cache = cache_get($cache_name);
@@ -7910,20 +7917,92 @@ function sidora_generate_child_resource_sparql_query($pid, array $resource_types
         LIMIT {$limit}";
   return $query;
 }
+function sidora_fedora_queue_sync_external_call($csv_pids = NULL) {
+  $stes = variable_get("sidora_trusted_external_servers","");
+  $allowed = array_map('trim' , explode(',' , $stes));
+  // Intentionally not checking for X-Forwarded-For
+  $the_ip = filter_var( $_SERVER['REMOTE_ADDR'], FILTER_VALIDATE_IP, FILTER_FLAG_IPV4 );
+  if (in_array($the_ip, $allowed)) {
+    if ($csv_pids === NULL && isset($_POST['csv_pids'])) {
+      $csv_pids = $_POST['csv_pids'];
+    }
+    $pids = explode(",",$csv_pids);
+    print '<pre>';
+    foreach($pids as $pid) {
+      print "\nClearing cache for:" . $pid;
+      sidora_clear_tree_cache($pid);
+    }
+    print '</pre>';
+  }
+  else {
+    watchdog('sidora',"Attempt to queue sync from server that wasn't in list: $the_ip -  Current ip list: $stes");
+    return MENU_NOT_FOUND;
+  }
+}
+function sidora_fedora_queue_sync($pid_or_nid) {
+  $nid = $pid_or_nid;
+  if (sidora_contains($pid_or_nid,':')){
+    $nid = sidora_quick_pid_to_node_id($pid_or_nid); 
+  }
+  $node = node_load($nid);
+  $node_wrapper = entity_metadata_wrapper('node', $node);
+  $node_wrapper->field_sidora_fedora_sync->set('0');
+  $node_wrapper->save();
+}
+function sidora_fedora_create_partial_node_set(
+  $root_pid,
+  $root_label,
+  $root_num_resources,
+  $owner_username,
+  $max_depth = 999999,
+  $max_count = 999999999
+){
+  $updated_set = array();
+  $root_node = sidora_create_full_node_set(
+    $root_pid,
+    $root_label,
+    $root_num_resources,
+    NULL,
+    $updated_set,
+    $max_depth,
+    $max_count
+  );
+  return $root_node; 
+}
 function sidora_fedora_sync() {
   $nid = filter_input(INPUT_GET, 'nid');
   $command = filter_input(INPUT_GET, 'command');
   $show_table = filter_input(INPUT_GET, 'show_table');
   $batch_start = filter_input(INPUT_GET, 'batch_start');
   $batch_end = filter_input(INPUT_GET, 'batch_end');
+  $root_pid = filter_input(INPUT_GET, "root_pid");
+  $root_label = filter_input(INPUT_GET, "root_label");
+  $root_resource_count = filter_input(INPUT_GET, "root_resource_count", FILTER_SANITIZE_NUMBER_INT);
+  $max_depth = filter_input(INPUT_GET, "max_depth", FILTER_SANITIZE_NUMBER_INT);
+  $max_count = filter_input(INPUT_GET, "max_count", FILTER_SANITIZE_NUMBER_INT);
   $table_html = '';
   if ($command == 'update_and_create_nodes_from_queries') {
-    $pid = 'si:root';
+    if (empty($root_pid)) {
+      $root_pid = 'si:root';
+    }
+    if (empty($root_label)) {
+      $root_label = 'Root';
+    }
+    if (empty($root_resource_count)) {
+      $root_resource_count = 0;
+    }
     print '<pre>';
+    print "\nroot_pid:\t$root_pid";
+    print "\nroot_label:\t$root_label";
+    print "\nroot_resource_count:\t$root_resource_count";
+    print "\ncommand:\t$command";
+    print "\nmax_depth:\t$max_depth";
+    print "\nmax_count:\t$max_count";
+    print "\n";
+    $table_html = '';
     $date = date('m/d/Y h:i:s a', time());
     print $date . "\n";
-    $updated_set = array();
-    $root_node = sidora_create_full_node_set($pid, 'Root', 0, NULL, $updated_set, filter_input(INPUT_GET, "max_depth", FILTER_SANITIZE_NUMBER_INT), filter_input(INPUT_GET, "max_count", FILTER_SANITIZE_NUMBER_INT));
+    $root_node =  sidora_fedora_create_partial_node_set($root_pid,$root_label,$root_resource_count,NULL,$max_depth,$max_count);
     print "Root Node:\n";
     var_dump($root_node);
     print "Full Set of Updated Items:\n";
@@ -7959,10 +8038,7 @@ function sidora_fedora_sync() {
           }
         }
         if ($command == 'queue') {
-          $node = node_load($nid);
-          $node_wrapper = entity_metadata_wrapper('node', $node);
-          $node_wrapper->field_sidora_fedora_sync->set('0');
-          $node_wrapper->save();
+          sidora_fedora_queue_sync($nid);
         }
       }
       $num++;
@@ -7979,10 +8055,7 @@ function sidora_fedora_sync() {
       }
     }
     if ($command == 'queue') {
-      $node = node_load($nid);
-      $node_wrapper = entity_metadata_wrapper('node', $node);
-      $node_wrapper->field_sidora_fedora_sync->set('0');
-      $node_wrapper->save();
+      sidora_fedora_queue_sync($nid);
     }
   }
   if (!empty($show_table)) {
@@ -8130,7 +8203,7 @@ function sidora_create_full_node_set($pid, $label, $num_resources, $owner_userna
 /*
  * Return a quick pid to node without doing a node DB lookup, or add to list
  */
-function sidora_quick_pid_to_node($pid, $node_id = ''){
+function sidora_quick_pid_to_node_id($pid, $node_id = ''){
   static $ptn = array();
   if (empty($node_id)){
     if (isset($ptn[$pid])) {

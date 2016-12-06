@@ -556,6 +556,21 @@ tr.removed.odd {
       ),
     ),
   );
+	$form['external_access'] = array(
+     'fieldset' => array(
+      '#type' => 'fieldset',
+      '#title' => 'External Servers',
+      '#description' => t('These are the IPs of servers which are allowed to tell workbench that an update is needed on specified pids'),
+      '#collapsible' => TRUE,
+      '#collapsed' => TRUE,
+			'sidora_trusted_external_servers' => array(
+			  '#type' => 'textfield',
+				'#title' => t('Server IPs (comma seperated)'),
+				'#default_value' => variable_get('sidora_trusted_external_servers', ''),
+				'#description' => t('Server IPs (comma seperated)'),
+			),	
+    ),
+  );
 	
   $form['sidora_allow_all_to_debug'] = array(
      '#type' => 'textfield',
