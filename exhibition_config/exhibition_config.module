@@ -272,7 +272,8 @@ function exhibition_config_get_new_config_data($pid){
       $row[$name] = $value;
     }
   }
-	error_log("\nIn exhibition_config_get_new_config_data, query result set:".print_r($row,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','exhibition_config')."/errorlog.txt");
+	error_log("\nIn exhibition_config_get_new_config_data, last edited:".print_r(unserialize($row['last_edited']),true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','exhibition_config')."/errorlog.txt");
+	error_log("\nIn exhibition_config_get_new_config_data, last published:".print_r(unserialize($row['last_published']),true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','exhibition_config')."/errorlog.txt");
   return $row;
 }
 function exhibition_config_load_last_published($pid){
@@ -366,7 +367,19 @@ function exhibition_config_form_validate($form, &$form_state){
     $pid = $form['pid']['#value'];
     $check_url =  $form['custom_url']['#value'];
     if (!empty($check_url)){
-      $url_in_use_result = db_query("select pid from {exhibition_config} where pid <> :pid and custom_url = :cus_url", 
+      // TODO :change this query since now the custom url will be  apart of a serialized/json encoded field
+			$url_in_use_result = db_query("select pid from {exhibition_config_copy} where pid <> :pid and last_edited like :cus_url", 
+        array(
+          ':pid' => $pid, 
+          ':cus_url' => db_like('%' . $form['custom_url']['#value'] . '%'),
+        )
+      );
+      $first_hit = $url_in_use_result->fetchAssoc();;
+      if (!empty($first_hit)){
+        form_set_error('custom_url',t('Custom URL already in use.'));
+      }
+      /*
+			$url_in_use_result = db_query("select pid from {exhibition_config} where pid <> :pid and custom_url = :cus_url", 
         array(
           ':pid' => $pid, 
           ':cus_url' => $form['custom_url']['#value'],
@@ -375,7 +388,7 @@ function exhibition_config_form_validate($form, &$form_state){
       $first_hit = $url_in_use_result->fetchAssoc();;
       if (!empty($first_hit)){
         form_set_error('custom_url',t('Custom URL already in use.'));
-      }
+      }*/
       $stripped = preg_replace("/[^A-Za-z0-9]/", "", $check_url );
       if ($stripped != $check_url){
         form_set_error('custom_url',t('Custom URL must be alphanumeric, no symbols or spaces.'));
@@ -424,7 +437,7 @@ function exhibition_config_form_validate($form, &$form_state){
  * hook_form_submit for exhibition_config
  */
 function exhibition_config_form_submit($form, &$form_state) {
-    error_log("\nIn exhibition_config_form_submit, form:".print_r($form,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','exhibition_config')."/errorlog.txt");
+    error_log("\nIn exhibition_config_form_submit, publish status value:".print_r($form['publish_status']['#value'],true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','exhibition_config')."/errorlog.txt");
 		$pid = $form['pid']['#value'];
     $allowed = exhibition_config_allowed_to_edit($pid);
     if (!$allowed){
@@ -458,10 +471,17 @@ function exhibition_config_form_submit($form, &$form_state) {
     $css_serialized = $my_css;
     $check_url =  $form['custom_url']['#value'];
     if (!empty($check_url)){
-      $url_in_use_result = db_query("select pid from {exhibition_config} where pid != '%s' and custom_url = '%s'", 
+      // TODO :change this query since now the custom url will be  apart of a serialized/json encoded field
+      /*$url_in_use_result = db_query("select pid from {exhibition_config} where pid != '%s' and custom_url = '%s'", 
         array(
           $pid, 
           $form['custom_url']['#value'],
+        )
+      );*/
+      $url_in_use_result = db_query("select pid from {exhibition_config_copy} where pid != '%s' and last_edited like '%s'", 
+        array(
+          $pid, 
+          db_like('%' . $form['custom_url']['#value'] . '%'),
         )
       );
       $first_hit = $url_in_use_result->fetchAssoc();
@@ -576,7 +596,7 @@ function exhibition_config_form_submit($form, &$form_state) {
         'nav_type' => $form['content_area']['nav_type']['#value'],
         'custom_url' => $form['custom_url']['#value'],
         'link_bar_links' => $fullLinkSet,
-        'is_available' => $form['is_available']['#value'],
+        //'is_available' => $form['is_published']['#value'],
         'use_parent_config' => empty($form['use_parent_config']['#value'])?'0':$form['use_parent_config']['#value'],
 		  );
 		 $fields = 
@@ -589,6 +609,8 @@ function exhibition_config_form_submit($form, &$form_state) {
 		  $last_published_config = serialize($last_edited_values);
 		 } 
     $insert_query = db_insert('exhibition_config_copy')->fields($fields);
+	error_log("\nIn exhibition_config_form_submit, saving last edited:".print_r($last_edited_values,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','exhibition_config')."/errorlog.txt");
+	error_log("\nIn exhibition_config_form_submit, saving last published:".print_r(unserialize($last_published_config),true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','exhibition_config')."/errorlog.txt");
     $insert_query->values( 
       array(
         'pid' => $pid,
@@ -631,7 +653,7 @@ function exhibition_config_form_submit($form, &$form_state) {
     }
     */
     if ($output !== FALSE) {
-      if ($form['is_available']['#value']) {
+      if ($form['publish_status']['#value'] == '1') {
         drupal_set_message(t('Configuration saved.'));
       }
       else {
@@ -793,8 +815,8 @@ function exhibition_config_form($form, $form_state){
 	    $row['last_published'] = TRUE;
 		}
 	}	
-  //error_log("\nIn exhibition_config_form, is available:".print_r($row['is_available'],true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','exhibition_config')."/errorlog.txt");
-	//error_log("\nIn exhibition_config_form, new serialized config data:".print_r($row,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','exhibition_config')."/errorlog.txt");
+  error_log("\nIn exhibition_config_form, is published:".print_r($row['is_published'],true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','exhibition_config')."/errorlog.txt");
+	error_log("\nIn exhibition_config_form, last published:".print_r($row['last_published'],true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','exhibition_config')."/errorlog.txt");
 
   $full = '
 <a href="javascript:void(0);" onclick="togglePreviewLocation();" title="Moves the sample between the top and side of the page.  You can also move your mouse between the sections and drag to change the sizes when the sample is on the right.">Toggle Sample Location</a><br/>
@@ -1260,7 +1282,7 @@ $(function(){
       if ($("#publish-exhibition").val() != "1") {
         e.preventDefault();
         $("#saveExhibitionConfirm").remove();
-        $("body").append("<div id=\'saveExhibitionConfirm\' style=\'display:none;\' title=\'Exhibition not set to show publicly.\'><p>To save this configuration without enabling the public to view click \"Confirm\".<br/><br/>To set the exhibition to be publicly viewable, click \"Cancel\" and check the box \"Show publicly\" then click \"Submit\".</p></div>");
+        $("body").append("<div id=\'saveExhibitionConfirm\' style=\'display:none;\' title=\'Exhibition changes not set to publish.\'><p>To save this configuration without publishing click \"Confirm\".<br/><br/>To set the exhibition changes to be saved and published, click \"Publish & Save\".<br/><br/>Click on \"Cancel\" to do nothing.</p></div>");
         $("#saveExhibitionConfirm").dialog({
          height: 300,
          width: 350,
@@ -1270,9 +1292,16 @@ $(function(){
           "Confirm": function() {
            $( this ).dialog("close");
            submit = true;
+					 $("#publish-exhibition").val("0");
            $("#exhibition-config-form").submit();
           },
-          Cancel: function() {
+          "Publish & Save": function() {
+					  $(this).dialog("close");
+						$("#publish-exhibition").val("1");
+            $("#confirm-publish").trigger("click");
+						return false;
+					},	
+					Cancel: function() {
           $( this ).dialog( "close" );
           }
          }
@@ -2087,12 +2116,13 @@ Color Set:
     '#value' => 'Save',
     '#attributes' => array("id" => "confirm-save"),
   );
-	if (!($row['is_published']) || !($row['last_published'])){
 	  $form['publish'] = array(
 		  '#type' => 'button',
 			'#value' => 'Publish',
-			'#attributes' => array("id" => "confirm-publish"),
+			'#attributes' => array('id' => 'confirm-publish','class' => array('element-invisible')),
 	);	
+	if (!($row['last_published']) || !($row['is_published'])){
+    unset($form['publish']['#attributes']['class']);
 	}
   return $form;
 }

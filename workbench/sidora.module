@@ -4300,8 +4300,10 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
            $exhibitions['ui_state_disable'] = true;
       }else{
           if (module_exists('exhibition_config')){
-            $exhibition_data = exhibition_config_get_config_data($pid);
-            if (!(empty($exhibition_data)) && !(is_null($exhibition_data['pid'])) && ($exhibition_data['is_available'])){
+            //$exhibition_data = exhibition_config_get_config_data($pid);
+            //if (!(empty($exhibition_data)) && !(is_null($exhibition_data['pid'])) && ($exhibition_data['is_available'])){
+            $exhibition_data = exhibition_config_get_new_config_data($pid);
+            if (!(empty($exhibition_data)) && !(is_null($exhibition_data['pid'])) && ($exhibition_data['last_published'] != '')){
                $exhibitions['action'] = 'window.open(\'' . variable_get('si_exhibition_website_location', ''). '\'+window.sidora.concept.GetPid()); return false;';
                $exhibitions['ui_state_disable'] = false;
             }else{
