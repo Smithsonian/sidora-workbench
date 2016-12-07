@@ -705,17 +705,8 @@ function sidora_reprocess_incomplete_object_creation_forms($only_these_form_ids 
       empty($creation_info['complete']) &&
       (empty($only_these_form_ids) || in_array($form_id, $only_these_form_ids))
     ) {
-      print "<br/>\nreprocess: $form_id ";
-      print "<pre>";
-      var_dump($creation_info);
       sidora_process_object_with_build_id($form_id);
-      print "After:";
-      var_dump(sidora_object_creation_info($form_id));
-      print "</pre>";
-      
-    }
-    else {
-      print "<br/>\ncompleted, not started, or not in the white list: $form_id ";
+      print 'Complete'; 
     }
   }
 }
