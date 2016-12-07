@@ -722,7 +722,7 @@ function sidora_islandora_datastream_modified(AbstractObject $object, AbstractDa
   //manipulate it as they desire.  This is NOT a security problem, the user would be allowed to perform these actions.
   //However, it would be a user directly manipulating data in a way that is
   //not fully supported by the Workbench.
-  if ($datastream->mimetype == 'text/xml' && $datastream->id != 'SIDORA' && $datastream->id != 'DC' && $datastream->id != 'RELS-EXT'){
+  if ((strpos($datastream->mimetype,'xml') !== false) && $datastream->id != 'SIDORA' && $datastream->id != 'DC' && $datastream->id != 'RELS-EXT'){
     $all_meta_entered = filter_input(INPUT_POST, 'all_meta_entered', FILTER_SANITIZE_URL);
     $form_name = filter_input(INPUT_POST, 'form_name', FILTER_SANITIZE_URL);
 		if (!empty($object['SIDORA'])){
