@@ -584,8 +584,11 @@ function sidora_title_callback(){
  * Fedora changes
  */
 function sidora_process_object_with_build_id($form_build_id){
+  global $user;
+  sidora_object_creation_info($form_build_id,'started',TRUE);
   $id_to_filename = cache_get("sidora:form_id_to_filename");
-  if (empty($id_to_filename)){ $id_to_filename = array(); }else{ $id_to_filename = $id_to_filename->data; }
+  //if (empty($id_to_filename)){ $id_to_filename = array(); }else{ $id_to_filename = $id_to_filename->data; }
+  $id_to_filename = (empty($id_to_filename)) ? array() : $id_to_filename->data;
   $file_location = '';
   if (array_key_exists($form_build_id, $id_to_filename)){ //Wont be on concepts or non-file upload forms
     $file_location = $id_to_filename[$form_build_id]['filepath'];
@@ -609,11 +612,12 @@ function sidora_process_object_with_build_id($form_build_id){
      * this info in Sidora datastream.
      */
     $dsids = sidora_get_proper_dsid($creation_info['model'],$creation_info['form']);
-    $creation_info['dsid'] = (empty($dsids))?'':$dsids[0];
+    $creation_info['dsid'] = (empty($dsids)) ? '' : $dsids[0];
     $parent_pid = $creation_info['parent_pid'];
     $pid = $creation_info['pid'];
     $object = sidora_obj($pid);
-    sidora_update_datastream($object, '<sidora>
+    if (empty($creation_info['added_sidora_ds'])) {
+      sidora_update_datastream($object, '<sidora>
 <model>'.$creation_info['model'].'</model>
 <form>'.$creation_info['form'].'</form>
 <ontology_location_id>'.$creation_info['ontology_id'].'</ontology_location_id>
@@ -621,6 +625,9 @@ function sidora_process_object_with_build_id($form_build_id){
 <initial_dsid>'.$creation_info['dsid'].'</initial_dsid>
 <parent>'.$creation_info['parent_pid'].'</parent>
 </sidora>', 'SIDORA');
+    }
+    sidora_object_creation_info($form_build_id,'added_sidora_ds',TRUE);
+     
   }else{
     //Items like Codebooks have no creation info, this should only be items that were not created via the menu
   }
@@ -631,7 +638,10 @@ function sidora_process_object_with_build_id($form_build_id){
     $is_concept = sidora_is_concept($object);
     $is_codebook = sidora_is_codebook($object);
     if ($is_concept){
-      $parent->relationships->add(FEDORA_RELS_EXT_URI, 'hasConcept', $object->id);
+      if (empty($creation_info['added_to_parent'])) {
+        $parent->relationships->add(FEDORA_RELS_EXT_URI, 'hasConcept', $object->id);
+      }
+      sidora_object_creation_info($form_build_id,'added_to_parent',TRUE);
       //clear THEIR parents out since the number in parens is held there
       $grandparents = sidora_get_parent_concepts($parent);
       foreach($grandparents as $grandparent_pid => $grandparent){ sidora_clear_tree_cache($grandparent_pid); }
@@ -639,12 +649,18 @@ function sidora_process_object_with_build_id($form_build_id){
       //add codebook to user object (not the intended parent)
       $user_projects_pid = sidora_get_user_object();
       $user_projects = sidora_obj($user_projects_pid);
-      $user_projects->relationships->add(FEDORA_RELS_EXT_URI, 'managesCodebook', $object->id);
+      if (empty($creation_info['added_to_parent'])) {
+        $user_projects->relationships->add(FEDORA_RELS_EXT_URI, 'managesCodebook', $object->id);
+      }
+      sidora_object_creation_info($form_build_id,'added_to_parent',TRUE);
       //set the user's recent codebook to this new codebook
       $edit['data']['recent_codebook_id'] = $object->id;
       user_save($user,$edit);
     }else{
-      $parent->relationships->add(FEDORA_RELS_EXT_URI, 'hasResource', $object->id);
+      if (empty($creation_info['added_to_parent'])) {
+        $parent->relationships->add(FEDORA_RELS_EXT_URI, 'hasResource', $object->id);
+      }
+      sidora_object_creation_info($form_build_id,'added_to_parent',TRUE);
       $tuque = islandora_get_tuque_connection();
       // if its a video, set the mime type for OBJ explicitly
       if ($creation_info['model'] == 'islandora:sp_videoCModel'){
@@ -666,7 +682,42 @@ function sidora_process_object_with_build_id($form_build_id){
     }
     sidora_clear_tree_cache($object->id);
   }
-  sidora_object_creation_info(NULL,'complete',TRUE);
+  sidora_object_creation_info($form_build_id,'complete',TRUE);
+}
+/**
+ * Checks the forms that are held in the cache and reprocesses any that have been started but were not completed
+ * The assumption being that the communication with Fedora failed somewhere
+ * $only_these_form_ids - csv string of form build ids or an array of form build ids, if NULL then do all
+ */
+function sidora_reprocess_incomplete_object_creation_forms($only_these_form_ids = NULL){
+  if (is_string($only_these_form_ids)) {
+    $only_these_form_ids = explode(',' , $only_these_form_ids);
+  }
+  $id_to_creation_info = cache_get("sidora:form_id_to_creation_info");
+  if (empty($id_to_creation_info)){
+    return;
+  }else{
+    $id_to_creation_info = $id_to_creation_info->data;
+  }
+  foreach ($id_to_creation_info as $form_id => $creation_info) {
+    if (
+      !empty($creation_info['started']) &&
+      empty($creation_info['complete']) &&
+      (empty($only_these_form_ids) || in_array($form_id, $only_these_form_ids))
+    ) {
+      print "<br/>\nreprocess: $form_id ";
+      print "<pre>";
+      var_dump($creation_info);
+      sidora_process_object_with_build_id($form_id);
+      print "After:";
+      var_dump(sidora_object_creation_info($form_id));
+      print "</pre>";
+      
+    }
+    else {
+      print "<br/>\ncompleted, not started, or not in the white list: $form_id ";
+    }
+  }
 }
 /*
  * Get or set cached information that is associated with this form id
@@ -4920,6 +4971,10 @@ function sidora_ontology_json_default(){
  */
 function sidora_ajax_parts($call_type, $param1 = '', $param2 = '', $param3 = ''){
   global $user;
+  if ($call_type == 'reprocess_incomplete_object_creation_forms') {
+    sidora_reprocess_incomplete_object_creation_forms($param1);
+    drupal_exit();
+  }
   if ($call_type == 'create_and_set_new_user_object') {
     print sidora_create_and_set_new_user_object($user);
     drupal_exit();
