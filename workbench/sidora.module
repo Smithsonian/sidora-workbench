@@ -2061,6 +2061,10 @@ function sidora_watchdog_filtering(array $log_entry) {
   $message = $log_entry['message'];
   if (strpos($message, "LAME encoding failed for object") === 0){
     return WATCHDOG_FILTERING_EXCLUDE;
+  }else if (strpos($message, 'XSLTProcessor::importStylesheet(): xsl:version: only 1.0 features are supported in ') !== FALSE){
+    return WATCHDOG_FILTERING_EXCLUDE;
+  }else if (strpos($message, 'XSLTProcessor::importStylesheet(): compilation error') !== FALSE){
+    return WATCHDOG_FILTERING_EXCLUDE;
   }else if (strpos($message, 'Undefined index: callback in <em class="placeholder">securepages_match_form()</em> (line <em class="placeholder">369</em> of') !== FALSE){
     return WATCHDOG_FILTERING_EXCLUDE;
   }
