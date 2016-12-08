@@ -263,8 +263,8 @@ function exhibition_config_get_config_data($pid){
   return $row;
 }
 function exhibition_config_get_new_config_data($pid){
-  $result = db_query("Select ". //SELECT
-" last_edited, last_published "   .
+  $result = db_query("Select". //SELECT
+" pid, last_edited, last_published" .
 " FROM {exhibition_config_copy} where pid = :pid", array(':pid'=>$pid));
   $row = array();
   foreach ($result as $input){
@@ -272,8 +272,8 @@ function exhibition_config_get_new_config_data($pid){
       $row[$name] = $value;
     }
   }
-	error_log("\nIn exhibition_config_get_new_config_data, last edited:".print_r(unserialize($row['last_edited']),true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','exhibition_config')."/errorlog.txt");
-	error_log("\nIn exhibition_config_get_new_config_data, last published:".print_r(unserialize($row['last_published']),true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','exhibition_config')."/errorlog.txt");
+	//error_log("\nIn exhibition_config_get_new_config_data, last edited:".print_r(unserialize($row['last_edited']),true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','exhibition_config')."/errorlog.txt");
+	//error_log("\nIn exhibition_config_get_new_config_data, last published:".print_r(unserialize($row['last_published']),true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','exhibition_config')."/errorlog.txt");
   return $row;
 }
 function exhibition_config_load_last_published($pid){
@@ -307,13 +307,14 @@ function exhibition_config_custom_url($custom_url){
 function exhibition_config_json_data($pid){
   //if (!empty($_GET['BBB'])) return exhibition_config_json_visibility($pid);
   $pid = urldecode($pid);
-  $row = exhibition_config_get_config_data($pid);
+  $row = exhibition_config_get_new_config_data($pid);
   if (!empty($row)) {
     if (is_null($row['pid'])){
       print '{ "error": true, "error_message" : "Exhibition not available" }';
-    } else if ($row['is_available']){
-      $my_css = unserialize($row['css_script']);
-      $links = unserialize($row['link_bar_links']);
+    } else if ($row['last_published'] != ''){
+      $row = unserialize($row['last_published']);
+			$my_css = $row['css_script'];
+      $links = $row['link_bar_links'];
       print '
 {
       "error": false,
@@ -371,15 +372,15 @@ function exhibition_config_form_validate($form, &$form_state){
 			$url_in_use_result = db_query("select pid from {exhibition_config_copy} where pid <> :pid and last_edited like :cus_url", 
         array(
           ':pid' => $pid, 
-          ':cus_url' => db_like('%' . $form['custom_url']['#value'] . '%'),
+          ':cus_url' => db_like($form['custom_url']['#value']),
         )
       );
-      $first_hit = $url_in_use_result->fetchAssoc();;
+      $first_hit = $url_in_use_result->fetchAssoc();
       if (!empty($first_hit)){
         form_set_error('custom_url',t('Custom URL already in use.'));
       }
-      /*
-			$url_in_use_result = db_query("select pid from {exhibition_config} where pid <> :pid and custom_url = :cus_url", 
+      
+			/*$url_in_use_result = db_query("select pid from {exhibition_config} where pid <> :pid and custom_url = :cus_url", 
         array(
           ':pid' => $pid, 
           ':cus_url' => $form['custom_url']['#value'],
@@ -478,13 +479,13 @@ function exhibition_config_form_submit($form, &$form_state) {
           $form['custom_url']['#value'],
         )
       );*/
-      $url_in_use_result = db_query("select pid from {exhibition_config_copy} where pid != '%s' and last_edited like '%s'", 
+      /*$url_in_use_result = db_query("select pid from {exhibition_config_copy} where pid != '%s' and last_edited like '%s'", 
         array(
           $pid, 
           db_like('%' . $form['custom_url']['#value'] . '%'),
         )
       );
-      $first_hit = $url_in_use_result->fetchAssoc();
+      $first_hit = $url_in_use_result->fetchAssoc();*/
       if (!empty($first_hit)){
         drupal_set_message('Custom URL already in use, all other information saved.', 'warning');
         $form['custom_url']['#value'] = '';
@@ -781,9 +782,10 @@ function exhibition_config_form($form, $form_state){
     return;
   }
   $object = _exhibition_config_get_object($pid);
-  //$row = exhibition_config_get_config_data($pid);
-	$new_row = exhibition_config_get_new_config_data($pid);
-  $row = unserialize($new_row['last_edited']);
+  $row = exhibition_config_get_config_data($pid);
+	//$new_row = exhibition_config_get_new_config_data($pid);
+  //$row = array();
+	//if (!empty($new_row)) $row = unserialize($new_row['last_edited']);
 	drupal_add_library('system', 'ui.resizable');
   drupal_add_library('system','ui.dialog');
   if (empty($row)) {
