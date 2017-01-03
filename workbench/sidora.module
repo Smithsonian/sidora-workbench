@@ -3163,7 +3163,7 @@ function sidora_is_create_resource_codebook_choice_completed($model){
  * returns TRUE or FALSE;
  */
 function sidora_is_displayable_image_with_convert($filename){
-  $convertable_extensions = array('jpg','png','gif','tif','jp2');
+  $convertable_extensions = array('jpg','png','gif');
   return sidora_is_displayable_image($filename, $convertable_extensions);
 
 }
