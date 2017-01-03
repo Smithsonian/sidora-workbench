@@ -2890,7 +2890,21 @@ function sidora_process_batch_submit($form,&$form_state){
   $batch_id = $id_to_filename_info[$form_build_id]['filename'];
   $step_storage = $form_state['islandora']['step_storage']['xml_form_builder_metadata_step'];
   $association = $step_storage['association'];
-  $run_transforms = !variable_get('xml_form_builder_use_default_dc_xslts', FALSE);
+  if (is_array($association['title_field'])){
+    $parent_array = $form;
+    $xml_association = $association;
+    for ($ctr=0;$ctr<sizeof($association['title_field']);$ctr++){
+      $title_field = sidora_get_nested_title_field(array($association['title_field'][$ctr]),$parent_array);
+      if (isset($title_field['#actions']) && isset($title_field['#actions']['create'])){
+        if (isset($title_field['#actions']['create']['value']) && ($title_field['#actions']['create']['value'] != '')){
+	  $xml_association['title_field'][$ctr] = $title_field['#actions']['create']['value'];
+	}
+      }
+      $parent_array = $title_field;		
+     }
+     $association = $xml_association;	
+   }
+   $run_transforms = !variable_get('xml_form_builder_use_default_dc_xslts', FALSE);
   // generate the xml with the form metadata
   $xml_form = new XMLForm($form_state);
   $document = $xml_form->submit($form, $form_state);
@@ -5118,7 +5132,7 @@ function sidora_ajax_parts($call_type, $param1 = '', $param2 = '', $param3 = '')
   if ($call_type == 'check_batch_status') {
     $request_id = $param1;
     $batch_id = $param2;
-    $batch_done == 'false';
+    $batch_done = 'false';
     $session_key = 'sidora_batch_request_'.$batch_id;
     $parent_pid = $_SESSION[$session_key]['Parent'];
     $batch_url = variable_get('sidora_batch_status_url', '') . '/' . $parent_pid . '/' . $request_id;
@@ -9641,3 +9655,9 @@ function sidora_call_batch_API($method, $url, $data = false)
   curl_close($curl);
   return $result;
 }
+function sidora_get_nested_title_field($field_array,$parent_array) {
+  if (is_array($field_array) && is_array($parent_array)){
+    return (drupal_array_get_nested_value($parent_array,$field_array));
+  }
+  return;
+}			
