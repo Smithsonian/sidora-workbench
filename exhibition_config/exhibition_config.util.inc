@@ -166,31 +166,19 @@ function si_exhibition_get_children_info(FedoraObject $object) {
  */
 function si_exhibition_generate_children_query($pid) {
 return 'select ?o ?t ?res ?title ?model from <#ri> where {
-    { ?o <fedora-model:state> <fedora-model:Active>;
-         <fedora-model:label> ?t .
-     <info:fedora/' . $pid . '> <fedora-rels-ext:hasConcept> ?o
+    { ?o <info:fedora/fedora-system:def/model#state> <info:fedora/fedora-system:def/model#Active>;
+          <info:fedora/fedora-system:def/model#label> ?t .
+     <info:fedora/' . $pid . '> <info:fedora/fedora-system:def/relations-external#hasConcept> ?o
    }
 Union {
-     ?res <fedora-model:state> <fedora-model:Active>;
-     <fedora-model:label> ?title .
-<info:fedora/' . $pid . '> <fedora-rels-ext:hasResource> ?res .
-    ?res <fedora-model:hasModel> $model
+     ?res <info:fedora/fedora-system:def/model#state> <info:fedora/fedora-system:def/model#Active>;
+     <info:fedora/fedora-system:def/model#label> ?title .
+<info:fedora/' . $pid . '> <info:fedora/fedora-system:def/relations-external#hasResource> ?res .
+    ?res <info:fedora/fedora-system:def/model#hasModel> $model
 FILTER(!sameTerm(?model, <info:fedora/fedora-system:FedoraObject-3.0>) &&
            !sameTerm(?model, <info:fedora/si:resourceCModel>))
-}
+ }
 }';
-/* return 'select ?o ?t ?res $title $model from <#ri> where 
-     ($o <fedora-model:state> <fedora-model:Active> and
-      $o <fedora-model:label> $t and
-      <info:fedora/' . $pid . '> <fedora-rels-ext:hasConcept> $o) or 
-     ($res <fedora-model:state> <fedora-model:Active> and
-      $res <fedora-model:label> $title and
-			<info:fedora/' . $pid . '> <fedora-rels-ext:hasResource> $res and
-			$res <fedora-model:hasModel> $model
-			minus $model <mulgara:is> <info:fedora/si:resourceCModel>
-      minus $model <mulgara:is> <info:fedora/fedora-system:FedoraObject-3.0>
-     ) order by $title $t';
-		 */
 }		 
 /**
  * Fetchs some information about the given object's child resources.
