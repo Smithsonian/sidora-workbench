@@ -2307,6 +2307,8 @@ function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $ex
     dsm($o1);
     $op = sidora_xsl_information($pid, TRUE);
     dsm($op);
+    $op = sidora_get_xsl_file_config_for_object($pid);
+    dsm($op);
     return 'okay';
   }
   if ($one == 'xsls'){
@@ -4345,10 +4347,14 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
         if ($download=='download'){
           $content_size = strlen($datastream_content);
           //$filename = $pid.'_'.$specific_meta;//get_suggest_filename($label, $mime_type);
+          $filename = $pid.'_'.$specific_meta.$file_extension;//get_suggest_filename($label, $mime_type);
           if ((strtoupper($specific_meta) == 'OBJ') && (strtoupper($datastream->label) != 'OBJ')){
             $filename = $datastream->label;
-          }else{
-            $filename = $pid.'_'.$specific_meta.$file_extension;//get_suggest_filename($label, $mime_type);
+            if (!empty($filename)){
+              if (pathinfo($filename, PATHINFO_EXTENSION) == '') {
+                $filename = $filename . $file_extension;
+              }
+            }
           } 
           if ($content_size > 0) {
             header("Content-length: $content_size");
