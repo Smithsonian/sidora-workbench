@@ -4303,7 +4303,6 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
             //$exhibition_data = exhibition_config_get_config_data($pid);
             //if (!(empty($exhibition_data)) && !(is_null($exhibition_data['pid'])) && ($exhibition_data['is_available'])){
             $exhibition_data = exhibition_config_get_new_config_data($pid);
-	          error_log("\nIn sidora_info_json, exhibition data:".print_r($exhibition_data,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','exhibition_config')."/errorlog.txt");
             if (!(empty($exhibition_data)) && !(is_null($exhibition_data['last_published'])) && ($exhibition_data['last_published'] != '')){
                $exhibitions['action'] = 'window.open(\'' . variable_get('si_exhibition_website_location', ''). '\'+window.sidora.concept.GetPid()); return false;';
                $exhibitions['ui_state_disable'] = false;

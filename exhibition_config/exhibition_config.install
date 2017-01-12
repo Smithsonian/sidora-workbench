@@ -99,6 +99,45 @@ function exhibition_config_update_7100() {
   );
   db_add_field('exhibition_config', 'visibility', $spec);
 }
+function exhibition_config_update_7200() {
+  if (!db_table_exists('exhibition_config_7100')){
+    $schema['exhibition_config_7200'] = array(
+    'description' => t('Stores information for exhibitions'),
+    'fields' => array(
+      'pid' => array(
+        'type' => 'varchar',
+        'length' => '256',
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'is_available' => array(
+        'type' => 'int',
+      ),
+			'last_edited' => array(
+			  'type' => 'text',
+				'size' => 'big',
+			),
+			'last_published' => array(
+			  'type' => 'text',
+				'size' => 'big',
+			),		
+      'visibility' => array(
+        'type' => 'text',
+        'size' => 'big',
+      ),
+    ),
+  );
+	db_rename_table('exhibition_config','exhibition_config_7100');  
+	db_create_table('exhibition_config', $schema['exhibition_config_7200']);
+	
+		 
+	$spec = array(
+    'type' => 'text',
+    'description' => 'Visibility of all items within this exhibition',
+    'size' => 'big',
+  );
+  db_add_field('exhibition_config', 'visibility', $spec);
+}
     
 /*
 * Implementation of hook_uninstall().

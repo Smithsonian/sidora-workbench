@@ -58,6 +58,12 @@ function exhibition_config_admin_settings() {
       '#default_value' => variable_get('si_exhibition_friendly_website_location', ''),
       '#description' => t('The friendly name gets directly appended.  This is usually "&lt;server&gt;/public/" with the right server.'),
     ),
+    'si_exhibition_clear_cache_url' => array(
+      '#type' => 'textfield',
+      '#title' => t('URL to clear the exhibition cache when publishing the exhibition'),
+      '#default_value' => variable_get('si_exhibition_clear_cache_url', ''),
+      '#description' => t('This url is called to clear the cache when publishing an exhibition.'),
+    ),
     'si_exhibition_agree_before_allowed_public_json' => array(
       '#type' => 'textarea',
       '#title' => t('JSON determining the posting to public agreement'),
