@@ -9567,7 +9567,7 @@ function sidora_convert_entity($matches) {
 function sidora_upload_batch($upload_files_array,$ontology_id) {
   global $user;
   if ((!empty($upload_files_array)) && (count($upload_files_array) > 0)){
-    $unique_id = uniqid($user->name);
+    $unique_id = uniqid(preg_replace('/\s+/', '_', $user->name));
     $fields =
        array(
 			  'batch_id',
