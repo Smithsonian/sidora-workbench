@@ -4109,9 +4109,8 @@ function sidora_exhibition_exists_in_tree($pid_to_check, $pids_checked_array){
         }
       }
     }
-  }else{
-    return FALSE;
   }
+  return FALSE;
 }       
 // copy of the function si_exhibition_get_parent_info in si_exhibition.util.inc
 function sidora_get_parent_info($pid, $skipNonTreeParents = false) {
