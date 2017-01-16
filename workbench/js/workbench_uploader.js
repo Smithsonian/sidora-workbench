@@ -6,11 +6,19 @@ jQuery().ready(function(){
     window.currentInfo.type = "EditMetadata";
     // need to send this to sidora queue done() to force a refresh after edit metadata is finished
   }else{  // code for create resource
-    window.currentInfo.type = "CreateResource";
-    window.currentInfo.parentPid = myLoc.split("/").splice(-4)[0];
-    window.currentInfo.model = myLoc.split("/").splice(-4)[1];
-    window.currentInfo.ontologyId = myLoc.split("/").splice(-4)[3];
-    window.currentInfo.formname = myLoc.split("/").splice(-4)[2];
+     if (myLoc.indexOf("batch") != -1){
+      window.currentInfo.type = "batchIngest";
+      window.currentInfo.parentPid = myLoc.split("/").splice(-6)[0];
+      window.currentInfo.model = myLoc.split("/").splice(-6)[1];
+      window.currentInfo.ontologyId = myLoc.split("/").splice(-6)[3];
+      window.currentInfo.formname = myLoc.split("/").splice(-6)[2];
+     }else{
+      window.currentInfo.type = "CreateResource";
+      window.currentInfo.parentPid = myLoc.split("/").splice(-4)[0];
+      window.currentInfo.model = myLoc.split("/").splice(-4)[1];
+      window.currentInfo.ontologyId = myLoc.split("/").splice(-4)[3];
+      window.currentInfo.formname = myLoc.split("/").splice(-4)[2];
+     }
   }
   jQuery("body").css("padding-top","0px");
   jQuery(".form-submit[value=Ingest]").hide();
@@ -108,6 +116,10 @@ jQuery().ready(function(){
       console.log("This is not in the expected IFrame");
     }
   });
+	if (location.href.indexOf('batch') != '-1'){
+	 jQuery(".sidora-form-prev").addClass("form-button-disabled");
+	 jQuery(".sidora-form-next").addClass("form-button-disabled");
+	}
 });//ends ready
 
 window.ifhRemove = function(){
@@ -213,9 +225,9 @@ window.startBatch = function(){
     for (var i = 0; i < window.batchRequests.length; i++){
       var ajaxSettings = window.batchRequests[i];
       var postData = ajaxSettings.data;
-      var ccSuccess = ajaxSettings.success;
-      var onSuccess = function(){console.log("FINISH! "+friendlyName);};
-      //var onSuccess = ajaxSettings.success;
+      var ccSuccess = oldSuccess;
+     // var onSuccess = function(){console.log("FINISH! "+friendlyName);};
+      var onSuccess = ajaxSettings.success;
 			if (currentInfo.type == 'EditMetadata'){
         var type = "Resource";
         //Check to see if edit metadata of current concept
@@ -225,9 +237,14 @@ window.startBatch = function(){
         var friendlyName = " Edit MetaData of "+type+":"+(i+1)+" of "+window.batchRequests.length;
         sidora.queue.RequestPost(friendlyName,ajaxSettings.url,postData, onSuccess, function(){}, ajaxSettings.pidsOfInterest,'editMeta',i+' of '+window.batchRequests.length);
       }else{
-        var friendlyName = " Create "+currentInfo.formname+" Resource:"+(i+1)+" of "+window.batchRequests.length;
-        sidora.queue.RequestPost(friendlyName,window.location.href,postData, onSuccess, function(){}, currentInfo.parentPid,'createResource',i+' of '+window.batchRequests.length);
-      } 
+			  if (currentInfo.type == 'batchIngest'){
+          var friendlyName = " Submiting a batch ingest for "+currentInfo.formname;
+          sidora.queue.RequestPost(friendlyName,ajaxSettings.url,postData, onSuccess, function(){}, currentInfo.parentPid,'batchIngest');
+			  }else{	
+          var friendlyName = " Create "+currentInfo.formname+" Resource:"+(i+1)+" of "+window.batchRequests.length;
+          sidora.queue.RequestPost(friendlyName,window.location.href,postData, onSuccess, function(){}, currentInfo.parentPid,'createResource',i+' of '+window.batchRequests.length);
+        } 
+			}	
     }
     sidora.queue.Next();
     window.closeMyself();
@@ -321,9 +338,9 @@ window.prepIslandoraFormForSubmit = function(formName, onSuccessfulFormSubmit, o
   //if (jQuery("#create-resource-form").length){
   window.setWhetherMetaEntered();
   if (onSuccessfulFormSubmit == null || typeof(onSuccessfulFormSubmit) != "function"){
-    onSuccessfulFormSubmit = function(formName, ajaxCall, data){
+    onSuccessfulFormSubmit = function(ajaxCall, data){
         //If successful, kill itself.
-        newPid = window.successfulCreationPid(data);
+			  newPid = window.successfulCreationPid(data);
         window.closeMyself(newPid);
     }
   }
@@ -334,7 +351,23 @@ window.prepIslandoraFormForSubmit = function(formName, onSuccessfulFormSubmit, o
     }
   }
   if (jQuery("#create-resource-form").length){
-      ajaxSettings = ({
+    if (window.location.pathname.indexOf('batch') != -1){
+		  // ajax request will be different for batch request since we're only getting a co-relation id on successful execution not a new object
+			ajaxUrl = window.location.pathname.substring(0,window.location.pathname.indexOf('//batch'));
+		ajaxSettings = ({
+      type: "POST",
+      url: ajaxUrl,
+      data: jQuery("#"+formName).serialize()+"&ingest=Ingest",
+      success: function(xhr,data ) {
+					console.log(onSuccessfulFormSubmit.toString())
+					onSuccessfulFormSubmit.apply(formName,this, data);
+      },
+      dataType: "text"
+    });//ends ajax settings
+		}
+				else{
+		  ajaxUrl = window.location;
+			ajaxSettings = ({
       type: "POST",
       url: window.location,
       //url: Drupal.settings.basePath+"/pure",
@@ -349,6 +382,8 @@ window.prepIslandoraFormForSubmit = function(formName, onSuccessfulFormSubmit, o
       },
       dataType: "text"
     });//ends ajax settings
+		}		
+
   }else{
     if (window.location.href.search('&') != '-1'){
       var ajaxUrl = sidora_util.ajaxUrl(jQuery("#"+formName).attr("count"));

@@ -544,38 +544,6 @@ function exhibition_config_form_submit($form, &$form_state) {
     );
     $output = $insert_query->execute();
     exhibition_config_save_visibility($pid,$existing_visibility_obj);
-    /*
-    if ($form['use_current_config_for_children']['#value']){
-      $full_pid_list = array();
-      $object = get_pid_tree_ec($pid,'', &$full_pid_list);
-      foreach($full_pid_list as $curr_pid){
-        $row = exhibition_config_get_config_data($curr_pid);
-        if (empty($row) || is_null($row['pid'])){
-        $result = db_query("INSERT INTO {exhibition_config} (pid, logo, title, header_html, css_script, footer_html, precontent_html, postcontent_html, sidebar_left_html, sidebar_right_html, nav_location, is_available, use_parent_config) VALUES ('%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s', '%s', '%s')",
-         array(
-          $curr_pid,
-          $form['logo']['#value'],
-          $form['title']['#value'],
-          $form['header']['#value'],
-          $form['css']['#value'],
-          $form['footer']['#value'],
-          $form['precontent']['#value'],
-          $form['postcontent']['#value'],
-          $form['sidebar_left']['#value'],
-          $form['sidebar_right']['#value'],
-          $form['nav_location']['#value'],
-          $form['is_available']['#value'],
-          $form['use_parent_config']['#value'],
-         )
-        );
-        //dsm("pid:$curr_pid");
-        //dsm($result);
-        }else{
-          //dsm("already set:$curr_pid");
-        }
-      }
-    }
-    */
     if ($output !== FALSE) {
       if ($form['is_available']['#value']) {
         drupal_set_message(t('Configuration saved.'));
@@ -588,60 +556,6 @@ function exhibition_config_form_submit($form, &$form_state) {
       drupal_set_message(t('Database Error.'), 'error');
     }
 }
-
-
-
-/*
-Returns an array 
-array( 'pid' -> $pid
-       'children' -> array(
-          [0] -> array (
-                   'pid' -> 'child_pid1',
-                   'children' -> ...
-                 )
-          [1] -> array (
-                   'pid' -> 'child_pid2',
-                   'children' -> ...
-                 )
-            
-*/
-function get_pid_tree_ec($pid, $owner_id, &$pid_list = array()){
-  require_once ( dirname(__FILE__) . '/exhibition_config.util.inc');
-  $to_return = array();
-  $to_return['pid'] = $pid;
-  if (in_array($pid, $pid_list)){
-    //already did this, duplicate found:
-    $to_return['already_in_tree'] = TRUE;
-    return $to_return;
-  }
-  $repo = si_exhibition_get_repo();
-  try{
-    $exist = si_exhibition_check_object_info_accessible(array('pid' => $pid));
-    if ($exist){
-      $object = $repo->getObject($pid); 
-      $to_return['object'] = $object;
-      $to_return['children'] = array();
-      $pid_list[] = $pid;
-      $children = si_exhibition_get_child_concept_info($object);
-      //Get the children
-      foreach($children as $child){
-        //Build the tree from all the children
-        //for each child, get their sub-tree
-        $to_return['children'][] = get_pid_tree_ec($child['pid'],$owner_id,$pid_list); 
-      }
-      return $to_return;
-    }else{
-      dsm('doesnt exist:'.$pid);
-      return null;
-    }
-  }catch(Exception $hce){
-    dsm('exception trying to get:'.$pid);
-    return null;
-  }
-}
-
-
-
 
 function exhibition_config_main_form($pid){
   $pid = urldecode($pid);
@@ -2103,7 +2017,8 @@ function exhibition_config_generate_checkboxes($branch,&$rows,$visibility_settin
       if ((isset($child_array['children'])) && (sizeof($child_array['children']) > 0)) {
         $rows[$array_index]['suffix'] .= '<ul class="visibility-list-table" id="' . $array_index . '">';
         exhibition_config_generate_checkboxes($child_array['children'],$rows,$visibility_settings,$array_index.'/');
-        $key = end(array_keys($rows));
+        $all_keys = array_keys($rows);
+        $key = end($all_keys);
         $rows[$key]['suffix'] .= '</ul>';
       }
     } 
@@ -2671,11 +2586,12 @@ function exhibition_config_reset_visibility($vis_obj, $pid_that_requires_update,
       $repo = si_exhibition_get_repo();
       $curr_child_object = $repo->getObject($curr_child_pid);
       $models_to_remove = array("fedora-system:FedoraObject-3.0","si:resourceCModel","si:collectionCModel");
+      $model_array = array_diff($curr_child_object->models,$models_to_remove);
       $new_vis_obj = array(
         "pid" => $curr_child_info['pid'],
         "label" => $curr_child_info['title'],
         "type" => $curr_child_info['type'],
-        "model" => array_pop(array_diff($curr_child_object->models,$models_to_remove)),
+        "model" => array_pop($model_array),
       );
       if ($curr_child_info['type'] == 'Resource'){
         $new_vis_obj['show_name'] = !(empty($vis_obj['future_children_show_name']));

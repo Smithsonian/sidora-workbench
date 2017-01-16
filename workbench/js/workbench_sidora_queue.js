@@ -169,6 +169,64 @@ SidoraQueue.prototype.Done = function(completedItem, ajaxReturn){
     }
     this.NotificationWindow.Show(toShow, true);
   }else{
+    if (completedItem.action == 'batchIngest' && jsonData.status.toLowerCase().indexOf("batch ingest successfully received") > -1){ 
+      console.log("Batch successfully submitted");
+      var requestID = jsonData.request_id;
+      var batch_id = jsonData.batch_id;
+      var timestamp = jsonData.timestamp;
+      console.log("Request id:"+requestID);
+      this.NotificationWindow.Show('Batch Ingest request started at ' + timestamp + ' to ingest ' + jsonData.message + ' is now under process',true);
+      // extract the request id and batch_id and set an interval based function 
+				
+    (function poll(requestID,batch_id,timestamp) {
+      setTimeout(function(){
+	jQuery.ajax({
+        url: Drupal.settings.basePath+"sidora/ajax_parts/check_batch_status/"+requestID+"/"+batch_id+"/",
+        type: "GET",
+        success: function(batchStatus) {
+          if (batchStatus && typeof(batchStatus) != 'string'){
+	    if (batchStatus.status.toLowerCase().indexOf('complete') > -1){
+	      parentPid = batchStatus.parent;
+	      sidora.queue.NotificationWindow.Hide();
+	      console.log('parent pid to refresh is ' + parentPid);
+              jQuery('#batchMessage').remove();
+              jQuery("body").append("<div id='batchMessage' style='display:none;' title='Batch Metadata request status'><div>The batch request started at " + timestamp + " is completed.\n" + batchStatus.message + "</div></div>");
+              jQuery("#batchMessage").dialog({
+                modal: true,
+	        height:250,
+                width: 400,
+                buttons: {
+                 Ok: function(){
+		    jQuery( this ).dialog( "close" );
+		 }
+		}
+	      });	 
+	      if (sidora.concept.GetPid() == parentPid){
+		setTimeout(function(){
+	 	sidora.concept.LoadContent();
+		sidora.util.refreshConceptChildrenNumber(parentPid);
+                },5000);
+	      }
+	   }else{
+	     if (batchStatus.status.toLowerCase().indexOf('error') == -1) {
+			   sidora.queue.NotificationWindow.Show("Batch request started at " + timestamp + " is still running" + "<br>" + batchStatus.message,true);
+	       setTimeout(function() {poll(requestID,batch_id,timestamp)}, 2000);
+			 }else{
+			 	 sidora.queue.NotificationWindow.Show("Batch status for request started at " + timestamp + " returned an error" + "<br>" + batchStatus.message,true);
+			 }	 
+	   }
+	 }			
+       },
+       dataType: "json",
+       //timeout: 5000
+      });
+     },2000);
+   })(requestID,batch_id,timestamp);
+				
+        /*{}else{
+          onFailureOfFormSubmit(formName, this, data);
+        }*/
+  }else{  
     if (!completedItem.isSilent) this.NotificationWindow.Show(completedItem.userFriendlyName);
     var processedItemCount = completedItem.requestStat;
     var executeOnceOnly = false;
@@ -226,6 +284,7 @@ SidoraQueue.prototype.Done = function(completedItem, ajaxReturn){
       }else if (sidora.resources.IsOnScreen(completedItem.pidsBeingProcessed[i])){
         sidora.concept.LoadContent();
       } 
+		}	
     }
   }
   console.log("done function of queue:"+completedItem.userFriendlyName);

@@ -584,12 +584,34 @@ tr.removed.odd {
     '#description' => t('Usually pids have locks to eliminate multiple users attempting to access it at one.  Checking this box turns off that feature.'),
     '#default_value' => variable_get('sidora_disable_locking_by_pid', ''),
   );
+	$form['batch_url'] = array(
+     'fieldset' => array(
+      '#type' => 'fieldset',
+      '#title' => 'Batch Ingest URL',
+      '#description' => t(''),
+      '#collapsible' => TRUE,
+      '#collapsed' => TRUE,
+      'sidora_batch_ingest_url' => array(
+        '#type' => 'textfield',
+        '#title' => t('Batch Metadata URL'),
+        '#default_value' => variable_get('sidora_batch_ingest_url', ''),
+        '#description' => t('The location of endpoint for initiating a batch ingest. Valid entry looks like this: http://&lt;server&gt;:&lt;port&gt;/batch/process/'),
+      ),	
+      'sidora_batch_status_url' => array(
+        '#type' => 'textfield',
+	'#title' => t('Batch Status URL'),
+	'#default_value' => variable_get('sidora_batch_status_url', ''),
+	'#description' => t('The location of endpoint for checking the status of a batch ingest. Valid entry looks like this: http://&lt;server&gt;:&lt;port&gt;/batch/newBatchResource/'),
+     ),	
+    ),
+  );
   $form['#attributes'] = array('OnSubmit' => 'formPreSubmit();');
   $form['sidora_links'] = array(
     '#markup' => '<ul id="sidora-admin-links"><h2>Administrative Links</h2>
-<li><a href="config_transfer">Config Transfer</a> Download or upload a SIdora configuration</li>
-<li><a href="fedora_object_issues">Fedora Object Issues</a> Check to see if any object issues have been found by the workbench (Malformed objects list)</li>
+<li><a href="config_transfer">' . t('Config Transfer') . '</a>' . t(' Download or upload a SIdora configuration') . '</li>
+<li><a href="fedora_object_issues">' . t('Fedora Object Issues') . '</a>' . t(' Check object issues have been found by the workbench (Malformed objects list)') . '</li>
 <li><a href="fedora_sync">Choose when to set concept objects to resync with Fedora</a></li>
+<li><a href="check_user_projects">' . t('Check User Projects') . '</a>' . t(' Check if the children of si:user-projects is out of sync with the Drupal users') . '</li>
 </ul>
 <script>
 

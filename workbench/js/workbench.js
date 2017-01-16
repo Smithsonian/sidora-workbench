@@ -358,7 +358,7 @@ sidora.concept.LoadContentHelp.CreateResourceMenu = function(conceptOfInterest){
     jQuery("#resource-create").remove();
     if (menu_html.length > 0){
       jQuery("#resource-files-menu").append('<li id="resource-create"><a id="resource-create-link" href="#" onclick="return false;"><input type="image" src="'+Drupal.settings.basePath+'sites/all/modules/islandora_xml_forms-7.x-1.7/elements/images/add.png" title="Create a new resource as a child of the highlighted concept."> Add&nbsp;resource</a><ul>'+availableResourcesToCreateForConceptHtml+'</ul></li>');
-      jQuery("#resource-create a").attr("onclick","return false;");
+       jQuery("#resource-create a").attr("onclick","return false;");
       jQuery("#resource-create a").click(function(){
         var model = jQuery(this).attr("model");
         var form = jQuery(this).attr("formname");
@@ -2756,7 +2756,7 @@ jQuery(window).resize(function() {
  * If the browser doesn't have a console, give it something so we're not creating JS errors
  */
 if (typeof(window.console) == 'undefined'||typeof(window.console.log)=='undefined'){window.console = {log:function(){}};}
-//setTimeout(sidora.util.constantCheck,4000); //All polling links in to this function, give 4 seconds for Drupal javascripts to set up
+setTimeout(sidora.util.constantCheck,4000); //All polling links in to this function, give 4 seconds for Drupal javascripts to set up
 
 
 /**

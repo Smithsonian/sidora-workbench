@@ -67,7 +67,8 @@ function sidora_update_relationship_choose_exit($uri, $predicate, $recipient, $r
      switch ($code) {
       case '404':
         if (!isset($description)) { // Couldn't reach the repository.
-          drupal_set_message(t('The Fedora repository server is currently unavailable. Please contact the site administrator' . (variable_get('site_admin_email_to', '') != ''?' at ' . variable_get('site_admin_email_to'):'')), 'error', FALSE);
+          drupal_set_message(t('The Fedora repository server is currently unavailable. Please contact the site administrator %email',
+	    array('%email' => (variable_get('site_admin_email_to', '') != ''?' at ' . variable_get('site_admin_email_to'):''))), 'error', FALSE);
         }
         drupal_not_found();
         break;
@@ -76,7 +77,8 @@ function sidora_update_relationship_choose_exit($uri, $predicate, $recipient, $r
         drupal_access_denied();
         break;
       default:
-        drupal_set_message(t('An error occured when attempting to access the fedora repository. Please contact the site administrator.' . (variable_get('site_admin_email_to', '') != ''?' at ' . variable_get('site_admin_email_to'):'')), 'error', FALSE);
+        drupal_set_message(t('An error occured when attempting to access the fedora repository. Please contact the site administrator %email',
+	  array('%email' => (variable_get('site_admin_email_to', '') != ''?' at ' . variable_get('site_admin_email_to'):''))), 'error', FALSE);
         $message = '%type: !message in %function (line %line of %file).';
         $backtrace = $e->getTrace();
         $caller = $backtrace[1];
@@ -1123,6 +1125,7 @@ function sidora_get_file_extension_from_mime($file_mime_type, $get_mime = FALSE)
         'video/x-ms-asf-plugin' => '.asx',
         'audio/x-au' => '.au',
         'video/avi' => '.avi',
+        'video/x-msvideo' => '.avi',
         'video/avs-video' => '.avs',
         'image/x-windows-bmp' => '.bmp',
 				'image/bmp' => '.bmp',
@@ -1239,6 +1242,7 @@ function sidora_get_file_extension_from_mime($file_mime_type, $get_mime = FALSE)
 				'video/quicktime' => '.mov',
 				'video/mp4' => '.mp4',
 				'audio/ogg' => 'ogg',
+				'video/x-m4v' => '.m4v',
 				'video/mp4' => '.m4v',
 				'audio/mp4' => '.m4a',
 				'video/x-matroska' => '.mkv',
@@ -1309,5 +1313,36 @@ function sidora_mail($from = 'default_from', $to, $subject, $message) {
   else {
     return FALSE;
   }
+}
+// function to convert a PHP array to valid xml file
+function sidora_array_to_xml( $data, &$xml_data, &$domtree ) {
+  foreach( $data as $key => $value ) {
+    if( is_numeric($key) ){
+      $key = 'item'.$key; //dealing with <0/>..<n/> issues
+    }
+    if( is_array($value) ) {
+      $subnode = $domtree->createElement($key);
+			$subnode = $xml_data->appendChild($subnode);
+      sidora_array_to_xml($value, $subnode,$domtree);
+    } else {
+       $subnode = $domtree->createElement("$key",htmlspecialchars("$value"));
+			 $xml_data->appendChild($subnode);
+    }
+  }
+
+}
+/**
+ * Clean the filenames in batch ingest before sending them to the 
+ * back-end via curl request. If not sanitized prior to sending,
+ * Fedora REST wasn't able to handle filenames with spaces.
+ * Code originally from http://cubiq.org/the-perfect-php-clean-url-generator
+ */
+function sidora_toAscii($str,$delimiter='_') {
+  setlocale(LC_ALL, 'en_US.UTF8');
+	$clean = iconv('UTF-8', 'ASCII//TRANSLIT', $str);
+	$clean = preg_replace("/[^a-zA-Z0-9.\/_|+ -]/", '', $clean);
+	$clean = strtolower(trim($clean, '-'));
+	$clean = preg_replace("/[\/_|+ -]+/", $delimiter, $clean);
+	return $clean;
 }
 ?>
