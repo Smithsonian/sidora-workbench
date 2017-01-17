@@ -2647,7 +2647,23 @@ if ($one == 'deletexsl'){
   }   
   if ($one == 'get_tree_by_id'){
 	  var_dump(sidora_html_tree_for_ajax($two));
-	}	
+	}
+	if ($one == 'db_like'){
+	  $pid = 'si-user:124';
+		$custom_url = 'asdf';
+		$url_in_use_result = db_query("select pid from {exhibition_config} where pid <> :pid and last_edited like :cus_url", 
+        array(
+          ':pid' => $pid, 
+          ':cus_url' => '%'.$custom_url.'%',
+        )
+      );
+			var_dump($url_in_use_result);
+      $first_hit = $url_in_use_result->fetchAssoc();
+      var_dump($first_hit);
+			if (!empty($first_hit)){
+        echo('Custom URL already in use.');
+      }
+		}	
   //This ends the testing function and should also indicate the end of liberal use of the dsm function
 }
 /*
@@ -4302,7 +4318,7 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
           if (module_exists('exhibition_config')){
             //$exhibition_data = exhibition_config_get_config_data($pid);
             //if (!(empty($exhibition_data)) && !(is_null($exhibition_data['pid'])) && ($exhibition_data['is_available'])){
-            $exhibition_data = exhibition_config_get_new_config_data($pid);
+            $exhibition_data = exhibition_config_get_config_data($pid);
             if (!(empty($exhibition_data)) && !(is_null($exhibition_data['last_published'])) && ($exhibition_data['last_published'] != '')){
                $exhibitions['action'] = 'window.open(\'' . variable_get('si_exhibition_website_location', ''). '\'+window.sidora.concept.GetPid()); return false;';
                $exhibitions['ui_state_disable'] = false;

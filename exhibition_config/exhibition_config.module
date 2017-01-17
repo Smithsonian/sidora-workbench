@@ -108,7 +108,7 @@ function exhibition_config_get_exhibition_pids_for_user($user_id){
   $repo = si_exhibition_get_repo();
 
   $exhibition_pids = array();
-  $result = db_query("select pid, custom_url, is_available from {exhibition_config}");
+  $result = db_query("select pid, last_edited, last_published, is_available from {exhibition_config}");
   foreach ($result as $records){
     $pid_to_test = $records->pid;
     $curr_label = '';
@@ -117,7 +117,8 @@ function exhibition_config_get_exhibition_pids_for_user($user_id){
       if ($exist){
         $object = $repo->getObject($pid_to_test); 
         $curr_label = $object->label;
-        $to_add = array('pid'=>$pid_to_test, 'label'=>$curr_label, 'custom_url'=>$records->custom_url, 'is_available'=>$records->is_available);
+        $last_saved = unserialize($records->last_edited);
+				$to_add = array('pid'=>$pid_to_test, 'label'=>$curr_label, 'custom_url'=>$last_saved['custom_url'], 'is_available'=>(!(is_null($records->last_published)) && ($records->last_published != ''))? '1' : $records->is_available);
         if (strtolower($object->owner) == strtolower($user_id) || $user_id === '') $exhibition_pids[] = $to_add;
       }
     }catch(Exception $hce){
@@ -249,23 +250,9 @@ function exhibition_config_user_view($account, $view_mode, $langcode){
  * Pulls all info from the database for this pid
  */
 function exhibition_config_get_config_data($pid){
-  $result = db_query("Select ". //SELECT
-" is_available, link_bar_links, use_parent_config, pid, logo, logo_width, logo_height, title, header_html, css_script, footer_html, precontent_html, postcontent_html, sidebar_left_html, sidebar_right_html, nav_location, nav_type, custom_url ".
-"FROM {exhibition_config} where pid = :pid", array(':pid'=>$pid));
-//"FROM {exhibition_config} where pid = 'si:root'");//:pid'", array(':pid'=>$pid));
-  $row = array();
-  foreach ($result as $input){
-    foreach($input as $name=>$value){
-      $row[$name] = $value;
-    }
-  }
-  return $row;
-}
-
-function exhibition_config_get_new_config_data($pid){
   $result = db_query("Select". //SELECT
 " pid, last_edited, last_published" .
-" FROM {exhibition_config_copy} where pid = :pid", array(':pid'=>$pid));
+" FROM {exhibition_config} where pid = :pid", array(':pid'=>$pid));
   $row = array();
   foreach ($result as $input){
 	  foreach($input as $name=>$value){
@@ -278,7 +265,7 @@ function exhibition_config_get_new_config_data($pid){
 function exhibition_config_load_last_published($pid){
   $result = db_query("Select ". //SELECT
 " last_published "   .
-" FROM {exhibition_config_copy} where pid = :pid", array(':pid'=>$pid));
+" FROM {exhibition_config} where pid = :pid", array(':pid'=>$pid));
   $row = array();
   foreach ($result as $input){
 	  foreach($input as $name=>$value){
@@ -292,10 +279,11 @@ function exhibition_config_load_last_published($pid){
  * prints out each pid that has the input custom_url, should only be one if input configuration checked properly
  */
 function exhibition_config_custom_url($custom_url){
-  $result = db_query("Select pid FROM {exhibition_config} where custom_url = :custom_url", array(':custom_url'=>$custom_url));
+  $result = db_query("Select pid, last_edited FROM {exhibition_config} where last_edited like :custom_url", array(':custom_url'=> '%' . $custom_url . '%'));
   $row = null;
   foreach ($result as $row){
-    print($row->pid);
+    $last_saved = unserialize($row->last_edited);
+		if ($last_saved['custom_url'] == $custom_url) print($row->pid);
   }
   exit();
 }
@@ -306,7 +294,7 @@ function exhibition_config_custom_url($custom_url){
 function exhibition_config_json_data($pid){
   //if (!empty($_GET['BBB'])) return exhibition_config_json_visibility($pid);
   $pid = urldecode($pid);
-  $row = exhibition_config_get_new_config_data($pid);
+  $row = exhibition_config_get_config_data($pid);
   if (!empty($row)) {
     if (is_null($row['pid'])){
       print '{ "error": true, "error_message" : "Exhibition not available" }';
@@ -368,27 +356,17 @@ function exhibition_config_form_validate($form, &$form_state){
     $check_url =  $form['custom_url']['#value'];
     if (!empty($check_url)){
       // TODO :change this query since now the custom url will be  apart of a serialized/json encoded field
-			$url_in_use_result = db_query("select pid from {exhibition_config_copy} where pid <> :pid and last_edited like :cus_url", 
+			$url_in_use_result = db_query("select pid, last_edited from {exhibition_config} where pid <> :pid and last_edited like :cus_url", 
         array(
           ':pid' => $pid, 
-          ':cus_url' => $form['custom_url']['#value'],
+          ':cus_url' => '%' . $form['custom_url']['#value'] . '%',
         )
       );
       $first_hit = $url_in_use_result->fetchAssoc();
       if (!empty($first_hit)){
-        form_set_error('custom_url',t('Custom URL already in use.'));
+        $unserialized_first_hit = unserialize($first_hit['last_edited']);
+				if ($unserialized_first_hit['custom_url'] == $form['custom_url']['#value']) form_set_error('custom_url',t('Custom URL already in use.'));
       }
-      
-			/*$url_in_use_result = db_query("select pid from {exhibition_config} where pid <> :pid and custom_url = :cus_url", 
-        array(
-          ':pid' => $pid, 
-          ':cus_url' => $form['custom_url']['#value'],
-        )
-      );
-      $first_hit = $url_in_use_result->fetchAssoc();;
-      if (!empty($first_hit)){
-        form_set_error('custom_url',t('Custom URL already in use.'));
-      }*/
       $stripped = preg_replace("/[^A-Za-z0-9]/", "", $check_url );
       if ($stripped != $check_url){
         form_set_error('custom_url',t('Custom URL must be alphanumeric, no symbols or spaces.'));
@@ -437,7 +415,6 @@ function exhibition_config_form_validate($form, &$form_state){
  * hook_form_submit for exhibition_config
  */
 function exhibition_config_form_submit($form, &$form_state) {
-    error_log("\nIn exhibition_config_form_submit, publish status value:".print_r($form['publish_status']['#value'],true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','exhibition_config')."/errorlog.txt");
 		$pid = $form['pid']['#value'];
     $allowed = exhibition_config_allowed_to_edit($pid);
     if (!$allowed){
@@ -471,24 +448,19 @@ function exhibition_config_form_submit($form, &$form_state) {
     $css_serialized = $my_css;
     $check_url =  $form['custom_url']['#value'];
     if (!empty($check_url)){
-      // TODO :change this query since now the custom url will be  apart of a serialized/json encoded field
-      /*$url_in_use_result = db_query("select pid from {exhibition_config} where pid != '%s' and custom_url = '%s'", 
+			$url_in_use_result = db_query("select pid, last_edited from {exhibition_config} where pid <> :pid and last_edited like :cus_url", 
         array(
-          $pid, 
-          $form['custom_url']['#value'],
-        )
-      );*/
-      $url_in_use_result = db_query("select pid from {exhibition_config_copy} where pid != '%s' and last_edited like '%s'", 
-        array(
-          $pid, 
-          '%' . $form['custom_url']['#value'] . '%',
+          ':pid' => $pid, 
+          ':cus_url' => '%' . $form['custom_url']['#value'] . '%',
         )
       );
       $first_hit = $url_in_use_result->fetchAssoc();
-    error_log("\nIn exhibition_config_form_submit, first hit:".print_r($first_hit,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','exhibition_config')."/errorlog.txt");
       if (!empty($first_hit)){
-        drupal_set_message('Custom URL already in use, all other information saved.', 'warning');
-        $form['custom_url']['#value'] = '';
+			  $unserialized_first_hit = unserialize($first_hit['last_edited']);
+				if ($unserialized_first_hit['custom_url'] == $form['custom_url']['#value']){ 
+				 drupal_set_message('Custom URL already in use, all other information saved.', 'warning');
+         $form['custom_url']['#value'] = '';
+				} 
       }
     }
     
@@ -533,54 +505,7 @@ function exhibition_config_form_submit($form, &$form_state) {
    if ($form['publish_status']['#value'] != '1'){
 		 $last_published_config = exhibition_config_load_last_published($pid);
 		} 
-		/*$delete_result = db_delete("{exhibition_config}")->condition('pid', $pid)->execute();
-    $fields = 
-      array(
-        'pid', 
-        'logo',
-        'logo_width', 
-        'logo_height', 
-        'title', 
-        'header_html', 
-        'css_script', 
-        'footer_html', 
-        'precontent_html', 
-        'postcontent_html', 
-        'sidebar_left_html', 
-        'sidebar_right_html', 
-        'nav_location', 
-        'nav_type', 
-        'custom_url', 
-        'link_bar_links', 
-        'is_available', 
-        'use_parent_config'
-      );
-    $insert_query = db_insert('exhibition_config')->fields($fields);
-    $insert_query->values( 
-      array(
-        'pid' => $pid,
-        'logo' => $form['top']['logo']['#value'],
-        'logo_width' => $form['top']['logo_width']['#value'],
-        'logo_height' => $form['top']['logo_height']['#value'],
-        'title' => $form['top']['title']['#value'],
-        'header_html' => $form['top']['header']['value']['#value'],
-        'css_script' => serialize($css_serialized),
-        'footer_html' => $form['bottom']['footer']['value']['#value'],
-        'precontent_html' => $form['content_area']['precontent']['value']['#value'],
-        'postcontent_html' => $form['content_area']['postcontent']['value']['#value'],
-        'sidebar_left_html' => $form['content_area']['sidebar_left']['value']['#value'],
-        'sidebar_right_html' => $form['content_area']['sidebar_right']['value']['#value'],
-        'nav_location' => $form['content_area']['nav_location']['#value'],
-        'nav_type' => $form['content_area']['nav_type']['#value'],
-        'custom_url' => $form['custom_url']['#value'],
-        'link_bar_links' => serialize($fls_serialized),
-        'is_available' => $form['is_available']['#value'],
-        'use_parent_config' => empty($form['use_parent_config']['#value'])?'0':$form['use_parent_config']['#value'],
-      )
-    );
-    $output = $insert_query->execute();
-    exhibition_config_save_visibility($pid,$existing_visibility_obj);*/
-		$delete_result = db_delete("{exhibition_config_copy}")->condition('pid', $pid)->execute();
+		$delete_result = db_delete("{exhibition_config}")->condition('pid', $pid)->execute();
 		$last_edited_values = array(
         'logo' => $form['top']['logo']['#value'],
         'logo_width' => $form['top']['logo_width']['#value'],
@@ -609,7 +534,7 @@ function exhibition_config_form_submit($form, &$form_state) {
 		 if ($form['publish_status']['#value'] == '1'){
 		  $last_published_config = serialize($last_edited_values);
 		 } 
-    $insert_query = db_insert('exhibition_config_copy')->fields($fields);
+    $insert_query = db_insert('exhibition_config')->fields($fields);
     $insert_query->values( 
       array(
         'pid' => $pid,
@@ -618,7 +543,7 @@ function exhibition_config_form_submit($form, &$form_state) {
 				)
 		);
 		$output = $insert_query->execute();
-		exhibition_config_copy_save_visibility($pid,$existing_visibility_obj);
+		exhibition_config_save_visibility($pid,$existing_visibility_obj);
     if ($output !== FALSE) {
       if ($form['publish_status']['#value'] == '1') {
         exhibition_config_clear_exhibition_cache();
@@ -749,9 +674,7 @@ function exhibition_config_form($form, $form_state){
     return;
   }
   $object = _exhibition_config_get_object($pid);
-  $row = exhibition_config_get_config_data($pid);
-	$new_row = exhibition_config_get_new_config_data($pid);
-  error_log("\nIn exhibition_config_form, new row:".print_r($new_row,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','exhibition_config')."/errorlog.txt");
+  $new_row = exhibition_config_get_config_data($pid);
   $row = array();
 	if (!empty($new_row)) $row = unserialize($new_row['last_edited']);
 	drupal_add_library('system', 'ui.resizable');
@@ -785,8 +708,6 @@ function exhibition_config_form($form, $form_state){
 	    $row['last_published'] = TRUE;
 		}
 	}	
-  error_log("\nIn exhibition_config_form, is published:".print_r($row['is_published'],true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','exhibition_config')."/errorlog.txt");
-	error_log("\nIn exhibition_config_form, last published:".print_r($row['last_published'],true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','exhibition_config')."/errorlog.txt");
   $full = '
 <a href="javascript:void(0);" onclick="togglePreviewLocation();" title="Moves the sample between the top and side of the page.  You can also move your mouse between the sections and drag to change the sizes when the sample is on the right.">Toggle Sample Location</a><br/>
 <a href="javascript:void(0);" onclick="togglePreviewEditLinks();" title="Turns off the \'Edit\' quick links to get a better view of the sample, or turns them back on to quickly jump to a section to edit">Toggle Placeholder Text and Links</a><br/>';
@@ -1233,7 +1154,8 @@ $(function(){
             }
           },
           Cancel: function() {
-            jQuery( this ).dialog("close");
+            $("#publish-exhibition").val("0");
+						jQuery( this ).dialog("close");
           }
        }
     });
@@ -2438,42 +2360,6 @@ function exhibition_config_save_visibility($pid, $visibility_obj_tree) {
         'visibility', 
       );
     $insert_query = db_insert('exhibition_config')->fields($fields);
-    $insert_query->values( 
-      array(
-        'pid' => $pid,
-        'visibility' => json_encode($visibility_obj_tree),
-      )
-    );
-    $new_entry = $insert_query->execute();
-  }
-  return TRUE; 
-}
-function exhibition_config_copy_save_visibility($pid, $visibility_obj_tree) {
-  if (!exhibition_config_allowed_to_edit($pid)) {
-    drupal_not_found();
-    drupal_exit();
-  }
-  //if the tree is a child array, just take the first element
-  if (empty($visibility_obj_tree['pid']) && !empty($visibility_obj_tree[0])){
-    $visibility_obj_tree = $visibility_obj_tree[0];
-  }
-  $exists = db_query('SELECT 1 FROM {exhibition_config_copy} WHERE pid = :pid', array(':pid' => $pid))->fetchField();
-  if ($exists) {
-    $query = db_update('exhibition_config_copy')
-      ->fields(array(
-        'visibility' => json_encode($visibility_obj_tree),
-      ))
-      ->condition('pid', $pid, '=');
-    $num_updated = $query->execute();
-    $new_entry = NULL;
-  }
-  else {
-    $fields = 
-      array(
-        'pid', 
-        'visibility', 
-      );
-    $insert_query = db_insert('exhibition_config_copy')->fields($fields);
     $insert_query->values( 
       array(
         'pid' => $pid,
