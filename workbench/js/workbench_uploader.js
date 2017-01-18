@@ -6,7 +6,7 @@ jQuery().ready(function(){
     window.currentInfo.type = "EditMetadata";
     // need to send this to sidora queue done() to force a refresh after edit metadata is finished
   }else{  // code for create resource
-     if (myLoc.indexOf("batch") != -1){
+     if (myLoc.indexOf("metabulk") != -1){
       window.currentInfo.type = "batchIngest";
       window.currentInfo.parentPid = myLoc.split("/").splice(-6)[0];
       window.currentInfo.model = myLoc.split("/").splice(-6)[1];
@@ -98,7 +98,7 @@ jQuery().ready(function(){
       console.log("This is not in the expected IFrame");
     }
   });
-	if (location.href.indexOf('batch') != '-1'){
+	if (location.href.indexOf('metabulk') != '-1'){
 	 jQuery(".sidora-form-prev").addClass("form-button-disabled");
 	 jQuery(".sidora-form-next").addClass("form-button-disabled");
 	}
@@ -333,9 +333,9 @@ window.prepIslandoraFormForSubmit = function(formName, onSuccessfulFormSubmit, o
     }
   }
   if (jQuery("#create-resource-form").length){
-    if (window.location.pathname.indexOf('batch') != -1){
+    if (window.location.pathname.indexOf('metabulk') != -1){
 		  // ajax request will be different for batch request since we're only getting a co-relation id on successful execution not a new object
-			ajaxUrl = window.location.pathname.substring(0,window.location.pathname.indexOf('//batch'));
+			ajaxUrl = window.location.pathname.substring(0,window.location.pathname.indexOf('//metabulk'));
 		ajaxSettings = ({
       type: "POST",
       url: ajaxUrl,
