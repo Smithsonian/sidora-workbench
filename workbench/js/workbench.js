@@ -106,9 +106,11 @@ sidora.concept.LoadContentHelp.Resources.TableLoad = function(conceptOfInterest)
     if (pids.length != 1){
    //   jQuery("#edit-resource-metadata-menu").addClass("ui-state-disabled");
       jQuery("#manage-resource").addClass("ui-state-disabled");
+			jQuery("#edit-resource-datastream-menu").addClass("ui-state-disabled");
     }else{
       jQuery("#edit-resource-metadata-menu").removeClass("ui-state-disabled");
       jQuery("#manage-resource").removeClass("ui-state-disabled");
+			/// TODO : get the owner for the currently selected resource and check if that matches the current user
     }
   }); //End onclick
     table.on( 'length', function ( e, settings, len ) {

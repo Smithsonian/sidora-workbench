@@ -4890,7 +4890,8 @@ function sidora_block_view($delta = ''){
             </li>
             <li><a href="#" onclick="return false;">Edit</a>
               <ul>
-                <li><a href="#" onclick="return false;" id="edit-resource-metadata-menu" class="ui-state-disabled">Edit&nbsp;Metadata</a></li>';
+                <li><a href="#" onclick="return false;" id="edit-resource-metadata-menu" class="ui-state-disabled">Edit&nbsp;Metadata</a></li>
+								<li><a href="#" onclick="return false;" id="edit-resource-datastream-menu" class="ui-state-disabled">Edit&nbsp;Datastream</a></li>';
       if (sidora_is_admin()) $block['content'] .= '
                 <li><a href="#" onclick="return false;" id="manage-resource" class="ui-state-disabled">Manage&nbsp;Resource</a></li>';
       $block['content'] .= '
