@@ -2842,7 +2842,7 @@ function sidora_form_alter(&$form, &$form_state, $form_id){
       '#description' => '',
       '#required' => false,
     );
-    if ((isset($form['#action']) && (strpos($form['#action'],'batch') !== false)) || (isset($form_state['batch']))){
+    if ((isset($form['#action']) && (strpos($form['#action'],'metabulk') !== false)) || (isset($form_state['batch']))){
       unset($form['#submit']);
       $form['#submit'][] = 'sidora_process_batch_submit'; 
       unset($form['next']['#submit']);
@@ -2851,8 +2851,8 @@ function sidora_form_alter(&$form, &$form_state, $form_id){
         unset($form['hidden_next']['#submit']);
 	$form['hidden_next']['#submit'][] = 'sidora_process_batch_submit';
       } 
-      if (isset($form['#action']) && (strpos($form['#action'],'batch') !== false)){
-        $form['#action'] = substr($form['#action'],0,strpos($form['#action'],'//batch'));
+      if (isset($form['#action']) && (strpos($form['#action'],'metabulk') !== false)){
+        $form['#action'] = substr($form['#action'],0,strpos($form['#action'],'//metabulk'));
       }
      $form_state['batch'] = array(
          '#name' => 'batch',
@@ -2954,7 +2954,7 @@ function sidora_process_batch_submit($form,&$form_state){
   }
   $batch_url = variable_get('sidora_batch_ingest_url', '') . '/' . $id_to_creation_info[$form_build_id]['parent'] . $get_params;
   $ingest_response = sidora_ingest_request($batch_url,$post_params);
-  // save the curl request id to session along with the parent concept
+	// save the curl request id to session along with the parent concept
   if (strpos($ingest_response,'</CorrelationID>') !== false) {
     $doc = new DOMDocument();
     $doc->loadXML($ingest_response);
@@ -3111,7 +3111,7 @@ function sidora_create_resource_get_upload_form_html($model, $form_name, $ontolo
     $to_return .= "<div id='create-resource-upload'>";
     $to_return .= sidora_get_plupload_html($elements, $upload_button_text);
     $to_return .= "<input class=\"form-submit\" id=\"Next\" value=\"Individual Metadata\" onclick=\"jQuery('#create-resource-upload').hide(); location.reload();\"></input>";
-    $to_return .= "<input class=\"form-submit\" id=\"applyBatch\" value=\"Apply Metadata\" onclick=\"jQuery('#create-resource-upload').hide(); if (window.location.href.indexOf('batch') == -1) {window.location.href += '//batch';}\"></input>";
+    $to_return .= "<input class=\"form-submit\" id=\"applyBatch\" value=\"Apply Metadata\" onclick=\"jQuery('#create-resource-upload').hide(); if (window.location.href.indexOf('metabulk') == -1) {window.location.href += '//metabulk';}\"></input>";
 		$to_return .= "</div>";
     if ($clear_file_list){
       $_SESSION['file_uploads'][$user->uid] = array();
@@ -3240,9 +3240,9 @@ function sidora_create_resource_get_metadata_form_html($parent_pid, $model, $for
   }else{
     $at_least_one_pic = false;
     foreach ($current_uploads as $cu){
-      $at_least_one_pic = $at_least_one_pic ||  sidora_is_displayable_image_with_convert($cu->filename) && ($batch != 'batch');
+      $at_least_one_pic = $at_least_one_pic ||  sidora_is_displayable_image_with_convert($cu->filename) && ($batch != 'metabulk');
     }
-    if ($batch == 'batch'){ // rename and move the uploaded files
+    if ($batch == 'metabulk'){ // rename and move the uploaded files
       $batch_uniqueId = '';
       $batch_uniqueId = sidora_upload_batch($current_uploads,drupal_static('ontology_id'));
       if ($batch_uniqueId == ''){
@@ -3251,7 +3251,7 @@ function sidora_create_resource_get_metadata_form_html($parent_pid, $model, $for
      }	
     }	
     for ($form_total = 0; $form_total < count($current_uploads); $form_total++){
-      if ($form_total > 0 && $batch == 'batch'){
+      if ($form_total > 0 && $batch == 'metabulk'){
         break;  // we need to create only one copy of the form for all the uploaded files
       }	
       $to_return .= '<div id="form-num-'.$form_total.'" class="sidora-ingest-form-holder ';
@@ -3307,7 +3307,7 @@ function sidora_create_resource_get_metadata_form_html($parent_pid, $model, $for
         } //If there is no specified title in the form, then the label for the object will never get set either. 
         if (!empty($form_copy_array)){
           $form_copy_array['#value'] = substr($filename,0,strpos($filename,'.'));
-	  if ($batch == 'batch'){
+	  if ($batch == 'metabulk'){
 	    $form_copy_array['#value'] = '';
 	  }  
           drupal_array_set_nested_value($form,$form_copy_array['#array_parents'],$form_copy_array);
@@ -3315,7 +3315,7 @@ function sidora_create_resource_get_metadata_form_html($parent_pid, $model, $for
         $id_to_filename = cache_get("sidora:form_id_to_filename");
         if (empty($id_to_filename)){ $id_to_filename = array(); }else{ $id_to_filename = $id_to_filename->data; }
 	$id_to_filename[$form['#build_id']] = array('filename' => $filename, 'filepath' => $current_uploads[$form_total]->filepath);
-        if ($batch == 'batch') $id_to_filename[$form['#build_id']] = array('filename' => $batch_uniqueId, 'filepath' => $current_uploads[$form_total]->filepath);
+        if ($batch == 'metabulk') $id_to_filename[$form['#build_id']] = array('filename' => $batch_uniqueId, 'filepath' => $current_uploads[$form_total]->filepath);
         cache_set("sidora:form_id_to_filename",$id_to_filename);
       }
       $id_to_creation_info = cache_get("sidora:form_id_to_creation_info");
