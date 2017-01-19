@@ -2717,6 +2717,20 @@ if ($one == 'deletexsl'){
     $modules = implode(PHP_EOL, module_list());
     print $modules;
   }
+	if ($one == 'test_curl'){
+    $curl = curl_init();
+    $batch_url = variable_get('sidora_batch_status_url', '') . '/' . $two . '/c8b4c3e1-1ca1-4445-9cfc-0f3deb7ada2f';
+    curl_setopt($curl, CURLOPT_URL, $batch_url);
+    curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1);
+    var_dump(curl_getinfo($curl));
+		$result = curl_exec($curl);
+    var_dump($result);
+		var_dump(curl_error($curl));
+watchdog('SIdora Testing',t("Bulk metadata Curl reponse whole :<br/> %curl_response",
+                array('%curl_response' => $result))
+                );
+    curl_close($curl);
+	}
   //This ends the testing function and should also indicate the end of liberal use of the dsm function
 }
 /*
@@ -2953,6 +2967,9 @@ function sidora_process_batch_submit($form,&$form_state){
     $get_params = '?codebookPID=' . $user->data['recent_codebook_id'];
   }
   $batch_url = variable_get('sidora_batch_ingest_url', '') . '/' . $id_to_creation_info[$form_build_id]['parent'] . $get_params;
+  watchdog('Sidora_debug',t("Sending Bulk metadata Curl to:<br/> %curl_url",
+                array('%curl_url' => $batch_url))
+                );
   $ingest_response = sidora_ingest_request($batch_url,$post_params);
 	// save the curl request id to session along with the parent concept
   if (strpos($ingest_response,'</CorrelationID>') !== false) {
@@ -2979,6 +2996,12 @@ function sidora_process_batch_submit($form,&$form_state){
    }
  }
 }
+watchdog('Sidora_debug',t("Bulk metadata Curl reponse trimmed :<br/> %curl_response",
+                array('%curl_response' => substr($ingest_response,0,1024)))
+                );
+watchdog('Sidora_debug',t("Bulk metadata Curl reponse whole :<br/> %curl_response",
+                array('%curl_response' => $ingest_response))
+                );
 print json_encode(array('status' => 'Error in batch ingest request', 'message' => $ingest_response));
 drupal_exit();
 }
@@ -9657,6 +9680,9 @@ function sidora_call_batch_API($method, $url, $data = false)
   curl_setopt($curl, CURLOPT_URL, $url);
   curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1);
   $result = curl_exec($curl);
+  watchdog('Sidora_debug',t("Bulk metadata Curl error:<br/> %curl_dump",
+                array('%curl_dump' => substr(curl_error($curl),0,1024)))
+                );
   curl_close($curl);
   return $result;
 }
