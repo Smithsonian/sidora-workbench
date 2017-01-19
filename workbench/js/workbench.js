@@ -111,6 +111,7 @@ sidora.concept.LoadContentHelp.Resources.TableLoad = function(conceptOfInterest)
       jQuery("#edit-resource-metadata-menu").removeClass("ui-state-disabled");
       jQuery("#manage-resource").removeClass("ui-state-disabled");
 			/// TODO : get the owner for the currently selected resource and check if that matches the current user
+      sidora.resources.updateDatastream.permission(sidora.resources.individualPanel.resourceOfInterest.pid);
     }
   }); //End onclick
     table.on( 'length', function ( e, settings, len ) {
@@ -2804,3 +2805,15 @@ sidora.reloadPage = function(){
 sidora.util.refreshPidInTree = function(){
 sidora.util.RefreshTree(null,sidora.concept.GetPid());
 }
+sidora.resources.updateDatastream.permission = function(resourceOfInterest){
+  jQuery.ajax({
+    dataType: "json",
+    url: Drupal.settings.basePath+'sidora/info/'+resourceOfInterest+'/updateDS',
+    success: function(exhibitions){
+      jQuery("#exhibitConcept").attr('onclick', '');
+      jQuery("#exhibitConcept").children('a').attr('onclick',exhibitions.action);
+      jQuery("#exhibitConcept").children('a').toggleClass('ui-state-disabled',exhibitions.ui_state_disable);
+    }
+  });
+}
+

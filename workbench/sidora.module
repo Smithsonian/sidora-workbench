@@ -4580,6 +4580,17 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
      $to_return = sidora_generic_upload($configure);
      return 'Upload XSL files:'.$to_return;
      break;
+	 case 'updateDS':
+      global $user;
+			module_load_include('inc', 'sidora', 'includes/utils');
+      $object = sidora_obj($pid);
+      if (empty($object)){
+        $obj_permission['ui_state_disable'] = true;
+      }else{
+			  if ($object->owner != $user->name){
+				  $obj_permission['ui_state_disable'] = true;
+					
+	 	 
   }
   print $to_output;
 }
