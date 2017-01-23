@@ -4584,13 +4584,20 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
       global $user;
 			module_load_include('inc', 'sidora', 'includes/utils');
       $object = sidora_obj($pid);
-      if (empty($object)){
+      $obj_permission['action'] = 'return false;';
+			$obj_permission['ui_state_disable'] = true;
+			if (empty($object)){
         $obj_permission['ui_state_disable'] = true;
+				$obj_permission['action'] = 'return false;';
       }else{
-			  if ($object->owner != $user->name){
-				  $obj_permission['ui_state_disable'] = true;
-					
-	 	 
+			  if (($object->owner == $user->name) && (isset($object['OBJ']))){
+				  $obj_permission['ui_state_disable'] = false;
+					$obj_permission['action'] = '';
+				}
+			}
+			print json_encode($obj_permission);
+			drupal_exit();
+			break;		
   }
   print $to_output;
 }
