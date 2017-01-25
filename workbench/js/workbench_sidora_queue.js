@@ -169,17 +169,17 @@ SidoraQueue.prototype.Done = function(completedItem, ajaxReturn){
     }
     this.NotificationWindow.Show(toShow, true);
   }else{
-    if (completedItem.action == 'batchIngest' && jsonData.status.toLowerCase().indexOf("batch ingest successfully received") > -1){ 
-      console.log("Batch successfully submitted");
-      var requestID = jsonData.request_id;
-      var batch_id = jsonData.batch_id;
-      var timestamp = jsonData.timestamp;
-      console.log("Request id:"+requestID);
-      this.NotificationWindow.Show('Batch Ingest request started at ' + timestamp + ' to ingest ' + jsonData.message + ' is now under process',true);
+    if (completedItem.action == 'batchIngest'){
+      if (jsonData.status.toLowerCase().indexOf("batch ingest successfully received") > -1){ 
+        console.log("Batch successfully submitted");
+        var requestID = jsonData.request_id;
+        var batch_id = jsonData.batch_id;
+        var timestamp = jsonData.timestamp;
+        console.log("Request id:"+requestID);
+        this.NotificationWindow.Show('Batch Ingest request started at ' + timestamp + ' to ingest ' + jsonData.message + ' is now submitted for processing',true);
       // extract the request id and batch_id and set an interval based function 
-				
-    (function poll(requestID,batch_id,timestamp) {
-      setTimeout(function(){
+      (function poll(requestID,batch_id,timestamp) {
+       setTimeout(function(){
 	jQuery.ajax({
         url: Drupal.settings.basePath+"sidora/ajax_parts/check_batch_status/"+requestID+"/"+batch_id+"/",
         type: "GET",
@@ -207,25 +207,27 @@ SidoraQueue.prototype.Done = function(completedItem, ajaxReturn){
 		sidora.util.refreshConceptChildrenNumber(parentPid);
                 },5000);
 	      }
-	   }else{
-	     if (batchStatus.status.toLowerCase().indexOf('error') == -1) {
-			   sidora.queue.NotificationWindow.Show("Batch request started at " + timestamp + " is still running" + "<br>" + batchStatus.message,true);
-	       setTimeout(function() {poll(requestID,batch_id,timestamp)}, 2000);
-			 }else{
-			 	 sidora.queue.NotificationWindow.Show("Batch status for request started at " + timestamp + " returned an error" + "<br>" + batchStatus.message,true);
-			 }	 
-	   }
-	 }			
-       },
+	    }else{
+	      if (batchStatus.status.toLowerCase().indexOf('error') == -1) {
+	        sidora.queue.NotificationWindow.Show("Status for batch request started at " + timestamp + " : " + "<br>" + batchStatus.message,true);
+	        setTimeout(function() {poll(requestID,batch_id,timestamp)}, 2000);
+	      }else{
+	        sidora.queue.NotificationWindow.Show("Status for batch request started at " + timestamp + " returned an error : " + "<br>" + batchStatus.message,true);
+	        console.log(batchStatus.message);
+	      }	 
+	    }
+	  }			
+        },
        dataType: "json",
        //timeout: 5000
       });
      },2000);
    })(requestID,batch_id,timestamp);
-				
-        /*{}else{
-          onFailureOfFormSubmit(formName, this, data);
-        }*/
+    }else{
+      if (Drupal.settings.site_admin_email != "") site_admin = " at " + Drupal.settings.site_admin_email;
+        this.NotificationWindow.Show('The batch ingest request could not be submitted to backend for processing. Contact site administrator' + site_admin,true);
+	console.log(jsonData.status+jsonData.message);
+    }				
   }else{  
     if (!completedItem.isSilent) this.NotificationWindow.Show(completedItem.userFriendlyName);
     var processedItemCount = completedItem.requestStat;

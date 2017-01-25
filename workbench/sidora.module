@@ -2983,26 +2983,23 @@ function sidora_process_batch_submit($form,&$form_state){
       $_SESSION[$session_key]['request_id'] = $request_id;
       $_SESSION[$session_key]['batch_id'] = $batch_id;
       $_SESSION[$session_key]['Parent'] = $id_to_creation_info[$form_build_id]['parent'];
-     $update_query = db_update('sidora_batch_ingest')
+      $update_query = db_update('sidora_batch_ingest')
        ->fields(array(
            'status' => 'corelation id received',
            'corelation_id' => $request_id,
          ))
        ->condition('batch_id', $batch_id, '=');
-       $num_updated = $update_query->execute();
-       $created = db_query("select DATE_FORMAT(Created,'%h:%i:%s') AS Created, count, resource_type from sidora_batch_ingest where batch_id = :batchid", array(':batchid' => $batch_id))->fetchAssoc();
-       print json_encode(array('status' => 'Request for batch ingest successfully received','request_id' => $request_id,'batch_id' => $batch_id,'timestamp' => $created['Created'],'message' => $created['count'] . ' ' . $created['resource_type'] . ' resources'));
-      drupal_exit();
+      $num_updated = $update_query->execute();
+      $created = db_query("select DATE_FORMAT(Created,'%h:%i:%s') AS Created, count, resource_type from sidora_batch_ingest where batch_id = :batchid", array(':batchid' => $batch_id))->fetchAssoc();
+      print json_encode(array('status' => 'Request for batch ingest successfully received','request_id' => $request_id,'batch_id' => $batch_id,'timestamp' => $created['Created'],'message' => $created['count'] . ' ' . $created['resource_type'] . ' resources'));
+     drupal_exit();
    }
  }
 }
-watchdog('Sidora_debug',t("Bulk metadata Curl reponse trimmed :<br/> %curl_response",
+watchdog('Sidora_debug',t("Bulk metadata Curl response trimmed :<br/> %curl_response",
                 array('%curl_response' => substr($ingest_response,0,1024)))
                 );
-watchdog('Sidora_debug',t("Bulk metadata Curl reponse whole :<br/> %curl_response",
-                array('%curl_response' => $ingest_response))
-                );
-print json_encode(array('status' => 'Error in batch ingest request', 'message' => $ingest_response));
+print json_encode(array('status' => 'Error in submitting batch ingest request to the backend', 'message' => $ingest_response));
 drupal_exit();
 }
 /**
@@ -5174,64 +5171,68 @@ function sidora_ajax_parts($call_type, $param1 = '', $param2 = '', $param3 = '')
       if (($parent_pid_from_response->item(0)->nodeValue == $parent_pid) && ($xml_from_curl->getElementsByTagName('CorrelationID')->item(0)->nodeValue == $request_id)){
         $batch_count = $xml_from_curl->getElementsByTagName('ResourceCount')->item(0)->nodeValue;
         $batch_processed = $xml_from_curl->getElementsByTagName('ResourcesProcessed')->item(0)->nodeValue;
-  $batch_done = $xml_from_curl->getElementsByTagName('BatchDone')->item(0)->nodeValue;
-  if (($batch_done == 'true') || ($batch_count == $batch_processed)){
-    $resources_xml = $xml_from_curl->getElementsByTagName('resources')->item(0);
-    $failed_filenames = array();
-    $created_pids = 0;
-    foreach($resources_xml->childNodes as $resource_xml){
-      if ($resource_xml->nodeName == 'resource'){
-        if ($resource_xml->getElementsByTagName('complete')->item(0)->nodeValue == 'false'){
-          $failed_filenames[] = $resource_xml->getElementsByTagName('file')->item(0)->nodeValue;
-    $db_message[] = array("Pid" => 'failed',"file" => $resource_xml->getElementsByTagName('file')->item(0)->nodeValue);
-        }
-        else{
-    $created_pids++;
-    $db_message[] = array("Pid" => $resource_xml->getElementsByTagName('pid')->item(0)->nodeValue,"file" => $resource_xml->getElementsByTagName('file')->item(0)->nodeValue);
-        }   
-      }
-    }
-    if (!empty($failed_filenames)) {
-      $message .= "Resource creation failed for the following files :" . "<br>" ;
-      $ingest_filenames = db_query("select filenames from sidora_batch_ingest where batch_id = :batchid", array(':batchid' => $batch_id))->fetchField();
-     $file_array = unserialize($ingest_filenames);
-     foreach ($failed_filenames as $filename){
-       foreach ($file_array as $key => $value){
-         if ($value['ingest'] == $filename){
-           $message .= $value['original'] . "<br>";
-     break;
+        $batch_done = $xml_from_curl->getElementsByTagName('BatchDone')->item(0)->nodeValue;
+        if (($batch_done == 'true') || ($batch_count == $batch_processed)){
+          $resources_xml = $xml_from_curl->getElementsByTagName('resources')->item(0);
+          $failed_filenames = array();
+          $created_pids = 0;
+          foreach($resources_xml->childNodes as $resource_xml){
+            if ($resource_xml->nodeName == 'resource'){
+              if ($resource_xml->getElementsByTagName('complete')->item(0)->nodeValue == 'false'){
+                $failed_filenames[] = $resource_xml->getElementsByTagName('file')->item(0)->nodeValue;
+                $db_message[] = array("Pid" => 'failed',"file" => $resource_xml->getElementsByTagName('file')->item(0)->nodeValue);
+              }
+              else{
+                $created_pids++;
+                $db_message[] = array("Pid" => $resource_xml->getElementsByTagName('pid')->item(0)->nodeValue,"file" => $resource_xml->getElementsByTagName('file')->item(0)->nodeValue);
+             }   
+           }
          }
-       }   
-     }
-   }  
-   if ($created_pids > 0) {
+         if (!empty($failed_filenames)) {
+           $message .= "Resource creation failed for the following files :" . "<br>" ;
+           $ingest_filenames = db_query("select filenames from sidora_batch_ingest where batch_id = :batchid", array(':batchid' => $batch_id))->fetchField();
+           $file_array = unserialize($ingest_filenames);
+           foreach ($failed_filenames as $filename){
+             foreach ($file_array as $key => $value){
+               if ($value['ingest'] == $filename){
+                 $message .= $value['original'] . "<br>";
+                 break;
+               }
+             }   
+           }
+         }  
+         if ($created_pids > 0) {
            $res_type = db_query("select resource_type from sidora_batch_ingest where batch_id = :batchid", array(':batchid' => $batch_id))->fetchField();
-     $message .= $created_pids . " new " . $res_type . " resources were created";
-  }   
+           $message .= $created_pids . " new " . $res_type . " resources were created";
+         }   
         $update_query = db_update('sidora_batch_ingest')
          ->fields(array(
-    'status' => serialize($db_message),
+           'status' => serialize($db_message),
          ))
          ->condition('batch_id', $batch_id, '=');
         $num_updated = $update_query->execute();
         unset($_SESSION['sidora_batch_request_'.$batch_id]);
         print json_encode(array('status' => 'Batch complete', 'message' => $message, 'parent' => $parent_pid));
-  drupal_exit();
+        drupal_exit();
      }else{
        if ($batch_processed < $batch_count) {
-   $update_query = db_update('sidora_batch_ingest')
+         $update_query = db_update('sidora_batch_ingest')
            ->fields(array(
-        'status' => $batch_done . ' out of ' . $batch_count . ' resources processed',
+            'status' => $batch_done . ' out of ' . $batch_count . ' resources processed',
            ))
            ->condition('batch_id', $batch_id, '=');
          $num_updated = $update_query->execute();
-         print json_encode(array('status' => 'processing', 'message' => $batch_processed . ' out of ' . $batch_count . ' resources processed'));
-         drupal_exit();
-       }
-     }
-   }
+         if ($batch_processed > 0){
+	   print json_encode(array('status' => 'processing', 'message' => $batch_processed . ' out of ' . $batch_count . ' resources processed'));
+	}else{
+	   print json_encode(array('status' => 'processing', 'message' => 'This request is currently in queue for processing'));
+	} 
+        drupal_exit();
+      }
+    }
+  }
  }  
- print json_encode(array('status' => 'error', 'message' => 'Batch Status return invalid'));
+ print json_encode(array('status' => 'error', 'message' => 'Batch Status return ' . $ingest_status));
  drupal_exit(); 
 }  
 drupal_not_found();
