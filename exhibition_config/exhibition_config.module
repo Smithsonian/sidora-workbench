@@ -2108,7 +2108,10 @@ function exhibition_permission_form($form, $form_state){
            '#type' => 'markup',
            '#prefix' => $tree_html.$row['prefix'].'<div class="empty-visibility-setting">',
            '#suffix' => '</div>',
-           '#access' => 'FALSE'
+           '#access' => 'FALSE',
+            '#attributes' => array(
+              'class' => array($checkbox_id),
+            ),
           );
         }elseif (in_array($checkbox_id,$concept_visibility_only)) { 
           $form['visibility'][$depth][$checkbox_id] = array(
@@ -2116,19 +2119,23 @@ function exhibition_permission_form($form, $form_state){
             '#prefix' => $tree_html.$row['prefix'].'<div class="hidden-visibility-setting">',
             '#default_value' => (isset($existing_visibility[$depth][$checkbox_id]))?($existing_visibility[$depth][$checkbox_id]):'',
             '#suffix' => '</div>',
+            '#attributes' => array(
+              'class' => array($checkbox_id),
+            ),
           );
         }else{  
           $form['visibility'][$depth][$checkbox_id] = array(
-           '#type' => 'checkbox',
-           '#prefix' => $tree_html.$row['prefix'].'<div class="visibility-setting">',
-           '#default_value' => (isset($existing_visibility[$depth][$checkbox_id]))?($existing_visibility[$depth][$checkbox_id]):'',
-           '#suffix' => '</div>',
-           '#attributes' => array(
-             'label' => $row['label'],
-             'pid' => $row['pid'],
-             'path' => $depth,
-             'model' => $row['model'],
-             'type' => $row['type']
+            '#type' => 'checkbox',
+            '#prefix' => $tree_html.$row['prefix'].'<div class="visibility-setting">',
+            '#default_value' => (isset($existing_visibility[$depth][$checkbox_id]))?($existing_visibility[$depth][$checkbox_id]):'',
+            '#suffix' => '</div>',
+            '#attributes' => array(
+              'class' => array($checkbox_id),
+              'label' => $row['label'],
+              'pid' => $row['pid'],
+              'path' => $depth,
+              'model' => $row['model'],
+              'type' => $row['type']
             ),
           );
         } 
@@ -2138,20 +2145,24 @@ function exhibition_permission_form($form, $form_state){
            '#type' => 'markup',
            '#prefix' => $tree_html.$row['prefix'].'<div class="empty-visibility-setting">',
            '#suffix' => '</div>',
-           '#access' => 'FALSE'
+           '#access' => 'FALSE',
+            '#attributes' => array(
+              'class' => array($checkbox_id),
+            ),
           );
         }else{
           $form['visibility'][$depth][$checkbox_id] = array(
-           '#type' => 'checkbox',
-           '#prefix' => $tree_html.$row['prefix'].'<div class="visibility-setting">',
-           '#default_value' => (isset($existing_visibility[$depth][$checkbox_id]))?($existing_visibility[$depth][$checkbox_id]):'',
-           '#suffix' => '</div>',
-           '#attributes' => array(
-             'label' => $row['label'],
-             'pid' => $row['pid'],
-             'path' => $depth,
-             'model' => $row['model'],
-             'type' => $row['type']
+            '#type' => 'checkbox',
+            '#prefix' => $tree_html.$row['prefix'].'<div class="visibility-setting">',
+            '#default_value' => (isset($existing_visibility[$depth][$checkbox_id]))?($existing_visibility[$depth][$checkbox_id]):'',
+            '#suffix' => '</div>',
+            '#attributes' => array(
+              'label' => $row['label'],
+              'pid' => $row['pid'],
+              'path' => $depth,
+              'model' => $row['model'],
+              'type' => $row['type'],
+              'class' => array($checkbox_id),
             ),
           );
         }
@@ -2165,6 +2176,17 @@ function exhibition_permission_form($form, $form_state){
   $tree_html .= '<div id="action-bar"><div class="action-button"><a href="javascript:void(0);" class="button" id="change_all">Change All Selected</a></div><div class="action-button"><a href="javascript:void(0);" class="button" id="open-advanced">Advanced</a></div><div class="action-button">';
   $post_html = '</div><div class="action-button"><a href="javascript:void(0);" class="button" id="cancel-button">Cancel</a></div></div>';
   $post_html .= '<div id="advanced_hidden"></div></td>'; 
+  $post_html .= "<script>
+jQuery(document).ready(function(){
+jQuery(\"#exhibition-permission-form\").submit(function(){
+var packed = '';
+jQuery('#selectable .visibility-list-table input').each(function(){if(jQuery(this).prop('checked')){packed+='1'}else{packed+='0'};});
+jQuery(\"[name='packed']\").val(packed);
+jQuery('body').append('<div id=\"fsOverlay\" style=\"position:fixed;top:0;left:0;width:100%;height:100%;background-color:#ddd;z-index:10000;\"><div style=\"width:170px;margin:200px auto;height:100px;font-size:48px;\">Saving...</div>');
+jQuery('#selectable .visibility-list-table input').prop('checked', false);
+return true;});
+});
+</script>";
   //$post_html .= '</td></tr></table></div></td></tr></table>';
   $form['submit'] = array(
     '#type' => 'submit',
@@ -2275,6 +2297,10 @@ function exhibition_permission_form($form, $form_state){
   $form['pid'] = array(
     '#type' => 'hidden', 
     '#value' => $pid, 
+  );
+  $form['packed'] = array(
+    '#type' => 'hidden', 
+    '#default_value' => '', 
   );
   drupal_add_js(drupal_get_path('module', 'exhibition_config') . '/js/exhibition_config_visibility.js');
   return $form;
@@ -2658,6 +2684,8 @@ function exhibition_permission_form_submit($form, &$form_state) {
   $post_array = array();
   $resource_visibility_only = array('show_preview','allow_download');
   $concept_visibility_only = array('future_children_show_name','future_children_show_meta','future_children_show_preview','future_children_allow_download');
+  $packed = $form['packed']['#value'];
+  $packed_index = 0;
   foreach($form['visibility'] as $object_key => $object_visibility) {
     if ((is_array($object_visibility)) && (array_key_exists('show_name',$object_visibility))) {
       $pid = $object_visibility['show_name']['#attributes']['pid'];
@@ -2670,7 +2698,7 @@ function exhibition_permission_form_submit($form, &$form_state) {
       );
       foreach($object_visibility as $visibility_key => $visibility_value) {
         if ((is_array($visibility_value)) && ((array_key_exists('#type',$visibility_value)) && ($visibility_value['#type'] == 'checkbox'))) {
-          $pid_result[$visibility_key] = $visibility_value['#value'];
+          $pid_result[$visibility_key] = ($packed[$packed_index++] == "1"); //$visibility_value['#value'];
         }
       }
      $post_array[$depth] = $pid_result; 
