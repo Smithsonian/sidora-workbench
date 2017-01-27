@@ -2936,9 +2936,9 @@ function sidora_process_batch_submit($form,&$form_state){
     $transform = xml_form_builder_get_transform_file($association['transform']);
     if ($transform != ''){
       if (strpos($transform,'sidora_specific') !== false){
-        $association['transform'] = $base_url . "/sites/all/modules/sidora_specific/transforms/" . pathinfo($transform,PATHINFO_BASENAME);
+        $association['transform'] = str_replace('https://','http://',$base_url . "/sites/all/modules/sidora_specific/transforms/" . pathinfo($transform,PATHINFO_BASENAME));
       }else{  
-        $association['transform'] = file_create_url($transform);
+        $association['transform'] = str_replace('https://','http://',file_create_url($transform));
       } 
     }   
   }
@@ -2956,11 +2956,11 @@ function sidora_process_batch_submit($form,&$form_state){
 </sidora>';
     file_put_contents('public://' . 'sidora_' . $batch_id . '.xml',$sidora_xml);
     $post_params = array(
-   'resourceFileList' => file_create_url('public://' . '/files_' . $batch_id . '.xml'),
-   'ds_metadata' => file_create_url('public://' . '/batch_' . $batch_id . '.xml'),
-   'ds_sidora' => file_create_url('public://' . '/sidora_' . $batch_id . '.xml'),
+   'resourceFileList' => str_replace('https://','http://',file_create_url('public://' . '/files_' . $batch_id . '.xml')),
+   'ds_metadata' => str_replace('https://','http://',file_create_url('public://' . '/batch_' . $batch_id . '.xml')),
+   'ds_sidora' => str_replace('https://','http://',file_create_url('public://' . '/sidora_' . $batch_id . '.xml')),
    'resourceOwner' => $user->name,
-   'association' => file_create_url('public://' . '/association_' . $batch_id . '.xml')
+   'association' => str_replace('https://','http://',file_create_url('public://' . '/association_' . $batch_id . '.xml'))
    );
   $get_params = '';
   if ($association['content_model'] == 'si:datasetCModel'){
@@ -9644,7 +9644,7 @@ function sidora_create_batch_filelist($batch_id,$uploaded_files) {
   foreach ($uploaded_files as $file){
     $unique_filename = sidora_toAscii($batch_id . '_' . $file->filename);
     if (file_unmanaged_copy($file->filepath, 'public://' . $unique_filename)){
-      $filename_xml = $domtree->createElement('file', file_create_url('public://' . '/' . $unique_filename));
+      $filename_xml = $domtree->createElement('file', str_replace('https://','http://',file_create_url('public://' . '/' . $unique_filename)));
       $filename_xml = $batch_tag->appendChild($filename_xml);
       $files[] = array('original' => $file->filename,'ingest' => $unique_filename);
     }else{
