@@ -2368,7 +2368,7 @@ sidora.resources.individualPanel.Create = function() {
 jQuery('#edit-resource-datastream-menu').unbind('click');
 			jQuery("#edit-resource-datastream-menu").click(function(){
         jQuery('#addDatastreamDialog').remove();
-				jQuery("body").append("<div id='addDatastreamDialog' style='display:none;' title='Add OBJ'><iframe height='1000%' width='100%' style='height:100%;width:100%' src='"+Drupal.settings.basePath+"sidora/manage/"+sidora.resources.individualPanel.resourceOfInterest.pid+"/upload' frameborder='0' marginwidth='0' marginheight='0' allowfullscreen></iframe></div>");
+				jQuery("body").append("<div id='addDatastreamDialog' style='display:none;' title='Add OBJ'><iframe height='1000%' width='100%' style='height:100%;width:100%' src='"+Drupal.settings.basePath+"sidora/manage/"+sidora.resources.individualPanel.resourceOfInterest.pid+"/upload/OBJ' frameborder='0' marginwidth='0' marginheight='0' allowfullscreen></iframe></div>");
         jQuery("#addDatastreamDialog").dialog({
           resizable: true,
           height:600,
