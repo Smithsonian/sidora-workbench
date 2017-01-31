@@ -5774,7 +5774,7 @@ function sidora_json_for_delete($pid, $show_output = TRUE){
 function sidora_html_tree_for_ajax($root_pid = '', $num_levels = 3){
   module_load_include('inc', 'sidora', 'includes/utils');
   if (empty($root_pid)) $root_pid = sidora_get_user_root_object();
-  print sidora_html_string_tree($root_pid, NULL, $num_levels);
+  print sidora_html_string_tree($root_pid, NULL, $num_levels + 1);
   drupal_exit();
 }
 /*
@@ -5804,8 +5804,8 @@ function sidora_html_string_tree($root_pid = '', $root = NULL, $num_levels = 3){
      $root_label = $root->label;
   }
   $results = _sidora_get_child_results_cache($root_pid);
-  $filled = sidora_fill_concepts_children($results); 
-  $html_tree_from_query_result = sidora_html_tree($filled, '', $num_levels);
+  $filled = sidora_fill_concepts_children($results, NULL, $num_levels - 1); 
+  $html_tree_from_query_result = sidora_html_tree($filled, '', $num_levels - 1);
   $html_escaped_name = htmlspecialchars($root_label);
   $to_return = '';
   $to_return .= '<ul>';
@@ -5824,7 +5824,7 @@ function sidora_block_content_navigation(){
   module_load_include('inc', 'sidora', 'includes/utils');
   $root_pid = sidora_get_user_root_object();
   $results = _sidora_get_child_results_cache($root_pid);
-  $filled = sidora_fill_concepts_children($results); 
+  $filled = sidora_fill_concepts_children($results, NULL, 3); 
   $html_tree_from_query_result = sidora_html_tree($filled);
   $to_return = '<div style="float:left;width:200px;">';
   $to_return .= '<div id="concept-create-menu">';
@@ -6519,7 +6519,9 @@ Array(
 
  *  ...and so on.  k0 is the number of resource children
  */
-function sidora_fill_concepts_children($query_result, $current_path = array()){
+function sidora_fill_concepts_children($query_result, $current_path = array(), $max_depth = 3){
+  if ($current_path == NULL) $current_path = array();
+  if (sizeof($current_path) > $max_depth) return $query_result;
   if (is_array($query_result)){
     foreach ($query_result as $c_index=>$child){
       $child_pid = $child['o']['value'];
@@ -6527,7 +6529,7 @@ function sidora_fill_concepts_children($query_result, $current_path = array()){
         $path_to_send = $current_path;
         $path_to_send[] = $child_pid;
         $results = _sidora_get_child_results_cache($child_pid);
-        $query_result[$c_index]['children'] = sidora_fill_concepts_children($results, $path_to_send);
+        $query_result[$c_index]['children'] = sidora_fill_concepts_children($results, $path_to_send, $max_depth);
       }else{
         $query_result[$c_index]['already_in_tree'] = true;
       }
