@@ -4302,8 +4302,9 @@ function sidora_node_access($node, $op, $account) {
   if (
     !empty($node->type) &&
     $node->type == "sidora_concept" && 
-    empty($account->uid
-  )) {
+    empty($account->uid)
+  ) {
+    //Do not allow anonymous access to the node
     return NODE_ACCESS_DENY;
   }
   return NODE_ACCESS_IGNORE;
@@ -7203,21 +7204,21 @@ function sidora_html_tree_from_query_results_tree($query_result_tree, $input_pat
           $classes_for_ownership = " not-owned";
         }
       }
-      
-      $to_return .= '<li><a href="' . base_path() . 'sidora/workbench/' . $url_params . '#' . $pid . '?path=' . $input_path . '" pid="' . $pid . '" fullname="' . $html_escaped_name . '" conceptchildren="' . count($t_element['children']) . '" resourcechildren="' . $resource_children_num . '" class="' . $classes_for_permissions . $classes_for_ownership . '" permissions="' . $permissions . '"' . $nid_info . $owner_info . '>';
-      $to_return .= $t_element['t']['value'];
-      if ($resource_children_num > 0) $to_return .= ' ('.$resource_children_num.')';
-      $to_return .= '</a>';
-      if (array_key_exists('children',$t_element)){
-        $to_return .= '<ul>';
-        $to_return .= sidora_html_tree_from_query_results_tree($t_element['children'], $current_path, $num_levels - 1, $url_params);
-        $to_return .= '</ul>';
+      if (!empty($permissions)) {
+        $to_return .= '<li><a href="' . base_path() . 'sidora/workbench/' . $url_params . '#' . $pid . '?path=' . $input_path . '" pid="' . $pid . '" fullname="' . $html_escaped_name . '" conceptchildren="' . count($t_element['children']) . '" resourcechildren="' . $resource_children_num . '" class="' . $classes_for_permissions . $classes_for_ownership . '" permissions="' . $permissions . '"' . $nid_info . $owner_info . '>';
+        $to_return .= $t_element['t']['value'];
+        if ($resource_children_num > 0) $to_return .= ' ('.$resource_children_num.')';
+        $to_return .= '</a>';
+        if (array_key_exists('children',$t_element)){
+          $to_return .= '<ul>';
+          $to_return .= sidora_html_tree_from_query_results_tree($t_element['children'], $current_path, $num_levels - 1, $url_params);
+          $to_return .= '</ul>';
+        }
+        if (array_key_exists('already_in_tree',$t_element) && $t_element['already_in_tree']){
+          $to_return .= '<b>Already in tree!</b>';
+        }
+        $to_return .= '</li>'."\n";
       }
-      if (array_key_exists('already_in_tree',$t_element) && $t_element['already_in_tree']){
-        $to_return .= '<b>Already in tree!</b>';
-
-      }
-      $to_return .= '</li>'."\n";
     }
   }
   return $to_return;
@@ -7390,11 +7391,10 @@ function sidora_pid_set_locked($pid, $set_locked_to_user = '', $obtain_lock = fa
 }
 
 function sidora_build_tree_from_nodes_by_pid($pid, $max_depth = 3, $preload_nodes = TRUE){
-  $nids = sidora_get_concept_node_id($pid);
-  if (count($nids) <= 0){
+  $nid = sidora_get_concept_node_id($pid);
+  if (empty($nid)){
     return '';
   }
-  $nid = $nids[0];
   $to_return = array();
   $to_return[] = sidora_build_tree_from_nodes($nid, $max_depth, 0, TRUE, $preload_nodes);
   return $to_return;
@@ -8299,9 +8299,11 @@ function sidora_fedora_queue_sync($pid_or_nid) {
     $nid = sidora_quick_pid_to_node_id($pid_or_nid); 
   }
   $node = node_load($nid);
-  $node_wrapper = entity_metadata_wrapper('node', $node);
-  $node_wrapper->field_sidora_fedora_sync->set('0');
-  $node_wrapper->save();
+  if (!empty($node)){
+    $node_wrapper = entity_metadata_wrapper('node', $node);
+    $node_wrapper->field_sidora_fedora_sync->set('0');
+    $node_wrapper->save();
+  }
 }
 function sidora_fedora_create_partial_node_set(
   $root_pid,
@@ -8354,14 +8356,14 @@ function sidora_fedora_sync() {
     print "\nmax_count:\t$max_count";
     print "\n";
     $table_html = '';
-    $date = date('m/d/Y h:i:s a', time());
+    $date = date('Y-m-d H:i:s');
     print $date . "\n";
     $root_node =  sidora_fedora_create_partial_node_set($root_pid,$root_label,$root_resource_count,NULL,$max_depth,$max_count);
     print "Root Node:\n";
     var_dump($root_node);
     print "Full Set of Updated Items:\n";
     var_dump($updated_set);
-    $date = date('m/d/Y h:i:s a', time());
+    $date = date('Y-m-d H:i:s');
     print $date . "\n";
     print "\n";
     print "\n";
@@ -8424,7 +8426,13 @@ function sidora_fedora_sync() {
     $table_html .= '<tr><th></th><th>Node</th><th>Node Title</th><th>Fedora Label</th><th>Num Concept Children</th><th>Num Resource Children</th><th>Sync Time</th><th>Resync NOW</th><th>Queue Resync</th></tr>';
     $tr_class = 'odd';
     $tr_count = 1;
+    $start_table_node = 1; 
+    $end_table_node = 1000;
+    $table_page = max(intval($show_table) - 1, 0);
+    $start_table_node += 1000 * $table_page;
+    $end_table_node += 1000 * $table_page;
     foreach($result["node"] as $nid => $obj){
+      if ($tr_count >= $start_table_node && $tr_count <= $end_table_node) {   
       $node = node_load($nid);
       if (array_key_exists('und',$node->field_fedora_label)){
         $html_escaped_name = htmlspecialchars($node->field_fedora_label['und'][0]['value']);
@@ -8450,22 +8458,37 @@ function sidora_fedora_sync() {
         $table_html .= "<td>$tr_count</td>";
         $table_html .= "<td><a href='" .url('node/' . $nid) . "' target='_blank'>$nid</a></td><td>$node->title</td>";
         $table_html .= "<td>$html_escaped_name</td><td>$concept_children</td><td>$resource_children</td><td>$readable_sync_time</td>";
-        $table_html .= "<td><a href='?command=resync&nid=$nid&show_table=true'>Resync NOW</a></td>";
-        $table_html .= "<td><a href='?command=queue&nid=$nid&show_table=true'>Queue Resync</td></tr>";
+        $table_html .= "<td><a href='?command=resync&nid=$nid&show_table=$show_table'>Resync NOW</a></td>";
+        $table_html .= "<td><a href='?command=queue&nid=$nid&show_table=$show_table'>Queue Resync</td></tr>";
         $tr_class = ($tr_class == 'odd') ? "even" : "odd";
+      }
       }
       $tr_count++;
     }
-      
     $table_html .= '</table>';
   }
-  $to_return =  $table_html;
-  $to_return .= '<a href="?show_table=true">Show table of nodes</a>';
+  $tr_count--;
+  $pager = '';
+  for ($page_num = 1; $page_num < ($tr_count / 1000) + 1 ; $page_num++) {
+    if ($page_num == $table_page + 1) {
+      $page = " <strong>$page_num</strong>";
+    }
+    else {
+      $range = "Page $page_num : " . (1+($page_num - 1)*1000) . " to " . (($page_num * 1000 > $tr_count )?$tr_count:($page_num * 1000));
+      $page = " <a href='?show_table=$page_num' title='$range'>$page_num</a>";
+    }
+    $pager .= $page;
+  }
+  
+  $to_return = 'Nodes: '.$tr_count;
+  $to_return .= "<br/>Page: $pager";
+  $to_return .= $table_html;
+  $to_return .= '<a href="?show_table=1">Show table of nodes</a>';
   $to_return .= '<h1>BATCH COMMANDS</h1><ul>';
   $to_return .= '<li><a href="?command=update_and_create_nodes_from_queries">Create / Update Nodes from Sparql queries</a></li>';
-  $to_return .= '<li><a href="?command=queue&nid=ALL&batch_start=1&batch_end=999999&show_table=true">Queue ALL</a> This will cause the tree to load them when a user opens the tree for the first time</li>';
+  $to_return .= '<li><a href="?command=queue&nid=ALL&batch_start=1&batch_end=999999&show_table=1">Queue ALL</a> This will cause the tree to load them when a user opens the tree for the first time</li>';
   $to_return .= '<li><a href="'.url('sidora/ajax_parts/tree/si:root/2').'" target="_blank">Load the initial administrator tree in a separate window</a></li>';
-  $to_return .= '<li style="margin-top:20px"><a href="?command=resync&nid=ALL&batch_start=1&batch_end=999999&show_table=true">Resync ALL NOW from Fedora</a> This will take a LONG time </li>';
+  $to_return .= '<li style="margin-top:20px"><a href="?command=resync&nid=ALL&batch_start=1&batch_end=999999&show_table=1">Resync ALL NOW from Fedora</a> This will take a LONG time </li>';
   $to_return .= '</ul>';
   $to_return .= '<p class="buffer-so-you-dont-click-on-resync-from-fedora-accident" style="height:100px"></p>';
   return $to_return;
@@ -8557,11 +8580,16 @@ function sidora_create_full_node_set($pid, $label, $num_resources, $owner_userna
 /*
  * Return a quick pid to node without doing a node DB lookup, or add to list
  */
-function sidora_quick_pid_to_node_id($pid, $node_id = ''){
+function sidora_quick_pid_to_node_id($pid, $node_id = '', $add_to_request_memory = TRUE){
   static $ptn = array();
   if (empty($node_id)){
     if (isset($ptn[$pid])) {
       return $ptn[$pid];
+    }
+    if ($add_to_request_memory) {
+      $nid = sidora_get_concept_node_id($pid);
+      $ptn[$pid] = $nid;
+      return $nid;
     }
     return NULL;
   }
@@ -10658,8 +10686,8 @@ function sidora_update_node_from_fedora($pid_or_fedora_obj_or_nid_or_node){
     $child_pid = $child_concept['object']['value'];
     if (!in_array($child_pid, $child_pids) && ($child_pid != $pid)){
       $child_pids[] = $child_pid;
-      $existing_child_nids = sidora_get_concept_node_id($child_pid);
-      if (empty($existing_child_nids)) {
+      $existing_child_nid = sidora_get_concept_node_id($child_pid);
+      if (empty($existing_child_nid)) {
         // create the stub
         $node = sidora_get_update_or_create_concept_node($child_pid, array());
         if (!empty($node)) {
@@ -10670,7 +10698,7 @@ function sidora_update_node_from_fedora($pid_or_fedora_obj_or_nid_or_node){
         }
       }
       else {
-        $child_nid = $existing_child_nids[0];
+        $child_nid = $existing_child_nid;
       }
       if (!empty($child_nid)) {
         $child_nids[] = $child_nid;
@@ -10713,7 +10741,7 @@ function sidora_get_update_or_create_concept_node($pid, $info = NULL, $set_fedor
     return sidora_create_concept_node($pid, $info, $set_fedora_sync);
   }
   else {
-    $node = node_load($node_id[0]);
+    $node = node_load($node_id);
     if (!empty($info)){
       sidora_update_concept_node($node, $info, $set_fedora_sync);
     }
@@ -10860,6 +10888,11 @@ function sidora_get_concept_node_id($pid) {
   $to_return = array();
   foreach($result["node"] as $nid => $obj){
     $to_return[] = $nid;
+  }
+  if (is_string($pid)){
+    if (sizeof($to_return) == 1){
+      return $to_return[0];
+    }
   }
   return $to_return;
 }
