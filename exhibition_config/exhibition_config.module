@@ -108,7 +108,7 @@ function exhibition_config_get_exhibition_pids_for_user($user_id){
   $repo = si_exhibition_get_repo();
 
   $exhibition_pids = array();
-  $result = db_query("select pid, custom_url, is_available from {exhibition_config}");
+  $result = db_query("select pid, last_edited, last_published, is_available from {exhibition_config}");
   foreach ($result as $records){
     $pid_to_test = $records->pid;
     $curr_label = '';
@@ -117,7 +117,8 @@ function exhibition_config_get_exhibition_pids_for_user($user_id){
       if ($exist){
         $object = $repo->getObject($pid_to_test); 
         $curr_label = $object->label;
-        $to_add = array('pid'=>$pid_to_test, 'label'=>$curr_label, 'custom_url'=>$records->custom_url, 'is_available'=>$records->is_available);
+        $last_saved = unserialize($records->last_edited);
+				$to_add = array('pid'=>$pid_to_test, 'label'=>$curr_label, 'custom_url'=>$last_saved['custom_url'], 'is_available'=>(!(is_null($records->last_published)) && ($records->last_published != ''))? '1' : $records->is_available);
         if (strtolower($object->owner) == strtolower($user_id) || $user_id === '') $exhibition_pids[] = $to_add;
       }
     }catch(Exception $hce){
@@ -249,27 +250,40 @@ function exhibition_config_user_view($account, $view_mode, $langcode){
  * Pulls all info from the database for this pid
  */
 function exhibition_config_get_config_data($pid){
-  $result = db_query("Select ". //SELECT
-" is_available, link_bar_links, use_parent_config, pid, logo, logo_width, logo_height, title, header_html, css_script, footer_html, precontent_html, postcontent_html, sidebar_left_html, sidebar_right_html, nav_location, nav_type, custom_url ".
-"FROM {exhibition_config} where pid = :pid", array(':pid'=>$pid));
-//"FROM {exhibition_config} where pid = 'si:root'");//:pid'", array(':pid'=>$pid));
+  $result = db_query("Select". //SELECT
+" pid, last_edited, last_published" .
+" FROM {exhibition_config} where pid = :pid", array(':pid'=>$pid));
   $row = array();
   foreach ($result as $input){
-    foreach($input as $name=>$value){
+	  foreach($input as $name=>$value){
       $row[$name] = $value;
     }
   }
   return $row;
+}
+
+function exhibition_config_load_last_published($pid){
+  $result = db_query("Select ". //SELECT
+" last_published "   .
+" FROM {exhibition_config} where pid = :pid", array(':pid'=>$pid));
+  $row = array();
+  foreach ($result as $input){
+	  foreach($input as $name=>$value){
+      $row[$name] = $value;
+    }
+  }
+  return $row['last_published'];
 }
 /*
  * Returns nothing, does an exit
  * prints out each pid that has the input custom_url, should only be one if input configuration checked properly
  */
 function exhibition_config_custom_url($custom_url){
-  $result = db_query("Select pid FROM {exhibition_config} where custom_url = :custom_url", array(':custom_url'=>$custom_url));
+  $result = db_query("Select pid, last_edited FROM {exhibition_config} where last_edited like :custom_url", array(':custom_url'=> '%' . $custom_url . '%'));
   $row = null;
   foreach ($result as $row){
-    print($row->pid);
+    $last_saved = unserialize($row->last_edited);
+		if ($last_saved['custom_url'] == $custom_url) print($row->pid);
   }
   exit();
 }
@@ -284,9 +298,10 @@ function exhibition_config_json_data($pid){
   if (!empty($row)) {
     if (is_null($row['pid'])){
       print '{ "error": true, "error_message" : "Exhibition not available" }';
-    } else if ($row['is_available']){
-      $my_css = unserialize($row['css_script']);
-      $links = unserialize($row['link_bar_links']);
+    } else if ($row['last_published'] != ''){
+      $row = unserialize($row['last_published']);
+			$my_css = $row['css_script'];
+      $links = $row['link_bar_links'];
       print '
 {
       "error": false,
@@ -340,15 +355,17 @@ function exhibition_config_form_validate($form, &$form_state){
     $pid = $form['pid']['#value'];
     $check_url =  $form['custom_url']['#value'];
     if (!empty($check_url)){
-      $url_in_use_result = db_query("select pid from {exhibition_config} where pid <> :pid and custom_url = :cus_url", 
+      // TODO :change this query since now the custom url will be  apart of a serialized/json encoded field
+			$url_in_use_result = db_query("select pid, last_edited from {exhibition_config} where pid <> :pid and last_edited like :cus_url", 
         array(
           ':pid' => $pid, 
-          ':cus_url' => $form['custom_url']['#value'],
+          ':cus_url' => '%' . $form['custom_url']['#value'] . '%',
         )
       );
-      $first_hit = $url_in_use_result->fetchAssoc();;
+      $first_hit = $url_in_use_result->fetchAssoc();
       if (!empty($first_hit)){
-        form_set_error('custom_url',t('Custom URL already in use.'));
+        $unserialized_first_hit = unserialize($first_hit['last_edited']);
+				if ($unserialized_first_hit['custom_url'] == $form['custom_url']['#value']) form_set_error('custom_url',t('Custom URL already in use.'));
       }
       $stripped = preg_replace("/[^A-Za-z0-9]/", "", $check_url );
       if ($stripped != $check_url){
@@ -398,7 +415,7 @@ function exhibition_config_form_validate($form, &$form_state){
  * hook_form_submit for exhibition_config
  */
 function exhibition_config_form_submit($form, &$form_state) {
-    $pid = $form['pid']['#value'];
+		$pid = $form['pid']['#value'];
     $allowed = exhibition_config_allowed_to_edit($pid);
     if (!$allowed){
       drupal_set_message(t('Your user is not allowed to change the configuration of this object.  To change the configuration, the object must be viewable in Fedora by your user, and you must either be the owner of the object or have the "Exhibition Configuration Administrator" role.'), 'error');
@@ -428,19 +445,22 @@ function exhibition_config_form_submit($form, &$form_state) {
       }
     }
     $my_css['actual'] = $form['css']['#value'];
-    $css_serialized = serialize($my_css);
+    $css_serialized = $my_css;
     $check_url =  $form['custom_url']['#value'];
     if (!empty($check_url)){
-      $url_in_use_result = db_query("select pid from {exhibition_config} where pid != '%s' and custom_url = '%s'", 
+			$url_in_use_result = db_query("select pid, last_edited from {exhibition_config} where pid <> :pid and last_edited like :cus_url", 
         array(
-          $pid, 
-          $form['custom_url']['#value'],
+          ':pid' => $pid, 
+          ':cus_url' => '%' . $form['custom_url']['#value'] . '%',
         )
       );
       $first_hit = $url_in_use_result->fetchAssoc();
       if (!empty($first_hit)){
-        drupal_set_message('Custom URL already in use, all other information saved.', 'warning');
-        $form['custom_url']['#value'] = '';
+			  $unserialized_first_hit = unserialize($first_hit['last_edited']);
+				if ($unserialized_first_hit['custom_url'] == $form['custom_url']['#value']){ 
+				 drupal_set_message('Custom URL already in use, all other information saved.', 'warning');
+         $form['custom_url']['#value'] = '';
+				} 
       }
     }
     
@@ -480,55 +500,19 @@ function exhibition_config_form_submit($form, &$form_state) {
     $link_urls = array_values($link_urls);
 
     $fullLinkSet = array('names'=>$link_names, 'urls'=>$link_urls);  //validate already said these were okay
-    $fls_serialized = serialize($fullLinkSet);
+    $fls_serialized = $fullLinkSet;
     $existing_visibility_obj = exhibition_config_load_visibility($pid); 
-    $delete_result = db_delete("{exhibition_config}")->condition('pid', $pid)->execute();
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    $fields = 
-      array(
-        'pid', 
-        'logo',
-        'logo_width', 
-        'logo_height', 
-        'title', 
-        'header_html', 
-        'css_script', 
-        'footer_html', 
-        'precontent_html', 
-        'postcontent_html', 
-        'sidebar_left_html', 
-        'sidebar_right_html', 
-        'nav_location', 
-        'nav_type', 
-        'custom_url', 
-        'link_bar_links', 
-        'is_available', 
-        'use_parent_config'
-      );
-    $insert_query = db_insert('exhibition_config')->fields($fields);
-    $insert_query->values( 
-      array(
-        'pid' => $pid,
+   if ($form['publish_status']['#value'] != '1'){
+		 $last_published_config = exhibition_config_load_last_published($pid);
+		} 
+		$delete_result = db_delete("{exhibition_config}")->condition('pid', $pid)->execute();
+		$last_edited_values = array(
         'logo' => $form['top']['logo']['#value'],
         'logo_width' => $form['top']['logo_width']['#value'],
         'logo_height' => $form['top']['logo_height']['#value'],
         'title' => $form['top']['title']['#value'],
         'header_html' => $form['top']['header']['value']['#value'],
-        'css_script' => $css_serialized,
+        'css_script' => $my_css,
         'footer_html' => $form['bottom']['footer']['value']['#value'],
         'precontent_html' => $form['content_area']['precontent']['value']['#value'],
         'postcontent_html' => $form['content_area']['postcontent']['value']['#value'],
@@ -537,19 +521,36 @@ function exhibition_config_form_submit($form, &$form_state) {
         'nav_location' => $form['content_area']['nav_location']['#value'],
         'nav_type' => $form['content_area']['nav_type']['#value'],
         'custom_url' => $form['custom_url']['#value'],
-        'link_bar_links' => $fls_serialized,
-        'is_available' => $form['is_available']['#value'],
+        'link_bar_links' => $fullLinkSet,
+        //'is_available' => $form['is_published']['#value'],
         'use_parent_config' => empty($form['use_parent_config']['#value'])?'0':$form['use_parent_config']['#value'],
-      )
-    );
-    $output = $insert_query->execute();
-    exhibition_config_save_visibility($pid,$existing_visibility_obj);
+		  );
+		 $fields = 
+      array(
+        'pid', 
+        'last_edited',
+				'last_published',
+				);
+		 if ($form['publish_status']['#value'] == '1'){
+		  $last_published_config = serialize($last_edited_values);
+		 } 
+    $insert_query = db_insert('exhibition_config')->fields($fields);
+    $insert_query->values( 
+      array(
+        'pid' => $pid,
+        'last_edited' => serialize($last_edited_values),
+				'last_published' => $last_published_config,
+				)
+		);
+		$output = $insert_query->execute();
+		exhibition_config_save_visibility($pid,$existing_visibility_obj);
     if ($output !== FALSE) {
-      if ($form['is_available']['#value']) {
-        drupal_set_message(t('Configuration saved.'));
+      if ($form['publish_status']['#value'] == '1') {
+        exhibition_config_clear_exhibition_cache();
+				drupal_set_message(t('Configuration saved and published.'));
       }
       else {
-        drupal_set_message(t('Configuration saved. Exhibition not set to show publicly.'),'warning');
+        drupal_set_message(t('Configuration saved but not published.'),'warning');
       }
     }
     else {
@@ -619,13 +620,15 @@ function exhibition_config_form($form, $form_state){
     return;
   }
   $object = _exhibition_config_get_object($pid);
-  $row = exhibition_config_get_config_data($pid);
-  drupal_add_library('system', 'ui.resizable');
+  $new_row = exhibition_config_get_config_data($pid);
+  $row = array();
+	if (!empty($new_row)) $row = unserialize($new_row['last_edited']);
+	drupal_add_library('system', 'ui.resizable');
   drupal_add_library('system','ui.dialog');
   if (empty($row)) {
     $row = array();
     $row['css_script'] = '';
-    $row['link_bar_links'] = '';
+    $row['link_bar_links'] = array('names' => array(),'urls' => array());
     $row['logo'] = '';
     $row['header_html'] = '';
     $row['title'] = '';
@@ -634,19 +637,27 @@ function exhibition_config_form($form, $form_state){
     $row['postcontent_html'] = '';
     $row['sidebar_right_html'] = '';
     $row['footer_html'] = '';
-    $row['is_available'] = '';
+    //$row['is_available'] = '';
     $row['custom_url'] = '';
     $row['logo_width'] = '';
     $row['logo_height'] = '';
     $row['nav_location'] = '';
     $row['nav_type'] = '';
-  }  //have everything's value as a blank
-  $my_css = unserialize($row['css_script']);
-  $links = unserialize($row['link_bar_links']);
+  }
+  $my_css = $row['css_script'];
+  $links = $row['link_bar_links'];
+	$row['is_published'] = FALSE;
+	$row['last_published'] = FALSE;
+	if ((isset($new_row['last_published'])) && ($new_row['last_published'] != '')) {
+	  $row['is_published'] = TRUE;
+	  if ($new_row['last_published'] == $new_row['last_edited']){
+	    $row['last_published'] = TRUE;
+		}
+	}	
   $full = '
 <a href="javascript:void(0);" onclick="togglePreviewLocation();" title="Moves the sample between the top and side of the page.  You can also move your mouse between the sections and drag to change the sizes when the sample is on the right.">Toggle Sample Location</a><br/>
 <a href="javascript:void(0);" onclick="togglePreviewEditLinks();" title="Turns off the \'Edit\' quick links to get a better view of the sample, or turns them back on to quickly jump to a section to edit">Toggle Placeholder Text and Links</a><br/>';
-  if ($row['is_available']) {
+  if ($row['is_published']) {
     $full .= '
 <a href="javascript:void(0);" onclick="window.open(\''.
 variable_get('si_exhibition_website_location', '').
@@ -1013,9 +1024,9 @@ $GLOBALS['base_url'].'/'.drupal_get_path('module','exhibition_config').'/images/
 $(function(){
   submit = false;
   $("body").css("padding-top","0px");
-jQuery("#edit-is-available").unbind(\'click\').click(function(e){
-  if (jQuery("#edit-is-available").prop("checked")) {
-    var info = 
+  jQuery("#confirm-publish").unbind(\'click\').click(function(e){
+    e.preventDefault();
+		var info = 
  ' . variable_get('si_exhibition_agree_before_allowed_public_json', '{}') . '
     jQuery("body").append("<div id=\'AcceptThis\' style=\'display:none;\' title=\'Publishing to public\'></div>");
     var popupHtml = info.htmlStart;
@@ -1027,7 +1038,7 @@ jQuery("#edit-is-available").unbind(\'click\').click(function(e){
       }
       popupHtml += "</p>";
     }
-    jQuery("#AcceptThis").html(popupHtml)
+    jQuery("#AcceptThis").html(popupHtml);
     jQuery("#AcceptThis").dialog({
          height: Math.max(300,jQuery(window).height()-150),
          width: Math.max(400,jQuery(window).width()-100),
@@ -1074,8 +1085,11 @@ jQuery("#edit-is-available").unbind(\'click\').click(function(e){
                 resizable: true
               });
               if (canContinue) {
-                jQuery("#edit-is-available").prop("checked",true);
+                //jQuery("#edit-is-available").prop("checked",true);
                 jQuery( this ).dialog("close");
+								jQuery("#publish-exhibition").val("1");
+								submit = true;
+                jQuery("#exhibition-config-form").submit();
               }
             }
             else {
@@ -1086,22 +1100,17 @@ jQuery("#edit-is-available").unbind(\'click\').click(function(e){
             }
           },
           Cancel: function() {
-            jQuery( this ).dialog("close");
+            $("#publish-exhibition").val("0");
+						jQuery( this ).dialog("close");
           }
        }
     });
-
-    e.preventDefault();
-  }
-})
-
-    
-
+});
   $("#confirm-save").click(function(e){
-      if ($("input[name=\'is_available\']:checked").length == 0) {
+      if ($("#publish-exhibition").val() != "1") {
         e.preventDefault();
         $("#saveExhibitionConfirm").remove();
-        $("body").append("<div id=\'saveExhibitionConfirm\' style=\'display:none;\' title=\'Exhibition not set to show publicly.\'><p>To save this configuration without enabling the public to view click \"Confirm\".<br/><br/>To set the exhibition to be publicly viewable, click \"Cancel\" and check the box \"Show publicly\" then click \"Submit\".</p></div>");
+        $("body").append("<div id=\'saveExhibitionConfirm\' style=\'display:none;\' title=\'Exhibition changes not set to publish.\'><p>To save this configuration without publishing click \"Confirm\".<br/><br/>To set the exhibition changes to be saved and published, click \"Publish & Save\".<br/><br/>Click on \"Cancel\" to do nothing.</p></div>");
         $("#saveExhibitionConfirm").dialog({
          height: 300,
          width: 350,
@@ -1111,9 +1120,16 @@ jQuery("#edit-is-available").unbind(\'click\').click(function(e){
           "Confirm": function() {
            $( this ).dialog("close");
            submit = true;
+					 $("#publish-exhibition").val("0");
            $("#exhibition-config-form").submit();
           },
-          Cancel: function() {
+          "Publish & Save": function() {
+					  $(this).dialog("close");
+						$("#publish-exhibition").val("1");
+            $("#confirm-publish").trigger("click");
+						return false;
+					},	
+					Cancel: function() {
           $( this ).dialog( "close" );
           }
          }
@@ -1488,17 +1504,24 @@ for(var i=0, len=els.length; i<len; ++i){
     '#title' => t('Islandora PID'),
     '#default_value' => $pid,
   );
-  $form['is_available'] = array(
-    '#type' => 'checkbox',
-    '#title' => t('Show publicly'),
-    '#default_value' => $row['is_available'],
-    '#description' => t('This must be checked to view the exhibition, otherwise the exhibition is hidden (default).'),
+  $form['is_published'] = array(
+    '#type' => 'hidden',
+    '#title' => t('Has this exhibition been published with the latest changes?'),
+    '#default_value' => $row['is_published'],
+    '#description' => t('Has this exhibition been published at all or with the latest changes?'),
   );
+	$form['publish_status'] = array(
+	  '#type' => 'hidden',
+		'#title' => t('Publish the changes'),
+		'#default_value' => '0',
+		'#attributes' => array("id" => "publish-exhibition"), 
+		'#description' => t('This must be true to push the last edited state to last published state'),
+	);
     $form['visibility_link'] = array(
       '#markup' => t('<p> <a target="_blank" href="'.base_path().'exhibition_config/visibility/'.$pid.'">Configure Visibility</a> (which concepts and resources are shown)</p>'),
     );
   $customUrl = '';
-  if ($row['is_available']) {
+  if ($row['is_published']) {
     $customUrl = $row['custom_url'];
     if (!empty($customUrl)){
       $savedUrlFullPath = variable_get('si_exhibition_friendly_website_location','').$customUrl;
@@ -1638,7 +1661,7 @@ for(var i=0, len=els.length; i<len; ++i){
   $form['css'] = array(
     '#type' => 'hidden',
     '#title' => t('CSS'),
-    '#default_value' => $my_css['actual'],
+    '#default_value' => isset($my_css['actual']) ? $my_css['actual'] : '',
   );
   $form['bottom']['footer'] = array(
     '#type' => 'text_format',
@@ -1816,67 +1839,67 @@ Color Set:
   $form['colors']['color-page-background'] = array(
     '#type' => 'textfield',
     '#title' => t('Page Background'),
-    '#default_value' => $my_css['color-page-background'],
+    '#default_value' => isset($my_css['color-page-background']) ? $my_css['color-page-background'] : '',
   );
   $form['colors']['color-link'] = array(
     '#type' => 'textfield',
     '#title' => t('Main Page Links'),
-    '#default_value' => $my_css['color-link'],
+    '#default_value' => isset($my_css['color-link']) ? $my_css['color-link'] : '',
   );
   $form['colors']['color-background'] = array(
     '#type' => 'textfield',
     '#title' => t('Sidebar Background'),
-    '#default_value' => $my_css['color-background'],
+    '#default_value' => isset($my_css['color-background']) ? $my_css['color-background'] : '',
   );
   $form['colors']['color-background-link'] = array(
     '#type' => 'textfield',
     '#title' => t('Sidebar Links'),
-    '#default_value' => $my_css['color-background-link'],
+    '#default_value' => isset($my_css['color-background-link']) ? $my_css['color-background-link'] : '',
   );
   $form['colors']['color-inner-background'] = array(
     '#type' => 'textfield',
     '#title' => t('Interior Background'),
-    '#default_value' => $my_css['color-inner-background'],
+    '#default_value' => isset($my_css['color-inner-background']) ? $my_css['color-inner-background'] : '',
   );
   $form['colors']['color-inner-background-link'] = array(
     '#type' => 'textfield',
     '#title' => t('Interior Links'),
-    '#default_value' => $my_css['color-inner-background-link'],
+    '#default_value' => isset($my_css['color-inner-background-link']) ? $my_css['color-inner-background-link'] : '',
   );
   $form['colors']['color-active-link'] = array(
     '#type' => 'textfield',
     '#title' => t('"Active" Links'),
-    '#default_value' => $my_css['color-active-link'],
+    '#default_value' => isset($my_css['color-active-link']) ? $my_css['color-active-link'] : '',
   );
   $form['colors']['color-text'] = array(
     '#type' => 'textfield',
     '#title' => t('Text'),
-    '#default_value' => $my_css['color-text'],
+    '#default_value' => isset($my_css['color-text']) ? $my_css['color-text'] : '',
   );
   $form['colors']['color-table-main'] = array(
     '#type' => 'textfield',
     '#title' => t('Table Accent Color'),
-    '#default_value' => $my_css['color-table-main'],
+    '#default_value' => isset($my_css['color-table-main']) ? $my_css['color-table-main'] : '',
   );
   $form['colors']['color-table-color-1'] = array(
     '#type' => 'textfield',
     '#title' => t('Table Color 1'),
-    '#default_value' => $my_css['color-table-color-1'],
+    '#default_value' => isset($my_css['color-table-color-1']) ? $my_css['color-table-color-1'] : '',
   );
   $form['colors']['color-table-color-2'] = array(
     '#type' => 'textfield',
     '#title' => t('Table Color 2'),
-    '#default_value' => $my_css['color-table-color-2'],
+    '#default_value' => isset($my_css['color-table-color-2']) ? $my_css['color-table-color-2'] : '',
   );
   $form['colors']['color-table-link'] = array(
     '#type' => 'textfield',
     '#title' => t('Table Links'),
-    '#default_value' => $my_css['color-table-link'],
+    '#default_value' => isset($my_css['color-table-link']) ? $my_css['color-table-link'] : '',
   );
   $form['colors']['font'] = array(
     '#type' => 'select',
     '#title' => t('Font Family'),
-    '#default_value' => $my_css['font'],
+    '#default_value' => isset($my_css['font']) ? $my_css['font'] : '',
     '#options' => array(
       'Georgia' => t('Georgia'),
       'Arial' => t('Arial'),
@@ -1884,43 +1907,19 @@ Color Set:
       'Verdana' => t('Verdana'),
     ),
   );
-  /*
-  for ($i = 1; $i < 5; $i++){
-    $form['rows'][$i]['data'] = array ('#type' => 'value', '#value' => array('data'.$i));
-    $form['rows'][$i]['weight-'.$i] = array(
-      '#type' => 'textfield',
-      '#size' => 5,
-      '#default_value' => $i,
-      '#attributes' => array('class' => 'weight'),
-    );
-  }
-  */
-  /*
-  $form['use_parent_config'] = array(
-    '#type' => 'checkbox',
-    '#title' => t('Do not use a custom configuration, use parent configuration'),
-    '#default_value' => $row['use_parent_config'],
-  );
-  */
-  /*
-  $form['use_current_config_for_children'] = array(
-    '#type' => 'checkbox',
-    '#title' => t('Allow all child concepts that can be reached from this concept through the tree to be viewable and use this configuration for all children of this concept that you own that have not yet been specified. This will not overwrite any exhibition configuration for concepts that have already been set.  If this is unchecked, child concepts will not show publicly unless explictly set to show publicly.'),
-    '#default_value' => TRUE, //TODO going to need to save this
-  );
-  */
-  /*
-  $form['use_current_config_overwrite_children'] = array(
-    '#type' => 'checkbox',
-    '#title' => t('Overwrite the configuration of all children of this concept that you own with this configuration.'),
-    '#default_value' => FALSE,
-  );
-  */
   $form['submit'] = array(
     '#type' => 'submit',
-    '#value' => 'Submit',
+    '#value' => 'Save',
     '#attributes' => array("id" => "confirm-save"),
   );
+	$form['publish'] = array(
+		  '#type' => 'button',
+			'#value' => 'Publish',
+			'#attributes' => array('id' => 'confirm-publish','class' => array('element-invisible')),
+	);	
+	if (!($row['last_published']) || !($row['is_published'])){
+    unset($form['publish']['#attributes']['class']);
+	}
   return $form;
 }
 function theme_exhibition_config_form($form){
@@ -2764,3 +2763,14 @@ function exhibition_config_update_label($pid_to_update,$new_label,$visibility_ar
 	}
 	return $visibility_array;
 }		
+function exhibition_config_clear_exhibition_cache(){
+  $url_to_get = variable_get('si_exhibition_clear_cache_url', '');
+  $ch = curl_init();
+  curl_setopt($ch, CURLOPT_URL, $url_to_get);
+  curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+  curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+  curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+	$data = curl_exec($ch);
+	curl_close($ch);
+	return;
+}

@@ -2450,6 +2450,20 @@ function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $ex
     print (json_encode($associations));
     drupal_exit();
   }
+  if ($one == 'formassociations'){
+    if ($two == 'two'){
+      module_load_include('inc', 'xml_form_builder', 'XMLFormRepository');
+      module_load_include('inc', 'xml_form_builder', 'includes/associations');
+      $names = XMLFormRepository::GetNames();
+      $associations = xml_form_builder_get_associations($names, array(), array(), FALSE);
+      var_dump ($associations);
+      drupal_exit();
+    }else{
+      $dsids = sidora_get_proper_dsid($two, $parent_pid);
+      var_dump($dsids);
+      drupal_exit();
+    }
+  }
   if ($one == 'guesser'){
     $object = sidora_obj($two);
     $the_guess = sidora_guess_dsid_and_form_name($object);
@@ -2810,6 +2824,22 @@ watchdog('SIdora Testing',t("Bulk metadata Curl reponse whole :<br/> %curl_respo
        var_dump($extensions_for_model);
     }
   }
+	}
+	if ($one == 'db_like'){
+	  $pid = 'si-user:124';
+		$custom_url = 'asdf';
+		$url_in_use_result = db_query("select pid from {exhibition_config} where pid <> :pid and last_edited like :cus_url", 
+        array(
+          ':pid' => $pid, 
+          ':cus_url' => '%'.$custom_url.'%',
+        )
+      );
+			var_dump($url_in_use_result);
+      $first_hit = $url_in_use_result->fetchAssoc();
+      var_dump($first_hit);
+			if (!empty($first_hit)){
+        echo('Custom URL already in use.');
+      }
 	}	
   //This ends the testing function and should also indicate the end of liberal use of the dsm function
 }
@@ -9793,4 +9823,4 @@ function sidora_get_nested_title_field($field_array,$parent_array) {
     return (drupal_array_get_nested_value($parent_array,$field_array));
   }
   return;
-}     
+}
