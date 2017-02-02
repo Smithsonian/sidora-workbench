@@ -108,10 +108,10 @@ sidora.concept.LoadContentHelp.Resources.TableLoad = function(conceptOfInterest)
       jQuery("#manage-resource").addClass("ui-state-disabled");
 			jQuery("#edit-resource-datastream-menu").addClass("ui-state-disabled");
     }else{
+      sidora.resources.permission(sidora.resources.individualPanel.resourceOfInterest.pid);
       jQuery("#edit-resource-metadata-menu").removeClass("ui-state-disabled");
       jQuery("#manage-resource").removeClass("ui-state-disabled");
 			jQuery("#edit-resource-datastream-menu").addClass("ui-state-disabled");
-      sidora.resources.permission(sidora.resources.individualPanel.resourceOfInterest.pid);
     }
   }); //End onclick
     table.on( 'length', function ( e, settings, len ) {
@@ -2365,18 +2365,21 @@ sidora.resources.individualPanel.Create = function() {
       }
     });
   });
-jQuery('#edit-resource-datastream-menu').unbind('click');
-			jQuery("#edit-resource-datastream-menu").click(function(){
-        jQuery('#addDatastreamDialog').remove();
-				jQuery("body").append("<div id='addDatastreamDialog' style='display:none;' title='Add OBJ'><iframe height='1000%' width='100%' style='height:100%;width:100%' src='"+Drupal.settings.basePath+"sidora/manage/"+sidora.resources.individualPanel.resourceOfInterest.pid+"/upload/OBJ' frameborder='0' marginwidth='0' marginheight='0' allowfullscreen></iframe></div>");
-        jQuery("#addDatastreamDialog").dialog({
-          resizable: true,
-          height:600,
-          width: 600,
-          modal: true,
-        });
-        jQuery("#addDatastreamDialog").css("overflow", "hidden");
-      });
+  jQuery('#edit-resource-datastream-menu').unbind('click');
+  jQuery("#edit-resource-datastream-menu").click(function(){
+    var resourcePid = sidora.resources.individualPanel.resourceOfInterest.pid;
+    var resourceName = sidora.resources.individualPanel.resourceOfInterest.name;
+    sidora.manage.Open(resourcePid, resourceName, "Add OBJ", "Update OBJ datastream");
+    jQuery('#addDatastreamDialog').remove();
+    jQuery("body").append("<div id='addDatastreamDialog' style='display:none;' title='Add OBJ'><iframe height='1000%' width='100%' style='height:100%;width:100%' src='"+Drupal.settings.basePath+"sidora/manage/"+resourcePid+"/upload/OBJ' frameborder='0' marginwidth='0' marginheight='0' allowfullscreen></iframe></div>");
+    jQuery("#addDatastreamDialog").dialog({
+     resizable: true,
+     height:600,
+     width: 600,
+     modal: true,
+    });
+    jQuery("#addDatastreamDialog").css("overflow", "hidden");
+  });
 
   //The overlay is needed to protect the cursor from being lost to the iframe
   //For example, here's what would happen during a drag toward the iframe:
@@ -2661,7 +2664,7 @@ sidora.manage.Open = function(pid, name, title, userFriendlyToastName){
   this.recent.name = name;
   this.recent.title = title;
   this.recent.uftn = userFriendlyToastName;
-  sidora.manage.OpenCurrentConfig();
+  if (title.indexOf("OBJ") == -1)sidora.manage.OpenCurrentConfig();
 }
 /*
  * Opens the shadowbox based management panel
@@ -2671,7 +2674,7 @@ sidora.manage.OpenCurrentConfig = function(){
   var name = this.recent.name;
   var title = this.recent.title;
   var userFriendlyToastName = this.recent.uftn;
-  Shadowbox.close();
+	Shadowbox.close();
   jQuery.ajax(Drupal.settings.basePath+"sidora/manage/"+pid).done(function(html){
     Shadowbox.open({
         content:    html,
