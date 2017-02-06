@@ -308,7 +308,6 @@ function sidora_management_ingest($pid, $dsid, $label = NULL, $mimeType = NULL){
   $current_uploads = sidora_create_resource_get_current_uploads();
   $datastream->setContentFromFile($current_uploads[0]->filepath);
   $object->ingestDatastream($datastream);
-
 }
 /*
  * Set Drupal to be ready to upload a file using the multiple uploader plupload and 
@@ -575,7 +574,7 @@ function sidora_management_panel($pid, $show_or_save = 'show', $dsid_to_remove =
 * Attempts to load the item to get output as a JPEG
 * $content - the original file content
 * $output_to_browser - if TRUE then outputs direct to browser or gives message that there is not available view
-&                    - if FALSE then returns whether or not the item can be output as JPEG
+*                    - if FALSE then returns whether or not the item can be output as JPEG
 */
 function sidora_direct_jpg_output($content, $output_to_browser = TRUE){
   $tempfilename = tempnam('','Sidora_temp_pic_');
@@ -642,78 +641,57 @@ function sidora_title_callback(){
   return 'SIdora Workbench';
 }
 /**
- * Implementation for hook_islandora_object_ingested
- * Uses information set into the page load to determine what to do with the object
- *   The information is set during the "form submit" stage of sidora_create_concept and sidora_create_resource
- * Uses information set into session during the file uploads to determine what files to add
- *   TBD / TODO: Create better implementation for storing which files go with which item
- *   For example, save it in the form's cache / form
+ * Pull information from the session that is associated with the specified build id and create the assocated
+ * Fedora changes
  */
-/* SID-453 : Add parent pid to the Sidora datastream of the newly created
- * object. This info gets added only once after a new object is ingested.
- * Any subsequent operations on the object like copy or move do not change
- * this info in Sidora datastream.
- */
-function sidora_islandora_object_ingested(AbstractObject $object){
+function sidora_process_object_with_build_id($form_build_id){
   global $user;
-  module_load_include('inc', 'islandora', 'includes/utilities');
-  module_load_include('inc', 'islandora', 'includes/ingest.form');
-  module_load_include('inc', 'sidora', 'includes/utils');
-
-  $parent_pid = drupal_static('parent_collection_pid');
-  $ontology_id = drupal_static('ontology_id');
-  /*
-  if (strpos($object->id, "si-user:") === FALSE){
-    drupal_set_message("Object:".$object->id);
-    drupal_set_message("Parent:".$parent_pid);
-    drupal_set_message("New Pid:" . $object->id . ":End New Pid");
-  }
-  */
+  sidora_object_creation_info($form_build_id,'started',TRUE);
   $id_to_filename = cache_get("sidora:form_id_to_filename");
-  if (empty($id_to_filename)){ $id_to_filename = array(); }else{ $id_to_filename = $id_to_filename->data; }
+  //if (empty($id_to_filename)){ $id_to_filename = array(); }else{ $id_to_filename = $id_to_filename->data; }
+  $id_to_filename = (empty($id_to_filename)) ? array() : $id_to_filename->data;
   $file_location = '';
-  if (array_key_exists('form_build_id', $_POST)){
-    $submitted_form_id = $_POST['form_build_id'];
-    if (array_key_exists($submitted_form_id, $id_to_filename)){ //Wont be on concepts or non-file upload forms
-      $file_location = $id_to_filename[$submitted_form_id]['filepath'];
-      $file_name = $id_to_filename[$submitted_form_id]['filename'];
-      foreach($_SESSION['file_uploads'][$user->uid] as $index => $file_obj){
-        if ($file_obj->filepath == $file_location){
-          unset($_SESSION['file_uploads'][$user->uid][$index]);
-          //If this was the codebook sample, reset the codebook sample information
-          $_SESSION['file_uploads'][$user->uid] = array_values($_SESSION['file_uploads'][$user->uid]);
-          //unlink($file_obj->filepath);
-        }
+  if (array_key_exists($form_build_id, $id_to_filename)){ //Wont be on concepts or non-file upload forms
+    $file_location = $id_to_filename[$form_build_id]['filepath'];
+    $file_name = $id_to_filename[$form_build_id]['filename'];
+    foreach($_SESSION['file_uploads'][$user->uid] as $index => $file_obj){
+      if ($file_obj->filepath == $file_location){
+        unset($_SESSION['file_uploads'][$user->uid][$index]);
+        //If this was the codebook sample, reset the codebook sample information
+        $_SESSION['file_uploads'][$user->uid] = array_values($_SESSION['file_uploads'][$user->uid]);
+        //unlink($file_obj->filepath);
       }
     }
   }
-  $id_to_creation_info = cache_get("sidora:form_id_to_creation_info");
-  if (empty($id_to_creation_info)){ 
-    $id_to_creation_info = array(); // so additional checks no longer has to ask if this array exists
-  }else{ 
-    $id_to_creation_info = $id_to_creation_info->data; 
-  }
-  if (array_key_exists('form_build_id', $_POST)){
-    $submitted_form_id = $_POST['form_build_id'];
-    $all_meta_entered = filter_input(INPUT_POST, 'all_meta_entered', FILTER_SANITIZE_URL);
-    if ($all_meta_entered != 'TRUE') $all_meta_entered = 'FALSE';
-    if (array_key_exists($submitted_form_id, $id_to_creation_info)){ 
-      $creation_info = $id_to_creation_info[$submitted_form_id];
-      $dsids = sidora_get_proper_dsid($creation_info['model'],$creation_info['form']);
-      $creation_info['dsid'] = (empty($dsids))?'':$dsids[0];
+  $creation_info = sidora_object_creation_info($form_build_id);
+  $parent_pid = NULL;
+  if (!empty($creation_info)){
+    $all_meta_entered = $creation_info['all_meta_entered'];
+    /* SID-453 : Add parent pid to the Sidora datastream of the newly created
+     * object. This info gets added only once after a new object is ingested.
+     * Any subsequent operations on the object like copy or move do not change
+     * this info in Sidora datastream.
+     */
+    $dsids = sidora_get_proper_dsid($creation_info['model'],$creation_info['form']);
+    $creation_info['dsid'] = (empty($dsids)) ? '' : $dsids[0];
+    $parent_pid = $creation_info['parent_pid'];
+    $pid = $creation_info['pid'];
+    $object = sidora_obj($pid);
+    if (empty($creation_info['added_sidora_ds'])) {
       sidora_update_datastream($object, '<sidora>
 <model>'.$creation_info['model'].'</model>
 <form>'.$creation_info['form'].'</form>
 <ontology_location_id>'.$creation_info['ontology_id'].'</ontology_location_id>
 <meta_requirements_fulfilled>'.$all_meta_entered.'</meta_requirements_fulfilled>
 <initial_dsid>'.$creation_info['dsid'].'</initial_dsid>
-<parent>'.$parent_pid.'</parent>
+<<<<<<< HEAD
+<parent>'.$creation_info['parent_pid'].'</parent>
 </sidora>', 'SIDORA');
-    }else{
-      //Items like Codebooks have no creation info, this should only be items that were not created via the menu
     }
+    sidora_object_creation_info($form_build_id,'added_sidora_ds',TRUE);
+     
   }else{
-    dsm("no build ID"); //This is likely an error.  Currently no known instances of valid workbench use should enter this branch
+    //Items like Codebooks have no creation info, this should only be items that were not created via the menu
   }
 
   if ($parent_pid){
@@ -722,7 +700,10 @@ function sidora_islandora_object_ingested(AbstractObject $object){
     $is_concept = sidora_is_concept($object);
     $is_codebook = sidora_is_codebook($object);
     if ($is_concept){
-      $parent->relationships->add(FEDORA_RELS_EXT_URI, 'hasConcept', $object->id);
+      if (empty($creation_info['added_to_parent'])) {
+        $parent->relationships->add(FEDORA_RELS_EXT_URI, 'hasConcept', $object->id);
+      }
+      sidora_object_creation_info($form_build_id,'added_to_parent',TRUE);
       //clear THEIR parents out since the number in parens is held there
       $grandparents = sidora_get_parent_concepts($parent);
       foreach($grandparents as $grandparent_pid => $grandparent){ sidora_clear_tree_cache($grandparent_pid); }
@@ -730,14 +711,19 @@ function sidora_islandora_object_ingested(AbstractObject $object){
       //add codebook to user object (not the intended parent)
       $user_projects_pid = sidora_get_user_object();
       $user_projects = sidora_obj($user_projects_pid);
-      $user_projects->relationships->add(FEDORA_RELS_EXT_URI, 'managesCodebook', $object->id);
+      if (empty($creation_info['added_to_parent'])) {
+        $user_projects->relationships->add(FEDORA_RELS_EXT_URI, 'managesCodebook', $object->id);
+      }
+      sidora_object_creation_info($form_build_id,'added_to_parent',TRUE);
       //set the user's recent codebook to this new codebook
       $edit['data']['recent_codebook_id'] = $object->id;
       user_save($user,$edit);
     }else{
-      $parent->relationships->add(FEDORA_RELS_EXT_URI, 'hasResource', $object->id);
+      if (empty($creation_info['added_to_parent'])) {
+        $parent->relationships->add(FEDORA_RELS_EXT_URI, 'hasResource', $object->id);
+      }
+      sidora_object_creation_info($form_build_id,'added_to_parent',TRUE);
       $tuque = islandora_get_tuque_connection();
-      $apim = $tuque->repository->api->m;
       // if its a video, set the mime type for OBJ explicitly
       if ($creation_info['model'] == 'islandora:sp_videoCModel'){
         $file_mime_type = '';
@@ -757,6 +743,111 @@ function sidora_islandora_object_ingested(AbstractObject $object){
       }
     }
     sidora_clear_tree_cache($object->id);
+  }
+  sidora_object_creation_info($form_build_id,'complete',TRUE);
+}
+/**
+ * Checks the forms that are held in the cache and reprocesses any that have been started but were not completed
+ * The assumption being that the communication with Fedora failed somewhere
+ * $only_these_form_ids - csv string of form build ids or an array of form build ids, if NULL then do all
+ */
+function sidora_reprocess_incomplete_object_creation_forms($only_these_form_ids = NULL){
+  if (is_string($only_these_form_ids)) {
+    $only_these_form_ids = explode(',' , $only_these_form_ids);
+  }
+  $id_to_creation_info = cache_get("sidora:form_id_to_creation_info");
+  if (empty($id_to_creation_info)){
+    return;
+  }else{
+    $id_to_creation_info = $id_to_creation_info->data;
+  }
+  foreach ($id_to_creation_info as $form_id => $creation_info) {
+    if (
+      !empty($creation_info['started']) &&
+      empty($creation_info['complete']) &&
+      (empty($only_these_form_ids) || in_array($form_id, $only_these_form_ids))
+    ) {
+      sidora_process_object_with_build_id($form_id);
+      print 'Complete'; 
+    }
+  }
+}
+/*
+ * Get or set cached information that is associated with this form id
+ * $submitted_form_id - form_id to grab information about (if NULL, pulls from current POSTed form)
+ * $key - if used, set a value into the cache for the form
+ * $value - if used with $key, then sets this key/value pair into the cached information about the form
+ * returns an associative array
+ */
+function sidora_object_creation_info($submitted_form_id = NULL, $key = NULL, $value = NULL) {
+  if (empty($submitted_form_id)) {
+    if (array_key_exists('form_build_id', $_POST)){
+      $submitted_form_id = $_POST['form_build_id'];
+    }
+  }
+  $creation_info = array();
+  $id_to_creation_info = cache_get("sidora:form_id_to_creation_info");
+  if (empty($id_to_creation_info)){ 
+    $id_to_creation_info = array(); // so additional checks no longer has to ask if this array exists
+  }else{ 
+    $id_to_creation_info = $id_to_creation_info->data; 
+  }
+  if (array_key_exists($submitted_form_id, $id_to_creation_info)){ 
+    $creation_info = $id_to_creation_info[$submitted_form_id];
+  }
+  if (empty($key)){
+    return $creation_info;
+  }
+  if ($value === NULL){
+    if (empty($creation_info[$key])) return NULL;
+    return $creation_info[$key];
+  }
+  $creation_info[$key] = $value;
+  $id_to_creation_info[$submitted_form_id] = $creation_info;
+  cache_set("sidora:form_id_to_creation_info",$id_to_creation_info);
+  return $creation_info;
+}
+/**
+ * Implementation for hook_islandora_object_ingested
+ * Uses information set into the page load to determine what to do with the object
+ *   The information is set during the "form submit" stage of sidora_create_concept and sidora_create_resource
+ * Uses information set into session during the file uploads to determine what files to add
+ *   TBD / TODO: Create better implementation for storing which files go with which item
+ *   For example, save it in the form's cache / form
+ */
+function sidora_islandora_object_ingested(AbstractObject $object){
+  sidora_after_ingest_processing($object);
+  $creation_info = sidora_object_creation_info();
+}
+/**
+ * Split out the SIdora processing from the hook, so it can be called apart from the hook
+ */
+function sidora_after_ingest_processing(AbstractObject $object){
+  global $user;
+  module_load_include('inc', 'islandora', 'includes/utilities');
+  module_load_include('inc', 'islandora', 'includes/ingest.form');
+  module_load_include('inc', 'sidora', 'includes/utils');
+
+  /*
+  if (strpos($object->id, "si-user:") === FALSE){
+    drupal_set_message("Object:".$object->id);
+    drupal_set_message("Parent:".$parent_pid);
+    drupal_set_message("New Pid:" . $object->id . ":End New Pid");
+  }
+  */
+  if (array_key_exists('form_build_id', $_POST)){
+    sidora_object_creation_info($submitted_form_build_id, 'pid', $object->id);
+    $submitted_form_build_id = $_POST['form_build_id'];
+    $all_meta_entered = filter_input(INPUT_POST, 'all_meta_entered', FILTER_SANITIZE_URL);
+    if ($all_meta_entered != 'TRUE') $all_meta_entered = 'FALSE';
+    sidora_object_creation_info($submitted_form_build_id, 'all_meta_entered', $all_meta_entered);
+    $ontology_id = drupal_static('ontology_id');
+    sidora_object_creation_info($submitted_form_build_id, 'ontology_id', $ontology_id);
+    $parent_pid = drupal_static('parent_collection_pid');
+    sidora_object_creation_info($submitted_form_build_id, 'parent_pid', $parent_pid);
+    sidora_process_object_with_build_id($submitted_form_build_id);
+  }else{
+    dsm("no build ID"); //This is likely an error.  Currently no known instances of valid workbench use should enter this branch
   }
 }
 /**
@@ -811,11 +902,11 @@ function sidora_islandora_datastream_modified(AbstractObject $object, AbstractDa
       if (empty($sidora_form_name) || $sidora_form_name->length == 0){
         $node = $doc->createElement('form');
         $node->nodeValue = $form_name;
-  $sidora_node = $doc->getElementsByTagName('sidora');
-  $sidora_node->item(0)->appendChild($node);
-  $sidora_node = $doc->getElementsByTagName('sidora');
+        $sidora_node = $doc->getElementsByTagName('sidora');
+        $sidora_node->item(0)->appendChild($node);
+        $sidora_node = $doc->getElementsByTagName('sidora');
         $object['SIDORA']->content = $doc->saveXML($sidora_node->item(0));
-      }
+			}
     }else{
       //Didn't have the SIDORA datastream, add at least that the metadata has been updated
       //sidora_update_datastream($object, '<sidora><meta_requirements_fulfilled>TRUE</meta_requirements_fulfilled></sidora>', 'SIDORA');
@@ -1250,7 +1341,7 @@ function sidora_edit_metadata($object_id_string = '', $dsid = '', $form_name = '
   $form_name = $sidora_data['form_name'];
   $object = sidora_obj($object_id);
   $form_state = array();
-  $associations = xml_form_builder_datastream_form_get_associations($form_state,$object->models, $dsid);  //first param goes unused
+ 	$associations = xml_form_builder_datastream_form_get_associations($form_state,$object->models, $dsid);  //first param goes unused
   $association = null;
   foreach($associations as $curr_association){
     if ($curr_association['form_name'] == $form_name){
@@ -1266,7 +1357,7 @@ function sidora_edit_metadata($object_id_string = '', $dsid = '', $form_name = '
     print "models:";
     var_dump($object->models);
   }
-  $tform = drupal_get_form('xml_form_builder_datastream_form_metadata_form',$object,$association);
+	$tform = drupal_get_form('xml_form_builder_datastream_form_metadata_form',$object,$association);
   $tform['pid'] = array(
   '#type' => 'hidden',
   '#name' => 'Pid',
@@ -3426,7 +3517,7 @@ function sidora_create_resource_get_metadata_form_html($parent_pid, $model, $for
         }
         $form_copy_array = $form;
         if (!empty($association['title_field'])){
-    for ($title_total = 0; $title_total < count($association['title_field']); $title_total++){
+          for ($title_total = 0; $title_total < count($association['title_field']); $title_total++){
             $form_copy_key = $association['title_field'][$title_total];
             if (!empty($form_copy_key)) {
               if (array_key_exists($form_copy_key,$form_copy_array)){
@@ -5158,6 +5249,10 @@ function sidora_ontology_json_default(){
  */
 function sidora_ajax_parts($call_type, $param1 = '', $param2 = '', $param3 = ''){
   global $user;
+  if ($call_type == 'reprocess_incomplete_object_creation_forms') {
+    sidora_reprocess_incomplete_object_creation_forms($param1);
+    drupal_exit();
+  }
   if ($call_type == 'create_and_set_new_user_object') {
     print sidora_create_and_set_new_user_object($user);
     drupal_exit();
@@ -6211,7 +6306,6 @@ print  '
         if (jQuery("#applyBatch").length > 0)
           document.getElementById("applyBatch").disabled=false;
         jQuery("#applyBatch").removeClass("form-button-disabled");
-
       }
     }
   });
