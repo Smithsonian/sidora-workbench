@@ -719,7 +719,6 @@ function sidora_process_object_with_build_id($form_build_id) {
 <ontology_location_id>'.$creation_info['ontology_id'].'</ontology_location_id>
 <meta_requirements_fulfilled>'.$all_meta_entered.'</meta_requirements_fulfilled>
 <initial_dsid>'.$creation_info['dsid'].'</initial_dsid>
-<<<<<<< HEAD
 <parent>'.$creation_info['parent_pid'].'</parent>
 </sidora>', 'SIDORA');
     }
