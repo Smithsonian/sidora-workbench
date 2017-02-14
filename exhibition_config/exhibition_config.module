@@ -702,7 +702,7 @@ function exhibition_config_form($form, $form_state){
   $my_css = $row['css_script'];
   $links = $row['link_bar_links'];
 	$row['is_published'] = FALSE; // this exhibition has been published at all
-	$row['last_published'] = FALSE; // the last edited changes have been published yet
+	$row['last_published'] = FALSE; // the last changes made to this exhibition have been published
 	if ((isset($new_row['last_published'])) && ($new_row['last_published'] != '')) {
 	  $row['is_published'] = TRUE;
 	  if ($new_row['last_published'] == $new_row['last_edited']){
