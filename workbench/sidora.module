@@ -141,8 +141,9 @@ function sidora_menu() {
       'description' => 'Show the management panel',
       'page callback' => 'sidora_management_panel',
       'type' => MENU_CALLBACK,
-      'access callback' => 'user_access',
-      'access arguments' => array('administer site configuration'),
+      'access callback' => 'user_is_logged_in',
+			/*'access callback' => 'user_access',
+      'access arguments' => array('administer site configuration'),*/
     ),
     'sidora/create_resource' => array(
       'title' => 'Create Resource',
@@ -377,29 +378,10 @@ jQuery(document).ready(function(){
  */
 function sidora_management_panel($pid, $show_or_save = 'show', $dsid_to_remove = '', $confirm_action = FALSE){
   global $user;
-  if ($show_or_save == 'new_dsid'){
-    if (!sidora_allow($user,$pid,'update')) drupal_not_found();
-    $label = filter_input(INPUT_POST, 'label', FILTER_SANITIZE_STRING);
-    $identifier = filter_input(INPUT_POST, 'identifier', FILTER_SANITIZE_URL);
-    if (strtoupper($identifier) == 'OBJ'){
+	if ($show_or_save == 'upload_content'){
+    if (!empty($pid)){
       $object = sidora_obj($pid);
-      if (!$object[$identifier]->versionable){
-       $object[$identifier]->versionable = true;
-      }
-    }	
-    $state = filter_input(INPUT_POST, 'state', FILTER_SANITIZE_URL);
-    $mime_detect = new MimeDetect();
-    $current_uploads = sidora_create_resource_get_current_uploads();
-    $mimeType = $mime_detect->getMimeType($current_uploads[0]->filepath);
-    sidora_management_ingest($pid, $identifier, $label, $mimeType);
-    $to_return = 'complete';
-    return $to_return;
-  }
-  if ($show_or_save == 'upload'){
-    if (!empty($dsid_to_remove) && (strtoupper($dsid_to_remove) == 'OBJ')){
-      $object = sidora_obj($pid);
-      $dsid_to_remove = strtoupper($dsid_to_remove);
-      if (isset($object[$dsid_to_remove])){
+      $dsid_to_remove = strtoupper('obj');
         $model_for_extensions = '*';
 	$models = $object->models;
         $sidora_models = array('si:imageCModel','si:generalImageCModel','si:datasetCModel','si:fieldbookCModel','islandora:sp-audioCModel','islandora:sp_videoCModel');
@@ -409,25 +391,21 @@ function sidora_management_panel($pid, $show_or_save = 'show', $dsid_to_remove =
 	    break;
 	 }
       }
-      $to_return =  sidora_create_resource_get_upload_form_html($model_for_extensions, NULL, NULL, 'Upload OBJ');
-    }
-  }else{		
-    $to_return =  sidora_create_resource_get_upload_form_html('*', NULL, NULL, 'Upload File');
-  }
+      $to_return =  sidora_create_resource_get_upload_form_html($model_for_extensions, NULL, NULL, 'Update OBJ');
   drupal_add_css(drupal_get_path('module','sidora').'/css/workbench_create_resource.css',array('weight' => '1000000', 'group' => CSS_THEME));
   drupal_add_js(drupal_get_path('module','sidora').'/js/workbench_util.js',array('weight' => '1000000', 'group' => JS_THEME));
   drupal_add_js(drupal_get_path('module','sidora').'/js/workbench_uploader.js',array('weight' => '1000000', 'group' => JS_THEME));
-  if (!empty($dsid_to_remove) && (strtoupper($dsid_to_remove) == 'OBJ')){
     drupal_add_js('
        submitIt = function(){
-       var postData = "label="+jQuery("#dsl").val()+"&identifier=OBJ"+"&state=A";
-       jQuery.ajax({ 
+       jQuery(".form-submit").attr("disabled",true);
+			 var postData = "label="+jQuery("#dsl").val()+"&identifier=OBJ"+"&state=A";
+			 jQuery.ajax({ 
          type: "POST",
          url: window.location.href.substring(0,window.location.href.lastIndexOf("/",window.location.href.length-5)+1)+"new_dsid",
          data: postData,
          success: function(){
          window.parent.jQuery("#addDatastreamDialog").dialog("close");
-         window.parent.sidora.manage.resetFrame();
+				 window.parent.sidora.resources.refreshSelectedResourceThumbnail();
          }
        });
        }
@@ -437,12 +415,9 @@ function sidora_management_panel($pid, $show_or_save = 'show', $dsid_to_remove =
          tableHtml += "</table>";
          jQuery("#create-resource-upload").append(tableHtml);
          jQuery(".form-submit").remove();
-         jQuery("#create-resource-upload").append("<input class=\"form-submit\" value=\"Add OBJ\" onclick=\"submitIt();\">");
+         jQuery("#create-resource-upload").append("<input class=\"form-submit\" value=\"Update Content\" onclick=\"submitIt();\">");
          uploader.bind("FilesAdded", function(up, files) {
            jQuery("#filelist").html("");
-           if(up.files.length > 1 ){
-             up.splice(1);
-            }
          });
          uploader.bind("FileUploaded", function() {
           if (uploader.files.length == (uploader.total.uploaded + uploader.total.failed)) {
@@ -453,7 +428,35 @@ function sidora_management_panel($pid, $show_or_save = 'show', $dsid_to_remove =
          });
        });
        ',array('type' => 'inline', 'weight' => '1000000', 'group' => JS_THEME));
-    }else{
+			 return $to_return;
+    }
+	}	
+  if ($show_or_save == 'new_dsid'){
+    if (!sidora_allow($user,$pid,'update')) drupal_not_found();
+    $label = filter_input(INPUT_POST, 'label', FILTER_SANITIZE_STRING);
+    $identifier = filter_input(INPUT_POST, 'identifier', FILTER_SANITIZE_URL);
+    if (strtoupper($identifier) == 'OBJ'){
+      $object = sidora_obj($pid);
+      if (!$object[$identifier]->versionable){
+       $object[$identifier]->versionable = true;
+      }
+			if (empty($label)){
+			  $label = $object[$identifier]->label;
+			}	
+    }	
+    $state = filter_input(INPUT_POST, 'state', FILTER_SANITIZE_URL);
+    $mime_detect = new MimeDetect();
+    $current_uploads = sidora_create_resource_get_current_uploads();
+    $mimeType = $mime_detect->getMimeType($current_uploads[0]->filepath);
+    sidora_management_ingest($pid, $identifier, $label, $mimeType);
+    $to_return = 'complete';
+    return $to_return;
+  }
+  if (($show_or_save == 'upload') && sidora_is_admin()){
+    $to_return =  sidora_create_resource_get_upload_form_html('*', NULL, NULL, 'Upload File');
+  drupal_add_css(drupal_get_path('module','sidora').'/css/workbench_create_resource.css',array('weight' => '1000000', 'group' => CSS_THEME));
+  drupal_add_js(drupal_get_path('module','sidora').'/js/workbench_util.js',array('weight' => '1000000', 'group' => JS_THEME));
+  drupal_add_js(drupal_get_path('module','sidora').'/js/workbench_uploader.js',array('weight' => '1000000', 'group' => JS_THEME));
       drupal_add_js('
         submitIt = function(){
         var postData = "label="+jQuery("#dsl").val()+"&identifier="+jQuery("#dsi").val()+"&state="+jQuery("#state").val();
@@ -492,10 +495,9 @@ function sidora_management_panel($pid, $show_or_save = 'show', $dsid_to_remove =
 
 });
 ',array('type' => 'inline', 'weight' => '1000000', 'group' => JS_THEME));
-}
     return $to_return;
   }
-  if ($show_or_save == 'remove'){
+  if (($show_or_save == 'remove') && sidora_is_admin()){
     if (empty($confirm_action)){
       return t('This action cannot be undone.  Are you sure?');
     }
@@ -506,7 +508,7 @@ function sidora_management_panel($pid, $show_or_save = 'show', $dsid_to_remove =
     }
     return 'DS purge complete';
   }
-  if ($show_or_save == 'save'){
+  if (($show_or_save == 'save') && sidora_is_admin()){
     if (!sidora_allow($user,$pid,'update')) drupal_not_found();
     $label = filter_input(INPUT_POST, 'label', FILTER_SANITIZE_STRING);
     $owner = filter_input(INPUT_POST, 'owner', FILTER_SANITIZE_URL);
@@ -522,7 +524,7 @@ function sidora_management_panel($pid, $show_or_save = 'show', $dsid_to_remove =
     return;
   }
   if (!sidora_allow($user,$pid,'view')) drupal_not_found();
-
+  if (!sidora_is_admin()) drupal_not_found();
   $object = sidora_obj($pid);
   if (empty($object)){ drupal_not_found(); }
   print '
@@ -740,7 +742,7 @@ function sidora_islandora_object_ingested(AbstractObject $object){
       $apim = $tuque->repository->api->m;
       // if its a video, set the mime type for OBJ explicitly
       if ($creation_info['model'] == 'islandora:sp_videoCModel'){
-        $file_mime_type = '';
+        $f_mime_type = '';
         if (sidora_get_file_extension_from_mime(pathinfo($file_location, PATHINFO_EXTENSION), TRUE)) {
           $file_mime_type = sidora_get_file_extension_from_mime(pathinfo($file_location, PATHINFO_EXTENSION), TRUE);
           sidora_update_datastream($object, $file_location, 'OBJ', $file_name, $file_mime_type);
@@ -4519,7 +4521,7 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
           if (array_key_exists('object',$element)){
             $tn = '<img src="'.$GLOBALS['base_url'].'/'.drupal_get_path('module','sidora').'/images/mime/default.png" height="30" width="30"/>';
             if (array_key_exists('thumbnail_exists',$element) && $element['thumbnail_exists']){
-              $tn = '<img style="max-height:90px;max-width:150px;" src="../info/'.$element['object']['value'].'/meta/TN/browser" />';
+              $tn = '<img style="max-height:90px;max-width:150px;" src="'.$GLOBALS['base_url'].'/sidora/info/'.$element['object']['value'].'/meta/TN/browser" />';
             }else if (array_key_exists('MainMimeType',$element) && !empty($element['MainMimeType'])){
               $mimeTypeFileName = sidora_get_thumbnail_image_for_mime_type($element['MainMimeType']);
               if (!empty($mimeTypeFileName)){
@@ -4679,24 +4681,6 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
      $to_return = sidora_generic_upload($configure);
      return 'Upload XSL files:'.$to_return;
      break;
-	 case 'updateDS':
-      global $user;
-			module_load_include('inc', 'sidora', 'includes/utils');
-      $object = sidora_obj($pid);
-      $obj_permission['action'] = 'return false;';
-			$obj_permission['ui_state_disable'] = true;
-			if (empty($object)){
-        $obj_permission['ui_state_disable'] = true;
-				$obj_permission['action'] = 'return false;';
-      }else{
-			  if (($object->owner == $user->name) && (isset($object['OBJ']))){
-				  $obj_permission['ui_state_disable'] = false;
-					$obj_permission['action'] = '';
-				}
-			}
-			print json_encode($obj_permission);
-			drupal_exit();
-			break;		
   }
   print $to_output;
 }
@@ -5008,7 +4992,7 @@ function sidora_block_view($delta = ''){
             <li><a href="#" onclick="return false;">Edit</a>
               <ul>
                 <li><a href="#" onclick="return false;" id="edit-resource-metadata-menu" class="ui-state-disabled">Edit&nbsp;Metadata</a></li>
-								<li><a href="#" onclick="return false;" id="edit-resource-datastream-menu" class="ui-state-disabled">Edit&nbsp;Datastream</a></li>';
+								<li><a href="#" onclick="return false;" id="edit-resource-datastream-menu" class="ui-state-disabled">Update&nbsp;Content</a></li>';
       if (sidora_is_admin()) $block['content'] .= '
                 <li><a href="#" onclick="return false;" id="manage-resource" class="ui-state-disabled">Manage&nbsp;Resource</a></li>';
       $block['content'] .= '
@@ -5334,6 +5318,66 @@ function sidora_ajax_parts($call_type, $param1 = '', $param2 = '', $param3 = '')
  print json_encode(array('status' => 'error', 'message' => 'Batch Status return ' . $ingest_status));
  drupal_exit(); 
 }  
+  if ($call_type == 'update_content') {
+	 // if (!empty($param1) && (strtoupper($param1) == 'OBJ')){
+      if (!empty($param1)){
+			  $pid = $param1;
+			  $object = sidora_obj($pid);
+        $dsid_to_remove = strtoupper('obj');
+        if (isset($object[$dsid_to_remove])){
+          $model_for_extensions = '*';
+	        $models = $object->models;
+          $sidora_models = array('si:imageCModel','si:generalImageCModel','si:datasetCModel','si:fieldbookCModel','islandora:sp-audioCModel','islandora:sp_videoCModel');
+          foreach($models as $model){
+            if (in_array($model, $sidora_models)){
+              $model_for_extensions = $model;
+	            break;
+	          }
+          }
+      $to_return =  sidora_create_resource_get_upload_form_html($model_for_extensions, NULL, NULL, 'Update OBJ');
+			drupal_add_css(drupal_get_path('module','sidora').'/css/workbench_create_resource.css',array('weight' => '1000000', 'group' => CSS_THEME));
+      drupal_add_js(drupal_get_path('module','sidora').'/js/workbench_util.js',array('weight' => '1000000', 'group' => JS_THEME));
+      drupal_add_js(drupal_get_path('module','sidora').'/js/workbench_uploader.js',array('weight' => '1000000', 'group' => JS_THEME));
+    drupal_add_js('
+       submitIt = function(){
+       var postData = "label="+jQuery("#dsl").val()+"&identifier=OBJ"+"&state=A";
+			 jQuery.ajax({ 
+         type: "POST",
+         url: Drupal.settings.basePath+"sidora/ajax_parts/update_dsid/' . $pid . '",
+				 data: postData,
+         success: function(){
+         window.parent.jQuery("#addDatastreamDialog").dialog("close");
+				 window.parent.sidora.resources.refreshSelectedResourceThumbnail();
+         }
+       });
+       }
+       jQuery(document).ready(function(){
+         var tableHtml = "<table>";
+         tableHtml +=  "<tr><td>Label:</td><td><input id=\"dsl\" value=\"\" type=\"text\" style=\"border:solid 1px lightblue;\"></td></tr>";
+         tableHtml += "</table>";
+         jQuery("#create-resource-upload").append(tableHtml);
+         jQuery(".form-submit").remove();
+         jQuery("#create-resource-upload").append("<input class=\"form-submit\" value=\"Add OBJ\" onclick=\"submitIt();\">");
+         uploader.bind("FilesAdded", function(up, files) {
+           jQuery("#filelist").html("");
+           if(up.files.length > 1 ){
+             up.splice(1);
+            }
+         });
+         uploader.bind("FileUploaded", function() {
+          if (uploader.files.length == (uploader.total.uploaded + uploader.total.failed)) {
+           while (jQuery("#filelist div").length > 1){
+            jQuery(jQuery("#filelist div")[0]).remove();
+           }
+          }
+         });
+       });
+       ',array('type' => 'inline', 'weight' => '1000000', 'group' => JS_THEME));
+       }
+			} 
+    //}
+		return $to_return;
+  }
 drupal_not_found();
 }
 /*
@@ -6021,8 +6065,16 @@ function sidora_get_plupload_html($elements, $button_text = 'Browse'){
   drupal_add_css($plupload_loc . 'jquery.ui.plupload/css/jquery.ui.plupload.css', array('type' => 'external'));
   drupal_add_css(drupal_get_path('module', 'sidora') . '/css/themes/smoothness/jquery-ui.min.css',array('weight' => '1000000', 'group' => CSS_THEME));
   $path_for_remove_icon = base_path() . drupal_get_path('module', 'xml_forms') . '/elements/images/';
-  ob_start();
-  print '
+  $multi_selection = 'true';
+	$drag_and_drop = 'true';
+	if (strpos(strtoupper($button_text),"OBJ") !== FALSE){
+	  $multi_selection = 'false';
+		$drag_and_drop = 'false';
+		$button_text = 'Browse';
+	}
+	ob_start();
+	if ($multi_selection == 'true') {
+	print '
   <div class="plupload_wrapper"><div class="ui-widget-content plupload_container" id="create-resource-upload_container">
   <table class="plupload_filelist plupload_filelist_header ui-widget-header"><tr>
   <td class="plupload_cell plupload_file_name">Filename</td>
@@ -6030,10 +6082,16 @@ function sidora_get_plupload_html($elements, $button_text = 'Browse'){
   <td class="plupload_cell plupload_file_status">Status</td>
   <td class="plupload_cell plupload_file_action">&nbsp;</td>
   </tr></table>';
-  print '
-  <div class="plupload_content plupload_drop plupload_dropbox" id="create-resource-upload_dropbox" style="top:28px;bottom:3px;"><div class="plupload_droptext" id="plupload_droptext">Drag Files here</div>
+	print '<div class="plupload_content plupload_drop plupload_dropbox" id="create-resource-upload_dropbox" style="top:28px;bottom:3px;"><div class="plupload_droptext" id="plupload_droptext">Drag Files here</div>';
+	}
+	print '
   <ul class="plupload_filelist_content" id="create-resource-upload_filelist" unselectable="on" style="margin:0px;">';
-  print '</ul></div></div></div>
+  print '</ul>';
+	if ($multi_selection == 'true') {
+	print '
+	</div></div></div>';
+	}
+	print '
   <div id="container" class="-uploader">
       <button class="islandora-repo-button" id="pickfiles" href="javascript:;">'.$button_text.'</button> 
       <a id="uploadfiles" style="display:none;" href="javascript:;">[Browse]</a>
@@ -6066,12 +6124,27 @@ function sidora_get_plupload_html($elements, $button_text = 'Browse'){
   window.uploader = new plupload.Uploader({
     runtimes : runtimesBrowserSpecific, //No silverlight - gets bad if user does not allow it and it tries to use.
     browse_button : "pickfiles", // you can pass in id...
-    container : document.getElementById("container"), // ... or DOM Element itself
-    dragdrop : true,
-    drop_element : "create-resource-upload_dropbox",
+    container : document.getElementById("container"),'; // ... or DOM Element itself
+    if ($drag_and_drop == 'false') {
+		print '
+		max_files : "1",';
+		}
+		print '
+		dragdrop : ';
+		print $drag_and_drop;
+		print ',';
+    if ($drag_and_drop == 'true') {
+		print '
+    drop_element : "create-resource-upload_dropbox",';
+		}
+		print '
     button_browse_hover : true,
     chunk_size: "900kb",
-    url : "';
+    multi_selection: ';
+		print $multi_selection;
+		//print '"';
+		print ',
+		url : "';
   print base_path();
   print 'sidora/upload/';
   print $user->uid;
@@ -6129,6 +6202,9 @@ function sidora_get_plupload_html($elements, $button_text = 'Browse'){
       },
       FilesAdded: function(up, files) {
         if (typeof(sidoraUploaderFilesAdded) == "function"){ sidoraUploaderFilesAdded(up,files); }
+        if ((typeof up.settings.max_files !== "undefined") && (up.settings.max_files !== null) && (up.files.length == up.settings.max_files)) {
+          jQuery(up.settings.browse_button).attr("disabled", true).addClass("form-button-disabled");
+        }
         if (jQuery("#Next").length > 0)
           document.getElementById("Next").disabled=true;
         jQuery("#Next").addClass("form-button-disabled");
@@ -6136,7 +6212,7 @@ function sidora_get_plupload_html($elements, $button_text = 'Browse'){
           document.getElementById("applyBatch").disabled=true;
         jQuery("#applyBatch").addClass("form-button-disabled");
         plupload.each(files, function(file) {
-          var item = jQuery("<li class=\"plupload_view_list plupload_file ui-state-default plupload_file_loading plupload_delete\"></li>");
+					var item = jQuery("<li class=\"plupload_view_list plupload_file ui-state-default plupload_file_loading plupload_delete\"></li>");
           item.attr("id",file.id);
           item.html("<div class=\"plupload_file_name\">"+file.name + "</div><div class=\"plupload_file_size\" style=\"width:100px;\">" + plupload.formatSize(file.size) + "   <b></b></div>" + "<div class=\"plupload_file_action\"><a class=\'remove-file-btn\' href=\'\'><img src=\'' . $path_for_remove_icon . 'minus_small.png\'/></a></div>");
           jQuery("#create-resource-upload_filelist").append(item);
@@ -6147,6 +6223,7 @@ function sidora_get_plupload_html($elements, $button_text = 'Browse'){
             var toDelete = file.name;
             if (up.files.length == "0") jQuery("#Next").attr("disabled", true).addClass("form-button-disabled");
             if (up.files.length == "0") jQuery("#applyBatch").attr("disabled", true).addClass("form-button-disabled");
+						jQuery(up.settings.browse_button).attr("disabled", false).removeClass("form-button-disabled");
             console.log(toDelete);';
             //TBD TODO Put in a check here to remove the correct file when multiple files have same filename
             
@@ -6162,7 +6239,7 @@ print  '
             });  
           });
         });
-        uploader.start();
+        if ((typeof up.settings.max_files == "undefined") || (up.settings.max_files == null) || (up.files.length <= up.settings.max_files)) uploader.start();
       },
       UploadProgress: function(up, file) {
         document.getElementById(file.id).getElementsByTagName("b")[0].innerHTML = "<span>" + file.percent + "%</span>";
