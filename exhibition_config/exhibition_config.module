@@ -255,7 +255,7 @@ function exhibition_config_get_config_data($pid){
 " FROM {exhibition_config} where pid = :pid", array(':pid'=>$pid));
   $row = array();
   foreach ($result as $input){
-	  foreach($input as $name=>$value){
+    foreach($input as $name=>$value){
       $row[$name] = $value;
     }
   }
@@ -268,11 +268,11 @@ function exhibition_config_load_last_published($pid){
 " FROM {exhibition_config} where pid = :pid", array(':pid'=>$pid));
   $row = array();
   foreach ($result as $input){
-	  foreach($input as $name=>$value){
+    foreach($input as $name=>$value){
       $row[$name] = $value;
     }
   }
-  return $row['last_published'];
+  return (isset($row['last_published'])?$row['last_published']:'');
 }
 /*
  * Returns nothing, does an exit
@@ -300,7 +300,7 @@ function exhibition_config_json_data($pid){
       print '{ "error": true, "error_message" : "Exhibition not available" }';
     } else if ($row['last_published'] != ''){
       $row = unserialize($row['last_published']);
-			$my_css = $row['css_script'];
+      $my_css = $row['css_script'];
       $links = $row['link_bar_links'];
       print '
 {
@@ -356,7 +356,7 @@ function exhibition_config_form_validate($form, &$form_state){
     $check_url =  $form['custom_url']['#value'];
     if (!empty($check_url)){
       // TODO :change this query since now the custom url will be  apart of a serialized/json encoded field
-			$url_in_use_result = db_query("select pid, last_edited from {exhibition_config} where pid <> :pid and last_edited like :cus_url", 
+     $url_in_use_result = db_query("select pid, last_edited from {exhibition_config} where pid <> :pid and last_edited like :cus_url", 
         array(
           ':pid' => $pid, 
           ':cus_url' => '%' . $form['custom_url']['#value'] . '%',
@@ -365,7 +365,7 @@ function exhibition_config_form_validate($form, &$form_state){
       $first_hit = $url_in_use_result->fetchAssoc();
       if (!empty($first_hit)){
         $unserialized_first_hit = unserialize($first_hit['last_edited']);
-				if ($unserialized_first_hit['custom_url'] == $form['custom_url']['#value']) form_set_error('custom_url',t('Custom URL already in use.'));
+	if ($unserialized_first_hit['custom_url'] == $form['custom_url']['#value']) form_set_error('custom_url',t('Custom URL already in use.'));
       }
       $stripped = preg_replace("/[^A-Za-z0-9]/", "", $check_url );
       if ($stripped != $check_url){
@@ -415,7 +415,7 @@ function exhibition_config_form_validate($form, &$form_state){
  * hook_form_submit for exhibition_config
  */
 function exhibition_config_form_submit($form, &$form_state) {
-		$pid = $form['pid']['#value'];
+    $pid = $form['pid']['#value'];
     $allowed = exhibition_config_allowed_to_edit($pid);
     if (!$allowed){
       drupal_set_message(t('Your user is not allowed to change the configuration of this object.  To change the configuration, the object must be viewable in Fedora by your user, and you must either be the owner of the object or have the "Exhibition Configuration Administrator" role.'), 'error');
@@ -448,7 +448,7 @@ function exhibition_config_form_submit($form, &$form_state) {
     $css_serialized = $my_css;
     $check_url =  $form['custom_url']['#value'];
     if (!empty($check_url)){
-			$url_in_use_result = db_query("select pid, last_edited from {exhibition_config} where pid <> :pid and last_edited like :cus_url", 
+      $url_in_use_result = db_query("select pid, last_edited from {exhibition_config} where pid <> :pid and last_edited like :cus_url", 
         array(
           ':pid' => $pid, 
           ':cus_url' => '%' . $form['custom_url']['#value'] . '%',
@@ -456,11 +456,11 @@ function exhibition_config_form_submit($form, &$form_state) {
       );
       $first_hit = $url_in_use_result->fetchAssoc();
       if (!empty($first_hit)){
-			  $unserialized_first_hit = unserialize($first_hit['last_edited']);
-				if ($unserialized_first_hit['custom_url'] == $form['custom_url']['#value']){ 
-				 drupal_set_message('Custom URL already in use, all other information saved.', 'warning');
+        $unserialized_first_hit = unserialize($first_hit['last_edited']);
+	if ($unserialized_first_hit['custom_url'] == $form['custom_url']['#value']){ 
+	 drupal_set_message('Custom URL already in use, all other information saved.', 'warning');
          $form['custom_url']['#value'] = '';
-				} 
+	} 
       }
     }
     
@@ -502,11 +502,11 @@ function exhibition_config_form_submit($form, &$form_state) {
     $fullLinkSet = array('names'=>$link_names, 'urls'=>$link_urls);  //validate already said these were okay
     $fls_serialized = $fullLinkSet;
     $existing_visibility_obj = exhibition_config_load_visibility($pid); 
-   if ($form['publish_status']['#value'] != '1'){
-		 $last_published_config = exhibition_config_load_last_published($pid);
-		} 
-		$delete_result = db_delete("{exhibition_config}")->condition('pid', $pid)->execute();
-		$last_edited_values = array(
+    if ($form['publish_status']['#value'] != '1'){
+      $last_published_config = exhibition_config_load_last_published($pid);
+    } 
+    $delete_result = db_delete("{exhibition_config}")->condition('pid', $pid)->execute();
+	$last_edited_values = array(
         'logo' => $form['top']['logo']['#value'],
         'logo_width' => $form['top']['logo_width']['#value'],
         'logo_height' => $form['top']['logo_height']['#value'],
@@ -522,32 +522,33 @@ function exhibition_config_form_submit($form, &$form_state) {
         'nav_type' => $form['content_area']['nav_type']['#value'],
         'custom_url' => $form['custom_url']['#value'],
         'link_bar_links' => $fullLinkSet,
-        //'is_available' => $form['is_published']['#value'],
         'use_parent_config' => empty($form['use_parent_config']['#value'])?'0':$form['use_parent_config']['#value'],
 		  );
-		 $fields = 
+     $fields = 
       array(
         'pid', 
+	'is_available',
         'last_edited',
-				'last_published',
-				);
-		 if ($form['publish_status']['#value'] == '1'){
-		  $last_published_config = serialize($last_edited_values);
-		 } 
+	'last_published',
+	);
+      if ($form['publish_status']['#value'] == '1'){
+	  $last_published_config = serialize($last_edited_values);
+      } 
     $insert_query = db_insert('exhibition_config')->fields($fields);
     $insert_query->values( 
       array(
         'pid' => $pid,
+	'is_available' => (!empty($last_published_config)?'1':'0'),
         'last_edited' => serialize($last_edited_values),
-				'last_published' => $last_published_config,
-				)
-		);
-		$output = $insert_query->execute();
-		exhibition_config_save_visibility($pid,$existing_visibility_obj);
+	'last_published' => $last_published_config,
+	)
+     );
+     $output = $insert_query->execute();
+     exhibition_config_save_visibility($pid,$existing_visibility_obj);
     if ($output !== FALSE) {
       if ($form['publish_status']['#value'] == '1') {
         exhibition_config_clear_exhibition_cache();
-				drupal_set_message(t('Configuration saved and published.'));
+	drupal_set_message(t('Configuration saved and published.'));
       }
       else {
         drupal_set_message(t('Configuration saved but not published.'),'warning');
@@ -700,8 +701,8 @@ function exhibition_config_form($form, $form_state){
   }
   $my_css = $row['css_script'];
   $links = $row['link_bar_links'];
-	$row['is_published'] = FALSE;
-	$row['last_published'] = FALSE;
+	$row['is_published'] = FALSE; // this exhibition has been published at all
+	$row['last_published'] = FALSE; // the last edited changes have been published yet
 	if ((isset($new_row['last_published'])) && ($new_row['last_published'] != '')) {
 	  $row['is_published'] = TRUE;
 	  if ($new_row['last_published'] == $new_row['last_edited']){
