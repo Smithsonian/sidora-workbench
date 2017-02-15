@@ -4541,7 +4541,7 @@ function sidora_exhibition_exists_in_tree($pid_to_check, $pids_checked_array) {
   global $pids_checked_array;
   if (($pid_to_check != 'si:root') && ((!is_array($pids_checked_array)) || (!in_array($pid_to_check,$pids_checked_array)))) {
     $exhibition_data = exhibition_config_get_config_data($pid_to_check);
-    if (!(empty($exhibition_data)) && !(is_null($exhibition_data['pid'])) && ($exhibition_data['is_available'])) {
+    if (!(empty($exhibition_data)) && !(is_null($exhibition_data['pid'])) && !(is_null($exhibition_data['last_published'])) && ($exhibition_data['last_published'] != '')){
       return $pid_to_check;
     }
     else {
