@@ -17,9 +17,9 @@ var resetMenu = function(menuId){
     if (ulOfInterest.length == 0) return;
     ulOfInterest.show();
     ulOfInterest.css("width","");
-   /* Mod added by RA on 3/11/15 to fix the issue where the concept dropdown menu widths were changing on each load */
+   /* to fix the issue where the concept dropdown menu widths were changing on each load */
     var prefWidth = '0';
-    if (ulOfInterest.css("position") != "relative"){ // eof - RA mod
+    if (ulOfInterest.css("position") != "relative"){
       var prefWidth = ulOfInterest[0].scrollWidth; //Math.max(ulOfInterest[0].scrollWidth + 10, ulOfInterest.width());
     }
     ulOfInterest.css("height","0");
