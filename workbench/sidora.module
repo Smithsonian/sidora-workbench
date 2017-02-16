@@ -390,7 +390,7 @@ jQuery(document).ready(function() {
  */
 function sidora_management_panel($pid, $show_or_save = 'show', $dsid_to_remove = '', $confirm_action = FALSE){
   global $user;
-	if ($show_or_save == 'upload_content'){
+   if ($show_or_save == 'upload_content'){
     if (!empty($pid)){
       $object = sidora_obj($pid);
       $dsid_to_remove = strtoupper('obj');
@@ -410,14 +410,14 @@ function sidora_management_panel($pid, $show_or_save = 'show', $dsid_to_remove =
     drupal_add_js('
        submitIt = function(){
        jQuery(".form-submit").attr("disabled",true);
-			 var postData = "label="+jQuery("#dsl").val()+"&identifier=OBJ"+"&state=A";
-			 jQuery.ajax({ 
+       var postData = "label="+jQuery("#dsl").val()+"&identifier=OBJ"+"&state=A";
+	 jQuery.ajax({ 
          type: "POST",
          url: window.location.href.substring(0,window.location.href.lastIndexOf("/",window.location.href.length-5)+1)+"new_dsid",
          data: postData,
          success: function(){
-         window.parent.jQuery("#addDatastreamDialog").dialog("close");
-				 window.parent.sidora.resources.refreshSelectedResourceThumbnail();
+	 window.parent.jQuery("#addDatastreamDialog").dialog("close");
+	 window.parent.sidora.resources.refreshSelectedResourceThumbnail();
          }
        });
        }
@@ -440,11 +440,13 @@ function sidora_management_panel($pid, $show_or_save = 'show', $dsid_to_remove =
          });
        });
        ',array('type' => 'inline', 'weight' => '1000000', 'group' => JS_THEME));
-			 return $to_return;
+       return $to_return;
     }
 	}	
   if ($show_or_save == 'new_dsid'){
-    if (!sidora_allow($user,$pid,'update')) drupal_not_found();
+    if (!sidora_allow($user,$pid,'update')) {
+      return 'This user is not authorized to change this object';
+    } 
     $label = filter_input(INPUT_POST, 'label', FILTER_SANITIZE_STRING);
     $identifier = filter_input(INPUT_POST, 'identifier', FILTER_SANITIZE_URL);
     if (strtoupper($identifier) == 'OBJ'){
@@ -452,9 +454,9 @@ function sidora_management_panel($pid, $show_or_save = 'show', $dsid_to_remove =
       if (!$object[$identifier]->versionable){
        $object[$identifier]->versionable = true;
       }
-			if (empty($label)){
-			  $label = $object[$identifier]->label;
-			}	
+      if (empty($label)){
+        $label = $object[$identifier]->label;
+      }	
     }	
     $state = filter_input(INPUT_POST, 'state', FILTER_SANITIZE_URL);
     $mime_detect = new MimeDetect();
@@ -6454,15 +6456,15 @@ function sidora_get_plupload_html($elements, $button_text = 'Browse'){
   drupal_add_css(drupal_get_path('module', 'sidora') . '/css/themes/smoothness/jquery-ui.min.css',array('weight' => '1000000', 'group' => CSS_THEME));
   $path_for_remove_icon = base_path() . drupal_get_path('module', 'xml_forms') . '/elements/images/';
   $multi_selection = 'true';
-	$drag_and_drop = 'true';
-	if (strpos(strtoupper($button_text),"OBJ") !== FALSE){
-	  $multi_selection = 'false';
-		$drag_and_drop = 'false';
-		$button_text = 'Browse';
-	}
-	ob_start();
-	if ($multi_selection == 'true') {
-	print '
+  $drag_and_drop = 'true';
+  if (strpos(strtoupper($button_text),"OBJ") !== FALSE){
+    $multi_selection = 'false';
+    $drag_and_drop = 'false';
+    $button_text = 'Browse';
+  }
+  ob_start();
+  if ($multi_selection == 'true') {
+    print '
   <div class="plupload_wrapper"><div class="ui-widget-content plupload_container" id="create-resource-upload_container">
   <table class="plupload_filelist plupload_filelist_header ui-widget-header"><tr>
   <td class="plupload_cell plupload_file_name">Filename</td>
@@ -6470,19 +6472,18 @@ function sidora_get_plupload_html($elements, $button_text = 'Browse'){
   <td class="plupload_cell plupload_file_status">Status</td>
   <td class="plupload_cell plupload_file_action">&nbsp;</td>
   </tr></table>';
-	print '<div class="plupload_content plupload_drop plupload_dropbox" id="create-resource-upload_dropbox" style="top:28px;bottom:3px;"><div class="plupload_droptext" id="plupload_droptext">Drag Files here</div>';
-	}
-	print '
+   print '<div class="plupload_content plupload_drop plupload_dropbox" id="create-resource-upload_dropbox" style="top:28px;bottom:3px;"><div class="plupload_droptext" id="plupload_droptext">Drag Files here</div>';
+  }
+  print '
   <ul class="plupload_filelist_content" id="create-resource-upload_filelist" unselectable="on" style="margin:0px;">';
   print '</ul>';
-	if ($multi_selection == 'true') {
-	print '
-	</div></div></div>';
-	}
-	print '
+  if ($multi_selection == 'true') {
+    print '</div></div></div>';
+  }
+  print '
   <div id="container" class="-uploader">
-      <button class="islandora-repo-button" id="pickfiles" href="javascript:;">'.$button_text.'</button> 
-      <a id="uploadfiles" style="display:none;" href="javascript:;">[Browse]</a>
+  <button class="islandora-repo-button" id="pickfiles" href="javascript:;">'.$button_text.'</button> 
+  <a id="uploadfiles" style="display:none;" href="javascript:;">[Browse]</a>
   </div>
   <br />
   <pre id="console"></pre>';
@@ -6514,25 +6515,24 @@ function sidora_get_plupload_html($elements, $button_text = 'Browse'){
     browse_button : "pickfiles", // you can pass in id...
     container : document.getElementById("container"),'; // ... or DOM Element itself
     if ($drag_and_drop == 'false') {
-		print '
-		max_files : "1",';
-		}
-		print '
-		dragdrop : ';
-		print $drag_and_drop;
-		print ',';
+      print '
+	max_files : "1",';
+    }
+    print '
+     dragdrop : ';
+     print $drag_and_drop;
+     print ',';
     if ($drag_and_drop == 'true') {
-		print '
+     print '
     drop_element : "create-resource-upload_dropbox",';
-		}
-		print '
+    }
+    print '
     button_browse_hover : true,
     chunk_size: "900kb",
     multi_selection: ';
-		print $multi_selection;
-		//print '"';
-		print ',
-		url : "';
+    print $multi_selection;
+    print ',
+     url : "';
   print base_path();
   print 'sidora/upload/';
   print $user->uid;
@@ -6611,7 +6611,7 @@ function sidora_get_plupload_html($elements, $button_text = 'Browse'){
             var toDelete = file.name;
             if (up.files.length == "0") jQuery("#Next").attr("disabled", true).addClass("form-button-disabled");
             if (up.files.length == "0") jQuery("#applyBatch").attr("disabled", true).addClass("form-button-disabled");
-						jQuery(up.settings.browse_button).attr("disabled", false).removeClass("form-button-disabled");
+	jQuery(up.settings.browse_button).attr("disabled", false).removeClass("form-button-disabled");
             console.log(toDelete);';
             //TBD TODO Put in a check here to remove the correct file when multiple files have same filename
             

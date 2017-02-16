@@ -107,11 +107,11 @@ sidora.concept.LoadContentHelp.Resources.TableLoad = function(conceptOfInterest)
     if (pids.length != 1){
    //   jQuery("#edit-resource-metadata-menu").addClass("ui-state-disabled");
       jQuery("#manage-resource").addClass("ui-state-disabled");
-			jQuery("#edit-resource-datastream-menu").addClass("ui-state-disabled");
+      jQuery("#edit-resource-datastream-menu").addClass("ui-state-disabled");
     }else{
       jQuery("#edit-resource-metadata-menu").removeClass("ui-state-disabled");
       jQuery("#manage-resource").removeClass("ui-state-disabled");
-			jQuery("#edit-resource-datastream-menu").removeClass("ui-state-disabled");
+	jQuery("#edit-resource-datastream-menu").removeClass("ui-state-disabled");
     }
   }); //End onclick
     table.on( 'length', function ( e, settings, len ) {
@@ -1279,7 +1279,6 @@ sidora.resources.updateThumbnails = function(){
   })
 }
 sidora.resources.refreshSelectedResourceThumbnail = function(){
- console.log("in refreshSelectedResourceThumbnail");
  var pids = sidora.resources.getHighlighted();
  toRefreshPid = pids[0];
   var me = jQuery(jq(toRefreshPid));
@@ -1288,16 +1287,14 @@ sidora.resources.refreshSelectedResourceThumbnail = function(){
       var pidThumbnail = Drupal.settings.basePath+"sidora/info/"+toRefreshPid+"/meta/TN/browser";
       jQuery.ajax(pidThumbnail,{
         complete:function(res){
-				  console.log("in refreshSelectedResourceThumbnail ajax "+res.getResponseHeader("content-type"));
-					//var currType = res.getResponseHeader("content-type");
-          //if (currType.indexOf("image") != -1){
+	var currType = res.getResponseHeader("content-type");
+          if (currType.indexOf("image") != -1){
             setTimeout(function(){
-             sidora.resources.individualPanel.resourceOfInterest.pid = null;
-						 imgChild.attr("src",pidThumbnail).attr("height","").attr("width","").addClass("resource-list-tn");
-             console.log(imgChild.attr("src"));
-						 sidora.resources.individualPanel.resourceOfInterest.pid = toRefreshPid;
-					  },2000);
-					//}
+             //sidora.resources.individualPanel.resourceOfInterest.pid = null;
+	    imgChild.attr("src",pidThumbnail).attr("height","").attr("width","").addClass("resource-list-tn");
+	 //sidora.resources.individualPanel.resourceOfInterest.pid = toRefreshPid;
+	  },2000);
+	}
         }
       });
   }
@@ -2698,11 +2695,10 @@ sidora.manage.OpenCurrentConfig = function(){
   var name = this.recent.name;
   var title = this.recent.title;
   var userFriendlyToastName = this.recent.uftn;
-	console.log("in opencurrentconfig :"+pid);
-	Shadowbox.close();
+  Shadowbox.close();
+  setTimeout(function(){
   jQuery.ajax(Drupal.settings.basePath+"sidora/manage/"+pid).done(function(html){
-    console.log("after ajax call to sidora manage"+html);
-		Shadowbox.open({
+	Shadowbox.open({
         content:    html,
         player:     "html",
         title:      title,
@@ -2745,12 +2741,12 @@ sidora.manage.OpenCurrentConfig = function(){
           }
     });
   })
+	},1000);
 }
 /*
  * Reopens the frame to show an update to the user
  */
 sidora.manage.resetFrame = function(){
-  console.log("in resetframe");
 	this.OpenCurrentConfig();
 }
 /*
