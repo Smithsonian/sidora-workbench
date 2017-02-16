@@ -2688,7 +2688,7 @@ sidora.manage.Open = function(pid, name, title, userFriendlyToastName){
   this.recent.name = name;
   this.recent.title = title;
   this.recent.uftn = userFriendlyToastName;
-  if (title.indexOf("OBJ") == -1)sidora.manage.OpenCurrentConfig();
+	sidora.manage.OpenCurrentConfig();
 }
 /*
  * Opens the shadowbox based management panel
