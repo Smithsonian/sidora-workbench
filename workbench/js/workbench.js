@@ -2698,9 +2698,11 @@ sidora.manage.OpenCurrentConfig = function(){
   var name = this.recent.name;
   var title = this.recent.title;
   var userFriendlyToastName = this.recent.uftn;
+	console.log("in opencurrentconfig :"+pid);
 	Shadowbox.close();
   jQuery.ajax(Drupal.settings.basePath+"sidora/manage/"+pid).done(function(html){
-    Shadowbox.open({
+    console.log("after ajax call to sidora manage");
+		Shadowbox.open({
         content:    html,
         player:     "html",
         title:      title,
@@ -2748,7 +2750,8 @@ sidora.manage.OpenCurrentConfig = function(){
  * Reopens the frame to show an update to the user
  */
 sidora.manage.resetFrame = function(){
-  this.OpenCurrentConfig();
+  console.log("in resetframe");
+	this.OpenCurrentConfig();
 }
 /*
  * Removes a datastream from the object, confirms with user first
