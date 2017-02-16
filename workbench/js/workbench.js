@@ -2701,7 +2701,7 @@ sidora.manage.OpenCurrentConfig = function(){
 	console.log("in opencurrentconfig :"+pid);
 	Shadowbox.close();
   jQuery.ajax(Drupal.settings.basePath+"sidora/manage/"+pid).done(function(html){
-    console.log("after ajax call to sidora manage");
+    console.log("after ajax call to sidora manage"+html);
 		Shadowbox.open({
         content:    html,
         player:     "html",
