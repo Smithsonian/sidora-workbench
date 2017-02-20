@@ -876,8 +876,8 @@ function sidora_after_ingest_processing(AbstractObject $object) {
   }
   */
   if (array_key_exists('form_build_id', $_POST)) {
-    sidora_object_creation_info($submitted_form_build_id, 'pid', $object->id);
     $submitted_form_build_id = $_POST['form_build_id'];
+    sidora_object_creation_info($submitted_form_build_id, 'pid', $object->id);
     $all_meta_entered = filter_input(INPUT_POST, 'all_meta_entered', FILTER_SANITIZE_URL);
     if ($all_meta_entered != 'TRUE') $all_meta_entered = 'FALSE';
     sidora_object_creation_info($submitted_form_build_id, 'all_meta_entered', $all_meta_entered);
