@@ -17,13 +17,18 @@ SidoraQueue.prototype.showWarning = function(warning){
 SidoraQueue.prototype.showMessage = function(message){
   console.log(message);
 }
-/* The action property in Sidora queue request object is used to track the actual action being performed in the request, instead of deriving it from the 
- * userFriendlyName. The requestStat property is used to track the item count in the current queue, e.g., if there are 3 requests being queued for deleting 
+/* The action property in Sidora queue request object is used to track the actual 
+ * action being performed in the request, instead of deriving it from the 
+ * userFriendlyName. The requestStat property is used to track the item count in 
+ * the current queue, e.g., if there are 3 requests being queued for deleting 
  * 3 resources, the requestStat will contain 0 of 3, 1 of 3,etc.
- * Use cases for action and requestStat: When multiple resources are added, the last resource added needs to be highlighted and opened in the preview pane.
- * Prior to requestStat, this was done by geting the item count from userFriendlyName. RequestStat is a more precise way of figuring out if we are processing 
+ * Use cases for action and requestStat: When multiple resources are added, the 
+ * last resource added needs to be highlighted and opened in the preview pane.
+ * Prior to requestStat, this was done by geting the item count from userFriendlyName.
+ * RequestStat is a more precise way of figuring out if we are processing 
  * the last resource in the queue.
- * Also, when a concept is deleted, the window url needs to change to the parent pid so Sidora.Concept.LoadContent loads the metadata for the parent pid. The 
+ * Also, when a concept is deleted, the window url needs to change to the parent 
+ * pid so Sidora.Concept.LoadContent loads the metadata for the parent pid. The 
  * done funtion of Sidora queue checks the action property to accomplish this functionality.
 */ 
 SidoraQueue.prototype.RequestPost = function(userFriendlyName, ajaxRequestUrl, postData, doneFunction, failFunction, pidsBeingProcessed, action, requestStat){
@@ -88,11 +93,78 @@ SidoraQueue.prototype.SidoraRequest = function(sidoraRequest){
   myself.requests.push(sidoraRequest);
   console.log("In SidoraRequest of the Queue : added a request to the requests array of the queue.");
 }
+SidoraQueue.prototype.ListenerForCreateRetry = function(completedItem, formBuildIdToUse) {
+  var formBuildIdIndex = -1;
+  if (completedItem != null) {
+    formBuildIdIndex = completedItem.fullObject.ajaxRequest.data.indexOf("form_build_id");
+  }
+  var fbi = '';
+  if (formBuildIdIndex > -1) {
+    var fbi_partial = completedItem.fullObject.ajaxRequest.data.substr(formBuildIdIndex+14);
+    var fbi = fbi_partial.substring(0,fbi_partial.indexOf("&"));
+  }
+  if (typeof(formBuildIdToUse) != 'undefined') {
+    fbi = formBuildIdToUse;
+  }
+  if (fbi != '') {
+    var rcid = 'retryCreate'+fbi;
+    var myQ = this;
+    var originalItem = completedItem;
+    jQuery("#"+rcid).click(function(){
+      var tryNumber = "2";
+      if (typeof(jQuery("#"+rcid).attr("try")) !== 'undefined'){
+        tryNumber = jQuery("#"+rcid).attr("try");
+      }
+      jQuery("#"+rcid).attr("try", 1+parseInt(tryNumber));
+      onSuccess = function(){
+        jQuery("#"+rcid).text("Success!");
+      }
+      onFailure = function(){
+        jQuery("#"+rcid).text("Retry "+jQuery("#"+rcid).attr("try"));
+        jQuery("#"+rcid).unbind('click');
+        jQuery("#"+rcid+"-ignore").parent().show();
+        myQ.ListenerForCreateRetry(originalItem);
+      }
+      myQ.RequestPost("Try #"+tryNumber+"-"+completedItem.userFriendlyName, Drupal.settings.basePath+"sidora/ajax_parts/reprocess_incomplete_object_creation_forms/"+fbi, '', onSuccess, onFailure, completedItem.pidsBeingProcessed, "retryIngest" );
+      myQ.Next();
+      jQuery("#"+rcid).text("Retrying...").unbind('click');
+      jQuery("#"+rcid+"-ignore").parent().hide();
+    });
+    jQuery("#"+rcid+"-ignore").click(function(){
+      jQuery("#"+rcid+"-ignore").parent().parent().hide();
+    });
+  }
+}
+SidoraQueue.prototype.HtmlForCreateRetry = function(completedItem, formBuildIdToUse) {
+  var formBuildIdIndex = completedItem.fullObject.ajaxRequest.data.indexOf("form_build_id");
+  var toReturn = '';
+  var fbi = '';
+  if (formBuildIdIndex > -1) {
+    var fbi_partial = completedItem.fullObject.ajaxRequest.data.substr(formBuildIdIndex+14);
+    var fbi = fbi_partial.substring(0,fbi_partial.indexOf("&"));
+  }
+  if (typeof(formBuildIdToUse) != 'undefined') {
+    fbi = formBuildIdToUse;
+  }
+  if (fbi != '') {
+    var rcid = 'retryCreate'+fbi;
+    toReturn = '<div>';
+    toReturn += '<button class="sidora-button" style="width:100px">';
+    toReturn += '<span class="sidora-button-text retryCreate" id="'+rcid+'" fbi="'+fbi+'">Retry</span>'
+    toReturn += '</button>';
+    toReturn += '<button class="sidora-button" style="width:100px">';
+    toReturn += '<span class="sidora-button-text" id="'+rcid+'-ignore">Ignore</span>';
+    toReturn += '</button>';
+    toReturn += '</div>';
+  }
+  return toReturn;
+}
 SidoraQueue.prototype.Fail = function(completedItem, ajaxReturn){
   completedItem.ajaxReturn = ajaxReturn;
   this.completedRequests.push(completedItem);
-  this.completedFailedRequests.push({pid:completedItem.pidsBeingProcessed[0],form:completedItem})
-  this.NotificationWindow.Show("FAILED: " + completedItem.userFriendlyName);
+  this.completedFailedRequests.push({pid:completedItem.pidsBeingProcessed[0],form:completedItem});
+  var creation
+  this.NotificationWindow.Show("FAILED: " + completedItem.userFriendlyName, true);
   console.log("fail:"+ajaxReturn[0].status);
   if (ajaxReturn[0].status == '500'){
     var site_admin = '';
@@ -121,20 +193,20 @@ SidoraQueue.prototype.Retry = function(pid) {
   jQuery("#edit_form").text(failedForm.form)
   Shadowbox.close();
   Shadowbox.open({
-        content: Drupal.settings.basePath+"sidora/edit_metadata/"+pid+"&retry",
-  player:     "iframe",
-        title:      "Edit Metadata",
-        options: {
-        onFinish:  function(){
-          //Allow the frame to go fullscreen if needed
-          jQuery("#sb-player").attr("allowfullscreen","true");
-          jQuery("#sb-player").attr("webkitallowfullscreen","true");
-          jQuery("#sb-player").attr("mozallowfullscreen","true");
-          jQuery("#sb-player").attr("msallowfullscreen","true");
-          jQuery("#sb-player").attr("oallowfullscreen","true");
-        }
+    content: Drupal.settings.basePath+"sidora/edit_metadata/"+pid+"&retry",
+    player:     "iframe",
+    title:      "Edit Metadata",
+    options: {
+      onFinish: function(){
+        //Allow the frame to go fullscreen if needed
+        jQuery("#sb-player").attr("allowfullscreen","true");
+        jQuery("#sb-player").attr("webkitallowfullscreen","true");
+        jQuery("#sb-player").attr("mozallowfullscreen","true");
+        jQuery("#sb-player").attr("msallowfullscreen","true");
+        jQuery("#sb-player").attr("oallowfullscreen","true");
       }
-    });
+    }
+  });
 }           
 SidoraQueue.prototype.Done = function(completedItem, ajaxReturn){
   completedItem.ajaxReturn = ajaxReturn;
@@ -151,16 +223,24 @@ SidoraQueue.prototype.Done = function(completedItem, ajaxReturn){
   try{ jsonData = jQuery.parseJSON(jsonString); } catch (e){
     if (jsonString.indexOf("<h2 class=\"element-invisible\">Error message</h2")>0){
       var toShow = "Did not perform action:"+completedItem.userFriendlyName;
+      this.completedFailedRequests.push({pid:completedItem.pidsBeingProcessed[0],form:jsonString});
       if (completedItem.fullObject.userFriendlyName.indexOf("Edit MetaData")>0){
-       this.completedFailedRequests.push({pid:completedItem.pidsBeingProcessed[0],form:jsonString})
         toShow += '<div class="messages error"><a rel="shadowbox; width=500; height=600; player=iframe" href="javascript:void(0)" id="retry_edit_metadata" class="' + completedItem.pidsBeingProcessed[0] + '" onClick = window.sidora.queue.Retry("'+completedItem.pidsBeingProcessed[0]+'");>Click here to view the errors and retry</a></div>';
-          }
-    this.NotificationWindow.Show(toShow, true);
-    return;
+      }
+      if (completedItem.fullObject.action == 'createResource') {
+        toShow += this.HtmlForCreateRetry(completedItem);
+      }
+      this.NotificationWindow.Show(toShow, true);
+      if (completedItem.fullObject.action == 'createResource') {
+        toShow += this.ListenerForCreateRetry(completedItem);
+      }
+      
+      return;
     }  
   }
   if (jsonData != null && jsonData.error){
     var toShow = "Did not perform action:"+completedItem.userFriendlyName;
+    this.completedFailedRequests.push({pid:completedItem.pidsBeingProcessed[0],form:jsonString});
     if (typeof(jsonData.error) == 'string') toShow += " - "+jsonData.error;
     if (typeof(jsonData.description) == 'string') toShow += " - "+jsonData.description;
     for (var i = 0; i < completedItem.pidsBeingProcessed.length; i++){
@@ -169,17 +249,17 @@ SidoraQueue.prototype.Done = function(completedItem, ajaxReturn){
     }
     this.NotificationWindow.Show(toShow, true);
   }else{
-    if (completedItem.action == 'batchIngest' && jsonData.status.toLowerCase().indexOf("batch ingest successfully received") > -1){ 
-      console.log("Batch successfully submitted");
-      var requestID = jsonData.request_id;
-      var batch_id = jsonData.batch_id;
-      var timestamp = jsonData.timestamp;
-      console.log("Request id:"+requestID);
-      this.NotificationWindow.Show('Batch Ingest request started at ' + timestamp + ' to ingest ' + jsonData.message + ' is now under process',true);
+    if (completedItem.action == 'batchIngest'){
+      if (jsonData.status.toLowerCase().indexOf("batch ingest successfully received") > -1){ 
+        console.log("Batch successfully submitted");
+        var requestID = jsonData.request_id;
+        var batch_id = jsonData.batch_id;
+        var timestamp = jsonData.timestamp;
+        console.log("Request id:"+requestID);
+        this.NotificationWindow.Show('Batch Ingest request started at ' + timestamp + ' to ingest ' + jsonData.message + ' is now submitted for processing',true);
       // extract the request id and batch_id and set an interval based function 
-				
-    (function poll(requestID,batch_id,timestamp) {
-      setTimeout(function(){
+      (function poll(requestID,batch_id,timestamp) {
+       setTimeout(function(){
 	jQuery.ajax({
         url: Drupal.settings.basePath+"sidora/ajax_parts/check_batch_status/"+requestID+"/"+batch_id+"/",
         type: "GET",
@@ -207,25 +287,27 @@ SidoraQueue.prototype.Done = function(completedItem, ajaxReturn){
 		sidora.util.refreshConceptChildrenNumber(parentPid);
                 },5000);
 	      }
-	   }else{
-	     if (batchStatus.status.toLowerCase().indexOf('error') == -1) {
-			   sidora.queue.NotificationWindow.Show("Batch request started at " + timestamp + " is still running" + "<br>" + batchStatus.message,true);
-	       setTimeout(function() {poll(requestID,batch_id,timestamp)}, 2000);
-			 }else{
-			 	 sidora.queue.NotificationWindow.Show("Batch status for request started at " + timestamp + " returned an error" + "<br>" + batchStatus.message,true);
-			 }	 
-	   }
-	 }			
-       },
+	    }else{
+	      if (batchStatus.status.toLowerCase().indexOf('error') == -1) {
+	        sidora.queue.NotificationWindow.Show("Status for batch request started at " + timestamp + " : " + "<br>" + batchStatus.message,true);
+	        setTimeout(function() {poll(requestID,batch_id,timestamp)}, 2000);
+	      }else{
+	        sidora.queue.NotificationWindow.Show("Status for batch request started at " + timestamp + " returned an error : " + "<br>" + batchStatus.message,true);
+	        console.log(batchStatus.message);
+	      }	 
+	    }
+	  }			
+        },
        dataType: "json",
        //timeout: 5000
       });
      },2000);
    })(requestID,batch_id,timestamp);
-				
-        /*{}else{
-          onFailureOfFormSubmit(formName, this, data);
-        }*/
+    }else{
+      if (Drupal.settings.site_admin_email != "") site_admin = " at " + Drupal.settings.site_admin_email;
+        this.NotificationWindow.Show('The batch ingest request could not be submitted to backend for processing. Contact site administrator' + site_admin,true);
+	console.log(jsonData.status+jsonData.message);
+    }				
   }else{  
     if (!completedItem.isSilent) this.NotificationWindow.Show(completedItem.userFriendlyName);
     var processedItemCount = completedItem.requestStat;
@@ -313,7 +395,11 @@ SidoraQueue.prototype.NotificationWindow.Show = function(message, isError){
     jQuery(".queue-mb-close").click(function(){nw.showingError = false; nw.Hide();});
   }
   jQuery(".notification-window-message div:hidden").remove();
-  jQuery(".notification-window-message").append("<div>"+message+"</div>");
+  var checkErrorClass = "";
+  if (isError) {
+    checkErrorClass = "notification-window-error-message";
+  }
+  jQuery(".notification-window-message").append("<div class="+checkErrorClass+">"+message+"</div>");
   jQuery("#queueMessage").height(jQuery("#queueMessage").css("min-height"));
   jQuery("#queueMessage").fadeIn();
   if (jQuery("#queueMessage")[0].scrollHeight > jQuery("#queueMessage").height()){
