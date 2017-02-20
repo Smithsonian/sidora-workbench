@@ -74,6 +74,7 @@ sidora.concept.LoadContentHelp.Resources.TableLoad = function(conceptOfInterest)
      })
   });
   var table = jQuery('#res_table').DataTable();
+	jQuery('#res_table').DataTable().clearPipeline().draw();
   jQuery('#res_table tbody').on( 'click', 'tr', function (e) {
     //If the mousedown is on something that is in the middle of a move process, ignore the mousedown
     if (jQuery(this).hasClass("is-being-moved")){
@@ -106,8 +107,11 @@ sidora.concept.LoadContentHelp.Resources.TableLoad = function(conceptOfInterest)
     if (pids.length != 1){
    //   jQuery("#edit-resource-metadata-menu").addClass("ui-state-disabled");
       jQuery("#manage-resource, #edit-resource-metadata-menu, #view-resource-metadata, #resource-open-window, #resource-download").addClass("ui-state-disabled");
+      jQuery("#edit-resource-datastream-menu").addClass("ui-state-disabled");
     }else{
+      jQuery("#edit-resource-metadata-menu").removeClass("ui-state-disabled");
       jQuery("#manage-resource, #edit-resource-metadata-menu, #view-resource-metadata, #resource-open-window, #resource-download").removeClass("ui-state-disabled");
+	jQuery("#edit-resource-datastream-menu").removeClass("ui-state-disabled");
     }
   }); //End onclick
     table.on( 'length', function ( e, settings, len ) {
@@ -1317,6 +1321,27 @@ sidora.resources.updateThumbnails = function(){
     }
   })
 }
+sidora.resources.refreshSelectedResourceThumbnail = function(){
+ var pids = sidora.resources.getHighlighted();
+ toRefreshPid = pids[0];
+  var me = jQuery(jq(toRefreshPid));
+  if (typeof(me.children("td").children("div").children("img").attr("src")) == 'string'){
+      var imgChild = me.children("td").children("div").children("img");
+      var pidThumbnail = Drupal.settings.basePath+"sidora/info/"+toRefreshPid+"/meta/TN/browser";
+      jQuery.ajax(pidThumbnail,{
+        complete:function(res){
+         me.children("td").children("div.resource-list-tn").children("img").remove();
+	 me.children("td").children("div.resource-list-tn").append('<div id="gray_overlay" style="background-color:rgba(0,0,0,1);opacity:0.5;width:150px;height:90px;">');
+         jQuery("#gray_overlay").append('<div id="sb-loading"><div id="sb-loading-inner"><span>&nbsp;</span></div></div>');
+	 setTimeout(function(){
+           me.children("td").children("div.resource-list-tn").append('<img style="max-height:90px;max-width:150px;display:none;">');
+	   me.children("td").children("div.resource-list-tn").children("img").load(function(){jQuery("#gray_overlay").remove();me.children("td").children("div.resource-list-tn").children("img").css("display","");}).attr("src",pidThumbnail+"?random="+new Date().getTime());
+	 },10000);
+        }
+      });
+  }
+}
+
 /*
  * Get the pids of the highlighed resources
  */
@@ -2342,6 +2367,20 @@ sidora.resources.individualPanel.Create = function() {
       }
     });
   });
+  jQuery('#edit-resource-datastream-menu').unbind('click');
+  jQuery("#edit-resource-datastream-menu").click(function(){
+    var resourcePid = sidora.resources.individualPanel.resourceOfInterest.pid;
+    var resourceName = sidora.resources.individualPanel.resourceOfInterest.name;
+    jQuery('#addDatastreamDialog').remove();
+    jQuery("body").append("<div id='addDatastreamDialog' style='display:none;' title='Update Content'><iframe height='1000%' width='100%' style='height:100%;width:100%' src='"+Drupal.settings.basePath+"sidora/manage/"+resourcePid+"/upload_content' frameborder='0' marginwidth='0' marginheight='0' allowfullscreen></iframe></div>");
+    jQuery("#addDatastreamDialog").dialog({
+     resizable: true,
+     height:600,
+     width: 600,
+     modal: true,
+    });
+    jQuery("#addDatastreamDialog").css("overflow", "hidden");
+  });
 
   //The overlay is needed to protect the cursor from being lost to the iframe
   //For example, here's what would happen during a drag toward the iframe:
@@ -2627,7 +2666,7 @@ sidora.manage.Open = function(pid, name, title, userFriendlyToastName){
   this.recent.name = name;
   this.recent.title = title;
   this.recent.uftn = userFriendlyToastName;
-  sidora.manage.OpenCurrentConfig();
+	sidora.manage.OpenCurrentConfig();
 }
 /*
  * Opens the shadowbox based management panel
@@ -2638,8 +2677,9 @@ sidora.manage.OpenCurrentConfig = function(){
   var title = this.recent.title;
   var userFriendlyToastName = this.recent.uftn;
   Shadowbox.close();
+  setTimeout(function(){
   jQuery.ajax(Drupal.settings.basePath+"sidora/manage/"+pid).done(function(html){
-    Shadowbox.open({
+	Shadowbox.open({
         content:    html,
         player:     "html",
         title:      title,
@@ -2682,12 +2722,13 @@ sidora.manage.OpenCurrentConfig = function(){
           }
     });
   })
+	},1000);
 }
 /*
  * Reopens the frame to show an update to the user
  */
 sidora.manage.resetFrame = function(){
-  this.OpenCurrentConfig();
+	this.OpenCurrentConfig();
 }
 /*
  * Removes a datastream from the object, confirms with user first
