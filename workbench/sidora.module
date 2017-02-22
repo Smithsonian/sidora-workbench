@@ -763,8 +763,7 @@ function sidora_process_object_with_build_id($form_build_id) {
         og_group('node', $owned_group, array('entity_type' => 'node', 'entity' => $concept_node->nid));
       }
       // Update Drupal node of parent
-      $parent_nodes = sidora_get_concept_node($parent_pid);
-      $parent_node = array_shift(array_values($parent_nodes)); 
+      $parent_node = sidora_get_concept_node($parent_pid);
       sidora_update_concept_node_add_child($parent_node, $concept_node->nid);
 
       
@@ -812,8 +811,7 @@ function sidora_process_object_with_build_id($form_build_id) {
         sidora_update_datastream($object, $file_location, 'OBJ', $file_name);
       }   
       // Update Drupal node of parent
-      $parent_nodes = sidora_get_concept_node($parent_pid);
-      $parent_node = array_shift(array_values($parent_nodes)); 
+      $parent_node = sidora_get_concept_node($parent_pid);
       // Update the number of resources on the node
       sidora_update_concept_node_add_child($parent_node);
       // if it's a tabular, see if there is a proper codebook
@@ -2599,10 +2597,13 @@ SELECT ?pid ?mod ?label ?created FROM <#ri>
       $owning_user = user_load($two);
     }
     $type = 'create';
-    if (!empty($parent_pid) || $parent_pid == 'si:root') {
+    if (!empty($parent_pid) && ($parent_pid != 'si:root')) {
       $type = $parent_pid;
     }
-    $entity = sidora_create_sidora_group($owning_user, $type); 
+    if (!empty($extra)) {
+      $entity = sidora_create_sidora_group($owning_user, $extra, $type); 
+      
+    }
     var_dump($entity);
     exit();
   }
@@ -4758,20 +4759,24 @@ function sidora_node_allow($type_of_operation, $node) {
 /**
  * Creates the four groups for the input user. (create, view, edit, delete)
  */
-function sidora_create_all_groups_for_user($owning_user) {
+function sidora_create_all_groups_for_user($owning_user, $project_pid = NULL) {
   $groups_created = array();
-  $groups_created[] = sidora_create_sidora_group($owning_user, 'create');
-  $groups_created[] = sidora_create_sidora_group($owning_user, 'edit');
-  $groups_created[] = sidora_create_sidora_group($owning_user, 'view');
-  $groups_created[] = sidora_create_sidora_group($owning_user, 'delete');
+  $groups_created[] = sidora_create_sidora_group($owning_user, $project_pid, 'create');
+  $groups_created[] = sidora_create_sidora_group($owning_user, $project_pid, 'edit');
+  $groups_created[] = sidora_create_sidora_group($owning_user, $project_pid, 'view');
+  $groups_created[] = sidora_create_sidora_group($owning_user, $project_pid, 'delete');
   return $groups_created; 
 }
 /**
  * Creates a specified group for the input type for this user.  Assumes the group does not exist
  */
-function sidora_create_sidora_group($owning_user, $type) {
+function sidora_create_sidora_group($owning_user, $project_pid, $type) {
     if (is_integer($owning_user) || is_string($owning_user)) {
       $owning_user = user_load(intval($owning_user));
+    }
+    $project_obj = sidora_obj($project_pid);
+    if (empty($project_obj)) {
+      return NULL;
     }
     $values = array(
       'type' => 'og_crud_group',
@@ -4787,7 +4792,8 @@ function sidora_create_sidora_group($owning_user, $type) {
     $entity = entity_create('node', $values);
     $wrapper = entity_metadata_wrapper('node', $entity);
     // Create View Edit Delete
-    $wrapper->title->set($owning_user->name . ' ' . ucfirst($type));
+    $name = $project_pid . " " . $project_obj->label . ' ' . ucfirst($type);
+    $wrapper->title->set($name);
     $my_body_content = '';
     $wrapper->body->set(array('value' => $my_body_content));
     $wrapper->body->summary->set('');
@@ -6766,8 +6772,7 @@ function sidora_unassociate($remove_from_pid, $pid_to_remove, $show_output = TRU
     $parent->relationships->remove(FEDORA_RELS_EXT_URI, 'hasResource', $pid_to_remove);
     // Update Drupal node of parent
     $parent_pid = $remove_from_pid;
-    $parent_nodes = sidora_get_concept_node($parent_pid);
-    $parent_node = array_shift(array_values($parent_nodes)); 
+    $parent_node = sidora_get_concept_node($parent_pid);
     sidora_update_concept_node_remove_child($parent_node);
   }
   sidora_clear_tree_cache($remove_from_pid);
@@ -6991,12 +6996,10 @@ function sidora_copy($copy_to_id, $pid, $show_output = TRUE) {
     }
   }
   // Update Drupal node of parent
-  $child_nodes = sidora_get_concept_node($pid);
-  if (!empty($child_nodes)) {
+  $child_node = sidora_get_concept_node($pid);
+  if (!empty($child_node)) {
     $parent_pid = $copy_to_id;
-    $parent_nodes = sidora_get_concept_node($parent_pid);
-    $parent_node = array_shift(array_values($parent_nodes)); 
-    $child_node = array_shift(array_values($child_nodes)); 
+    $parent_node = sidora_get_concept_node($parent_pid);
     sidora_update_concept_node_add_child($parent_node, $child_node->nid);
   }
   sidora_clear_tree_cache($copy_to_id);
@@ -11342,8 +11345,7 @@ function sidora_update_node_from_fedora($pid_or_fedora_obj_or_nid_or_node){
       // Get the object
       $obj = sidora_obj($pid);
       // Get the node
-      $nodes = sidora_get_concept_node($pid);
-      $node = array_shift(array_values($nodes)); 
+      $node = sidora_get_concept_node($pid);
       // Get the nid
       $nid = $node->nid;
     }
@@ -11353,8 +11355,7 @@ function sidora_update_node_from_fedora($pid_or_fedora_obj_or_nid_or_node){
     $obj = $pid_or_fedora_obj_or_nid_or_node;
     $pid = $obj->id;
     // Get the node
-    $nodes = sidora_get_concept_node($pid);
-    $node = array_shift(array_values($nodes)); 
+    $node = sidora_get_concept_node($pid);
     // Get the nid
     $nid = $node->nid;
   }
@@ -11539,9 +11540,28 @@ function sidora_update_concept_node($node, $info, $set_fedora_sync = FALSE) {
   return $node;
 }
 /**
- * Retrieves concept node for this pid or array of pids
+ * Retrieves the first found concept node for this single pid
  */
 function sidora_get_concept_node($pid) {
+  $nodes = sidora_get_concept_nodes($pid);
+  if (empty($nodes)) {
+    return NULL;
+  }
+  if (sizeof($nodes) > 1) {
+    $nodes_list = '';
+    foreach($nodes as $node) {
+      $nodes_list = ' ' . $node->id;
+    }
+    $text = t("Concept to PID 1-to-1 relationship failure. PID: !pid nodes: !nodes_list", array('!pid' => $pid, '!nodes_list' => $nodes_list));
+    watchdog("sidora", $text);
+  }
+  $node = array_shift(array_values($nodes)); 
+  return $node; 
+}
+/**
+ * Retrieves concept nodes for this pid or array of pids
+ */
+function sidora_get_concept_nodes($pid) {
   $pid_array = $pid;
   if (is_string($pid)){
     $pid_array = array($pid);
@@ -11649,11 +11669,10 @@ function sidora_create_concept_node($pid, $info = NULL, $set_fedora_sync = FALSE
 function sidora_get_default_owner_id_under_pid($pid){
   global $user;
   //Get the node that represents the pid
-  $nodes = sidora_get_concept_node($pid);
-  if (empty($nodes)) {
+  $node = sidora_get_concept_node($pid);
+  if (empty($node)) {
     return $user->uid;
   }
-  $node = array_shift(array_values($nodes)); 
 
   //If there is a node, check to see if it's in a share group
   $node_groups = og_get_entity_groups('node', $node);
