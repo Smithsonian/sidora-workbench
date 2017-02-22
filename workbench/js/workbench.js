@@ -1287,13 +1287,16 @@ sidora.resources.refreshSelectedResourceThumbnail = function(){
       var pidThumbnail = Drupal.settings.basePath+"sidora/info/"+toRefreshPid+"/meta/TN/browser";
       jQuery.ajax(pidThumbnail,{
         complete:function(res){
-         me.children("td").children("div.resource-list-tn").children("img").remove();
-	 me.children("td").children("div.resource-list-tn").append('<div id="gray_overlay" style="background-color:rgba(0,0,0,1);opacity:0.5;width:150px;height:90px;">');
-         jQuery("#gray_overlay").append('<div id="sb-loading"><div id="sb-loading-inner"><span>&nbsp;</span></div></div>');
-	 setTimeout(function(){
+         var currType = res.getResponseHeader("content-type");
+         if ((currType.indexOf("image") != -1) || (currType.indexOf("jpg") != -1)){ // video and audio TN have a jpg mimetype
+          me.children("td").children("div.resource-list-tn").children("img").remove();
+	  me.children("td").children("div.resource-list-tn").append('<div id="gray_overlay" style="background-color:rgba(0,0,0,1);opacity:0.5;width:150px;height:90px;">');
+          jQuery("#gray_overlay").append('<div id="sb-loading"><div id="sb-loading-inner"><span>&nbsp;</span></div></div>');
+	  setTimeout(function(){
            me.children("td").children("div.resource-list-tn").append('<img style="max-height:90px;max-width:150px;display:none;">');
 	   me.children("td").children("div.resource-list-tn").children("img").load(function(){jQuery("#gray_overlay").remove();me.children("td").children("div.resource-list-tn").children("img").css("display","");}).attr("src",pidThumbnail+"?random="+new Date().getTime());
-	 },10000);
+	  },15000);
+	 }
         }
       });
   }

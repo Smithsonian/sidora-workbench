@@ -449,19 +449,19 @@ function sidora_management_panel($pid, $show_or_save = 'show', $dsid_to_remove =
     } 
     $label = filter_input(INPUT_POST, 'label', FILTER_SANITIZE_STRING);
     $identifier = filter_input(INPUT_POST, 'identifier', FILTER_SANITIZE_URL);
+    $state = filter_input(INPUT_POST, 'state', FILTER_SANITIZE_URL);
+    $mime_detect = new MimeDetect();
+    $current_uploads = sidora_create_resource_get_current_uploads();
+    $mimeType = $mime_detect->getMimeType($current_uploads[0]->filepath);
     if (strtoupper($identifier) == 'OBJ'){
       $object = sidora_obj($pid);
       if (!$object[$identifier]->versionable){
        $object[$identifier]->versionable = true;
       }
       if (empty($label)){
-        $label = $object[$identifier]->label;
+        $label = $current_uploads[0]->filename;
       }	
     }	
-    $state = filter_input(INPUT_POST, 'state', FILTER_SANITIZE_URL);
-    $mime_detect = new MimeDetect();
-    $current_uploads = sidora_create_resource_get_current_uploads();
-    $mimeType = $mime_detect->getMimeType($current_uploads[0]->filepath);
     sidora_management_ingest($pid, $identifier, $label, $mimeType);
     $to_return = 'complete';
     return $to_return;
