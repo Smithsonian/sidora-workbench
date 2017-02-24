@@ -758,12 +758,18 @@ function sidora_process_object_with_build_id($form_build_id) {
       // Create the Drupal node to go along with it
       $info = array("label"=>$object->label,"concept_children"=>'',"resource_children"=>0);
       $concept_node = sidora_create_concept_node($object->id, $info, TRUE, $owner_id);
-      $owned_groups = sidora_get_owned_groups($owner_id);
-      foreach($owned_groups as $owned_group) {
-        og_group('node', $owned_group, array('entity_type' => 'node', 'entity' => $concept_node->nid));
+      $parent_node = sidora_get_concept_node($parent_pid);
+      $parent_node_id = $parent_node->nid;
+      $parent_group_info = og_get_entity_groups('node', $parent_node_id);
+      $parent_gids = array();
+      foreach($parent_group_info['node'] as $group_node_id){
+        $parent_gids[] = $group_node_id;
+      }
+      $parent_groups = node_load_multiple($parent_gids);
+      foreach($parent_groups as $parent_group) {
+        og_group('node', $parent_group, array('entity_type' => 'node', 'entity' => $concept_node->nid));
       }
       // Update Drupal node of parent
-      $parent_node = sidora_get_concept_node($parent_pid);
       sidora_update_concept_node_add_child($parent_node, $concept_node->nid);
 
       
@@ -2543,6 +2549,16 @@ SELECT ?pid ?mod ?label ?created FROM <#ri>
      print 'no tuque';
     }
     exit();
+  }
+  if ($one == 'check_gids'){
+     $parent_pid = $two;
+     $parent_gids = og_get_entity_groups('node', $parent_pid);
+     dpm($parent_gids);
+     dpm($parent_gids['node']);
+     foreach($parent_gids['node'] as $group_node_id){
+       dpm($group_node_id);
+     } 
+     return 'complete';
   }
   if ($one == 'put_my_stuff_in_og') {
     sidora_sharing_put_all_owned_concepts_into_owned_groups();
@@ -11474,6 +11490,7 @@ function sidora_update_concept_node_remove_child($node, $child_node_id = NULL) {
  * Adds a child to the end of the child list
  */
 function sidora_update_concept_node_add_child($node, $child_node_id = NULL) {
+  watchdog("sidora","sidora_update_concept_node_add_child, node id:" . $node->nid . " new child node id:" . $child_node_id);
   $node_wrapper = entity_metadata_wrapper('node', $node);
   // If the child is null, then it was a resource, add one resource from the resource count
   if (empty($child_node_id)) {

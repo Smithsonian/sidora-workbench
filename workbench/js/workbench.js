@@ -588,6 +588,7 @@ sidora.InitiateJSTree = function(){
         }
       }
     }
+
     sidora.util.openToCurrentPathAndSelectItem(currentUrl);
     if (typeof sidora.sharedWithMe !== 'undefined') sidora.sharedWithMe.CreateDefaultShareSection();
     //When you select a node, update the url in the browser, change the page title (not browser title) and load the concept content into the main window
@@ -692,6 +693,38 @@ sidora.InitiateJSTree = function(){
 
 
     jQuery('#forjstree').show();
+
+    /*
+    jQuery(".branding-user-info").before("<div class='project-space-drop-down'><select><option value='Personal Project Space'>Personal Project Space</option></select></div>");
+    */
+    var mainTreeChildren = jQuery("#j1_1").children("ul").children();
+    jQuery(".branding-user-info").before("<div class='project-space-drop-down'><select id='psdd-select'></select></div>");
+    var selectedIndex = 0;
+    for(var mtci = 0; mtci < mainTreeChildren.length; mtci++){
+      var optionVal = mainTreeChildren[mtci].id;
+      var optionText = jQuery(mainTreeChildren[mtci]).children("a").attr("fullname");
+      var selected = "";
+      if (optionText == "Personal Project Space") {
+        selectedIndex = mtci;
+        selected = "selected";
+      }
+      var optionToAdd = jQuery("<option value='"+optionVal+"'"+selected+">"+htmlEntities(optionText)+"</option>");
+      jQuery("#psdd-select").append(optionToAdd);      
+    }
+    var selectedValue = mainTreeChildren[selectedIndex].id;
+    sidora.ChangeProjectSpace = function(selectedValue) {
+      jQuery("#"+selectedValue).siblings().css("visibility","hidden");
+      jQuery("#"+selectedValue).css("position","absolute").css("top","0").css("left","0").css("visibility","visible");
+      jQuery("#"+selectedValue).children("a").click(); 
+    }
+    sidora.ChangeProjectSpace(selectedValue);
+    jQuery("#psdd-select").change(function(){ sidora.ChangeProjectSpace(this.value); });
+    jQuery("#j1_1").children("i").hide();
+    jQuery("#j1_1").children("a").hide();
+
+    jQuery("#page").show();
+
+
     var updateLocationWith = jQuery('#'+jstreeIdSelected).children('a').attr('href');
     if (typeof(updateLocationWith) != 'undefined') window.location = updateLocationWith;
     //if the content is already based on the highlighted concept, do nothing
@@ -1250,7 +1283,6 @@ sidora.InitiatePage = function(){
       { position: { my: "left-7 bottom", at: "right center" } }
     );
     jQuery("#branding").append("<div class='branding-user-info' style='float:right'> <a href='"+Drupal.settings.basePath+"user' class='button'>Profile</a> <a href='"+Drupal.settings.basePath+"user/logout' class='button'>Logout</a></div>");
-    jQuery("#page").show();
   }
   recreateUser = function() {
     jQuery("#page").after('<div id="recreateUser" class="" style="max-width: 300px;margin: 0 auto;"><p>It looks like your user hasn\'t been set up yet. To automatically set up your user now, click \'Set Up Now\'. The process will take about 30 seconds and will reload the page when it\'s complete.</p> <div style="margin: 0 20px;"><input id="setupnow" class="form-submit" value="Set Up Now"><p></p><input id="logout" class="form-submit" value="Log Out"></div></div>');
@@ -2823,4 +2855,7 @@ sidora.reloadPage = function(){
 }
 sidora.util.refreshPidInTree = function(){
 sidora.util.RefreshTree(null,sidora.concept.GetPid());
+}
+function htmlEntities(str) {
+    return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
