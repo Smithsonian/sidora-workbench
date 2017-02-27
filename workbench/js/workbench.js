@@ -697,6 +697,8 @@ sidora.InitiateJSTree = function(){
     /*
     jQuery(".branding-user-info").before("<div class='project-space-drop-down'><select><option value='Personal Project Space'>Personal Project Space</option></select></div>");
     */
+    jst.open_node(jst.get_node("j1_1"));
+    setTimeout(function(){
     var mainTreeChildren = jQuery("#j1_1").children("ul").children();
     jQuery(".branding-user-info").before("<div class='project-space-drop-down'><select id='psdd-select'></select></div>");
     var selectedIndex = 0;
@@ -713,15 +715,17 @@ sidora.InitiateJSTree = function(){
     }
     var selectedValue = mainTreeChildren[selectedIndex].id;
     sidora.ChangeProjectSpace = function(selectedValue) {
-      jQuery("#"+selectedValue).siblings().css("visibility","hidden");
-      jQuery("#"+selectedValue).css("position","absolute").css("top","0").css("left","0").css("visibility","visible");
+      var projectSelectorCss = jQuery("#"+selectedValue).siblings().map(function(){return "#" + this.id;}).get().join(", ");
+      projectSelectorCss += " , #j1_1 > i, #j1_1 > a { display:none } ";
+      projectSelectorCss += " #" + selectedValue + " { position: absolute; top: 0; left: 0; } ";
+      //jQuery("#"+selectedValue).css("position","absolute").css("top","0").css("left","0").css("visibility","visible");
+      jQuery("#project-selector-css").remove();
+      jQuery("<style>").prop("type","text/css").prop("id","project-selector-css").html(projectSelectorCss).appendTo("head");
       jQuery("#"+selectedValue).children("a").click(); 
     }
     sidora.ChangeProjectSpace(selectedValue);
     jQuery("#psdd-select").change(function(){ sidora.ChangeProjectSpace(this.value); });
-    jQuery("#j1_1").children("i").hide();
-    jQuery("#j1_1").children("a").hide();
-
+    }, 200);
     jQuery("#page").show();
 
 

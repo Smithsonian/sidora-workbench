@@ -4652,26 +4652,27 @@ function sidora_allow($user_pid_or_drupal_user, $pid_or_fedora_object, $type_of_
    return TRUE;
   }
 
+
   $og_handled = array('view', 'update', 'delete', 'create');
   if (!empty($node) && in_array($type_of_operation, $og_handled)) {
     return sidora_node_allow($type_of_operation, $node); 
   }
   module_load_include('inc', 'sidora', 'includes/utils');
   $is_resource = sidora_is_resource($object);
-  // If it's a resource: check to see if the specified user has access to the owner's main node
-  // TBD: When this is concept-by-concept sharing this must be changed to check the direct parent
   if ($is_resource) {
-    $owner_id = sidora_get_uid_from_username($object->owner);
-    if (!empty($owner_id)) {
-      $account = user_load($owner_id);
-      $sharing_root_pid = sidora_get_user_object($account);
-      $sharing_root_node = sidora_get_update_or_create_concept_node($sharing_root_pid);
-      return sidora_node_allow($type_of_operation, $sharing_root_node);
-    }
+      $parents = sidora_get_parent_concepts($object);
+      foreach ($parents as $parent_pid => $parent) {
+        // BBB TODO DO NOT LEAVE AS IS
+        // TODO TODO TODO TODO TEMPORARY TBD WARNING
+        if (sidora_allow($user_pid_or_drupal_user, $parent_pid, $type_of_operation)) {
+          return TRUE;
+        }
+      }
   }
 
+  //Next comment is no longer necessarily true, would need a new check TODO
   // Next line says by default it's visible unless they shared, in which case it's already been returned
-  if ($type_of_operation == 'view') return TRUE;
+  //if ($type_of_operation == 'view') return TRUE;
 
   return FALSE;
 }
@@ -4680,6 +4681,8 @@ function sidora_allow($user_pid_or_drupal_user, $pid_or_fedora_object, $type_of_
  * with the user as children
  */
 function sidora_get_shared_with_me($drupal_user = NULL) {
+  //BBB TBD TODO removing while trying other ideas
+  return NULL;
   if (empty($drupal_user)) {
     global $user;
     $drupal_user = $user;
@@ -4751,8 +4754,7 @@ function sidora_node_allow($type_of_operation, $node) {
     $groups = sidora_get_groups_by_user();
     // Get the current user's groups
     foreach($groups as $group){
-      if ($group->uid == $node->uid) {
-        //Some hard-codes in here
+      if (og_is_member('node',$group->vid,'node',$node)){
         $roles = og_roles('node','og_crud_group', $group->vid);
         foreach($roles as $rid => $role) {
           if ($role == 'member') {
@@ -5358,23 +5360,6 @@ function sidora_exhibition_exists_in_tree($pid_to_check, $pids_checked_array) {
     }
   }
   return FALSE;
-}
-
-// copy of the function si_exhibition_get_parent_info in si_exhibition.util.inc
-function sidora_get_parent_info($pid, $skipNonTreeParents = false) {
-  $tuque = islandora_get_tuque_connection();
-  if ($tuque) {
-    $query = sidora_generate_parent_concept_query($pid);
-    $ri = $tuque->repository->ri;
-    $results = $ri->itqlQuery($query);
-    $parents = array_map(function($o) {
-      return array('pid' => $o['o']['value']);
-    }, $results);
-    return $parents;
-  }
-  else {
-    return -1;
-  }
 }
 
 
@@ -7223,7 +7208,9 @@ function sidora_block_content_navigation() {
   $filled = sidora_fill_concepts_children($results, array(), $root_children_pids); 
   */
   $filled = sidora_build_tree_from_nodes_by_pid($root_pid);
-  $filled = $filled[0]['children'];
+  if (!empty($filled[0])) {
+    $filled = $filled[0]['children'];
+  }
   /* */
   $html_tree_from_query_result = sidora_html_tree_from_query_results_tree($filled);
   $to_return = '<div style="float:left;width:200px;">';

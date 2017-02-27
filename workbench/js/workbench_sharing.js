@@ -30,7 +30,8 @@ sidora.sharedWithMe = {
   selector: null,
   dragY: false
 };
-sidora.sharedWithMe.CreateDefaultShareSection = function(){
+sidora.sharedWithMe.CreateDefaultShareSection = function(){}
+sidora.sharedWithMe.OLDCreateDefaultShareSection = function(){
   performWhenDisplayedOnScreen("#j1_1",function(){
     var jst = jQuery("#forjstree").jstree();
     var rn = jst.get_node("j1_1");
