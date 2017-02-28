@@ -694,9 +694,6 @@ sidora.InitiateJSTree = function(){
 
     jQuery('#forjstree').show();
 
-    /*
-    jQuery(".branding-user-info").before("<div class='project-space-drop-down'><select><option value='Personal Project Space'>Personal Project Space</option></select></div>");
-    */
     jst.open_node(jst.get_node("j1_1"));
     setTimeout(function(){
     var mainTreeChildren = jQuery("#j1_1").children("ul").children();
@@ -1029,7 +1026,6 @@ sidora.ReformatPage = function(){
   jQuery("#concept-resource-list").css("height","100%");
 }
 sidora.RelocateTreeOnPage = function(){
-  jQuery("#branding").css("margin-left","300px");
   jQuery("body").append("<div id='fjt-holder'></div>");
   jQuery("#fjt-holder").append(jQuery("#forjstree"));
 	jQuery("#fjt-holder").css("width","280px");
@@ -1063,7 +1059,6 @@ sidora.RelocateTreeOnPage = function(){
 		  .parent()
 			.attr('id','conceptTreeParent')
 			.append('<div id="iframeTreeOverlay" style="position:absolute;width:100%;height:100%;"></div>');
-	jQuery('#branding').css('margin-left',parseInt(jQuery('#fjt-holder').parent().outerWidth())+'px');												
   jQuery("#conceptResizable").find(".ui-resizable-e").css("background-color","#aaa").css("width","10px").css("right","0");
   sidora.ResizeToBrowser();
   sidora.ResizeTree(null,{element:jQuery("#conceptResizable")});
@@ -1115,8 +1110,6 @@ sidora.ResizeTree = function (e, ui)
 	jQuery('#concept_tabs').css('width',divTwoWidthPixels-8+'px');
   treeWidth = parseInt(ui.element.outerWidth())+6+"px";
   divTwo.css("left",treeWidth);
-	var divTop = jQuery("#branding");
-	divTop.css("margin-left",treeWidth);
 	if (jQuery('#resourceInformationPane').is(':visible')) {
 		if ((resourceDivWidth * parseInt(jQuery('#concept_tabs').width()) / 100) < (parseInt(jQuery('#resourceInformationPane').css('min-width')) + 25)) {
 			resourceDivWidth = (parseInt(jQuery('#resourceInformationPane').css('min-width'))+25) / parseInt(jQuery('#concept_tabs').width()) * 100;
@@ -1609,6 +1602,7 @@ sidora.concept.GetName = function(suggestedName){
  * Rename the in-page name to reflect the new conceptName passed in
  */
 sidora.UpdateTitleBasedOnNameInTree = function(conceptName){
+  return; //BBB remove
   var newTitle = sidora.concept.GetName();
   if (newTitle == "") return; //If there's no concept selected leave it as "Sidora Workbench" (the default)
   jQuery(".page-title").text(newTitle);
@@ -2814,17 +2808,14 @@ jQuery(window).resize(function() {
     sidora.ResizeTree(null,{element:jQuery("#conceptResizable")});
     sidora.stopResizeTree(null,{element:jQuery("#conceptResizable")});
     jQuery("#concept-meta,#concept-relationships,#concept-resource-list").css("min-width","1000px");
-    jQuery("#concept_tabs,#conceptResizable").css("position","absolute");
+    jQuery("#concept_tabs").css("position","absolute");
   }
   else{	
     if (parseInt(jQuery("#sidora_content_concept_info").width()) > 1000){
       jQuery("#concept-meta,#concept-relationships,#concept-resource-list").css("min-width","");
-      jQuery("#concept_tabs,#conceptResizable").css("position","fixed");
-      jQuery("#branding").css("position","relative");
+      jQuery("#concept_tabs").css("position","fixed");
     }	
   }	
-   //jQuery("#branding").css("padding-top",parseInt(jQuery("body").css("padding-top"))+10);
- //jQuery("#conceptResizable").css("top",parseInt(jQuery("body").height()));
   sidora.ResizeOnWindowResize();
   sidora.ResizeToBrowser();
 });
