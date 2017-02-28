@@ -74,7 +74,7 @@ sidora.concept.LoadContentHelp.Resources.TableLoad = function(conceptOfInterest)
      })
   });
   var table = jQuery('#res_table').DataTable();
-	jQuery('#res_table').DataTable().clearPipeline().draw();
+  jQuery('#res_table').DataTable().clearPipeline().draw();
   jQuery('#res_table tbody').on( 'click', 'tr', function (e) {
     //If the mousedown is on something that is in the middle of a move process, ignore the mousedown
     if (jQuery(this).hasClass("is-being-moved")){
@@ -111,7 +111,7 @@ sidora.concept.LoadContentHelp.Resources.TableLoad = function(conceptOfInterest)
     }else{
       jQuery("#edit-resource-metadata-menu").removeClass("ui-state-disabled");
       jQuery("#manage-resource, #edit-resource-metadata-menu, #view-resource-metadata, #resource-open-window, #resource-download").removeClass("ui-state-disabled");
-	jQuery("#edit-resource-datastream-menu").removeClass("ui-state-disabled");
+  jQuery("#edit-resource-datastream-menu").removeClass("ui-state-disabled");
     }
   }); //End onclick
     table.on( 'length', function ( e, settings, len ) {
@@ -431,7 +431,7 @@ sidora.concept.LoadContent = function(leaveContentIfAlreadyLoaded){
   if (conceptOfInterest == this.loadedContentPid && leaveContentIfAlreadyLoaded) return;
   
   if ("" == conceptOfInterest){
-		jQuery("#sidora_content_concept_info").hide();
+    jQuery("#sidora_content_concept_info").hide();
     return;
   }
   jQuery("#sidora_content_concept_info").show();
@@ -1028,37 +1028,37 @@ sidora.ReformatPage = function(){
 sidora.RelocateTreeOnPage = function(){
   jQuery("body").append("<div id='fjt-holder'></div>");
   jQuery("#fjt-holder").append(jQuery("#forjstree"));
-	jQuery("#fjt-holder").css("width","280px");
-	jQuery("#fjt-holder").css("min-width","200px");
-	jQuery("#fjt-holder").css("height","100%");
-	jQuery("#fjt-holder").css("position","fixed");
-	jQuery("#fjt-holder").css("top",parseInt(jQuery("body").css("padding-top"))+10+"px");
-	jQuery("#fjt-holder")
+  jQuery("#fjt-holder").css("width","280px");
+  jQuery("#fjt-holder").css("min-width","200px");
+  jQuery("#fjt-holder").css("height","100%");
+  jQuery("#fjt-holder").css("position","fixed");
+  jQuery("#fjt-holder").css("top",parseInt(jQuery("body").css("padding-top"))+10+"px");
+  jQuery("#fjt-holder")
       .wrap('<div/>')
           .parent()
             .attr('id','conceptResizable')
-						.css({'display':'inline-block',
+            .css({'display':'inline-block',
                   'overflow':'hidden',
-									'position':'fixed',
+                  'position':'fixed',
                   'height':function(){return jQuery('#fjt-holder').height();},
                   'width':  function(){return parseInt(jQuery('#fjt-holder').width())+'px';},
                   'paddingBottom':'12px',
-									'margin-right' : '2px',
-									'top':parseInt(jQuery('body').css('padding-top'))+10+'px',
-									'min-width':function(){return parseInt(jQuery('#fjt-holder').css('min-width'))+20+'px';}
+                  'margin-right' : '2px',
+                  'top':parseInt(jQuery('body').css('padding-top'))+10+'px',
+                  'min-width':function(){return parseInt(jQuery('#fjt-holder').css('min-width'))+20+'px';}
                  })
                 .resizable({handles:'e',resize:sidora.ResizeTree,stop:sidora.stopResizeTree})
                     .find('#fjt-holder')
                       .css({'overflow':'auto',
-											      'position':'absolute',
-														'width': function(){return parseInt(jQuery('#conceptResizable').outerWidth())-10+'px';},
-														'top':'0px',
+                            'position':'absolute',
+                            'width': function(){return parseInt(jQuery('#conceptResizable').outerWidth())-10+'px';},
+                            'top':'0px',
                             'height':'100%'});
-	jQuery('#conceptResizable')
-	  .wrap('<div/>')
-		  .parent()
-			.attr('id','conceptTreeParent')
-			.append('<div id="iframeTreeOverlay" style="position:absolute;width:100%;height:100%;"></div>');
+  jQuery('#conceptResizable')
+    .wrap('<div/>')
+      .parent()
+      .attr('id','conceptTreeParent')
+      .append('<div id="iframeTreeOverlay" style="position:absolute;width:100%;height:100%;"></div>');
   jQuery("#conceptResizable").find(".ui-resizable-e").css("background-color","#aaa").css("width","10px").css("right","0");
   sidora.ResizeToBrowser();
   sidora.ResizeTree(null,{element:jQuery("#conceptResizable")});
@@ -1087,19 +1087,19 @@ sidora.ResizeTree = function (e, ui)
   //Protect the cursor input from being taken into the iframe by making the overlay displayable
   jQuery("#iframeTreeOverlay").show();
   if (jQuery('#resourceInformationPane').is(':visible')) {
-	  // if a resource is currently selected, get the width ratio for the resourcepanel
+    // if a resource is currently selected, get the width ratio for the resourcepanel
     var resourceDivWidth = parseInt(jQuery('#resourceInformationPane').outerWidth()) / parseInt(jQuery('#resourceInformationPane').parent().width()) * 100;
-	}	
+  } 
   var treeWidth = parseInt(ui.element.outerWidth())+6+"px";
-	var parent = jQuery('body');
+  var parent = jQuery('body');
   var remainingSpace = parent.width() - ui.element.outerWidth() - 6;
   var minRequiredSpace = parseInt(jQuery('#sidora_content_concept_info').css('min-width'));
-	if (remainingSpace < minRequiredSpace) {
-	  var maxWidth = parent.width() - parseInt(jQuery("#sidora_content_concept_info").css('min-width'));
-		jQuery(ui.element).resizable('option', 'maxWidth', maxWidth);
-	}	
-		var divTree = ui.element.children('#fjt-holder');
-	  divTree.css('width',parseInt(ui.element.outerWidth())-10+'px');
+  if (remainingSpace < minRequiredSpace) {
+    var maxWidth = parent.width() - parseInt(jQuery("#sidora_content_concept_info").css('min-width'));
+    jQuery(ui.element).resizable('option', 'maxWidth', maxWidth);
+  } 
+    var divTree = ui.element.children('#fjt-holder');
+    divTree.css('width',parseInt(ui.element.outerWidth())-10+'px');
     divTwo = jQuery("#sidora_content_concept_info");
     divTwoWidthPixels = (remainingSpace - (divTwo.outerWidth() - divTwo.width()));
   if (parseInt(divTwo.css("min-width")) > divTwoWidthPixels){
@@ -1107,17 +1107,17 @@ sidora.ResizeTree = function (e, ui)
   }
   divTwoWidth = (divTwoWidthPixels) / parent.width() * 100 + '%';
   divTwo.width(divTwoWidthPixels + 'px');
-	jQuery('#concept_tabs').css('width',divTwoWidthPixels-8+'px');
+  jQuery('#concept_tabs').css('width',divTwoWidthPixels-8+'px');
   treeWidth = parseInt(ui.element.outerWidth())+6+"px";
   divTwo.css("left",treeWidth);
-	if (jQuery('#resourceInformationPane').is(':visible')) {
-		if ((resourceDivWidth * parseInt(jQuery('#concept_tabs').width()) / 100) < (parseInt(jQuery('#resourceInformationPane').css('min-width')) + 25)) {
-			resourceDivWidth = (parseInt(jQuery('#resourceInformationPane').css('min-width'))+25) / parseInt(jQuery('#concept_tabs').width()) * 100;
-		}	
-		resourceDivWidth = resourceDivWidth * parseInt(jQuery('#concept_tabs').width()) / 100;
-		jQuery('#resourceInformationPane').outerWidth(resourceDivWidth+'px');
-		jQuery('#res_table_wrapper').outerWidth(parseInt(jQuery('#concept_tabs').width()) - parseInt(jQuery('#resourceInformationPane').outerWidth()) - 15 + 'px');
-	}		
+  if (jQuery('#resourceInformationPane').is(':visible')) {
+    if ((resourceDivWidth * parseInt(jQuery('#concept_tabs').width()) / 100) < (parseInt(jQuery('#resourceInformationPane').css('min-width')) + 25)) {
+      resourceDivWidth = (parseInt(jQuery('#resourceInformationPane').css('min-width'))+25) / parseInt(jQuery('#concept_tabs').width()) * 100;
+    } 
+    resourceDivWidth = resourceDivWidth * parseInt(jQuery('#concept_tabs').width()) / 100;
+    jQuery('#resourceInformationPane').outerWidth(resourceDivWidth+'px');
+    jQuery('#res_table_wrapper').outerWidth(parseInt(jQuery('#concept_tabs').width()) - parseInt(jQuery('#resourceInformationPane').outerWidth()) - 15 + 'px');
+  }   
   //Move items around to fit the menu in the best place
   if (jQuery("#res_table_wrapper").width() < 470){
     jQuery("#res_table_wrapper").css("margin-top","83px");
@@ -1147,11 +1147,11 @@ sidora.ResizeToBrowser = function(){
   }
   jQuery("#fjt-holder").css("height",newHeight+"px");
   jQuery("#conceptResizable").css("height",jQuery('#fjt-holder').height()+contextChangeButtonHeight);
-	var tabsHeight = newHeight-50;
+  var tabsHeight = newHeight-50;
   jQuery("#concept_tabs").css("height",tabsHeight+"px");
   var concept_tabsWidth = parseInt(jQuery(window).width()-jQuery('#conceptResizable').outerWidth()-8);
-	//if (concept
-	jQuery("#concept_tabs").css("width",parseInt(jQuery(window).width()-jQuery('#conceptResizable').outerWidth()-8)+"px");
+  //if (concept
+  jQuery("#concept_tabs").css("width",parseInt(jQuery(window).width()-jQuery('#conceptResizable').outerWidth()-8)+"px");
   var tabContentHeight = tabsHeight - jQuery(".ui-tabs-nav").height();
   jQuery("#concept-resource-list").css("height",tabContentHeight);
   jQuery("#resourceResizable").css("height",'99%');
@@ -1360,12 +1360,12 @@ sidora.resources.refreshSelectedResourceThumbnail = function(){
       jQuery.ajax(pidThumbnail,{
         complete:function(res){
          me.children("td").children("div.resource-list-tn").children("img").remove();
-	 me.children("td").children("div.resource-list-tn").append('<div id="gray_overlay" style="background-color:rgba(0,0,0,1);opacity:0.5;width:150px;height:90px;">');
+   me.children("td").children("div.resource-list-tn").append('<div id="gray_overlay" style="background-color:rgba(0,0,0,1);opacity:0.5;width:150px;height:90px;">');
          jQuery("#gray_overlay").append('<div id="sb-loading"><div id="sb-loading-inner"><span>&nbsp;</span></div></div>');
-	 setTimeout(function(){
+   setTimeout(function(){
            me.children("td").children("div.resource-list-tn").append('<img style="max-height:90px;max-width:150px;display:none;">');
-	   me.children("td").children("div.resource-list-tn").children("img").load(function(){jQuery("#gray_overlay").remove();me.children("td").children("div.resource-list-tn").children("img").css("display","");}).attr("src",pidThumbnail+"?random="+new Date().getTime());
-	 },10000);
+     me.children("td").children("div.resource-list-tn").children("img").load(function(){jQuery("#gray_overlay").remove();me.children("td").children("div.resource-list-tn").children("img").css("display","");}).attr("src",pidThumbnail+"?random="+new Date().getTime());
+   },10000);
         }
       });
   }
@@ -1551,15 +1551,15 @@ sidora.ontology._createSubmenu = function(ontologyChildren){
 sidora.ResizeOnWindowResize = function(){
   var bodywidth = jQuery(window).width();
   // Cannot use a fixed width for the tree on the left since its resizable now.
-	//var menuwidth = 360;
-	var menuwidth = jQuery("#fjt-holder").width() + 10;
+  //var menuwidth = 360;
+  var menuwidth = jQuery("#fjt-holder").width() + 10;
   var newwidth = bodywidth-menuwidth;
-	if (newwidth < parseInt(jQuery('#sidora_content_concept_info').css('min-width'))){
-		newwidth = parseInt(jQuery('#sidora_content_concept_info').css('min-width'));
-	}	
+  if (newwidth < parseInt(jQuery('#sidora_content_concept_info').css('min-width'))){
+    newwidth = parseInt(jQuery('#sidora_content_concept_info').css('min-width'));
+  } 
   jQuery("#sidora_content_concept_info").width(newwidth);
   var newMaxWidth = bodywidth - parseInt(jQuery('#sidora_content_concept_info').css('min-width'));
-	jQuery('#conceptResizable').resizable('option', 'maxWidth', newMaxWidth);
+  jQuery('#conceptResizable').resizable('option', 'maxWidth', newMaxWidth);
   //Resize the resource information pane for the resource page 
   sidora.resources.individualPanel.ResizeAndStop();
 }
@@ -1670,7 +1670,7 @@ sidora.util.constantCheck = function(){
  * if multiple users are changing the number of resources
  */
 sidora.util.checkRecentChanges = function(){
-	  if (typeof(sidora.util.init_time.server) != 'undefined') {
+    if (typeof(sidora.util.init_time.server) != 'undefined') {
       if (typeof(sidora.util.lastUpdateTime) == 'undefined') sidora.util.lastUpdateTime = 0;
       jQuery.ajax({
         url: Drupal.settings.basePath+'sidora/ajax_parts/recent_changes/'+sidora.util.lastUpdateTime,
@@ -1758,7 +1758,7 @@ sidora.util.treeAdditionSingleItem = function(mainItem, htmlTree, onLoadComplete
       jst.rename_node(currChild, dfAnchorText);
     }
     var a_attr_obj = {};
-		jQuery(jQuery(currRep).children("a").first()[0].attributes).each(
+    jQuery(jQuery(currRep).children("a").first()[0].attributes).each(
       function() {
        // jstree puts in its own classes and we dont want to overwrite those for now
        if (this.nodeName != 'class') {
@@ -1767,11 +1767,11 @@ sidora.util.treeAdditionSingleItem = function(mainItem, htmlTree, onLoadComplete
       }
     );   
     a_attr_obj["href"] = currChild.a_attr.href;
-		jQuery.each(a_attr_obj,function(nodeName,nodeValue){
-		  jQuery("[pid='" + ccp + "']").attr(nodeName,nodeValue);
-		  jst.get_node(currChild).a_attr[nodeName] = nodeValue;
+    jQuery.each(a_attr_obj,function(nodeName,nodeValue){
+      jQuery("[pid='" + ccp + "']").attr(nodeName,nodeValue);
+      jst.get_node(currChild).a_attr[nodeName] = nodeValue;
     });
-		//Do not add children to items that are already filled in
+    //Do not add children to items that are already filled in
     if (currChild.children.length == 0 || overwriteType == "changes") {
       //Go through the children of the representative DOM object from document fragment
       var repChildren = currRep.children("ul").children("li");
@@ -1961,7 +1961,7 @@ sidora.util.checkUIForInvalidPids = function(openingPid, childPidsCsv) {
  * Checks the backend to see what the number of resource children is currently so that the UI can be updated
  */
 sidora.util.refreshConceptChildrenNumber = function(pid){
-	if (pid == "") return;
+  if (pid == "") return;
   jQuery.ajax({
     url: Drupal.settings.basePath+'sidora/ajax_parts/get_num_resource_children/'+pid,
   }).done(function(num_children){
@@ -1989,7 +1989,7 @@ sidora.util.refreshConceptChildrenNumberDirect = function(pid, number_of_childre
     jst.rename_node("#"+toUpdateId, newFullName);
     jst.get_node(toUpdateId).a_attr.resourcechildren = ""+number_of_children;
   }
-	jQuery("[pid='" + pid +"']").attr('resourcechildren',""+number_of_children)
+  jQuery("[pid='" + pid +"']").attr('resourcechildren',""+number_of_children)
 }
 /*
  * Directly changes the number in parenthesis on the UI of the tree by the input DOM id
@@ -2151,20 +2151,20 @@ sidora.RefreshTreeHtml = function(tree_html){
 
 
 sidora.util.refreshNodeByID = function(pidsProcessed){
-	if (pidsProcessed.length != 2) return;
-	jQuery.ajax({
+  if (pidsProcessed.length != 2) return;
+  jQuery.ajax({
     url: Drupal.settings.basePath+'sidora/ajax_parts/check_concept_tree/'+pidsProcessed[0]+'/'+pidsProcessed[1],
   }).done(function(refresh_concept){
-	  if (refresh_concept == "refreshNode"){
-			var jst = jQuery("#forjstree").jstree(true);
-			jst.pureUIChange = true;
-			jQuery('[pid="'+pidsProcessed[0]+'"]').closest("li").filter(
-			function(){ return jQuery(this).parent().parent().children("a").attr("pid") == pidsProcessed[1]; }
-			).map(
-			function(){ jst.delete_node(this.id); }
-			);
-		delete jst.pureUIChange;
-		}		
+    if (refresh_concept == "refreshNode"){
+      var jst = jQuery("#forjstree").jstree(true);
+      jst.pureUIChange = true;
+      jQuery('[pid="'+pidsProcessed[0]+'"]').closest("li").filter(
+      function(){ return jQuery(this).parent().parent().children("a").attr("pid") == pidsProcessed[1]; }
+      ).map(
+      function(){ jst.delete_node(this.id); }
+      );
+    delete jst.pureUIChange;
+    }   
   }).fail(function(failure_obj){
     sidora.recentAjaxFailure(failure_obj);
   });
@@ -2512,7 +2512,7 @@ sidora.util.deletePid = function(pidOfInterest, onSuccess, onFailure, action){
   action = typeof action !== 'undefined' ? action : '';
   var unassociateFrom = sidora.concept.GetPid();
   if (unassociateFrom == pidOfInterest){
-	//This was "delete concept", find the current concept's parent
+  //This was "delete concept", find the current concept's parent
     var jst = jQuery("#forjstree").jstree(true);
     var checkSelectedArr = jst.get_selected();
     for (var i = 0; i < checkSelectedArr.length; i++){
@@ -2637,7 +2637,7 @@ sidora.resources.individualPanel.ResizeIt = function (e, ui)
 {
   var parent = ui.element.parent();
   // when calculating the remainingSpace, factor in the 15px offset for the resourceInformationPane 
-	var remainingSpace = parent.width() - ui.element.outerWidth() -15,
+  var remainingSpace = parent.width() - ui.element.outerWidth() -15,
   divTwo = ui.element.prev(),
   divTwoWidthPixels = (remainingSpace - (divTwo.outerWidth() - divTwo.width()));
   //if they were attempted to be set at smaller than their min size, resize everything
@@ -2696,7 +2696,7 @@ sidora.manage.Open = function(pid, name, title, userFriendlyToastName){
   this.recent.name = name;
   this.recent.title = title;
   this.recent.uftn = userFriendlyToastName;
-	sidora.manage.OpenCurrentConfig();
+  sidora.manage.OpenCurrentConfig();
 }
 /*
  * Opens the shadowbox based management panel
@@ -2709,7 +2709,7 @@ sidora.manage.OpenCurrentConfig = function(){
   Shadowbox.close();
   setTimeout(function(){
   jQuery.ajax(Drupal.settings.basePath+"sidora/manage/"+pid).done(function(html){
-	Shadowbox.open({
+  Shadowbox.open({
         content:    html,
         player:     "html",
         title:      title,
@@ -2752,13 +2752,13 @@ sidora.manage.OpenCurrentConfig = function(){
           }
     });
   })
-	},1000);
+  },1000);
 }
 /*
  * Reopens the frame to show an update to the user
  */
 sidora.manage.resetFrame = function(){
-	this.OpenCurrentConfig();
+  this.OpenCurrentConfig();
 }
 /*
  * Removes a datastream from the object, confirms with user first
@@ -2810,12 +2810,12 @@ jQuery(window).resize(function() {
     jQuery("#concept-meta,#concept-relationships,#concept-resource-list").css("min-width","1000px");
     jQuery("#concept_tabs").css("position","absolute");
   }
-  else{	
+  else{ 
     if (parseInt(jQuery("#sidora_content_concept_info").width()) > 1000){
       jQuery("#concept-meta,#concept-relationships,#concept-resource-list").css("min-width","");
       jQuery("#concept_tabs").css("position","fixed");
-    }	
-  }	
+    } 
+  } 
   sidora.ResizeOnWindowResize();
   sidora.ResizeToBrowser();
 });
