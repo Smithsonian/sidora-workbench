@@ -697,7 +697,7 @@ sidora.InitiateJSTree = function(){
     jst.open_node(jst.get_node("j1_1"));
     setTimeout(function(){
     var mainTreeChildren = jQuery("#j1_1").children("ul").children();
-    jQuery(".branding-user-info").before("<div class='project-space-drop-down'><select id='psdd-select'></select></div>");
+    jQuery("#conceptResizable").prepend("<div class='project-space-drop-down'><select id='psdd-select'></select></div>");
     var selectedIndex = 0;
     for(var mtci = 0; mtci < mainTreeChildren.length; mtci++){
       var optionVal = mainTreeChildren[mtci].id;
@@ -1037,14 +1037,11 @@ sidora.RelocateTreeOnPage = function(){
       .wrap('<div/>')
           .parent()
             .attr('id','conceptResizable')
-            .css({'display':'inline-block',
+            .css({'display':'block',
                   'overflow':'hidden',
-                  'position':'fixed',
-                  'height':function(){return jQuery('#fjt-holder').height();},
+                  'height':function(){return window.innerHeight - (jQuery("#branding").outerHeight()+jQuery("#branding").offset().top+6);},
                   'width':  function(){return parseInt(jQuery('#fjt-holder').width())+'px';},
-                  'paddingBottom':'12px',
                   'margin-right' : '2px',
-                  'top':parseInt(jQuery('body').css('padding-top'))+10+'px',
                   'min-width':function(){return parseInt(jQuery('#fjt-holder').css('min-width'))+20+'px';}
                  })
                 .resizable({handles:'e',resize:sidora.ResizeTree,stop:sidora.stopResizeTree})
@@ -1090,7 +1087,6 @@ sidora.ResizeTree = function (e, ui)
     // if a resource is currently selected, get the width ratio for the resourcepanel
     var resourceDivWidth = parseInt(jQuery('#resourceInformationPane').outerWidth()) / parseInt(jQuery('#resourceInformationPane').parent().width()) * 100;
   } 
-  var treeWidth = parseInt(ui.element.outerWidth())+6+"px";
   var parent = jQuery('body');
   var remainingSpace = parent.width() - ui.element.outerWidth() - 6;
   var minRequiredSpace = parseInt(jQuery('#sidora_content_concept_info').css('min-width'));
@@ -1098,17 +1094,17 @@ sidora.ResizeTree = function (e, ui)
     var maxWidth = parent.width() - parseInt(jQuery("#sidora_content_concept_info").css('min-width'));
     jQuery(ui.element).resizable('option', 'maxWidth', maxWidth);
   } 
-    var divTree = ui.element.children('#fjt-holder');
-    divTree.css('width',parseInt(ui.element.outerWidth())-10+'px');
-    divTwo = jQuery("#sidora_content_concept_info");
-    divTwoWidthPixels = (remainingSpace - (divTwo.outerWidth() - divTwo.width()));
+  var divTree = ui.element.children('#fjt-holder');
+  divTree.css('width',parseInt(ui.element.outerWidth())-10+'px');
+  divTwo = jQuery("#sidora_content_concept_info");
+  divTwoWidthPixels = (remainingSpace - (divTwo.outerWidth() - divTwo.width()));
   if (parseInt(divTwo.css("min-width")) > divTwoWidthPixels){
     divTwoWidthPixels = parseInt(divTwo.css("min-width"));
   }
   divTwoWidth = (divTwoWidthPixels) / parent.width() * 100 + '%';
   divTwo.width(divTwoWidthPixels + 'px');
   jQuery('#concept_tabs').css('width',divTwoWidthPixels-8+'px');
-  treeWidth = parseInt(ui.element.outerWidth())+6+"px";
+  var treeWidth = parseInt(ui.element.outerWidth())+"px";
   divTwo.css("left",treeWidth);
   if (jQuery('#resourceInformationPane').is(':visible')) {
     if ((resourceDivWidth * parseInt(jQuery('#concept_tabs').width()) / 100) < (parseInt(jQuery('#resourceInformationPane').css('min-width')) + 25)) {
@@ -1136,18 +1132,14 @@ sidora.stopResizeTree = function (e, ui)
 };
 
 sidora.ResizeToBrowser = function(){
-  //jQuery("#sidora_content_concept_info").css("min-width",0);
-  //jQuery("#concept_tabs").css("min-width",0);
-  var newHeight = jQuery(window).height();
-  newHeight -= (parseInt(jQuery("body").css("padding-top"))+10);
-  var contextChangeButtonHeight = 0; //50; // If share button is there get the size of the button
-  newHeight -= contextChangeButtonHeight; // The new context-change button for sharing
+  var leftSideHeight = jQuery(window).height();
+  leftSideHeight -= (jQuery("#branding").outerHeight()+jQuery("#branding").offset().top+6);
   if (jQuery("footer").is(":visible")){
-    newHeight -= jQuery("footer").height();
+    leftSideHeight -= jQuery("footer").height();
   }
-  jQuery("#fjt-holder").css("height",newHeight+"px");
-  jQuery("#conceptResizable").css("height",jQuery('#fjt-holder').height()+contextChangeButtonHeight);
-  var tabsHeight = newHeight-50;
+  jQuery("#conceptResizable").css("height",leftSideHeight+"px");
+  jQuery("#fjt-holder").css("height",(leftSideHeight-30)+"px").css("top","40px");
+  var tabsHeight = leftSideHeight-50;
   jQuery("#concept_tabs").css("height",tabsHeight+"px");
   var concept_tabsWidth = parseInt(jQuery(window).width()-jQuery('#conceptResizable').outerWidth()-8);
   //if (concept
@@ -1279,7 +1271,9 @@ sidora.InitiatePage = function(){
     jQuery(document).tooltip(
       { position: { my: "left-7 bottom", at: "right center" } }
     );
-    jQuery("#branding").append("<div class='branding-user-info' style='float:right'> <a href='"+Drupal.settings.basePath+"user' class='button'>Profile</a> <a href='"+Drupal.settings.basePath+"user/logout' class='button'>Logout</a></div>");
+    jQuery("h1").remove();
+    jQuery("#branding").append('<div style="float: left;"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAYAAABXAvmHAAAABHNCSVQICAgIfAhkiAAAAAlwSFlzAAAQnAAAEHUBqXFykQAACIxJREFUaIHtmXtQVOcZxn/ngLugXHcXsF5BRmNqQqox9R4rhopEx0qmTTux7Wg7TaeXMbbpJO1MG+2kjU10JunU2KaTVEtVpk40ponGONEGA4ggsIBoVIgI4SasuMjtYzmnf5yzl7PsInf/aN4ZZnfP+c57nud7n+993+8DvrAv7P/bpHsNwN+6hEvUdwmu3xFU3OrmWnsv7a4+bncJXKrKJFMoZlMIU8NCeSAy7N4ScLlcwtnbx7HaNrKr2zhZ1wZNd6CjB3pdoEogqYAM9EHCeWhcbPARei9AN3S6ePliE6H7i+GzVujp1W4qsgZYUjXwblOAyBa+m/ghWQ1LND4Aqjq+BA5Ut4jJ2eW0ON4DHFC7GlTVK2RZ8Q6WVOP32EoybYVkyYo3MpKXy5hZV68Qr1Y0Cv6cK576Wx5zpGe5ufK30D4DbWoHZ6m2YpZEAaGdBnJjFgGXS4is6tuE7y2EGw4A7p+3j7MpH/HvFqAtWRvoO9MD2GqrHdsEwFoODUs80RoTApdbO0TcoQpuldeDogMMa+WDlCMAFLbPHJpDSSXT4kCSIMVWTlnTIs+tUSfw/Pk6MfcvedDe7dEpQGLiCWaYNNEkmDqG5nRSI0lhgApplouUebLTKK4BR1ePmHzQLnYetsOdrn7SWBdXpn2R4AlbC5juDN65rYgJkvZshqUKJO/aGRUCeQ1OYXm9gMbiG0CfMQXqNsV8GUUCWYXkMFgxd3/AcQZTJVAlNsbbkfWhy6MBnwiOmMBbV1vE0jcKoN7pvRhgYbb3TgVA0YG8k3ISpuYM6h2plgJAIx8KYCv13BsRgdcuNost+wp99B48o+S0zfOAALDIUL/yFaxJx7QL+mwboiJJENLL2hgtFygSyBKstJV5xg6bwK7yRrH16AcghP6ygdNh7vV07rjwLGoF+JIJmle8yS9XPAMRDXqB8iGgqhBRS1IYHgmhwtdsxZ4hwyKw58pN8Wx2CYg+fv3oMxBdbZzBQNp2JrP5ymJtJlWNiDvDvjyrmqp1P4LEExpotw9JZXJ8kRes/lxadDOE9A6PQG59m/jpv4qhxwVdVo40L6QmYysPzXtLyw7BFqYic+TCr3ilzoqsg5F1SchAYhh0rtxD8pxD3igoMqm2UnAHV7+8IAIIbxo6gVpnp1iWVQJdPfoVmU8vb+LIrRCKFx7l7+kbIPaKdqufnlXoM/F8zl7eadMk5P7TxoNZgpLFB2HaGc8z62PL+4E0y4ClcugEpr9dCS0dPm2uAkhsy99NvYAtCdCY8QuWPPhXT4gNBCQVxEQ25v6BNsW7oMEbjUgZzj6yG0IEmDpYGu3NXL72eLx9aAR+cLZaUFkfuP9yzmJj+QZQIcEEnyx4n/1rMsFaiSf+7mjICtx8iB9fSwkITFFhaRTMnpMNUVVMM3ldeEyF1NhCkNTBEShqdoo3T37qBeCfcVSJootb+Eezd2FuioeWjOdI/cprILv0gbJGRFY4XP4zmkTwGXwu8TBzE0oCt8wSZFi7QHYNjsDCY5eg2xV8gKSlhx+e241D8aa82BA4lXKat9dmQlyplmHc1j6FXXWz+wVU1qv1Ezb4VkIBshog6CrMNAERNYTcDfwf7Q3iozPXdKBBBql6o9JjIRcHmydXIUtevF+eCNuSz1BhquVK80JQtR4yXzGzIynf6FcvWGYJZoc7iQ7Rb0vG14VK0GqqH8Se+E9nBM0dxt1SMFO1ypmdnsmTccZb7tx/6hakF+yApvkgu3A+lUnkQDpQCThxCnoqHgjP0znXBS3tukQGsfGQVOibwLfP7eR2nzH07ty/JhY617zAN7/6IoR2835rcHfu9iGQhNyRGjgCe7IE3Veg8ZG7g/ezjPm7+M+DOd4WwBcYGpkPnaAqGqnhWtAIbC/+XCyKOMS22QeCtwcD2HH7Vo4HKlg+L30sCtJGAN7XVz/bnl/DgqhadiRWQ1zJoPeugEbWZWb9ue209wGBtOrTRozEAj6f3+wU1DgQqkykBAWrfge2Eg2JfyTc0ZF7tV3WhA6tCssKND3M9y4tCyij0bKAe+IdxQ3QBzmOuSiSnYXh0Jb+Ai/WJPNG3aM42+/XFtKkatZaK/lGfA7zJ6LtW4Fr3XDmto29tem8W/ETTk3PJS16bAgEnpvdOYLGNjC3Urtxs1bOfdpfGT9NS2hZwe83ElzogJduLOXA3DxtX8voHkb185Xf3C646dSO+XrieLJyjQbMp/316FfyVl0C/FZUmD8RDt6Xh6S/bLRP0vr5O3DNAe5GUlXJq3iaHbVTtMZLj4BvC8wAJcJNJlTStRqoLRih9SOwr6rV2/rqhen3H+9hfcVybitGAIrfZ8AXSH6RG030BFoDL50WODq9sHyzTtQNliW9x6KYUmJCu7kv7BYpkTDLDKZ7dFBveG2ds1tM23naeDbvJhDse0gPxFSxeMrHbJ91nLQYH68qY5pC+xE49JlDfOf1T4buRZF1bSgw7TT7U15lk02/NMYEDJKsdHQOuWXQvOiLQ5WgdjXfP3GUBUWZ1PXe9ckRm4FAqaNreF480lLA3A7xRZjlHoqGeIY7HDNU4uZO4e15fPXu+9ttkqq1D5aLPGArY5XNTqrlKmnRMEnCcw461mYgcDPYtlGRwdQNETVMjytltc3O6tgy1logRoYQn0Xr1vx46B/8CHQKPXXKvRDejGQrZUN8BY9Zcvl6DMzU06V7d2UoYHqRGvP/WfmZsZmT+oid8V9+M/uf/HxqC2bf/sdnNn3bBe+z4w/eHwKTs4pFo/1zbTFO6ASbneVxdlKtJaTFNPJwBITLfo2cTxTculfGkYyBwJzsMnHlwvUgI/tgYiNYLvG4zc4q63nWxnaRFKYf9YGncI2nlAwElr1bKXJzrvodcUvGquz7Kbsg8gax1nJW2eystxayLhZspnFCD/wP7U9ib8jYfs0AAAAASUVORK5CYII=" height="20" width="20" style="padding-right: 10px;"><span style="font-size: 17px;font-weight: bold;font-family:Arial;color:#595959;text-decoration:none;"><span style="text-decoration: none; line-height: 20.5px;">SIdora Workbench</span></span></div>');
+    jQuery("#branding").append("<div class='branding-user-info' style='float:right'> <a href='"+Drupal.settings.basePath+"user' class='sidora-thin-button'>Profile</a> <a href='"+Drupal.settings.basePath+"user/logout' class='sidora-thin-button'>Logout</a></div>");
   }
   recreateUser = function() {
     jQuery("#page").after('<div id="recreateUser" class="" style="max-width: 300px;margin: 0 auto;"><p>It looks like your user hasn\'t been set up yet. To automatically set up your user now, click \'Set Up Now\'. The process will take about 30 seconds and will reload the page when it\'s complete.</p> <div style="margin: 0 20px;"><input id="setupnow" class="form-submit" value="Set Up Now"><p></p><input id="logout" class="form-submit" value="Log Out"></div></div>');

@@ -6100,10 +6100,11 @@ function sidora_block_view($delta = '') {
  '';
         $block['content'] .= '
   <div id="concept_tabs">
-    <ul>
-      <li><a href="#concept-meta">Concept Overview</a></li>
-      <li><a href="#concept-relationships">Relationships</a></li>
-      <li><a href="#concept-resource-list">Resource List</a></li>
+    <ul style="background:white;border:solid 2px gray;margin:0;padding:0;">
+      <li><a href="#concept-meta"><div class="sidora-ui-text sidora-thin-button" style="margin: 0;">Attributes</div></a></li>
+      <li><a href="#concept-resource-list"><div class="sidora-ui-text sidora-thin-button" style="margin: 0;">Resources</div></a></li>
+      <li><a href="#concept-relationships"><div class="sidora-ui-text sidora-thin-button" style="margin: 0;">Links</div></a></li>
+      <div class="sidora-ui-text sidora-thin-button" style="margin-top: 5px; margin-right:20px;float:right;">Share</div>
     </ul>
     <div id="concept-meta">
       <div id="concept-meta-menu" class="sidora-menu">

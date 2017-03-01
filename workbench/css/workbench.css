@@ -11,6 +11,10 @@
     font-family: Mouser;
     src: url('Mouser.ttf')  format('truetype');
 }
+#branding {
+  background: white;
+  padding: 8px 20px 3px 20px;
+}
 .bright-green {
   background-color: #ccffcc
 }
@@ -258,6 +262,11 @@ button.ui-button-text-only .ui-button-text {
 #concept_tabs, #sidora_content_concept_info {
   min-width: 822px;
 }
+#concept_tabs {
+  border:none;
+  padding: 0;
+  margin: 0;
+}
 #resourceInformationPane {
   min-width: 400px;
 }
@@ -377,6 +386,55 @@ Table paging
 }	
 .ui-resizable-e{
   width:10px;
+}
+.sidora-ui-text {
+  font-size: 12px;
+  font-weight: bold;
+  font-family: Arial;
+  color: rgb(89,89,89);
+}
+.project-space-drop-down {
+   overflow: hidden;
+   background: url(images/dd_1.png) no-repeat right #ddd;
+   background-position-x: 179px;
+   background-position-y: -2px;
+   border: 1px solid #ccc;
+   border-radius: 5px;
+   width: 200px;
+   height: 20px;
+   position: absolute;
+   top: 0px;
+   left: 6px;
+   background-color: white;
+}
+.project-space-drop-down select {
+   background: transparent;
+   -webkit-appearance: none;
+   width: 200px;
+   height: 20px;
+   padding-left: 5px;
+}
+.project-space-drop-down select:active, .project-space-drop-down select:hover {
+  outline:none;
+}
+.sidora-thin-button:hover {
+  text-decoration: none;
+}
+.sidora-thin-button {
+  background-color: rgb(240, 240, 250); 
+  border: 1px solid rgb(100, 100, 100); 
+  border-radius: 12px; 
+  font-size: 12px; 
+  font-weight: bold; 
+  font-family: Arial; 
+  color: rgb(89, 89, 89); 
+  line-height: 14px; 
+  margin: 10px; 
+  padding: 1px 13px;
+  text-decoration: none;
+}
+#conceptResizable {
+  background-color: rgb(245,245,245);
 }
 button.sidora-button span.sidora-button-text{
   padding:0;display:block;line-height:normal;
