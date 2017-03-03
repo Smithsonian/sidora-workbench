@@ -355,7 +355,6 @@ function exhibition_config_form_validate($form, &$form_state){
     $pid = $form['pid']['#value'];
     $check_url =  $form['custom_url']['#value'];
     if (!empty($check_url)){
-      // TODO :change this query since now the custom url will be  apart of a serialized/json encoded field
      $url_in_use_result = db_query("select pid, last_edited from {exhibition_config} where pid <> :pid and last_edited like :cus_url", 
         array(
           ':pid' => $pid, 
@@ -410,6 +409,21 @@ function exhibition_config_form_validate($form, &$form_state){
       }
       */
     }
+		if (isset($_FILES['files']['name']['xslt_upload'])){
+       $dir = dirname(__FILE__) . '/files/';
+       $dir = drupal_tempnam($dir,'');
+       $name = $_FILES['files']['name']['xslt_upload'];
+       $size = $_FILES['files']['size']['xslt_upload'];
+       $type = $_FILES['files']['type']['xslt_upload'];
+       if (!empty($name)){
+         $file = file_save_upload('xslt_upload', array('file_validate_extensions' => array('xsl xslt')), 'public://');
+         if($file){
+           $form_state['values']['xslt_upload'] = $file;
+         }else{
+           form_set_error('XSLT for the exhibition',t('Could not save uploaded XSLT file. Only XSL and XSLT files are accepted'));
+         }
+       }
+    }
 }
 /*
  * hook_form_submit for exhibition_config
@@ -430,7 +444,7 @@ function exhibition_config_form_submit($form, &$form_state) {
        if (!empty($name)){
          $file = file_save_upload('logo_upload', array(), 'public://');
          if($file){
-           $form['top']['logo']['#value'] = file_create_url($file->destination);
+            $form['top']['logo']['#value'] = file_create_url($file->destination);
            $file->status = FILE_STATUS_PERMANENT;
            file_save($file);
          }else{
@@ -438,6 +452,12 @@ function exhibition_config_form_submit($form, &$form_state) {
          }
        }
     }
+		if (!empty($form_state['values']['xslt_upload'])){
+      $xslt_to_use = $form_state['values']['xslt_upload'];
+			$form['xslt']['existing_xslt']['#value'] = str_replace('https://','http://',file_create_url($xslt_to_use->destination));
+      $xslt_to_use->status = FILE_STATUS_PERMANENT;
+      file_save($xslt_to_use);
+		}	
     $my_css = array();
     foreach($form['colors'] as $ffname => $formField){
       if (startsWith($ffname, 'color-') || startsWith($ffname,'font')){
@@ -523,6 +543,7 @@ function exhibition_config_form_submit($form, &$form_state) {
         'custom_url' => $form['custom_url']['#value'],
         'link_bar_links' => $fullLinkSet,
         'use_parent_config' => empty($form['use_parent_config']['#value'])?'0':$form['use_parent_config']['#value'],
+				'xslt' => $form['xslt']['existing_xslt']['#value'],
 		  );
      $fields = 
       array(
@@ -698,6 +719,7 @@ function exhibition_config_form($form, $form_state){
     $row['logo_height'] = '';
     $row['nav_location'] = '';
     $row['nav_type'] = '';
+		$row['xslt'] = '';
   }
   $my_css = $row['css_script'];
   $links = $row['link_bar_links'];
@@ -1711,7 +1733,12 @@ for(var i=0, len=els.length; i<len; ++i){
     '#collapsible' => TRUE,
     '#collapsed' => TRUE, 
   );
-  
+  $form['xslt'] = array(
+	  '#type' => 'fieldset',
+		'#title' => t('XSLT'),
+		'#collapsible' => TRUE,
+		'#collapsed' => TRUE,
+	);	
   
   $form['css'] = array(
     '#type' => 'hidden',
@@ -1961,6 +1988,35 @@ Color Set:
       'Tahoma' => t('Tahoma'),
       'Verdana' => t('Verdana'),
     ),
+  );
+  $directory_to_list_for_xsl = DRUPAL_ROOT.'/'.drupal_get_path('module','sidora').'/XSL';
+  $xsl_filenames = array_diff(scandir($directory_to_list_for_xsl), array('..', '.', '.htaccess'));
+  $custom_xslt_added = FALSE;
+	$xsl_names_dd['none'] = '';
+	$xsl_names_dd['direct'] = 'None - Direct metadata to browser';
+  $directory_to_list_for_xsl = str_replace('https://','http://',$GLOBALS['base_url'].'/'.drupal_get_path('module','sidora').'/XSL/');
+	foreach($xsl_filenames as $name){ 
+    if (strpos(strtolower($name), ".xsl", strlen(strtolower($name)) - strlen(".xsl")) !== FALSE){
+      $xsl_names_dd[$directory_to_list_for_xsl.$name] = $name; 
+     	if ($row['xslt'] == $name){
+        $custom_xslt_added = TRUE;
+			}	
+    }
+  }
+	if ((isset($row['xslt'])) && (!empty($row['xslt'])) && ($row['xslt'] != 'none') && ($row['xslt'] != 'direct') && !($custom_xslt_added)){
+    $custom_xslt = str_replace('https://','http://',$row['xslt']);
+		$xsl_names_dd[$custom_xslt] = basename($custom_xslt);
+	}	
+	$form['xslt']['existing_xslt'] = array(
+	  '#type' => 'select',
+		'#title' => 'Select from existing:',
+		'#options' => $xsl_names_dd,
+		'#default_value' => isset($row['xslt'])?$row['xslt']:'none',
+	);
+	$form['xslt']['xslt_upload'] = array(
+    '#type' => 'file',
+    '#title' => t('or Upload new XSLT:'),
+		'#attributes' => array('accept' => '.xsl,.xslt'),
   );
   $form['submit'] = array(
     '#type' => 'submit',
