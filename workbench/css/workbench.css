@@ -55,6 +55,7 @@ li a.not-owned {
 
 #page {
   margin-left: 0px;
+  margin-right: 0px;
   display: none; /* Get rid of the non-stylized information, will show at end of initialization */
 }
 .resource-list-tn {
@@ -403,7 +404,7 @@ Table paging
    width: 200px;
    height: 20px;
    position: absolute;
-   top: 0px;
+   top: 6px;
    left: 6px;
    background-color: white;
 }

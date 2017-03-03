@@ -313,11 +313,17 @@ function sidora_menu() {
       'access arguments' => array('Create XML Forms'),
       'type' => MENU_CALLBACK,
     ),
-    'sidora/sharing_permissions' => array(
+    'sidora/sharing_permissions/%' => array(
       'title' => 'Sharing Permissions',
       'page callback' => 'drupal_get_form',
-      'page arguments' => array('sidora_sharing_permissions_form'),
-      'access callback' => TRUE,
+      'page arguments' => array('sidora_sharing_permissions_form', 2),
+      'access callback' => 'user_is_logged_in',
+    ),
+    'sidora/project_spaces' => array(
+      'title' => 'Project Spaces',
+      'page callback' => 'drupal_get_form',
+      'page arguments' => array('sidora_project_spaces_form', 2),
+      'access callback' => 'user_is_logged_in',
     ),
  );
 }
@@ -2482,6 +2488,71 @@ function sidora_check_user_projects() {
   $to_return .= t('Unused Pids in si:user-projects') . theme('table',array('header' => $header, 'rows' => $rows_unused_pids));
   return $to_return;
 }
+/**
+ * Assumes owners of the project spaces should also own the organic groups
+ * Uses logged in user if none specified
+ * Special 'all' for load all users data
+ */
+function sidora_get_owned_project_spaces($user_of_interest = NULL) {
+  global $user;
+  if (empty($user_of_interest)) {
+    $user_of_interest = $user;
+  }
+  $query = new EntityFieldQuery();
+  $query->entityCondition('entity_type', 'node')
+    ->propertyCondition('type', 'og_crud_group')
+    ->propertyCondition('status', NODE_PUBLISHED)
+    ->addMetaData('account', user_load(1));
+  if (!sidora_is_admin() || $user_of_interest != 'all') {
+    $query->propertyCondition('uid', $user_of_interest->uid);
+  }
+  $result = $query->execute();
+  $group_nodes = array();
+  if (isset($result['node'])) {
+    $nids = array_keys($result['node']);
+    $group_nodes = entity_load('node', $nids);
+  }
+  $pids = array();
+  $project_spaces = array();
+  foreach($group_nodes as $node){
+      $pid = NULL;
+      if (array_key_exists($node->language, $node->field_fedora_pid)) {
+        $pid = $node->field_fedora_pid[$node->language][0]['value'];
+      }
+      // Initially let's restrict this to people that are able to change permissions, may open it up later
+      if (sidora_allow($user, $pid, 'permission')) {
+         if (!in_array($pid, $pids)) {
+           $pids[] = $pid;
+           $project_spaces[] = sidora_get_concept_node($pid);
+         }
+      }
+  }
+  return $project_spaces; 
+  
+}
+/**
+ * Returns group nodes that have their group root pid set to the input value
+ */
+function sidora_get_groups_for_project_space($pid) {
+  // Only allow owner / administrator to access this information
+  global $user;
+  if (!sidora_allow($user, $pid, 'permission')) {
+    return array();
+  }
+  $query = new EntityFieldQuery();
+  $query->entityCondition('entity_type', 'node')
+    ->propertyCondition('type', 'og_crud_group')
+    ->propertyCondition('status', NODE_PUBLISHED)
+    ->fieldCondition('field_fedora_pid', 'value', $pid, '=')
+    ->addMetaData('account', user_load(1));
+  $result = $query->execute();
+  $to_return = array();
+  if (isset($result['node'])) {
+    $nids = array_keys($result['node']);
+    $to_return = entity_load('node', $nids);
+  } 
+  return $to_return;
+}
 
 /**
  * Used only for testing purposes.  Should not be called by the main application
@@ -2549,6 +2620,27 @@ SELECT ?pid ?mod ?label ?created FROM <#ri>
      print 'no tuque';
     }
     exit();
+  }
+  if ($one == 'sample_stuff') {
+    $owned_groups =  sidora_get_owned_project_spaces();
+      print '<table>';
+    foreach($owned_groups as $owned_group) {
+      print '<tr>';
+      print '<td>';
+      print $owned_group->field_fedora_label[$owned_group->language][0]["safe_value"];
+      print '</td>';
+      print '<td>';
+      $pid = $owned_group->field_fedora_pid[$owned_group->language][0]["safe_value"];
+      print '<a href="/sidora/sharing_permissions/'.$pid.'">Permissions</a>';
+      print '</td>';
+      print '<td>';
+      var_dump($owned_group);
+      //print $owned_group->field_fedora_label[$owned_group->language][0]["safe_value"];
+      print '</td>';
+      print '</tr>';
+    }
+      print '</table>';
+   exit();
   }
   if ($one == 'check_gids'){
      $parent_pid = $two;
@@ -4886,6 +4978,7 @@ function sidora_get_sidora_group_type($group){
  * themes the sharing_permissions_form
  */
 function theme_sidora_sharing_permissions(&$variables){
+  drupal_add_css(drupal_get_path('module','sidora').'/css/workbench_basic_screen.css',array('weight' => '1000000', 'group' => CSS_THEME));
   $form = $variables['form'];
   $rows = $form['rows'];
   $header = $form['#header'];
@@ -5046,13 +5139,89 @@ function sidora_sharing_put_all_owned_concepts_into_owned_groups($for_uid = NULL
 /*
  * Create the sharing permissions form
  */
-function sidora_sharing_permissions_form($form = array(), &$form_state) {
+function sidora_project_spaces_form($form = array(), &$form_state, $uid = NULL) {
+  drupal_add_css(drupal_get_path('module','sidora').'/css/workbench_basic_screen.css',array('weight' => '1000000', 'group' => CSS_THEME));
   global $user;
+  if (!sidora_is_admin($user) && !empty($uid)){
+    $form['info'] = array(
+      '#markup' => t('Need administrator to load specific users.')
+    );
+    return $form;
+  }
+  $owner = $user;
+  if ($uid == 'all') {
+    $owner = 'all';
+  }
+  elseif (!empty($uid)) {
+    $owner = user_load($uid);
+    if (empty($owner)) {
+      $form['info'] = array(
+        '#markup' => t('User not found.')
+      );
+      return $form;
+    }
+  }
+  $owned_groups = sidora_get_owned_project_spaces($owner);
+  $form['table'] = array(
+    '#theme' => 'table',
+    '#header' => array(t('Name'), t('Description'),t('Is Default'),t('Edit')),
+  );
+  $rows = array();
+
+  foreach($owned_groups as $i => $owned_group) {
+      $pid = $owned_group->field_fedora_pid[$owned_group->language][0]["safe_value"];
+      $row = array(
+        "name_$i" => array('data' => array(
+          '#markup' => $owned_group->field_fedora_label[$owned_group->language][0]["safe_value"],
+        )),
+        "desc_$i" => array('data' => array(
+          '#markup' => t('TBD'),
+        )),
+        "is_default_$i" => array('data' => array(
+          '#type' =>'checkbox',
+          '#default_value' => FALSE,
+          '#title' => t('TBD'),
+        )),
+        "edit_$i" => array('data' => array(
+          '#markup' => l(t('Permissions'),'/sidora/sharing_permissions/' . $pid),
+        )),
+      );
+
+      $rows[] = $row;
+  }
+  $form['table']['#rows'] = $rows;
+  if (sidora_is_admin()) { 
+    $form['show_all'] = array(
+      '#markup' => '<div>' . l(t('Show All'),'/sidora/sharing_permissions/all') . '<div>',
+    );
+  }
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Submit'),
+  );
+  return $form;
+}
+/*
+ * Create the sharing permissions form
+ */
+function sidora_sharing_permissions_form($form = array(), &$form_state, $pid) {
+  global $user;
+  if (!sidora_allow($user, $pid, 'permissions')) {
+    $form['info'] = array(
+      '#markup' => t('PID not found or no access to permissions for PID')
+    );
+    return $form;
+  }
+  $node = sidora_get_concept_node($pid);
+  $label = $node->field_fedora_label[$node->language][0]["safe_value"];
+  $form['pid_info'] = array(
+    '#markup' => "<h1>$label</h1>"
+  );
   $form['table'] = array(
     '#theme' => 'sidora_sharing_permissions',
     '#header' => array(t('User'), t('Create'),t('View'),t('Edit'),t('Delete')),
   );
-  $selected_groups = sidora_sharing_create_or_get_owned_groups();
+  $selected_groups = sidora_get_groups_for_project_space($pid);
   $member_to_group_association = sidora_get_member_to_group_association($selected_groups);
   $rows = array();
   foreach($member_to_group_association as $uid => $groups) {
@@ -5114,6 +5283,7 @@ function sidora_sharing_permissions_form($form = array(), &$form_state) {
     '#type' => 'submit',
     '#value' => t('Submit'),
   );
+  $form_state['storage']['pid'] = $pid;
   return $form;
 }
 /*
@@ -5140,7 +5310,14 @@ function sidora_sharing_permissions_form_validate($form, &$form_state) {
  * Submit handler for the sharing permissions form
  */
 function sidora_sharing_permissions_form_submit($form, &$form_state) {
-  $groups = sidora_get_owned_groups();
+  $pid = $form_state['storage']['pid'];
+  global $user;
+  if (!sidora_allow($user, $pid, 'permissions')) {
+    // Do not allow any unauthorized items in the submit handler
+    return;
+  }
+
+  $groups = sidora_get_groups_for_project_space($pid);
   $group_assoc = array();
   foreach($groups as $group) {
    $group_type = sidora_get_sidora_group_type($group);
@@ -11560,7 +11737,8 @@ function sidora_get_concept_node($pid) {
     $text = t("Concept to PID 1-to-1 relationship failure. PID: !pid nodes: !nodes_list", array('!pid' => $pid, '!nodes_list' => $nodes_list));
     watchdog("sidora", $text);
   }
-  $node = array_shift(array_values($nodes)); 
+  $nv = array_values($nodes);
+  $node = array_shift($nv);
   return $node; 
 }
 /**
