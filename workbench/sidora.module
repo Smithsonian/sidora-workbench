@@ -2512,6 +2512,13 @@ function sidora_get_owned_project_spaces($user_of_interest = NULL) {
     $nids = array_keys($result['node']);
     $group_nodes = entity_load('node', $nids);
   }
+  return sidora_get_project_spaces_from_og_groups($group_nodes, $user);
+}
+
+/**
+ * Returns the concept nodes that represent the project spaces for a set of permission groups nodes
+ */
+function sidora_get_project_spaces_from_og_groups($group_nodes, $user, $only_return_groups_that_owner_can_change = TRUE) {
   $pids = array();
   $project_spaces = array();
   foreach($group_nodes as $node){
@@ -2520,15 +2527,14 @@ function sidora_get_owned_project_spaces($user_of_interest = NULL) {
         $pid = $node->field_fedora_pid[$node->language][0]['value'];
       }
       // Initially let's restrict this to people that are able to change permissions, may open it up later
-      if (sidora_allow($user, $pid, 'permission')) {
-         if (!in_array($pid, $pids)) {
+      if (!$only_return_groups_that_owner_can_change || sidora_allow($user, $pid, 'permission')) {
+         if (!in_array($pid, $pids) && !empty($pid)) {
            $pids[] = $pid;
            $project_spaces[] = sidora_get_concept_node($pid);
          }
       }
   }
   return $project_spaces; 
-  
 }
 /**
  * Returns group nodes that have their group root pid set to the input value
@@ -4681,6 +4687,9 @@ function sidora_get_drupal_user($user_pid_or_drupal_user = '') {
   if (empty($user_pid_or_drupal_user)) {
     $drupal_user = $user;
   }
+  elseif (is_numeric($user_pid_or_drupal_user)) {
+    $drupal_user = user_load($user_pid_or_drupal_user);
+  }
   elseif (is_string($user_pid_or_drupal_user)) {
     $drupal_user = user_load_by_name($user_pid_or_drupal_user);
   }
@@ -4813,10 +4822,15 @@ function sidora_get_shared_with_me($drupal_user = NULL) {
   );
   return $shared_with_me;
 }
-function sidora_get_groups_by_user(){
+function sidora_get_groups_by_user($uid = NULL){
   static $groups = NULL;
   if (empty($groups)) {
-    $drupal_user = sidora_get_drupal_user();
+    if (empty($uid)) {
+      $drupal_user = sidora_get_drupal_user();
+    }
+    else {
+      $drupal_user = user_load($uid);
+    }
     $gids = og_get_groups_by_user($drupal_user);
     $groups = node_load_multiple($gids['node']);
   }
@@ -5136,11 +5150,8 @@ function sidora_sharing_put_all_owned_concepts_into_owned_groups($for_uid = NULL
   }
   return $owned_groups;
 }
-/*
- * Create the sharing permissions form
- */
-function sidora_project_spaces_form($form = array(), &$form_state, $uid = NULL) {
-  drupal_add_css(drupal_get_path('module','sidora').'/css/workbench_basic_screen.css',array('weight' => '1000000', 'group' => CSS_THEME));
+
+function sidora_get_project_spaces_by_member($uid = NULL){
   global $user;
   if (!sidora_is_admin($user) && !empty($uid)){
     $form['info'] = array(
@@ -5148,25 +5159,51 @@ function sidora_project_spaces_form($form = array(), &$form_state, $uid = NULL) 
     );
     return $form;
   }
-  $owner = $user;
   if ($uid == 'all') {
-    $owner = 'all';
+    $to_return = sidora_get_owned_project_spaces($uid);
   }
-  elseif (!empty($uid)) {
-    $owner = user_load($uid);
+  else {
+    $owner = sidora_get_drupal_user($uid);
     if (empty($owner)) {
       $form['info'] = array(
         '#markup' => t('User not found.')
       );
       return $form;
     }
+    $group_nodes = sidora_get_groups_by_user();
+    $to_return = sidora_get_project_spaces_from_og_groups($group_nodes, $user, FALSE);
   }
-  $owned_groups = sidora_get_owned_project_spaces($owner);
+  return $to_return;
+}
+/**
+ * Assumes the form was submitted for the logged in user
+ */
+function sidora_project_spaces_form_submit($form, &$form_state) {
+  global $user;
+  $owned_groups = sidora_get_project_spaces_by_member();
+  foreach($owned_groups as $i => $owned_group) {
+    $pid = $owned_group->field_fedora_pid[$owned_group->language][0]["safe_value"];
+    // Only allow user to set defaults to something they can see
+    if ($pid == $form_state['values']['default_ps']) {
+      $edit['data']['default_ps'] = $pid;
+      user_save($user,$edit);
+    }
+  }
+}
+/*
+ * Create the sharing permissions form
+ */
+function sidora_project_spaces_form($form = array(), &$form_state, $uid = NULL) {
+  drupal_add_css(drupal_get_path('module','sidora').'/css/workbench_basic_screen.css',array('weight' => '1000000', 'group' => CSS_THEME));
+  global $user;
+  $owned_groups = sidora_get_project_spaces_by_member($uid);
   $form['table'] = array(
     '#theme' => 'table',
-    '#header' => array(t('Name'), t('Description'),t('Is Default'),t('Edit')),
+    '#header' => array(t('Name'), t('Description')),
   );
   $rows = array();
+  $can_change_permission = FALSE;
+  $default_ps = (empty($user->data['default_ps']))?"":$user->data['default_ps'];
 
   foreach($owned_groups as $i => $owned_group) {
       $pid = $owned_group->field_fedora_pid[$owned_group->language][0]["safe_value"];
@@ -5177,22 +5214,43 @@ function sidora_project_spaces_form($form = array(), &$form_state, $uid = NULL) 
         "desc_$i" => array('data' => array(
           '#markup' => t('TBD'),
         )),
-        "is_default_$i" => array('data' => array(
-          '#type' =>'checkbox',
-          '#default_value' => FALSE,
-          '#title' => t('TBD'),
-        )),
-        "edit_$i" => array('data' => array(
-          '#markup' => l(t('Permissions'),'/sidora/sharing_permissions/' . $pid),
-        )),
       );
-
-      $rows[] = $row;
+      if (empty($uid) || $uid == $user->uid){
+        $form['table']['#header'] = array(t('Name'), t('Description'),t('Is Default'));
+        $row["is_default_$i"] = array('data' => array(
+          "check_default_$i" => array(
+            '#type' =>'radio',
+            '#attributes' => array(
+              'name' => "default_ps",
+              'value' => $pid,
+            ),
+          ),
+        ));
+        if ($pid == $default_ps) {
+          $row["is_default_$i"]['data']["check_default_$i"]['#attributes']['checked'] = 'checked';
+        }
+      }
+      if (sidora_allow($user, $pid, 'permissions')) {
+        $row["edit_$i"] = array('data' => array(
+          '#markup' => l(t('Permissions'),'/sidora/sharing_permissions/' . $pid),
+        ));
+        $can_change_permission = TRUE;
+      }
+      else {
+        $row["edit_$i"] = array('data' => array(
+          '#markup' => ''
+        ));
+      }
+      $rows['myrow'.$i] = $row;
+  }
+  if ($can_change_permission) {
+    $form['table']['#header'][] = t('Permissions');
   }
   $form['table']['#rows'] = $rows;
+  $form['default_ps'] = array('#type'=>'radio', '#attributes' => array('style' => 'display:none;'));
   if (sidora_is_admin()) { 
     $form['show_all'] = array(
-      '#markup' => '<div>' . l(t('Show All'),'/sidora/sharing_permissions/all') . '<div>',
+      '#markup' => '<div>' . l(t('Show All'),'/sidora/project_spaces/all') . '<div>',
     );
   }
   $form['submit'] = array(
@@ -7904,6 +7962,7 @@ function sidora_cron() {
  * (This function should not be used to restrict view permissions, instead only pass in information that is allowed to be viewed.)
  */
 function sidora_html_tree_from_query_results_tree($query_result_tree, $input_path = '', $num_levels = 3, $url_params = ''){
+  global $user;
   // Every entry needs a label or we will not show it in the tree
   // Go through the current children and throw out any that don't have a label
   $to_remove = array();
@@ -7926,6 +7985,7 @@ function sidora_html_tree_from_query_results_tree($query_result_tree, $input_pat
     return '';
   }
   $to_return = '';
+  $default_ps = (empty($user->data['default_ps']))?"":$user->data['default_ps'];
   foreach($query_result_tree as $t_index=>$t_element){
     $html_escaped_name = htmlspecialchars($t_element['t']['value']);
     // An entry needs a label or we will not show it in the tree
@@ -7964,13 +8024,16 @@ function sidora_html_tree_from_query_results_tree($query_result_tree, $input_pat
       $classes_for_ownership = "";
       if (array_key_exists('owner',$t_element)) {
         $owner_info = " owner='" . $t_element['owner']['value'] . "'";
-        global $user;
         if (strtolower( $t_element['owner']['value'] ) != strtolower($user->name)) {
           $classes_for_ownership = " not-owned";
         }
       }
+      $class_for_default_project_space = '';
+      if ($pid == $default_ps) {
+        $class_for_default_project_space = ' default-project-space';
+      }
       if (!empty($permissions)) {
-        $to_return .= '<li><a href="' . base_path() . 'sidora/workbench/' . $url_params . '#' . $pid . '?path=' . $input_path . '" pid="' . $pid . '" fullname="' . $html_escaped_name . '" conceptchildren="' . count($t_element['children']) . '" resourcechildren="' . $resource_children_num . '" class="' . $classes_for_permissions . $classes_for_ownership . '" permissions="' . $permissions . '"' . $nid_info . $owner_info . '>';
+        $to_return .= '<li><a href="' . base_path() . 'sidora/workbench/' . $url_params . '#' . $pid . '?path=' . $input_path . '" pid="' . $pid . '" fullname="' . $html_escaped_name . '" conceptchildren="' . count($t_element['children']) . '" resourcechildren="' . $resource_children_num . '" class="' . $classes_for_permissions . $classes_for_ownership . $class_for_default_project_space . '" permissions="' . $permissions . '"' . $nid_info . $owner_info . '>';
         $to_return .= $t_element['t']['value'];
         if ($resource_children_num > 0) $to_return .= ' ('.$resource_children_num.')';
         $to_return .= '</a>';

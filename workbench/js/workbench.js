@@ -703,7 +703,7 @@ sidora.InitiateJSTree = function(){
       var optionVal = mainTreeChildren[mtci].id;
       var optionText = jQuery(mainTreeChildren[mtci]).children("a").attr("fullname");
       var selected = "";
-      if (optionText == "Personal Project Space") {
+      if (jQuery(mainTreeChildren[mtci]).children("a").hasClass('default-project-space')) {
         selectedIndex = mtci;
         selected = "selected";
       }
