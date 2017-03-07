@@ -4909,6 +4909,7 @@ function sidora_create_sidora_group($owning_user, $project_pid, $type) {
       'comment' => 1,
       'promote' => 0,
       'og_roles_permissions' => array("und" => array( array("value" => TRUE))),
+      'field_fedora_pid' => array("und" => array( array("value" => $project_pid))),
     );
     if ($type == 'view') {
       $values['group_access'] = array("und" => array( array("value" => TRUE)));
@@ -4921,7 +4922,6 @@ function sidora_create_sidora_group($owning_user, $project_pid, $type) {
     $my_body_content = '';
     $wrapper->body->set(array('value' => $my_body_content));
     $wrapper->body->summary->set('');
-
     $wrapper->save(true);
     entity_save('node', $entity);
     $roles = og_roles('node','og_crud_group',$entity->vid);
@@ -5190,6 +5190,15 @@ function sidora_project_spaces_form_submit($form, &$form_state) {
     }
   }
 }
+/**
+ * Duplicate the tree structure, will ONLY duplicate items that are owned by the original pid's owner
+ */
+function sidora_duplicate_tree($pid_of_item_to_duplicate, $pid_of_end_location) {
+  // Things to look out for:
+  //  Circular references
+  //  
+  
+}
 /*
  * Create the sharing permissions form
  */
@@ -5199,7 +5208,7 @@ function sidora_project_spaces_form($form = array(), &$form_state, $uid = NULL) 
   $owned_groups = sidora_get_project_spaces_by_member($uid);
   $form['table'] = array(
     '#theme' => 'table',
-    '#header' => array(t('Name'), t('Description')),
+    '#header' => array(t('Name'), t('Description'), t('Owner')),
   );
   $rows = array();
   $can_change_permission = FALSE;
@@ -5214,9 +5223,12 @@ function sidora_project_spaces_form($form = array(), &$form_state, $uid = NULL) 
         "desc_$i" => array('data' => array(
           '#markup' => t('TBD'),
         )),
+        "owner_$i" => array('data' => array(
+          '#markup' => sidora_get_username_from_uid($owned_group->uid),
+        )),
       );
       if (empty($uid) || $uid == $user->uid){
-        $form['table']['#header'] = array(t('Name'), t('Description'),t('Is Default'));
+        $form['table']['#header'] = array(t('Name'), t('Description'), t('Owner'), t('Is Default'));
         $row["is_default_$i"] = array('data' => array(
           "check_default_$i" => array(
             '#type' =>'radio',
@@ -7462,7 +7474,7 @@ function sidora_block_content_navigation() {
   drupal_add_css(drupal_get_path('module','sidora').'/css/themes/smoothness/jquery-ui.min.css');
   // jsTree lib
   $jstree_loc = variable_get('sidora_js_lib_location_jstree', '');
-  drupal_add_css($jstree_loc . 'themes/default/style.min.css', array('type' => 'external'));
+  drupal_add_css(drupal_get_path('module','sidora') . '/css/jstree_custom/style.min.css');
   drupal_add_js($jstree_loc . 'jstree.js');
   // dataTables lib
   $datatables_loc =  variable_get('sidora_dataTables_location','');

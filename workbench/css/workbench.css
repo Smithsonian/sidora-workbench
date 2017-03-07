@@ -50,13 +50,20 @@
   border-left: solid 6px #d80
 }
 li a.not-owned {
+  /*
   border-left: solid 6px #66d
+  */
 }
 #concept_tabs > ul > li {
   border:none;
   padding: 0;
   margin: 0;
   background: transparent;
+}
+.jstree-default .jstree-node, .jstree-default .jstree-icon {
+  /* 
+  background-image: none;
+  */
 }
 .ui-state-active .sidora-thin-button {
   background: moccasin;

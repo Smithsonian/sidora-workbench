@@ -2814,7 +2814,7 @@ jQuery(window).resize(function() {
     jQuery("#conceptResizable").css("width",parseInt(jQuery("#conceptResizable").css("min-width")));
     sidora.ResizeTree(null,{element:jQuery("#conceptResizable")});
     sidora.stopResizeTree(null,{element:jQuery("#conceptResizable")});
-    jQuery("#concept-meta,#concept-relationships,#concept-resource-list").css("min-width","1000px");
+    jQuery("#concept-meta,#concept-relationships,#concept-resource-list").css("min-width","100px");
     jQuery("#concept_tabs").css("position","absolute");
   }
   else{ 
