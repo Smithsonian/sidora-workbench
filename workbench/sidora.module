@@ -945,8 +945,8 @@ function sidora_after_ingest_processing(AbstractObject $object) {
     sidora_process_object_with_build_id($submitted_form_build_id);
   }
   else {
-    dsm("no build ID"); 
-    // This is likely an error.  Currently no known instances of valid workbench use should enter this branch
+    // This is likely from the duplicate process.
+    // The additional datastreams will be handled in the duplicate process
   }
 }
 
@@ -2569,6 +2569,16 @@ function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $ex
     return t("You must be an administrator or have an administrator set sidora_allow_all_to_debug in order to access this information");
   }
   if (!sidora_is_admin()) print t("Remember that nonadmins will NOT see output from dsm!");
+  if ($one == 'duplicate'){
+    sidora_duplicate_tree_and_resources($two, '');
+    return 'Done';
+  }
+  if ($one == 'list_pids_in_tree'){
+    $pids = sidora_get_pids_in_tree_from_nodes_by_root_pid($two);
+    print "Final pids \n";
+    var_dump($pids);
+    exit();
+  }
   if ($one == 'run_sparql_mod_query') {
     $query = 'SELECT ?pid ?mod ?label ?created FROM <#ri>
   WHERE {
@@ -5190,14 +5200,76 @@ function sidora_project_spaces_form_submit($form, &$form_state) {
     }
   }
 }
+/*
+ * Calls the tuque duplication process, returning the new FedoraObject
+ */
+function sidora_exact_duplicate($copy_from_pid) {
+  $copy_from = sidora_obj($copy_from_pid);
+  $tuque = islandora_get_tuque_connection();
+  module_load_include('inc', 'islandora', 'includes/utilities');
+  module_load_include('inc', 'islandora', 'includes/ingest.form');
+  $copied_to = islandora_copy_object($copy_from);
+  $apim = $tuque->repository->api->m;
+  $nextPid = $apim->getNextPid(islandora_get_namespace('si:root'));
+  $copied_to->id = $nextPid;
+  return $tuque->repository->ingestObject($copied_to);
+}
 /**
  * Duplicate the tree structure, will ONLY duplicate items that are owned by the original pid's owner
  */
-function sidora_duplicate_tree($pid_of_item_to_duplicate, $pid_of_end_location) {
+function sidora_duplicate_tree_and_resources($pid_of_item_to_duplicate, $pid_of_destination) {
   // Things to look out for:
   //  Circular references
-  //  
-  
+  //
+  $processed_duplicates = array();
+  // Plan: Pull all of the pids of the tree
+  $pids = sidora_get_pids_in_tree_from_nodes_by_root_pid($pid_of_item_to_duplicate);
+  if (!empty($pids)) {
+  // For each item in this list
+    foreach($pids as $pid => $node_id) {
+      // create a duplicate
+      $new_obj = sidora_exact_duplicate($pid);
+      //  Store the association between the old and new
+      $processed_duplicates[$pid] = $new_obj->id;
+      // create duplicates of each resource
+      $original_obj = sidora_obj($pid);
+      $resource_rels = $original_obj->relationships->get(FEDORA_RELS_EXT_URI, 'hasResource');
+      dsm("resource_rels");
+      dsm($resource_rels);
+      foreach($resource_rels as $resource_rel) {
+        $original_resource_pid = $resource_rel['object']['value'];
+        dsm($original_resource_pid);
+        
+        if (!array_key_exists($original_resource_pid, $processed_duplicates)) {
+          $new_res = sidora_exact_duplicate($original_resource_pid);
+          // Store the association between the old and new
+          $processed_duplicates[$original_resource_pid] = $new_res->id;
+        }
+      }
+    }
+    dsm("duplicates");
+    dsm($processed_duplicates);
+    // For each of the new items
+  /* 
+    foreach($processed_duplicates as $original_pid => $duplicate_pid) {
+      $duplicate_obj = sidora_obj($duplicate_pid);
+      // go through all of it's relationships
+      $relationships = $duplicate_obj->relationships->get();
+      dsm($relationships);
+      foreach($relationships as $relationship) {
+        dsm("start");
+        dsm($relationship);
+        // replace the references to the old pids with the new pids
+//        $check_relationship_pid = $relationship['object']['value'];
+//        dsm(array('duplicate_pid'=>$duplicate_obj->id, 'relationship_to'=>$check_relationship_pid));
+      }
+    }
+*/
+    // Add the new pid to the end location's children
+  }
+  else {
+    // Too many pids, will not duplicate
+  }
 }
 /*
  * Create the sharing permissions form
@@ -8248,7 +8320,59 @@ function sidora_pid_set_locked($pid, $set_locked_to_user = '', $obtain_lock = fa
     return FALSE;
   }
 }
+/**
+ * Returns an array of the form array(pid => nid) one for each pid and its corresponding node
+ * To get the pids, array_keys($the_return)
+ * To get just the node ids, array_values($the_return)
+ */
+function sidora_get_pids_in_tree_from_nodes_by_root_pid($pid) {
+  $to_return = array();
+  $nid = sidora_get_concept_node_id($pid);
+  if (empty($nid)){
+    return $to_return;
+  }
+  $nids = array();
+  $worked = sidora_get_pids_in_tree_from_nodes_by_node_id($nid, $nids, $to_return);
+  if (!$worked) {
+    return FALSE;    
+  }
+  return $to_return;
+}
+/**
+ * Recursive function to pull information out of the nodes. Not expected to be called directly
+ * $node_id = node_id of the root of the tree
+ * $nids = array of node_ids which new node ids gets appended in the form array(node_id => node_id)
+ * $pids = an array to append to of the form array(pid => nid) one for each pid and its corresponding node
+ * $max_pids = when to stop going through the tree
+ * returns: true if it didn't go over the max number of pids, false if it went over max pids
+ */
+function sidora_get_pids_in_tree_from_nodes_by_node_id($node_id, &$nids, &$pids, $max_pids = 1000) {
+  // Runs into execution time issues at > 8000 nodes, would need the following line to up the execution time:
+  // ini_set('max_execution_time',60);
 
+  if (sizeof($nids) > $max_pids){
+    return FALSE;
+  }
+  // if the node comes in as an integer, switch to string for consistency
+  $node_id = (string)$node_id; 
+  if (in_array($node_id, $nids)) return;
+  $node = node_load($node_id);
+  $pid = $node->field_fedora_pid[$node->language][0]['value'];
+  $pids[$pid] = $node_id;
+  $nids[$node_id] = $node_id;
+  if (!empty($node->field_sidora_concept_children) && !empty($node->field_sidora_concept_children[$node->language])) {
+    $children = explode(',',$node->field_sidora_concept_children[$node->language][0]['value']);
+    foreach($children as $child_nid) {
+      if (!in_array($child_nid, $nids) && !empty($child_nid)) {
+        sidora_get_pids_in_tree_from_nodes_by_node_id($child_nid, $nids, $pids);
+      }
+    }
+  }
+  // Get rid of the node out of cache, takes longer but the memory gets used up easily otherwise (@ >6000 nodes)
+  
+  entity_get_controller('node')->resetCache(array($node_id));
+  return sizeof($nids) <= $max_pids;
+}
 function sidora_build_tree_from_nodes_by_pid($pid, $max_depth = 3, $preload_nodes = TRUE){
   $nid = sidora_get_concept_node_id($pid);
   if (empty($nid)){
