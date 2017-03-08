@@ -719,6 +719,22 @@ sidora.InitiateJSTree = function(){
       jQuery("#project-selector-css").remove();
       jQuery("<style>").prop("type","text/css").prop("id","project-selector-css").html(projectSelectorCss).appendTo("head");
       jQuery("#"+selectedValue).children("a").click(); 
+      var owned = !jQuery("#"+selectedValue).children("a").hasClass("not-owned");
+      jQuery("#share-project-space-button").toggle(owned);
+      var pid = jQuery("#"+selectedValue).children("a").attr("pid");
+      jQuery("#share-project-space-button").click(function(){
+          Shadowbox.close();
+          setTimeout(function(){
+          Shadowbox.open({
+            content:    Drupal.settings.basePath+"sidora/sharing_permissions/"+pid,
+            player:     "iframe",
+            title:      "Project Space Permission",
+            options: {
+              onFinish:  function(){}
+            }
+          });},100);
+      });
+      
     }
     sidora.ChangeProjectSpace(selectedValue);
     jQuery("#psdd-select").change(function(){ sidora.ChangeProjectSpace(this.value); });

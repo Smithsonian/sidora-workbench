@@ -6423,7 +6423,7 @@ function sidora_block_view($delta = '') {
       <li><a href="#concept-meta"><i class="material-icons">list</i><div class="sidora-ui-text sidora-thin-button" style="float:right;margin: 3px 0 0 4px;">Attributes</div></a></li>
       <li><a href="#concept-resource-list"><i class="material-icons">panorama</i><div class="sidora-ui-text sidora-thin-button" style="float:right;margin: 3px 0 0 4px;">Resources</div></a></li>
       <li><a href="#concept-relationships"><i class="material-icons">transform</i><div class="sidora-ui-text sidora-thin-button" style="float:right;margin: 3px 0 0 4px;">Links</div></a></li>
-      <a href="#" onclick="return false;">
+      <a href="#" id="share-project-space-button" onclick="return false;" style="display:none";>
         <div class="sidora-ui-text sidora-thin-button" style="margin: 10px 3px 0px 0px; margin-right:20px;float:right;">Share</div>
         <i class="material-icons" style="padding-top:7px;float:right">share</i>
       </a>
