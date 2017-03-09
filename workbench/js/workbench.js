@@ -39,6 +39,41 @@ window.sidora = {
     tree: {}
   }
 };
+window.sidora.display = {
+  //Resource specific
+  "LINK_TO_RESOURCE_TITLE" : Drupal.t("Create links to resource"),
+  "RESOURCES_EXISTED_AT_TARGET_WILL_REMOVE_FROM_SOURCE" : Drupal.t("The resources listed below existed on the target already and will not be overwritten. They will be removed from the concepts that they were dragged from:"),
+  "CREATE_LINKS_OF_RESOURCES_TO_DESTINATION" : Drupal.t("Create links of following resources to "),
+  "MOVE_RESOURCES_TO_DESTINATION" : Drupal.t("Move the following resources to "),
+  "MOVE_RESOURCES_TITLE": Drupal.t("Move Resources"),
+
+  //Concept specific
+  "CREATE_LINKS_OF_FOLLOWING_TO" : Drupal.t("Create links of the following concepts to "),
+  "MOVE_CONCEPT_TITLE": Drupal.t("Move concept"),
+  "MOVE_FOLLOWING_CONCEPTS_TO" : Drupal.t("Move the following concepts to "),
+  "CONCEPTS_EXISTED_AT_TARGET_WILL_REMOVE_FROM_SOURCE" : Drupal.t("The concepts listed below existed on the target already and will not be overwritten. They will be removed from the concepts that they were dragged from:"),
+
+  //Generic
+  "TARGET_IS_LOCKED_GENERIC" : Drupal.t("The target is locked by another user."),
+  "LINK_ITEM_GENERIC_TITLE" : Drupal.t("Link item"),
+  "ALREADY_EXISTS_ON_TARGET_WILL_NOT_CREATE_LINK" : Drupal.t("Already exists on target, will not create link"),
+  "ALREADY_EXISTS_ON_TARGET_WILL_NOT_CREATE_LINK_ANY" : Drupal.t("All items selected for creating links already exist on the target."),
+  "ALREADY_EXISTS_ON_TARGET_WILL_NOT_MOVE" : Drupal.t("Already exists on target, will not move"),
+  "ALREADY_EXISTS_ON_TARGET_WILL_NOT_MOVE_ANY" : Drupal.t("All items selected for move already exist on the target."),
+  "REASSURE_WORKING_NOT_HUNG_DO_NOT_RELOAD" : Drupal.t("This is taking a little longer than normal but we're still working on it"),
+  "REQUIRE_FEDORA_USER_SETUP" : Drupal.t('It looks like your user hasn\'t been set up yet. To automatically set up your user now, click \'Set Up Now\'. The process will take about 30 seconds and will reload the page when it\'s complete.'),
+  "SECONDS_ESTIMATED_REMAINING" : Drupal.t("s estimated remaining"),
+  "UNKNOWN_ACTION" : Drupal.t('Unknown action'),
+  "MOVING" : Drupal.t("Moving "),
+
+  // Only ever put to console, doesn't actually display on browser screen
+  "CONSOLE_OUTPUT_BAD_PERMISSIONS_DATA_REDIRECT" : Drupal.t("Bad permissions data, likely a user setup issue, redirecting to user profile"),
+  "CONSOLE_OUTPUT_BASIC_DATA_REDIRECT" : Drupal.t("Problem getting basic data, redirecting to the user profile"),
+  "CONSOLE_OUTPUT_BAD_USER_DATA_REDIRECT" : Drupal.t("Bad user data, redirecting to user profile"),
+  "CONSOLE_OUTPUT_BAD_BASIC_USER_REDIRECT" : Drupal.t("Problem getting basic user info, redirecting to the user profile"),
+  "CONSOLE_OUTPUT_DROPPED_ON_EXISTING_PARENT" : Drupal.t("dropped on existing parent, ignoring request"),
+  "a" : "B"
+};
 /*
  * Retrieves the concept pid from the url
  */
@@ -619,7 +654,7 @@ sidora.InitiateJSTree = function(){
       jQuery("#"+data.parent).children("a").attr("conceptchildren",""+npReplacer);
       jst.get_node(data.parent).a_attr.conceptchildren = ""+npReplacer;
       sidora.queue.incomingRequestsAreSilent = true;
-      sidora.queue.Request('Copy Concept', actionUrl, function(){
+      sidora.queue.Request('Create Link To Concept', actionUrl, function(){
         sidora.concept.LoadContentHelp.Relationships();
       }, 
       sidora.util.createFunctionRefreshTree(moveToPid)
@@ -760,7 +795,7 @@ sidora.InitiateJSTree = function(){
               //Resource
               if ((jQuery('.jstree-copy:visible').length > 0) || (jQuery('.fakejstree-copy:visible').length > 0)){
                 //is a copy
-                var showText = "Copy the following resources to "+jQuery("#"+mouseOverObject.id).children("a").attr("fullname");
+                var showText = sidora.display.CREATE_LINKS_OF_RESOURCES_TO_DESTINATION + jQuery("#"+mouseOverObject.id).children("a").attr("fullname");
                 showText += " ("+jQuery("#"+mouseOverObject.id).children("a").attr("pid")+"):";
                 showText += "<ul>";
                 jQuery.ajax({
@@ -772,7 +807,7 @@ sidora.InitiateJSTree = function(){
                        showText += "<li>"+jQuery(jq(sidora.util.dragResources[i])).find(".resource-list-label").text();
                        showText += " ("+sidora.util.dragResources[i]+")";
                       if (jQuery.inArray(sidora.util.dragResources[i], currentChildrenPids) > -1){ 
-                         showText += " - Already exists on target, will not copy</li>";
+                         showText += " - " + sidora.display.ALREADY_EXISTS_ON_TARGET_WILL_NOT_CREATE_LINK + "</li>";
                       }else{
                          showText += "</li>";
                          resourcesToCopyOver.push(sidora.util.dragResources[i]);
@@ -780,21 +815,21 @@ sidora.InitiateJSTree = function(){
                     }
                     showText += "</ul>";
                     if (resourcesToCopyOver.length > 0){
-                       sidora.util.Confirm("Copy resource",showText,
+                       sidora.util.Confirm(sidora.display.LINK_TO_RESOURCE_TITLE,showText,
                          function(){
                            sidora.resources.performCopyOrMove("copy",mouseOverObject.id, resourcesToCopyOver);
                          }
                       );
                     }else{
-                      sidora.util.Confirm("Copy item","All items selected for copy already exist on the target.");
+                      sidora.util.Confirm(sidora.display.LINK_TO_RESOURCE_TITLE,sidora.display.ALREADY_EXISTS_ON_TARGET_WILL_NOT_CREATE_LINK_ANY);
                    }
                   } 
                 });  
               }else{
                 //is a move
-                var showText = "Move the following resources to "+jQuery("#"+mouseOverObject.id).children("a").attr("fullname")+" ("+jQuery("#"+mouseOverObject.id).children("a").attr("pid")+"):";
+                var showText = sidora.display.MOVE_RESOURCES_TO_DESTINATION + jQuery("#"+mouseOverObject.id).children("a").attr("fullname")+" ("+jQuery("#"+mouseOverObject.id).children("a").attr("pid")+"):";
                 showText += "<ul>";
-                var showTextForUnassociate = "The resources listed below existed on the target already and will not be overwritten. They will be removed from the concepts that they were dragged from:<ul>";
+                var showTextForUnassociate = sidora.display.RESOURCES_EXISTED_AT_TARGET_WILL_REMOVE_FROM_SOURCE + "<ul>";
                 jQuery.ajax({
                   url: Drupal.settings.basePath+"sidora/ajax_parts/generate_resource_list/"+jQuery("#"+mouseOverObject.id).children("a").attr("pid"),
                   dataType: "json",
@@ -818,7 +853,7 @@ sidora.InitiateJSTree = function(){
                     if (resourcesToMoveOver.length > 0){
                       if (!sidora.util.isConfirmShowing()){
                         if (resourcesToUnassociate.length > 0) showText += showTextForUnassociate;
-                        sidora.util.Confirm("Move resource",showText,
+                        sidora.util.Confirm(sidora.display.MOVE_RESOURCES_TITLE,showText,
                           function(){
                            sidora.resources.performCopyOrMove("move",mouseOverObject.id, resourcesToMoveOver);
                            for (rtui = 0; rtui < resourcesToUnassociate.length; rtui++){
@@ -830,8 +865,8 @@ sidora.InitiateJSTree = function(){
                     }else{
                       if (!sidora.util.isConfirmShowing()){
                         sidora.util.Confirm(
-                          "Move Resources",
-                          "<h4>All items selected for move already exist on the target.</h4>"+showTextForUnassociate,
+                          sidora.display.MOVE_RESOURCES_TITLE,
+                          "<h4>" + sidora.display.ALREADY_EXISTS_ON_TARGET_WILL_NOT_MOVE_ANY + "</h4>"+showTextForUnassociate,
                           function(){
                             sidora.resources.performCopyOrMove("move",mouseOverObject.id, resourcesToUnassociate);
                           }
@@ -853,7 +888,7 @@ sidora.InitiateJSTree = function(){
               sidora_util.lock.Obtain(parentPid,function(){
                 var lockAttempt = jQuery.parseJSON(arguments[0][0]);
                 if (lockAttempt.error){
-                  sidora.util.Confirm("Copy item","The target is locked by another user.");
+                  sidora.util.Confirm(sidora.display.LINK_ITEM_GENERIC_TITLE,sidora.display.TARGET_IS_LOCKED_GENERIC);
                   return;
                 }
                 sidora_util.lock.KeepAlive();
@@ -866,7 +901,7 @@ sidora.InitiateJSTree = function(){
                   //console.log("ccp:"+i+":"+currentChildrenPids[i]);
                 }
                  
-                var showText = "Copy the following concepts to ";
+                var showText = sidora.display.CREATE_LINKS_OF_FOLLOWING_TO;
                 showText += jQuery("#"+mouseOverObject.id).children("a").attr("fullname");
                 showText += " ("+jQuery("#"+mouseOverObject.id).children("a").attr("pid")+"):<ul>";
                 var selected = jQuery("#forjstree").jstree(true).get_selected();
@@ -877,7 +912,7 @@ sidora.InitiateJSTree = function(){
                 for(var i=0; i<selected.length; i++){
                   var currSel = jQuery(jq(selected[i])).children("a");
                   if (jQuery.inArray(currSel.attr("pid"),currentChildrenPids) > -1){
-                    showText += "<li>"+currSel.attr("fullname")+" ("+currSel.attr("pid")+") - Already exists on target, will not copy</li>";
+                    showText += "<li>"+currSel.attr("fullname")+" ("+currSel.attr("pid")+") - " + sidora.display.ALREADY_EXISTS_ON_TARGET_WILL_NOT_CREATE_LINK + "</li>";
                   }else{
                     showText += "<li>"+currSel.attr("fullname")+" ("+currSel.attr("pid")+")</li>";
                     objectsToCopyOver.push(selected[i]);
@@ -886,7 +921,7 @@ sidora.InitiateJSTree = function(){
                 showText += "</ul>";
                 if (objectsToCopyOver.length > 0){
                   if (!sidora.util.isConfirmShowing()){
-                    sidora.util.Confirm("Copy item",showText,
+                    sidora.util.Confirm(sidora.display.LINK_ITEM_GENERIC_TITLE,showText,
                       function(){
                         sidora.util.userConfirmedCopy = true;
                         for(var objIndex = 0; objIndex < objectsToCopyOver.length; objIndex++){
@@ -901,7 +936,7 @@ sidora.InitiateJSTree = function(){
                     );
                   }
                 }else{
-                  sidora.util.Confirm("Copy item","All items selected for copy already exist on the target.",
+                  sidora.util.Confirm(sidora.display.LINK_ITEM_GENERIC_TITLE,sidora.display.ALREADY_EXISTS_ON_TARGET_WILL_NOT_CREATE_LINK_ANY,
                     null,null,null,null,function(){
                       sidora_util.lock.Release(parentPid);
                     }
@@ -925,7 +960,7 @@ sidora.InitiateJSTree = function(){
             sidora_util.lock.Obtain(parentPid,function(){
               var lockAttempt = jQuery.parseJSON(arguments[0][0]);
               if (lockAttempt.error){
-                sidora.util.Confirm("Move concept","The target is locked by another user.");
+                sidora.util.Confirm(sidora.display.MOVE_CONCEPT_TITLE,sidora.display.TARGET_IS_LOCKED_GENERIC);
                 return;
               }
               sidora_util.lock.KeepAlive();
@@ -937,10 +972,10 @@ sidora.InitiateJSTree = function(){
                 //console.log("ccp:"+i+":"+currentChildrenPids[i]);
               }
                
-              var showText = "Move the following concepts to ";
+              var showText = sidora.display.MOVE_FOLLOWING_CONCEPTS_TO;
               showText += jQuery("#"+mouseOverObject.id).children("a").attr("fullname");
               showText += " ("+jQuery("#"+mouseOverObject.id).children("a").attr("pid")+"):<ul>";
-              var showTextForUnassociate = "The concepts listed below existed on the target already and will not be overwritten. They will be removed from the concepts that they were dragged from:<ul>";
+              var showTextForUnassociate = sidora.display.CONCEPTS_EXISTED_AT_TARGET_WILL_REMOVE_FROM_SOURCE + "<ul>";
               var selected = jQuery("#forjstree").jstree(true).get_selected();
               //If they dragged something that is not selected only copy that item (next 2 lines)
               var indexInArray = jQuery.inArray(draggedObjects.id,selected);
@@ -983,7 +1018,7 @@ sidora.InitiateJSTree = function(){
                 }
               }else{
                 if (!sidora.util.isConfirmShowing()){
-                  sidora.util.Confirm("Move Concept","<h4>All items selected for move already exist on the target.</h4>"+showTextForUnassociate,
+                  sidora.util.Confirm(sidora.display.MOVE_CONCEPT_TITLE,"<h4>" + sidora.display.ALREADY_EXISTS_ON_TARGET_WILL_NOT_MOVE_ANY + "</h4>"+showTextForUnassociate,
                     function(){
                       for(var objIndex = 0; objIndex < objectsToUnassociate.length; objIndex++){
                         var currToUnassociateId = objectsToUnassociate[objIndex];
@@ -1203,12 +1238,12 @@ sidora.InitiateConfirmAccess = function(){
     "url":Drupal.settings.basePath+"sidora/info/si:root/permission",
     "success":function(data){
       if (typeof(data.create) == 'undefined'){
-        console.log("Bad permissions data, likely a user setup issue, redirecting to user profile");
+        console.log(sidora.display.CONSOLE_OUTPUT_BAD_PERMISSIONS_DATA_REDIRECT);
         window.location = Drupal.settings.basePath+"user";
       }
     },
     "error":function(){
-       console.log("Problem getting basic data, redirecting to the user profile");
+       console.log(sidora.display.CONSOLE_OUTPUT_BASIC_DATA_REDIRECT);
        //OCIO message will also end up here since not json
        //This can also happen if the .htaccess file is incorrect
        window.location = Drupal.settings.basePath+"user";
@@ -1240,12 +1275,12 @@ sidora.IsUserSetUp = function(callOnCorrectSetup, callOnIncorrectSetup){
             }
           }
         }else{
-          console.log("Bad user data, redirecting to user profile");
+          console.log(sidora.display.CONSOLE_OUTPUT_BAD_USER_DATA_REDIRECT);
           window.location = Drupal.settings.basePath+"user";
         }
       },
       "error":function(){
-         console.log("Problem getting basic user info, redirecting to the user profile");
+         console.log(sidora.display.CONSOLE_OUTPUT_BAD_BASIC_USER_REDIRECT);
          //OCIO message will also end up here since not json
          //This can also happen if the .htaccess file is incorrect
          window.location = Drupal.settings.basePath+"user";
@@ -1305,16 +1340,16 @@ sidora.InitiatePage = function(){
     });
   }
   recreateUser = function() {
-    jQuery("#page").after('<div id="recreateUser" class="" style="max-width: 300px;margin: 0 auto;"><p>It looks like your user hasn\'t been set up yet. To automatically set up your user now, click \'Set Up Now\'. The process will take about 30 seconds and will reload the page when it\'s complete.</p> <div style="margin: 0 20px;"><input id="setupnow" class="form-submit" value="Set Up Now"><p></p><input id="logout" class="form-submit" value="Log Out"></div></div>');
+    jQuery("#page").after('<div id="recreateUser" class="" style="max-width: 300px;margin: 0 auto;"><p>' sidora.display.REQUIRE_FEDORA_USER_SETUP + "</p> <div style="margin: 0 20px;"><input id="setupnow" class="form-submit" value="Set Up Now"><p></p><input id="logout" class="form-submit" value="Log Out"></div></div>');
     jQuery("#setupnow").click(function(){
-      var overlay = jQuery('<div class="full-screen-overlay"><div id="countdown" style="color:white;margin:30px auto;width:200px;">20s estimated remaining</div></div>');
+      var overlay = jQuery('<div class="full-screen-overlay"><div id="countdown" style="color:white;margin:30px auto;width:200px;">30' + sidora.display.SECONDS_ESTIMATED_REMAINING + '</div></div>');
       overlay.appendTo(document.body);
       
       jQuery("#countdown").countdown(function(){
         jQuery("#countdown").css("width","500px");
-        jQuery("#countdown").html("This is taking a little longer than normal but we're still working on it");
+        jQuery("#countdown").html(sidora.display.REASSURE_WORKING_NOT_HUNG_DO_NOT_RELOAD);
         setTimeout(function(){window.location.reload();},5000);
-      }, 30, "s estimated remaining");
+      }, 30, sidora.display.SECONDS_ESTIMATED_REMAINING);
 
       jQuery.ajax(
         {
@@ -1326,7 +1361,7 @@ sidora.InitiatePage = function(){
           },
           "error":function(){
             //OCIO message will also end up here since not json
-            console.log("Problem getting basic user info, redirecting to the user profile");
+            console.log(sidora.display.CONSOLE_OUTPUT_BAD_BASIC_USER_REDIRECT);
           }
         }
       );
@@ -1436,7 +1471,7 @@ sidora.resources.performCopyOrMove = function(copyOrMove, toLocationId, resource
   var droppingThese = pids.join(",");
   //do nothing if move/copy to existing place
   if (droppedOn == fromParent) {
-    console.log("dropped on existing parent, ignoring request");
+    console.log(sidora.display.CONSOLE_OUTPUT_DROPPED_ON_EXISTING_PARENT);
     return;
   }
   //by default this is a move
@@ -1462,13 +1497,13 @@ sidora.resources.performCopyOrMove = function(copyOrMove, toLocationId, resource
   }  
   for(var i=0;i<pids.length;i++){
     droppedPid = pids[i];
-    var userFriendlyName = 'Unknown action';
+    var userFriendlyName = sidora.display.UNKNOWN_ACTION;
     var pidList = null;
     var onSuccess = null;
     if (action != 'copy'){
       pidListForRequest = [fromParent,droppedOn,droppedPid];
       jQuery(jq(pids[i])).addClass("is-being-moved");
-      userFriendlyName = "Moving ";
+      userFriendlyName = sidora.display.MOVING;
       onSuccess = onSuccessfulMove;
       queueAction = 'moveResource';
     }else{

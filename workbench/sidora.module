@@ -768,8 +768,10 @@ function sidora_process_object_with_build_id($form_build_id) {
       $parent_node_id = $parent_node->nid;
       $parent_group_info = og_get_entity_groups('node', $parent_node_id);
       $parent_gids = array();
-      foreach($parent_group_info['node'] as $group_node_id){
-        $parent_gids[] = $group_node_id;
+      if (array_key_exists('node',$parent_group_info)) {
+        foreach($parent_group_info['node'] as $group_node_id){
+          $parent_gids[] = $group_node_id;
+        }
       }
       $parent_groups = node_load_multiple($parent_gids);
       foreach($parent_groups as $parent_group) {
@@ -1271,13 +1273,19 @@ xmlns:cpf="urn:isbn:1-931666-33-4"
     $xsl->importStyleSheet($doc);
     $docToLoad = ('<?xml version="1.0" encoding="UTF-8"?'.'>'.$object['SIDORA']->content);
     $doc->loadXML($docToLoad);
-    $form_name = trim($xsl->transformToDoc($doc)->firstChild->wholeText);
+    $form_name = '';
+    if (!empty($xsl->transformToDoc($doc)->firstChild)) {
+      $form_name = trim($xsl->transformToDoc($doc)->firstChild->wholeText);
+    }
 
     $doc->loadXML($to_model);
     $xsl->importStyleSheet($doc);
     $docToLoad = ('<'.'?xml version="1.0" encoding="UTF-8"?'.'>'.$object['SIDORA']->content);
     $doc->loadXML($docToLoad);
-    $model = trim($xsl->transformToDoc($doc)->firstChild->wholeText);
+    $model = '';
+    if (!empty($xsl->transformToDoc($doc)->firstChild)) {
+      $model = trim($xsl->transformToDoc($doc)->firstChild->wholeText);
+    }
 
     $doc->loadXML($to_ontology_id);
     $xsl->importStyleSheet($doc);
@@ -12068,7 +12076,7 @@ function sidora_get_default_owner_id_under_pid($pid){
   $group_assoc = array();
   foreach($owned_groups as $owned_group) {
     $group_type = sidora_get_sidora_group_type($owned_group);
-    if (!empty($group_type)) {
+    if (!empty($group_type) && !empty($node_groups['node'])) {
       foreach($node_groups['node'] as $membership_id => $node_group_group_id) {
         if ($node_group_group_id == $owned_group->vid) {
           return $owned_group->uid;
