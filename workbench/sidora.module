@@ -7337,7 +7337,7 @@ function sidora_copy($copy_to_id, $pid, $show_output = TRUE) {
   sidora_clear_tree_cache($copy_to_id);
   if ($show_output) {
     $to_output['error'] = FALSE;
-    $to_output['description'] = t("Object copied");
+    $to_output['description'] = t("Object linked");
     $to_output['code'] = 'copy5';
     print json_encode($to_output);
     drupal_exit();
