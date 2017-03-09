@@ -1768,7 +1768,6 @@ function sidora_xsl_information($pid, $return_file_content = FALSE) {
     print(json_encode($xsl_config));
   }
   else {
-  error_log("\nIn sidora_xsl_information, xsl_config :".print_r($xsl_config,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
     print(sidora_xsl_string($xsl_config->file));
   }
 }
@@ -3058,7 +3057,7 @@ watchdog('SIdora Testing',t("Bulk metadata Curl reponse whole :<br/> %curl_respo
     }
   }
 	}
-  //This ends the testing function and should also indicate the end of liberal use of the dsm function
+	//This ends the testing function and should also indicate the end of liberal use of the dsm function
 }
 
 /*
@@ -4518,11 +4517,14 @@ function sidora_get_xsl_file_config_for_object($pid) {
  * Returns the XSL file filename to use for this pid
  */
 function sidora_get_xsl_file_for_object($pid) {
+  $curr_check = sidora_get_xsl_exhibition_config_for_object($pid);
+  if ((!empty($curr_check)) && ($curr_check != 'none') && ($curr_check != 'direct') && (file_exists($curr_check))) {
+    return $curr_check;
+  }	 
   $curr_check = sidora_get_xsl_file_config_for_object($pid);
   if (empty($curr_check)) return NULL;
-  return $curr_check->file;
+  return (DRUPAL_ROOT . '/'. drupal_get_path('module','sidora') . '/XSL/' . $curr_check->file);
 }
-
 /*
  * If an item's ancestry (parent/grandparent/etc) includes an exhibition, then the item is allowed to be shown by exhibition
  * So this checks up the tree to find if there is an exhibition somewhere in the object's ancestry.
@@ -4624,9 +4626,9 @@ function sidora_open_access($info_type, $pid) {
         print sidora_xsl_string($xsl_file);
       }
       else {
-        $directory_for_xsl = DRUPAL_ROOT.'/'.drupal_get_path('module','sidora').'/XSL';
-        $full_file = ($directory_for_xsl . '/' . $file);
-        if ($file) $output_info = readfile($full_file);
+	//$directory_for_xsl = DRUPAL_ROOT.'/'.drupal_get_path('module','sidora').'/XSL';
+        //$full_file = ($directory_for_xsl . '/' . $file);
+        if ($file) $output_info = readfile($file);
       }
       break;
     case 'xsl_config':
@@ -4657,7 +4659,6 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
       break;
     case 'xsl_upload':
       $return_when_encoded = array();
-  error_log("\nIn sidora_info_json, xsl upload :".print_r($_SESSION,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
       $all_uploads = $_SESSION['file_uploads'][$user->uid];
       $directory_to_list_for_xsl = DRUPAL_ROOT.'/'.drupal_get_path('module','sidora').'/XSL';
       $return_when_encoded['files'] = array();
@@ -6705,7 +6706,6 @@ $targetDir = file_directory_temp();
 $cleanupTargetDir = false; // Remove old files
 $outputDebugCleanup = false;
 $maxFileAge = 5 * 3600; // Temp file age in seconds
-  error_log("\nIn sidora_upload, targetdir :".print_r($targetDir,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
 
 
 // Create target dir
@@ -6729,7 +6729,6 @@ if (isset($_REQUEST["name"])) {
 //$fileName = uniqid("file_").$file_info->filename;
 //Add in user name to the mix so they can't overwrite each other
 $filePath = $targetDir . DIRECTORY_SEPARATOR . $user->name.'_'.$fileName;
-  error_log("\nIn sidora_upload, filepath :".print_r($filePath,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
 // Chunking might be enabled
 $chunk = isset($_REQUEST["chunk"]) ? intval($_REQUEST["chunk"]) : 0;
 $chunks = isset($_REQUEST["chunks"]) ? intval($_REQUEST["chunks"]) : 0;
@@ -6768,7 +6767,6 @@ if (!$out = @fopen("{$filePath}.part", $chunks ? "ab" : "wb")) {
   die('{"jsonrpc" : "2.0", "error" : {"code": 102, "message": "Failed to open output stream."}, "id" : "id"}');
 }
 
-  error_log("\nIn sidora_upload, FILES :".print_r($_FILES,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
 
 if (!empty($_FILES)) {
   if ($_FILES["file"]["error"] || !is_uploaded_file($_FILES["file"]["tmp_name"])) {
@@ -6803,7 +6801,6 @@ if (!$chunks || $chunk == $chunks - 1) {
   $file_info->filepath = $filePath;//$base_path . 'sites/all' .$filePath;
   $_SESSION['file_uploads'][$form_id][] = $file_info;
 }
-  error_log("\nIn sidora_upload, SESSION :".print_r($_SESSION,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
 
 // Return Success JSON-RPC response
 //print_r ($_SESSION['file_uploads']);
@@ -10407,4 +10404,15 @@ function sidora_get_nested_title_field($field_array,$parent_array) {
     return (drupal_array_get_nested_value($parent_array,$field_array));
   }
   return;
+}
+function sidora_get_xsl_exhibition_config_for_object($pid) {
+  $exhibition_config_xsl_file = '';
+  if ((isset($pid)) && (!empty($pid))) {
+    $exhibition_data = exhibition_config_get_config_data($pid);
+    if (!(empty($exhibition_data)) && !(is_null($exhibition_data['pid'])) && !(is_null($exhibition_data['last_published'])) && ($exhibition_data['last_published'] != '')){
+      $exhibition_config_publish_settings = unserialize($exhibition_data['last_published']);
+      $exhibition_config_xsl_file =  $exhibition_config_publish_settings['xslt'];
+     }
+   }
+   return $exhibition_config_xsl_file;
 }

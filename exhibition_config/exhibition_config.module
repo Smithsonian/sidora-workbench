@@ -300,7 +300,8 @@ function exhibition_config_json_data($pid){
       print '{ "error": true, "error_message" : "Exhibition not available" }';
     } else if ($row['last_published'] != ''){
       $row = unserialize($row['last_published']);
-      $my_css = $row['css_script'];
+			$row['pid'] = $pid;
+			$my_css = $row['css_script'];
       $links = $row['link_bar_links'];
       print '
 {
@@ -320,7 +321,8 @@ function exhibition_config_json_data($pid){
       "nav_location":'.json_encode($row['nav_location']).',
       "nav_type":'.json_encode($row['nav_type']).',
       "custom_url":'.json_encode($row['custom_url']).',
-      "links":[';
+      "xslt":'.json_encode($row['xslt']).',
+			"links":[';
       for($currLinkNum = 0; $currLinkNum < count($links['names']); $currLinkNum++){
         print '
         { "name":'.json_encode($links['names'][$currLinkNum]).',"link":'.json_encode($links['urls'][$currLinkNum]).'}';
@@ -409,7 +411,8 @@ function exhibition_config_form_validate($form, &$form_state){
       }
       */
     }
-		if (isset($_FILES['files']['name']['xslt_upload'])){
+
+    if (isset($_FILES['files']['name']['xslt_upload'])){
        $dir = dirname(__FILE__) . '/files/';
        $dir = drupal_tempnam($dir,'');
        $name = $_FILES['files']['name']['xslt_upload'];
@@ -418,9 +421,24 @@ function exhibition_config_form_validate($form, &$form_state){
        if (!empty($name)){
          $file = file_save_upload('xslt_upload', array('file_validate_extensions' => array('xsl xslt')), 'public://');
          if($file){
-           $form_state['values']['xslt_upload'] = $file;
+	   $form_state['values']['xslt_upload'] = $file;
          }else{
            form_set_error('XSLT for the exhibition',t('Could not save uploaded XSLT file. Only XSL and XSLT files are accepted'));
+         }
+       }
+    }
+    if (isset($_FILES['files']['name']['logo_upload'])){
+       $dir = dirname(__FILE__) . '/files/';
+       $dir = drupal_tempnam($dir,'');
+       $name = $_FILES['files']['name']['logo_upload'];
+       $size = $_FILES['files']['size']['logo_upload'];
+       $type = $_FILES['files']['type']['logo_upload'];
+       if (!empty($name)){
+         $file = file_save_upload('logo_upload', array('file_validate_is_image' => array(),'file_validate_extensions' => array('png gif jpg jpeg tiff'),), 'public://');
+         if($file){
+            $form_state['values']['logo_upload'] = $file;
+         }else{
+           form_set_error('Logo for the exhibition',t("Could not save upload: $name"));
          }
        }
     }
@@ -435,29 +453,21 @@ function exhibition_config_form_submit($form, &$form_state) {
       drupal_set_message(t('Your user is not allowed to change the configuration of this object.  To change the configuration, the object must be viewable in Fedora by your user, and you must either be the owner of the object or have the "Exhibition Configuration Administrator" role.'), 'error');
       return;
     }
-    if (isset($_FILES['files']['name']['logo_upload'])){
-       $dir = dirname(__FILE__) . '/files/';
-       $dir = drupal_tempnam($dir,'');
-       $name = $_FILES['files']['name']['logo_upload'];
-       $size = $_FILES['files']['size']['logo_upload'];
-       $type = $_FILES['files']['type']['logo_upload'];
-       if (!empty($name)){
-         $file = file_save_upload('logo_upload', array(), 'public://');
-         if($file){
-            $form['top']['logo']['#value'] = file_create_url($file->destination);
-           $file->status = FILE_STATUS_PERMANENT;
-           file_save($file);
-         }else{
-           drupal_set_message(t("Could not save upload: $name"));
-         }
-       }
+    if (!empty($form_state['values']['logo_upload'])){
+     $form['top']['logo']['#value'] = file_create_url($form_state['values']['logo_upload']->destination);
+     $form_state['values']['logo_upload']->status = FILE_STATUS_PERMANENT;
+     file_save($form_state['values']['logo_upload']);
     }
-		if (!empty($form_state['values']['xslt_upload'])){
+
+    if (!empty($form_state['values']['xslt_upload'])){
       $xslt_to_use = $form_state['values']['xslt_upload'];
-			$form['xslt']['existing_xslt']['#value'] = str_replace('https://','http://',file_create_url($xslt_to_use->destination));
+      $form['xslt']['existing_xslt']['#value'] = drupal_realpath('public://') . '/' . $xslt_to_use->filename;
       $xslt_to_use->status = FILE_STATUS_PERMANENT;
       file_save($xslt_to_use);
-		}	
+    }	
+    if (($form['xslt']['existing_xslt']['#value'] == 'none') || ($form['xslt']['existing_xslt']['#value'] == 'direct')) {
+     $form['xslt']['existing_xslt']['#value'] = '';
+    }	
     $my_css = array();
     foreach($form['colors'] as $ffname => $formField){
       if (startsWith($ffname, 'color-') || startsWith($ffname,'font')){
@@ -543,8 +553,8 @@ function exhibition_config_form_submit($form, &$form_state) {
         'custom_url' => $form['custom_url']['#value'],
         'link_bar_links' => $fullLinkSet,
         'use_parent_config' => empty($form['use_parent_config']['#value'])?'0':$form['use_parent_config']['#value'],
-				'xslt' => $form['xslt']['existing_xslt']['#value'],
-		  );
+	'xslt' => $form['xslt']['existing_xslt']['#value'],
+      );
      $fields = 
       array(
         'pid', 
@@ -698,8 +708,8 @@ function exhibition_config_form($form, $form_state){
   $object = _exhibition_config_get_object($pid);
   $new_row = exhibition_config_get_config_data($pid);
   $row = array();
-	if (!empty($new_row)) $row = unserialize($new_row['last_edited']);
-	drupal_add_library('system', 'ui.resizable');
+  if (!empty($new_row)) $row = unserialize($new_row['last_edited']);
+  drupal_add_library('system', 'ui.resizable');
   drupal_add_library('system','ui.dialog');
   if (empty($row)) {
     $row = array();
@@ -719,18 +729,18 @@ function exhibition_config_form($form, $form_state){
     $row['logo_height'] = '';
     $row['nav_location'] = '';
     $row['nav_type'] = '';
-		$row['xslt'] = '';
+    $row['xslt'] = '';
   }
   $my_css = $row['css_script'];
   $links = $row['link_bar_links'];
-	$row['is_published'] = FALSE; // this exhibition has been published at all
-	$row['last_published'] = FALSE; // the last changes made to this exhibition have been published
-	if ((isset($new_row['last_published'])) && ($new_row['last_published'] != '')) {
-	  $row['is_published'] = TRUE;
-	  if ($new_row['last_published'] == $new_row['last_edited']){
-	    $row['last_published'] = TRUE;
-		}
-	}	
+  $row['is_published'] = FALSE; // this exhibition has been published at all
+  $row['last_published'] = FALSE; // the last changes made to this exhibition have been published
+  if ((isset($new_row['last_published'])) && ($new_row['last_published'] != '')) {
+    $row['is_published'] = TRUE;
+    if ($new_row['last_published'] == $new_row['last_edited']){
+      $row['last_published'] = TRUE;
+    }
+  }	
   $full = '
 <a href="javascript:void(0);" onclick="togglePreviewLocation();" title="Moves the sample between the top and side of the page.  You can also move your mouse between the sections and drag to change the sizes when the sample is on the right.">Toggle Sample Location</a><br/>
 <a href="javascript:void(0);" onclick="togglePreviewEditLinks();" title="Turns off the \'Edit\' quick links to get a better view of the sample, or turns them back on to quickly jump to a section to edit">Toggle Placeholder Text and Links</a><br/>';
@@ -1587,16 +1597,16 @@ for(var i=0, len=els.length; i<len; ++i){
     '#default_value' => $row['is_published'],
     '#description' => t('Has this exhibition been published at all or with the latest changes?'),
   );
-	$form['publish_status'] = array(
-	  '#type' => 'hidden',
-		'#title' => t('Publish the changes'),
-		'#default_value' => '0',
-		'#attributes' => array("id" => "publish-exhibition"), 
-		'#description' => t('This must be true to push the last edited state to last published state'),
-	);
-    $form['visibility_link'] = array(
-      '#markup' => t('<p> <a target="_blank" href="'.base_path().'exhibition_config/visibility/'.$pid.'">Configure Visibility</a> (which concepts and resources are shown)</p>'),
-    );
+  $form['publish_status'] = array(
+    '#type' => 'hidden',
+    '#title' => t('Publish the changes'),
+    '#default_value' => '0',
+    '#attributes' => array("id" => "publish-exhibition"), 
+    '#description' => t('This must be true to push the last edited state to last published state'),
+  );
+  $form['visibility_link'] = array(
+   '#markup' => t('<p> <a target="_blank" href="'.base_path().'exhibition_config/visibility/'.$pid.'">Configure Visibility</a> (which concepts and resources are shown)</p>'),
+  );
   $customUrl = '';
   if ($row['is_published']) {
     $customUrl = $row['custom_url'];
@@ -1624,6 +1634,7 @@ for(var i=0, len=els.length; i<len; ++i){
   $form['top']['logo_upload'] = array(
     '#type' => 'file',
     '#title' => t('New Logo Upload'),
+    '#attributes' => array('accept' => 'image/*'),
   );
   $form['top']['logo'] = array(
     '#type' => 'textfield',
@@ -1734,11 +1745,11 @@ for(var i=0, len=els.length; i<len; ++i){
     '#collapsed' => TRUE, 
   );
   $form['xslt'] = array(
-	  '#type' => 'fieldset',
-		'#title' => t('XSLT'),
-		'#collapsible' => TRUE,
-		'#collapsed' => TRUE,
-	);	
+    '#type' => 'fieldset',
+    '#title' => t('XSLT'),
+    '#collapsible' => TRUE,
+    '#collapsed' => TRUE,
+  );	
   
   $form['css'] = array(
     '#type' => 'hidden',
@@ -1992,45 +2003,45 @@ Color Set:
   $directory_to_list_for_xsl = DRUPAL_ROOT.'/'.drupal_get_path('module','sidora').'/XSL';
   $xsl_filenames = array_diff(scandir($directory_to_list_for_xsl), array('..', '.', '.htaccess'));
   $custom_xslt_added = FALSE;
-	$xsl_names_dd['none'] = '';
-	$xsl_names_dd['direct'] = 'None - Direct metadata to browser';
-  $directory_to_list_for_xsl = str_replace('https://','http://',$GLOBALS['base_url'].'/'.drupal_get_path('module','sidora').'/XSL/');
-	foreach($xsl_filenames as $name){ 
+  $xsl_names_dd['none'] = '';
+  $xsl_names_dd['direct'] = 'None - Direct metadata to browser';
+  $directory_to_list_for_xsl = DRUPAL_ROOT.'/'.drupal_get_path('module','sidora').'/XSL/';
+  foreach($xsl_filenames as $name){ 
     if (strpos(strtolower($name), ".xsl", strlen(strtolower($name)) - strlen(".xsl")) !== FALSE){
       $xsl_names_dd[$directory_to_list_for_xsl.$name] = $name; 
      	if ($row['xslt'] == $name){
-        $custom_xslt_added = TRUE;
-			}	
+          $custom_xslt_added = TRUE;
+	}	
     }
   }
-	if ((isset($row['xslt'])) && (!empty($row['xslt'])) && ($row['xslt'] != 'none') && ($row['xslt'] != 'direct') && !($custom_xslt_added)){
-    $custom_xslt = str_replace('https://','http://',$row['xslt']);
-		$xsl_names_dd[$custom_xslt] = basename($custom_xslt);
-	}	
-	$form['xslt']['existing_xslt'] = array(
-	  '#type' => 'select',
-		'#title' => 'Select from existing:',
-		'#options' => $xsl_names_dd,
-		'#default_value' => isset($row['xslt'])?$row['xslt']:'none',
-	);
-	$form['xslt']['xslt_upload'] = array(
+  if ((isset($row['xslt'])) && (!empty($row['xslt'])) && ($row['xslt'] != 'none') && ($row['xslt'] != 'direct') && !($custom_xslt_added)){
+    $custom_xslt = $row['xslt'];
+    $xsl_names_dd[$custom_xslt] = basename($custom_xslt);
+  }	
+  $form['xslt']['existing_xslt'] = array(
+    '#type' => 'select',
+    '#title' => 'Select from existing:',
+    '#options' => $xsl_names_dd,
+    '#default_value' => isset($row['xslt'])?$row['xslt']:'none',
+  );
+  $form['xslt']['xslt_upload'] = array(
     '#type' => 'file',
     '#title' => t('or Upload new XSLT:'),
-		'#attributes' => array('accept' => '.xsl,.xslt'),
+    '#attributes' => array('accept' => '.xsl,.xslt'),
   );
   $form['submit'] = array(
     '#type' => 'submit',
     '#value' => 'Save',
     '#attributes' => array("id" => "confirm-save"),
   );
-	$form['publish'] = array(
-		  '#type' => 'button',
-			'#value' => 'Publish',
-			'#attributes' => array('id' => 'confirm-publish','class' => array('element-invisible')),
-	);	
-	if (!($row['last_published']) || !($row['is_published'])){
+  $form['publish'] = array(
+    '#type' => 'button',
+    '#value' => 'Publish',
+    '#attributes' => array('id' => 'confirm-publish','class' => array('element-invisible')),
+  );	
+  if (!($row['last_published']) || !($row['is_published'])){
     unset($form['publish']['#attributes']['class']);
-	}
+  }
   return $form;
 }
 function theme_exhibition_config_form($form){
