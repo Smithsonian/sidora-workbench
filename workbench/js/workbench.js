@@ -52,6 +52,16 @@ window.sidora.display = {
   "MOVE_CONCEPT_TITLE": Drupal.t("Move concept"),
   "MOVE_FOLLOWING_CONCEPTS_TO" : Drupal.t("Move the following concepts to "),
   "CONCEPTS_EXISTED_AT_TARGET_WILL_REMOVE_FROM_SOURCE" : Drupal.t("The concepts listed below existed on the target already and will not be overwritten. They will be removed from the concepts that they were dragged from:"),
+  "CREATE_A_CONCEPT_AS_CHILD_OF_HIGHLIGHT" : Drupal.t("Create a new concept as a child of the highlighted concept."),
+  "CREATE_CONCEPT_TITLE" : Drupal.t("Create Concept"),
+  "MANAGE_CONCEPT_TITLE" : Drupal.t("Manage Concept"), 
+  "UPDATE_CONCEPT_INFORMATION" : Drupal.t("Update Concept Information"),
+
+  //Button HTML
+  "BUTTON_HTML_ADD_A_NEW_CONCEPT" : Drupal.t("&nbsp;Add&nbsp;a&nbsp;new&nbsp;concept"),
+  "BUTTON_HTML_CONFIRM" : Drupal.t("Confirm");
+  "BUTTON_HTML_CANCEL" : Drupal.t("Cancel");
+  
 
   //Generic
   "TARGET_IS_LOCKED_GENERIC" : Drupal.t("The target is locked by another user."),
@@ -65,6 +75,18 @@ window.sidora.display = {
   "SECONDS_ESTIMATED_REMAINING" : Drupal.t("s estimated remaining"),
   "UNKNOWN_ACTION" : Drupal.t('Unknown action'),
   "MOVING" : Drupal.t("Moving "),
+  "COPYING" : Drupal.t("Copying "),
+  "FROM" : Drupal.t(" from "),
+  "TO" : Drupal.t(" to "),
+  "EDIT_SHARING_PERMISSIONS_TITLE" : Drupal.t("Edit Sharing Permissions"),
+
+  //Tree refresh issues
+  "TREE_ISSUE_NEVER_CHECKED": Drupal.t("Never attempted validity check"),
+  "TREE_ISSUE_NO_TREE_EXIST": Drupal.t("No tree indicates a user problem"),
+  "TREE_ISSUE_IS_NOT_STRING": Drupal.t("Tree html was not a string"),
+  "TREE_ISSUE_OCIO_INTERCEPT": Drupal.t("OCIO intercepted tree html issue."),
+  "TREE_ISSUE_BAD_FORMAT": Drupal.t("Did not receive tree in proper tree format."),
+
 
   // Only ever put to console, doesn't actually display on browser screen
   "CONSOLE_OUTPUT_BAD_PERMISSIONS_DATA_REDIRECT" : Drupal.t("Bad permissions data, likely a user setup issue, redirecting to user profile"),
@@ -72,7 +94,13 @@ window.sidora.display = {
   "CONSOLE_OUTPUT_BAD_USER_DATA_REDIRECT" : Drupal.t("Bad user data, redirecting to user profile"),
   "CONSOLE_OUTPUT_BAD_BASIC_USER_REDIRECT" : Drupal.t("Problem getting basic user info, redirecting to the user profile"),
   "CONSOLE_OUTPUT_DROPPED_ON_EXISTING_PARENT" : Drupal.t("dropped on existing parent, ignoring request"),
-  "a" : "B"
+  "CONSOLE_OUTPUT_ERROR_ON_CREATE_MENU" : Drupal.t("error on create menu"),
+  "CONSOLE_OUTPUT_NEW_PID" : Drupal.t("new pid:"),
+  "CONSOLE_OUTPUT_REMOVE_BAD_OBJECT" : Drupal.t("Removal from UI of invalid or malformed object with pid: "),
+  "CONSOLE_OUTPUT_TOO_MANY_TREE_FAILURES_SO_QUITTING" : Drupal.t("Too many tree failures without a success. Stopping retries."),
+  "CONSOLE_OUTPUT_UNKNOWN_TREE_ISSUE" : Drupal.t("Unknown tree issue. Error code:surt1"),
+
+  "SIDORA_VERSION" : "0.5.2"
 };
 /*
  * Retrieves the concept pid from the url
@@ -1508,13 +1536,13 @@ sidora.resources.performCopyOrMove = function(copyOrMove, toLocationId, resource
       queueAction = 'moveResource';
     }else{
       pidListForRequest = [droppedOn,droppedPid];
-      userFriendlyName = "Copying ";
+      userFriendlyName = sidora.display.COPYING;
       onSuccess = onSuccessfulCopy;
       queueAction = 'copyResource';
     }
     userFriendlyName += "<em>"+sidora.util.FriendlyNameDirect(droppedPid)+"</em>";
-    userFriendlyName += " from <em>"+sidora.util.FriendlyNameDirect(fromParent)+"</em>";
-    userFriendlyName += " to <em>"+sidora.util.FriendlyNameDirect(droppedOn)+"</em>";
+    userFriendlyName += sidora.display.FROM + "<em>"+sidora.util.FriendlyNameDirect(fromParent)+"</em>";
+    userFriendlyName += sidora.display.TO + "<em>"+sidora.util.FriendlyNameDirect(droppedOn)+"</em>";
     var requestUrl = Drupal.settings.basePath+'sidora/ajax_parts/'+action+'/'+droppedOn+'/'+droppedPid;
     sidora.queue.Request(userFriendlyName, requestUrl, onSuccess, null, pidListForRequest,queueAction,i+' of '+pids.length);
     console.log(userFriendlyName);
@@ -1531,12 +1559,12 @@ sidora.ontology.CreateConceptMenu = function(){
     dataType: "json",
     url: ontologyUrl,
     error: function(){
-      console.log("error on create menu"); //OCIO message will also end up here since not json
+      console.log(sidora.display.CONSOLE_OUTPUT_ERROR_ON_CREATE_MENU); //OCIO message will also end up here since not json
     },
     success: function (json_obj){
       window.sidora.ontology.tree = json_obj;
       //jQuery("#concept-file-menu").append("<li id='sharing-permissions'><a href='#' onclick='return false;'>Sharing Permissions</a></li>");// BBB
-      jQuery("#concept-file-menu").append("<li id='concept-create'><a href='#' onclick='return false;'><input type='image' src='"+Drupal.settings.basePath+"sites/all/modules/islandora_xml_forms-7.x-1.7/elements/images/add.png' title='Create a new concept as a child of the highlighted concept.'>&nbsp;Add&nbsp;a&nbsp;new&nbsp;concept</a><ul>"+window.sidora.ontology._createSubmenu(window.sidora.ontology.tree)+"</ul></li>");
+      jQuery("#concept-file-menu").append("<li id='concept-create'><a href='#' onclick='return false;'><input type='image' src='"+Drupal.settings.basePath+"sites/all/modules/islandora_xml_forms-7.x-1.7/elements/images/add.png' title='" + sidora.display.CREATE_A_CONCEPT_AS_CHILD_OF_HIGHLIGHT + "'>" + sidora.display.BUTTON_HTML_ADD_A_NEW_CONCEPT + "</a><ul>"+window.sidora.ontology._createSubmenu(window.sidora.ontology.tree)+"</ul></li>");
       resetMenu("concept-menu");
       jQuery("#concept-create").find("a").not(".ui-state-disabled").bind("click.createConcept",function(){
         var model = jQuery(this).attr("model");
@@ -1551,7 +1579,7 @@ sidora.ontology.CreateConceptMenu = function(){
           Shadowbox.open({
             content:    url,
             player:     "iframe",
-            title:      "Create Concept",
+            title:      sidora.display.CREATE_CONCEPT_TITLE,
             options: {
               onFinish:  function(){}
             }
@@ -1563,7 +1591,7 @@ sidora.ontology.CreateConceptMenu = function(){
         Shadowbox.open({
           content:    Drupal.settings.basePath+"sidora/sharing_permissions",
           player:     "iframe",
-          title:      "Edit Sharing Permissions",
+          title:      sidora.display.EDIT_SHARING_PERMISSIONS_TITLE,
           options: {
             onFinish:  function(){}
           }
@@ -1674,7 +1702,7 @@ sidora.CloseIFrame = function(newlyCreatedConceptId, typeOfClosure){
   if (typeOfClosure == 'simple close'){
     return;
   }
-  console.log("new pid:"+newlyCreatedConceptId);
+  console.log(sidora.display.CONSOLE_OUTPUT_NEW_PID+newlyCreatedConceptId);
   if (typeOfClosure == 'concept create'){
   }
   if (typeOfClosure == 'edit metadata'){
@@ -1983,7 +2011,7 @@ sidora.util.checkUIForInvalidPids = function(openingPid, childPidsCsv) {
     if (pidsValidationInfo.invalid.length > 0) {
       for (var pii = 0; pii < pidsValidationInfo.invalid.length; pii++) {
         var currInvalidPid = pidsValidationInfo.invalid[pii];
-        console.log("Removal from UI of invalid or malformed object with pid: "+currInvalidPid);
+        console.log(sidora.display.CONSOLE_OUTPUT_REMOVE_BAD_OBJECT+currInvalidPid);
         //Get all the node ids for this pid
         var nodeIds = [];
         jQuery("[pid='" + currInvalidPid + "']").closest("li").each(function(){ nodeIds.push(this.id); });
@@ -2102,7 +2130,7 @@ sidora.util.RefreshTreeHelper = function(secondsOfWait, pid, onlyRefreshIfNew) {
         if (suggestedAction.suggestRetry){
           sidora.util.refreshTreeFailuresInARow++;
           if (sidora.util.refreshTreeFailuresInARow > 10) {
-            console.log("Too many tree failures without a success. Stopping retries.");
+            console.log(sidora.display.CONSOLE_OUTPUT_TOO_MANY_TREE_FAILURES_SO_QUITTING);
             return;
           } else {
             console.log("Initiated retry:"+sidora.util.refreshTreeFailuresInARow);
@@ -2111,7 +2139,7 @@ sidora.util.RefreshTreeHelper = function(secondsOfWait, pid, onlyRefreshIfNew) {
           }
         }
         if (suggestedAction.suggestIgnore) { return; }
-        if (!suggestedAction.valid) { console.log("Unknown tree issue. Error code:surt1"); return; }
+        if (!suggestedAction.valid) { console.log(sidora.display.CONSOLE_OUTPUT_UNKNOWN_TREE_ISSUE); return; }
         /*
         */
         sidora.util.treeAddition(tree_html);//, null, "changes");
@@ -2144,14 +2172,14 @@ sidora.util.RefreshTree      = function(secondsOfWait, pid){ sidora.util.Refresh
 sidora.util.RefreshTreeSuggestAction = function(tree_html, outputProblemToConsole){
   var toReturn = {
     "valid":false,
-    "description":"Never attempted validity check",
+    "description": sidora.display.TREE_ISSUE_NEVER_CHECKED,
     "suggestRedirect":false,
     "suggestRetry":false,
     "suggestIgnore":true
   };
   var failures = 0;
   if (tree_html == '') {
-    toReturn.description = "No tree indicates a user problem";
+    toReturn.description = sidora.display.TREE_ISSUE_NO_TREE_EXIST;
     toReturn.suggestRetry = false;
     toReturn.suggestRedirect = true;
     toReturn.suggestIgnore = false;
@@ -2159,7 +2187,7 @@ sidora.util.RefreshTreeSuggestAction = function(tree_html, outputProblemToConsol
   }
   if (typeof(tree_html) != "string"){
     tree_html = ""
-    toReturn.description = "Tree html was not a string";
+    toReturn.description = sidora.display.TREE_ISSUE_IS_NOT_STRING;
     toReturn.suggestRetry = false;
     toReturn.suggestRedirect = true;
     toReturn.suggestIgnore = false;
@@ -2170,14 +2198,14 @@ sidora.util.RefreshTreeSuggestAction = function(tree_html, outputProblemToConsol
   //Should have at least one <ul> and one <li>
   var tree_html_lowercase = tree_html.toLowerCase();
   if (tree_html_lowercase.indexOf("contact the ocio help desk") > -1){
-    toReturn.description = "OCIO intercepted tree html issue.";
+    toReturn.description = sidora.display.TREE_ISSUE_OCIO_INTERCEPT; 
     toReturn.suggestRetry = true;
     toReturn.suggestRedirect = false;
     toReturn.suggestIgnore = false;
     failures++;
   }
   if (tree_html_lowercase.indexOf("<ul>") == -1 || tree_html_lowercase.indexOf("<li>") == -1){
-    toReturn.description = "Did not receive tree in proper tree format.";
+    toReturn.description = sidora.display.TREE_ISSUE_BAD_FORMAT; 
     toReturn.suggestRetry = false;
     toReturn.suggestRedirect = false;
     toReturn.suggestIgnore = true;
@@ -2250,7 +2278,7 @@ sidora.util.refreshConceptTreeUIDirect = function(pid, tree_html){
 sidora.concept.Manage = function(){
   var conceptPid = this.GetPid();
   var conceptName = this.GetName();
-  sidora.manage.Open(conceptPid, conceptName, "Manage Concept", "Update Concept Information");
+  sidora.manage.Open(conceptPid, conceptName, sidora.display.MANAGE_CONCEPT_TITLE, sidora.display.UPDATE_CONCEPT_INFORMATION);
 }
 /*
  * Generic confirming something from user.
@@ -2260,8 +2288,8 @@ sidora.util.Confirm = function(title, questionText, onConfirmation, onCancel, co
   if (typeof(onConfirmation) != 'function') onConfirmation = function(){};
   if (typeof(onCancel) != 'function') onCancel = function(){};
   if (typeof(onAnyClose) != 'function') onAnyClose = function(){};
-  if (typeof(confirmButtonText) != 'string') confirmButtonText = "Confirm";
-  if (typeof(cancelButtonText) != 'string') cancelButtonText = "Cancel";
+  if (typeof(confirmButtonText) != 'string') confirmButtonText = sidora.display.BUTTON_HTML_CONFIRM;
+  if (typeof(cancelButtonText) != 'string') cancelButtonText = sidora.display.BUTTON_HTML_CANCEL;
   jQuery('#userConfirm').remove();
   jQuery("body").append("<div id='userConfirm' style='display:none;' title='"+title+"'><div>"+questionText+"</div></div>");
   var dialogConfig = {
