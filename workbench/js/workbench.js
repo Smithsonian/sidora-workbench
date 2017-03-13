@@ -43,12 +43,25 @@ window.sidora.display = {
   //Resource specific
   "LINK_TO_RESOURCE_TITLE" : Drupal.t("Create links to resource"),
   "RESOURCES_EXISTED_AT_TARGET_WILL_REMOVE_FROM_SOURCE" : Drupal.t("The resources listed below existed on the target already and will not be overwritten. They will be removed from the concepts that they were dragged from:"),
-  "CREATE_LINKS_OF_RESOURCES_TO_DESTINATION" : Drupal.t("Create links of following resources to "),
+  "CREATE_LINKS_OF_RESOURCES_TO_DESTINATION" : Drupal.t("Create links of following resources inside of the concept "),
   "MOVE_RESOURCES_TO_DESTINATION" : Drupal.t("Move the following resources to "),
   "MOVE_RESOURCES_TITLE": Drupal.t("Move Resources"),
+  "RESOURCES" : Drupal.t(' resources'),
+  "RESOURCES_DD_ALL" : Drupal.t('All'),
+  "RESOURCES_DD_IMAGE" : Drupal.t("Image"),
+  "RESOURCES_DD_DIGITIZED_TEXT" : Drupal.t("Digitized Text"),
+  "RESOURCES_DD_TABULAR_DATASET" : Drupal.t('Tabular Dataset'),
+  "RESOURCES_DD_AUDIO" : Drupal.t('Audio'),
+  "RESOURCES_DD_VIDEO" : Drupal.t('Video'),
+  "RESOURCES_DD_SORT_TITLE" : Drupal.t('  Sort: '),
+  "RESOURCES_DD_TITLE" : Drupal.t('Title'),
+  "RESOURCES_DD_MODEL" : Drupal.t('Model'),
+  "RESOURCES_DD_CREATED" : Drupal.t('Created'),
+  "CREATE_NEW_RESOURCE_TOOLTIP" : Drupal.t("Create a new resource as a child of the highlighted concept."),
+  "CREATE_RESOURCE_TITLE" : Drupal.t("Create Resource"),
 
   //Concept specific
-  "CREATE_LINKS_OF_FOLLOWING_TO" : Drupal.t("Create links of the following concepts to "),
+  "CREATE_LINKS_OF_FOLLOWING_TO" : Drupal.t("Create links of the following concepts inside of the concept "),
   "MOVE_CONCEPT_TITLE": Drupal.t("Move concept"),
   "MOVE_FOLLOWING_CONCEPTS_TO" : Drupal.t("Move the following concepts to "),
   "CONCEPTS_EXISTED_AT_TARGET_WILL_REMOVE_FROM_SOURCE" : Drupal.t("The concepts listed below existed on the target already and will not be overwritten. They will be removed from the concepts that they were dragged from:"),
@@ -56,14 +69,19 @@ window.sidora.display = {
   "CREATE_CONCEPT_TITLE" : Drupal.t("Create Concept"),
   "MANAGE_CONCEPT_TITLE" : Drupal.t("Manage Concept"), 
   "UPDATE_CONCEPT_INFORMATION" : Drupal.t("Update Concept Information"),
+  "CREATE_LINK_TO_CONCEPT" : Drupal.t('Create Link To Concept'),
+  "DELETE_CONCEPT_TITLE" : Drupal.t("Delete Concept"),
 
   //Button HTML
   "BUTTON_HTML_ADD_A_NEW_CONCEPT" : Drupal.t("&nbsp;Add&nbsp;a&nbsp;new&nbsp;concept"),
-  "BUTTON_HTML_CONFIRM" : Drupal.t("Confirm");
-  "BUTTON_HTML_CANCEL" : Drupal.t("Cancel");
+  "BUTTON_HTML_CONFIRM" : Drupal.t("Confirm"),
+  "BUTTON_HTML_CANCEL" : Drupal.t("Cancel"),
   
 
   //Generic
+  "EDIT_METADATA_TITLE" : Drupal.t("Edit Metadata"),
+  "ASCENDING" : Drupal.t('Ascending'),
+  "DESCENDING" : Drupal.t('Descending'),
   "TARGET_IS_LOCKED_GENERIC" : Drupal.t("The target is locked by another user."),
   "LINK_ITEM_GENERIC_TITLE" : Drupal.t("Link item"),
   "ALREADY_EXISTS_ON_TARGET_WILL_NOT_CREATE_LINK" : Drupal.t("Already exists on target, will not create link"),
@@ -79,6 +97,8 @@ window.sidora.display = {
   "FROM" : Drupal.t(" from "),
   "TO" : Drupal.t(" to "),
   "EDIT_SHARING_PERMISSIONS_TITLE" : Drupal.t("Edit Sharing Permissions"),
+  "GENERIC_X_OF_Y" : Drupal.t(' of '),
+  "VALIDATING_YOUR_USER_WAITING" : Drupal.t("Validating your user..."),
 
   //Tree refresh issues
   "TREE_ISSUE_NEVER_CHECKED": Drupal.t("Never attempted validity check"),
@@ -86,6 +106,10 @@ window.sidora.display = {
   "TREE_ISSUE_IS_NOT_STRING": Drupal.t("Tree html was not a string"),
   "TREE_ISSUE_OCIO_INTERCEPT": Drupal.t("OCIO intercepted tree html issue."),
   "TREE_ISSUE_BAD_FORMAT": Drupal.t("Did not receive tree in proper tree format."),
+
+
+  // Permissions
+  "PROJECT_SPACE_PERMISSION_TITLE" : Drupal.t("Project Space Permission"),
 
 
   // Only ever put to console, doesn't actually display on browser screen
@@ -186,7 +210,7 @@ sidora.concept.LoadContentHelp.Resources.TableLoad = function(conceptOfInterest)
  */
 sidora.concept.LoadContentHelp.Resources.TableActionsSetup = function(){
   //Put a more compact pager in place
-  jQuery("#res_table_wrapper").before('<div id="sidora-resources-button-row" style=""><div id="sidora-resources-button-first" class="sidora-resources-icon" style="    background-position: -306px -44px;"></div><div id="sidora-resources-button-prev" class="sidora-resources-icon" style="    background-position: -231px -4px;"></div><div id="sidora-resources-pager" style="display:inline-block;vertical-align: top;padding-top: 7px;"><div id="sidora-resources-page-text" style="display:inline-block">Page</div><input id="sidora-resources-page-number" type="text" size="2" class="form-text"/><div id="sidora-resources-page-count" style="display:inline-block">of </div></div><div id="sidora-resources-button-next" class="sidora-resources-icon" style="    background-position: -270px -4px;"></div><div id="sidora-resources-button-last" class="sidora-resources-icon" style="    background-position: -346px -44px;"></div></div>');
+  jQuery("#res_table_wrapper").before('<div id="sidora-resources-button-row" style=""><div id="sidora-resources-button-first" class="sidora-resources-icon" style="background-position: -306px -44px;"></div><div id="sidora-resources-button-prev" class="sidora-resources-icon" style="background-position: -231px -4px;"></div><div id="sidora-resources-pager" style="display:inline-block;vertical-align: top;padding-top: 7px;"><div id="sidora-resources-page-text" style="display:inline-block">Page</div><input id="sidora-resources-page-number" type="text" size="2" class="form-text"/><div id="sidora-resources-page-count" style="display:inline-block"></div></div><div id="sidora-resources-button-next" class="sidora-resources-icon" style="background-position: -270px -4px;"></div><div id="sidora-resources-button-last" class="sidora-resources-icon" style="background-position: -346px -44px;"></div></div>');
   jQuery("#sidora-resources-button-first").click(function(){ jQuery(".paginate_button.first").click();  });
   jQuery("#sidora-resources-button-prev").click(function(){ jQuery(".paginate_button.previous").click();  });
   jQuery("#sidora-resources-button-next").click(function(){ jQuery(".paginate_button.next").click();  });
@@ -203,7 +227,7 @@ sidora.concept.LoadContentHelp.Resources.TableActionsSetup = function(){
   if (info.page > 0) jQuery("#sidora-resources-button-first").removeClass("disabled");
   if (info.page > 0) jQuery("#sidora-resources-button-prev").removeClass("disabled");
     jQuery('#sidora-resources-page-number').val((1+info.page));
-    jQuery('#sidora-resources-page-count').html(' of '+info.pages );
+    jQuery('#sidora-resources-page-count').html(htmlEntities(sidora.display.GENERIC_X_OF_Y) + info.pages );
     if (sidora.resources.individualPanel.resourceOfInterest){
       jQuery(this).find(jq(sidora.resources.individualPanel.resourceOfInterest.pid)).trigger("click");
       if (sidora_util.readCookie('Drupal.selectResource') == '1'){
@@ -244,7 +268,7 @@ sidora.concept.LoadContentHelp.Resources.TableActionsSetup = function(){
           'obj' : highlightedPids, 
           'nodes' : [{ id : true, text: highlightedPids.length+' resources'}] 
         }, 
-        '<div id="jstree-dnd" class="jstree-default"><i class="jstree-icon jstree-er"></i>' + highlightedPids.length+' resources' + '<span class="fakejstree-copy" style="'+displayPlusToIndicateCopy+'">+</span></div>'
+        '<div id="jstree-dnd" class="jstree-default"><i class="jstree-icon jstree-er"></i>' + highlightedPids.length + htmlEntities(sidora.display.RESOURCES) + '<span class="fakejstree-copy" style="'+displayPlusToIndicateCopy+'">+</span></div>'
       );
        
     }
@@ -257,12 +281,12 @@ sidora.concept.LoadContentHelp.Resources.TableActionsSetup = function(){
       '<div id="jstree-dnd" class="jstree-default"><i class="jstree-icon jstree-er"></i>' + jQuery(this).text() + '<span class="fakejstree-copy" style="'+displayPlusToIndicateCopy+'">+</span></div>'
     );
   });
-  jQuery('#res_table_filter').after('<select id=\"sidora-resource-type-dropdown\" class="form-select" name=\"search\"><option value=\"\">All</option><option value=\"images\">Image</option><option value=\"pdf\">Digitized Text</option><option value=\"csv\">Tabular Dataset</option><option value=\"audio\">Audio</option><option value=\"video\">Video</option></select><input type="text" name="titleFilter" id="titleFilter" style="border: solid 1px lightblue;">');
+  jQuery('#res_table_filter').after('<select id=\"sidora-resource-type-dropdown\" class="form-select" name=\"search\"><option value=\"\">'+htmlEntities(sidora.display.RESOURCES_DD_ALL)+'</option><option value=\"images\">'+htmlEntities(sidora.display.RESOURCES_DD_IMAGE) + '</option><option value=\"pdf\">'+htmlEntities(sidora.display.RESOURCES_DD_DIGITIZED_TEXT) +'</option><option value=\"csv\">'+htmlEntities(sidora.display.RESOURCES_DD_TABULAR_DATASET)+'</option><option value=\"audio\">'+htmlEntities(sidora.display.RESOURCES_DD_AUDIO)+'</option><option value=\"video\">'+htmlEntities(sidora.display.RESOURCES_DD_VIDO)+'</option></select><input type="text" name="titleFilter" id="titleFilter" style="border: solid 1px lightblue;">');
   if (sidora_util.readCookie('Drupal.dtFilter') != ''){
     jQuery("#sidora-resource-type-dropdown").val(sidora_util.readCookie('Drupal.dtFilter'));
   }   
-  jQuery('#titleFilter').after(' <div id="sidora-resource-sort">  Sort: '+'<select id=\"sidora-resource-sort-dropdown\" class="form-select" name=\"sort\"><option value=\"title\">Title</option><option value=\"model\">Model</option><option value=\"created\" selected=\"selected\">Created</option></select></div>');
-  jQuery('#sidora-resource-sort-dropdown').after('  <select id=\"sidora-resource-sortorder-dropdown\" class="form-select" name=\"sortorder\"><option value=\"ASC\">Ascending</option><option value=\"DESC\" selected=\"selected\">Descending</option></select>');
+  jQuery('#titleFilter').after(' <div id="sidora-resource-sort">'+htmlEntities(sidora.display.RESOURCES_DD_SORT_TITLE)+'<select id=\"sidora-resource-sort-dropdown\" class="form-select" name=\"sort\"><option value=\"title\">' + htmlEntities(sidora.display.RESOURCES_DD_TITLE)+'</option><option value=\"model\">'+htmlEntities(sidora.display.RESOURCES_DD_MODEL)+'</option><option value=\"created\" selected=\"selected\">'+htmlEntities(sidora.display.RESOURCES_DD_CREATED) + '</option></select></div>');
+  jQuery('#sidora-resource-sort-dropdown').after('  <select id=\"sidora-resource-sortorder-dropdown\" class="form-select" name=\"sortorder\"><option value=\"ASC\">'+htmlEntities(sidora.display.ASCENDING) + '</option><option value=\"DESC\" selected=\"selected\">'+htmlEntities(sidora.display.DESCENDING) + '</option></select>');
   if (sidora_util.readCookie('Drupal.sortOn') != ''){
     jQuery('#sidora-resource-sort-dropdown').val(sidora_util.readCookie('Drupal.sortOn'));
   }
@@ -384,7 +408,7 @@ sidora.concept.LoadContentHelp.Metadata = function(conceptOfInterest){
       Shadowbox.open({
         content:    Drupal.settings.basePath+"sidora/edit_metadata/"+window.sidora.concept.GetPid()+"",
         player:     "iframe",
-        title:      "Edit Metadata",
+        title:      sidora.display.EDIT_METADATA_TITLE,
         options: {
           onFinish:  function(){}
         }
@@ -424,7 +448,7 @@ sidora.concept.LoadContentHelp.CreateResourceMenu = function(conceptOfInterest){
     var availableResourcesToCreateForConceptHtml = menu_html;
     jQuery("#resource-create").remove();
     if (menu_html.length > 0){
-      jQuery("#resource-files-menu").append('<li id="resource-create"><a id="resource-create-link" href="#" onclick="return false;"><input type="image" src="'+Drupal.settings.basePath+'sites/all/modules/islandora_xml_forms-7.x-1.7/elements/images/add.png" title="Create a new resource as a child of the highlighted concept."> Add&nbsp;resource</a><ul>'+availableResourcesToCreateForConceptHtml+'</ul></li>');
+      jQuery("#resource-files-menu").append('<li id="resource-create"><a id="resource-create-link" href="#" onclick="return false;"><input type="image" src="'+Drupal.settings.basePath+'sites/all/modules/islandora_xml_forms-7.x-1.7/elements/images/add.png" title="'+htmlEntities(sidora.display.CREATE_NEW_RESOURCE_TOOLTIP)+'"> Add&nbsp;resource</a><ul>'+availableResourcesToCreateForConceptHtml+'</ul></li>');
        jQuery("#resource-create a").attr("onclick","return false;");
       jQuery("#resource-create a").click(function(){
         var model = jQuery(this).attr("model");
@@ -440,7 +464,7 @@ sidora.concept.LoadContentHelp.CreateResourceMenu = function(conceptOfInterest){
           Shadowbox.open({
             content:    url,
             player:     "iframe",
-            title:      "Create Resource",
+            title:      sidora.display.CREATE_RESOURCE_TITLE,
             options: {
               onFinish:  function(){}
             }
@@ -682,7 +706,7 @@ sidora.InitiateJSTree = function(){
       jQuery("#"+data.parent).children("a").attr("conceptchildren",""+npReplacer);
       jst.get_node(data.parent).a_attr.conceptchildren = ""+npReplacer;
       sidora.queue.incomingRequestsAreSilent = true;
-      sidora.queue.Request('Create Link To Concept', actionUrl, function(){
+      sidora.queue.Request(htmlEntities(sidora.display.CREATE_LINK_TO_CONCEPT), actionUrl, function(){
         sidora.concept.LoadContentHelp.Relationships();
       }, 
       sidora.util.createFunctionRefreshTree(moveToPid)
@@ -791,7 +815,7 @@ sidora.InitiateJSTree = function(){
           Shadowbox.open({
             content:    Drupal.settings.basePath+"sidora/sharing_permissions/"+pid,
             player:     "iframe",
-            title:      "Project Space Permission",
+            title:      sidora.display.PROJECT_SPACE_PERMISSION_TITLE,
             options: {
               onFinish:  function(){}
             }
@@ -1320,7 +1344,7 @@ sidora.IsUserSetUp = function(callOnCorrectSetup, callOnIncorrectSetup){
  * Wait 5 seconds and check user account set up. Used to double-check after a user set up failure occurred.
  */
 sidora.doubleCheckUser = function(){
-  jQuery("#page").before("<div id='remove-me' style='width:100%'><div style='margin:auto;width:400px;'>Validating your user...</div></div>");
+  jQuery("#page").before("<div id='remove-me' style='width:100%'><div style='margin:auto;width:400px;'>"+htmlEntities(sidora.display.VALIDATING_YOUR_USER_WAITING)+"</div></div>");
   setTimeout(function(){
     sidora.IsUserSetUp(
       function(){
@@ -1368,7 +1392,7 @@ sidora.InitiatePage = function(){
     });
   }
   recreateUser = function() {
-    jQuery("#page").after('<div id="recreateUser" class="" style="max-width: 300px;margin: 0 auto;"><p>' sidora.display.REQUIRE_FEDORA_USER_SETUP + "</p> <div style="margin: 0 20px;"><input id="setupnow" class="form-submit" value="Set Up Now"><p></p><input id="logout" class="form-submit" value="Log Out"></div></div>');
+    jQuery("#page").after('<div id="recreateUser" class="" style="max-width: 300px;margin: 0 auto;"><p>' + sidora.display.REQUIRE_FEDORA_USER_SETUP + '</p> <div style="margin: 0 20px;"><input id="setupnow" class="form-submit" value="Set Up Now"><p></p><input id="logout" class="form-submit" value="Log Out"></div></div>');
     jQuery("#setupnow").click(function(){
       var overlay = jQuery('<div class="full-screen-overlay"><div id="countdown" style="color:white;margin:30px auto;width:200px;">30' + sidora.display.SECONDS_ESTIMATED_REMAINING + '</div></div>');
       overlay.appendTo(document.body);
@@ -2319,7 +2343,7 @@ sidora.util.Confirm = function(title, questionText, onConfirmation, onCancel, co
 sidora.concept.DeleteConcept = function(){
   jQuery('#deleteConceptDialog').remove();
   if ((sidora.concept.GetConceptChildrenLength() == null) || (sidora.concept.GetResourceChildrenLength() == null)){
-    jQuery("body").append("<div id='deleteConceptDialog' style='display:none;' title='Delete Concept'><p>Error getting the child concepts or resources for this concept. Cannot delete this concept</p><p>"+sidora.concept.GetName()+" ("+sidora.concept.GetPid()+")</p></div>");
+    jQuery("body").append("<div id='deleteConceptDialog' style='display:none;' title='"+htmlEntities(sidora.display.DELETE_CONCEPT_TITLE)+"'><p>Error getting the child concepts or resources for this concept. Cannot delete this concept</p><p>"+sidora.concept.GetName()+" ("+sidora.concept.GetPid()+")</p></div>");
     jQuery("#deleteConceptDialog").dialog({
       resizable: false,
       height:250,
@@ -2334,7 +2358,7 @@ sidora.concept.DeleteConcept = function(){
     return;
   }
   if (sidora.concept.GetConceptChildrenLength() + sidora.concept.GetResourceChildrenLength() > 0){
-    jQuery("body").append("<div id='deleteConceptDialog' style='display:none;' title='Delete Concept'><p>This concept has "+sidora.concept.GetConceptChildrenLength()+" concept(s) and has "+sidora.concept.GetResourceChildrenLength()+" resource(s) as children. It cannot be deleted while it has children.</p><p>"+sidora.concept.GetName()+" ("+sidora.concept.GetPid()+")</p></div>");
+    jQuery("body").append("<div id='deleteConceptDialog' style='display:none;' title='"+htmlEntities(sidora.display.DELETE_CONCEPT_TITLE)+"'><p>This concept has "+sidora.concept.GetConceptChildrenLength()+" concept(s) and has "+sidora.concept.GetResourceChildrenLength()+" resource(s) as children. It cannot be deleted while it has children.</p><p>"+sidora.concept.GetName()+" ("+sidora.concept.GetPid()+")</p></div>");
     jQuery("#deleteConceptDialog").dialog({
       resizable: false,
       height:250,
@@ -2348,7 +2372,7 @@ sidora.concept.DeleteConcept = function(){
     });
     return;
   }
-  jQuery("body").append("<div id='deleteConceptDialog' style='display:none;' title='Delete Concept'><p>Are you sure you want to delete this concept?</p><p>"+sidora.concept.GetName()+" ("+sidora.concept.GetPid()+")</p></div>");
+  jQuery("body").append("<div id='deleteConceptDialog' style='display:none;' title='"+htmlEntities(sidora.display.DELETE_CONCEPT_TITLE)+"'><p>Are you sure you want to delete this concept?</p><p>"+sidora.concept.GetName()+" ("+sidora.concept.GetPid()+")</p></div>");
   jQuery("#deleteConceptDialog").dialog({
   resizable: false,
       height:205,
@@ -2939,4 +2963,7 @@ sidora.util.RefreshTree(null,sidora.concept.GetPid());
 }
 function htmlEntities(str) {
     return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+function htmlNonBreaking(str) {
+  return String(str).replace(/ /g,'&nbsp;');
 }

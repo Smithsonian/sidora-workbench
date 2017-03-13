@@ -692,6 +692,9 @@ function sidora_title_callback() {
   return 'SIdora Workbench';
 }
 
+function sidora_is_fedora_user_pid($pid) {
+  return sidora_startsWith($pid, 'si-user:');
+}
 /**
  * Pull information from the session that is associated with the specified build id and create the assocated
  * Fedora changes
@@ -717,19 +720,31 @@ function sidora_process_object_with_build_id($form_build_id) {
     }
   }
   $creation_info = sidora_object_creation_info($form_build_id);
+  dsm($creation_info);
   $parent_pid = NULL;
   if (!empty($creation_info)) {
+    $pid = $creation_info['pid'];
     $all_meta_entered = $creation_info['all_meta_entered'];
     /* SID-453 : Add parent pid to the Sidora datastream of the newly created
      * object. This info gets added only once after a new object is ingested.
      * Any subsequent operations on the object like copy or move do not change
      * this info in Sidora datastream.
      */
-    $dsids = sidora_get_proper_dsid($creation_info['model'],$creation_info['form']);
-    $creation_info['dsid'] = (empty($dsids)) ? '' : $dsids[0];
-    $parent_pid = $creation_info['parent_pid'];
-    $pid = $creation_info['pid'];
     $object = sidora_obj($pid);
+    if (sidora_is_fedora_user_pid($pid)) {
+      $dsid_and_form = sidora_guess_dsid_and_form_name($object);
+      $creation_info['dsid'] = variable_get('sidora_automatic_person_dsid','');
+      $creation_info['model'] = variable_get('sidora_automatic_person_model','');
+      $creation_info['form'] = variable_get('sidora_automatic_person_form','');
+      $creation_info['ontology_id'] = '';
+      $parent_pid = 'si:user-projects'; //BBB TODO
+      $all_meta_entered = TRUE;
+    }
+    else {
+      $dsids = sidora_get_proper_dsid($creation_info['model'],$creation_info['form']);
+      $creation_info['dsid'] = (empty($dsids)) ? '' : $dsids[0];
+      $parent_pid = $creation_info['parent_pid'];
+    }
     if (empty($creation_info['added_sidora_ds'])) {
       sidora_update_datastream($object, '<sidora>
 <model>'.$creation_info['model'].'</model>
@@ -742,7 +757,6 @@ function sidora_process_object_with_build_id($form_build_id) {
 </sidora>', 'SIDORA');
     }
     sidora_object_creation_info($form_build_id,'added_sidora_ds',TRUE);
-
   }
   else {
     // Items like Codebooks have no creation info, this should only be items that were not created via the menu
@@ -8058,6 +8072,7 @@ function sidora_cron() {
  * (This function should not be used to restrict view permissions, instead only pass in information that is allowed to be viewed.)
  */
 function sidora_html_tree_from_query_results_tree($query_result_tree, $input_path = '', $num_levels = 3, $url_params = ''){
+  if (empty($query_result_tree)) return '';
   global $user;
   // Every entry needs a label or we will not show it in the tree
   // Go through the current children and throw out any that don't have a label
