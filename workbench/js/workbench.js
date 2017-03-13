@@ -37,7 +37,8 @@ window.sidora = {
   concept: {},
   ontology: {
     tree: {}
-  }
+  },
+  ProjectSpaces: {}
 };
 window.sidora.display = {
   //Resource specific
@@ -110,6 +111,12 @@ window.sidora.display = {
 
   // Permissions
   "PROJECT_SPACE_PERMISSION_TITLE" : Drupal.t("Project Space Permission"),
+  "PROJECT_SPACE_CHOICE_CHANGE_PERMISSIONS" : Drupal.t("Change permissions of the current project space"),
+  "PROJECT_SPACE_CHOICE_TRANSFER_PS_TO_NEW_OWNER" : Drupal.t("Transfer this project space to a new owner"),
+  "PROJECT_SPACE_CHOICE_DUPLICATE_CONCEPT" : Drupal.t("Duplicate the selected concept and its children in another project space"),
+  "PROJECT_SPACE_CHOICE_TRANSFER_CONCEPT" : Drupal.t("Transfer the selected concept to another project space"),
+  "PROJECT_SPACE_CHOICE_DUPILCATE_RESOURCE" : Drupal.t("Duplicate the selected resources in another project space"),
+  "PROJECT_SPACE_CHOICE_TRANSFER_RESOURCE" : Drupal.t("Transfer the selected resources to another project space"),
 
 
   // Only ever put to console, doesn't actually display on browser screen
@@ -642,6 +649,128 @@ sidora.util.loadTreeSectionsIfNeeded = function(data){
     }
   }
 }
+sidora.ProjectSpaces.currentPid = function() {
+  return jQuery("#" + jQuery("#psdd-select").val()).children("a").attr("pid");
+}
+sidora.ProjectSpaces.isProjectSpace = function(pid) {
+  // TBD TODO add a indicator on the item to indicate it is a project space instead of this
+  var toCheck = jQuery("[pid='"+pid+"']").parent();
+  for(var tci = 0; tci < toCheck.length; tci++) {
+    if (jQuery("#psdd-select").children("[value='" +jQuery(toCheck[tci]).attr("id") + "']").length > 0) {
+      return true;
+    }
+  }
+  return false;
+}
+sidora.ProjectSpaces.shareChoicesHtml = function() {
+  var toReturn = '<a href="#" onclick="sidora.ProjectSpaces.ShowPermissionsForm(); return false;"><i class="material-icons">group vpn_key</i> '+htmlEntities(sidora.display.PROJECT_SPACE_CHOICE_CHANGE_PERMISSIONS)+'</a><br>';
+  toReturn += '<i class="material-icons">group redo</i> '+htmlEntities(sidora.display.PROJECT_SPACE_CHOICE_TRANSFER_PS_TO_NEW_OWNER)+'<br>';
+  if (!sidora.ProjectSpaces.isProjectSpace(sidora.concept.GetPid())) {
+    toReturn += '<a href="#" onclick="sidora.ProjectSpaces.DuplicateOrTransfer(\'duplicate\',\'concept\'); return false;"><i class="material-icons">lightbulb_outline content_copy</i> '+htmlEntities(sidora.display.PROJECT_SPACE_CHOICE_DUPLICATE_CONCEPT)+'</a><br>';
+    toReturn += '<a href="#" onclick="sidora.ProjectSpaces.DuplicateOrTransfer(\'transfer\',\'concept\'); return false;"><i class="material-icons">lightbulb_outline redo</i> '+htmlEntities(sidora.display.PROJECT_SPACE_CHOICE_TRANSFER_CONCEPT)+'</a><br>';
+  }
+  if (sidora.resources.getHighlighted().length > 0) {
+    toReturn += '<a href="#" onclick="sidora.ProjectSpaces.DuplicateOrTransfer(\'duplicate\',\'resource\'); return false;"><i class="material-icons">panorama content_copy</i> '+htmlEntities(sidora.display.PROJECT_SPACE_CHOICE_DUPILCATE_RESOURCE)+'</a><br>';
+    toReturn += '<a href="#" onclick="sidora.ProjectSpaces.DuplicateOrTransfer(\'transfer\',\'resource\'); return false;"><i class="material-icons">panorama redo</i> '+htmlEntities(sidora.display.PROJECT_SPACE_CHOICE_TRANSFER_RESOURCE)+'</a><br>';
+  }
+  return toReturn;
+}
+sidora.ProjectSpaces.DuplicateOrTransferHtml = function(selectionIntroHtml, onSubmit){
+  var toReturn = "<div>";
+  toReturn += selectionIntroHtml;
+  toReturn += "<select name='target-ps' size='7' style='width:100%'>";
+  var currentPid = sidora.ProjectSpaces.currentPid();
+  jQuery("#j1_1").children("ul").children("li").children("a").each(function(){
+    if (jQuery(this).attr("permissions").indexOf("c") > -1 && jQuery(this).attr("pid") != currentPid) {
+      toReturn += '<option value="' + jQuery(this).attr("pid")+ '">'+jQuery(this).attr("fullname") + '</option>';
+    }
+  });
+  toReturn += "</select>";
+  toReturn += '<div class="sidora-ui-text sidora-thin-button" style="float:right">Submit</div>';
+  return toReturn;
+}
+sidora.ProjectSpaces.ChangeProjectSpace = function(selectedValue) {
+  var projectSelectorCss = jQuery("#"+selectedValue).siblings().map(function(){return "#" + this.id;}).get().join(", ");
+  projectSelectorCss += " , #j1_1 > i, #j1_1 > a { display:none } ";
+  projectSelectorCss += " #" + selectedValue + " { position: absolute; top: 0; left: 0; } ";
+  jQuery("#project-selector-css").remove();
+  jQuery("<style>").prop("type","text/css").prop("id","project-selector-css").html(projectSelectorCss).appendTo("head");
+  jQuery("#"+selectedValue).children("a").click(); 
+  var owned = !jQuery("#"+selectedValue).children("a").hasClass("not-owned");
+  jQuery("#share-project-space-button").toggle(true);
+  jQuery("#share-project-space-button").click(function(){
+    setTimeout(function(){
+      Shadowbox.open({
+        content:    "<div style='height:100%;background:floralwhite;'><div style='padding:10px'>"+sidora.ProjectSpaces.shareChoicesHtml()+"</div></div>",
+        player:     "html",
+        title:      sidora.display.PROJECT_SPACE_PERMISSION_TITLE,
+        options: {
+          onFinish:  function(){}
+        }
+      });
+    },100 + (Shadowbox.isOpen() * 800));
+    Shadowbox.close();
+  });
+}
+sidora.ProjectSpaces.DuplicateOrTransfer = function(type, conceptsOrResources) {
+  var pids = [];
+  if (conceptsOrResources == 'resources') {
+    pids = sidora.resources.getHighlighted();
+  }
+  else {
+    pids.push(sidora.concept.GetPid()); 
+  }
+  var intro = sidora.ProjectSpaces.DuplicateOrTransferIntro(type, pids);
+  intro += "<p>Choose a destination below:</p>";
+  sidora.ProjectSpaces.ShowWhereToForm(intro, function(){console.log("done");});
+}
+sidora.ProjectSpaces.DuplicateOrTransferIntro = function(type, pids) {
+  var intro = "<p>";
+  if (type == "duplicate") {
+    intro = "You selected the following to be duplicated:";
+  }
+  if (type == "transfer") {
+    intro = "You selected the following to be transferred:";
+  }
+  intro += "</p><ul>";
+  for(var pidIndex = 0; pidIndex < pids.length; pidIndex++) {
+    intro += '<li>';
+    intro += jQuery("[pid='"+pids[pidIndex]+"'], "+jq(pids[pidIndex])).text();
+    intro += '</li>';
+  }
+  intro += '</ul>';
+  return intro;
+}
+sidora.ProjectSpaces.ShowWhereToForm = function(selectionIntro, onSubmit){
+  setTimeout(function(){
+    Shadowbox.open({
+      content:    "<div style='height:100%;background:floralwhite;'><div style='padding:10px'>"+sidora.ProjectSpaces.DuplicateOrTransferHtml(selectionIntro, onSubmit)+"</div></div>",
+      player:     "html",
+      title:      sidora.display.PROJECT_SPACE_PERMISSION_TITLE,
+      options: {
+        onFinish:  function(){}
+      }
+      });
+  },100 + (Shadowbox.isOpen() * 800));
+  Shadowbox.close();
+}
+sidora.ProjectSpaces.ShowPermissionsForm = function(pid){
+  if (typeof(pid) == 'undefined') {
+    pid = sidora.ProjectSpaces.currentPid();
+  }
+  setTimeout(function(){
+    Shadowbox.open({
+      content:    Drupal.settings.basePath+"sidora/sharing_permissions/"+pid,
+      player:     "iframe",
+      title:      sidora.display.PROJECT_SPACE_PERMISSION_TITLE,
+      options: {
+        onFinish:  function(){}
+      }
+      });
+  },100 + (Shadowbox.isOpen() * 800));
+  Shadowbox.close();
+}
+
 sidora.queue = new SidoraQueue();
 sidora.InitiateJSTree = function(){
   //loaded.jstree will also be called whenever a node is added to the tree programmatically
@@ -798,33 +927,8 @@ sidora.InitiateJSTree = function(){
       jQuery("#psdd-select").append(optionToAdd);      
     }
     var selectedValue = mainTreeChildren[selectedIndex].id;
-    sidora.ChangeProjectSpace = function(selectedValue) {
-      var projectSelectorCss = jQuery("#"+selectedValue).siblings().map(function(){return "#" + this.id;}).get().join(", ");
-      projectSelectorCss += " , #j1_1 > i, #j1_1 > a { display:none } ";
-      projectSelectorCss += " #" + selectedValue + " { position: absolute; top: 0; left: 0; } ";
-      //jQuery("#"+selectedValue).css("position","absolute").css("top","0").css("left","0").css("visibility","visible");
-      jQuery("#project-selector-css").remove();
-      jQuery("<style>").prop("type","text/css").prop("id","project-selector-css").html(projectSelectorCss).appendTo("head");
-      jQuery("#"+selectedValue).children("a").click(); 
-      var owned = !jQuery("#"+selectedValue).children("a").hasClass("not-owned");
-      jQuery("#share-project-space-button").toggle(owned);
-      var pid = jQuery("#"+selectedValue).children("a").attr("pid");
-      jQuery("#share-project-space-button").click(function(){
-          Shadowbox.close();
-          setTimeout(function(){
-          Shadowbox.open({
-            content:    Drupal.settings.basePath+"sidora/sharing_permissions/"+pid,
-            player:     "iframe",
-            title:      sidora.display.PROJECT_SPACE_PERMISSION_TITLE,
-            options: {
-              onFinish:  function(){}
-            }
-          });},100);
-      });
-      
-    }
-    sidora.ChangeProjectSpace(selectedValue);
-    jQuery("#psdd-select").change(function(){ sidora.ChangeProjectSpace(this.value); });
+    sidora.ProjectSpaces.ChangeProjectSpace(selectedValue);
+    jQuery("#psdd-select").change(function(){ sidora.ProjectSpaces.ChangeProjectSpace(this.value); });
     }, 200);
     jQuery("#page").show();
 
