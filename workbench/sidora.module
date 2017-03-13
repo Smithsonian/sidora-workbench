@@ -2591,6 +2591,9 @@ function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $ex
     return t("You must be an administrator or have an administrator set sidora_allow_all_to_debug in order to access this information");
   }
   if (!sidora_is_admin()) print t("Remember that nonadmins will NOT see output from dsm!");
+  if ($one == 'convert') {
+    
+  }
   if ($one == 'duplicate'){
     sidora_duplicate_tree_and_resources($two, '');
     return 'Done';
@@ -7027,7 +7030,13 @@ function sidora_get_codebooks($pid) {
   if (!empty($object)) {
     $codebooks = $object->relationships->get(FEDORA_RELS_EXT_URI, 'hasCodebook');
     foreach ($codebooks as $codebook_info) {
-      $to_return[] = sidora_obj($codebook_info['object']['value']);
+      $cb = sidora_obj($codebook_info['object']['value']);
+      if (!empty($cb)) {
+        $to_return[] = sidora_obj($codebook_info['object']['value']);
+      }
+      else {
+        watchdog('sidora',t("%pid has invalid codebook %cbpid", array("%pid"=>$pid,"%cbpid"=>$codebook_info['object']['value'])));
+      }
     }
   }
   return $to_return;
