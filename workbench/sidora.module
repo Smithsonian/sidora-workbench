@@ -2592,11 +2592,15 @@ function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $ex
   }
   if (!sidora_is_admin()) print t("Remember that nonadmins will NOT see output from dsm!");
   if ($one == 'convert') {
-    
+     $results = _sidora_get_child_results_cache($two);
+     print "<pre>";
+     var_dump($results);
+     print "</pre>";
+     return 'Done';
   }
   if ($one == 'duplicate'){
-    sidora_duplicate_tree_and_resources($two, '');
-    return 'Done';
+    $the_return = sidora_duplicate_tree_and_resources($two);
+    return 'Done: '. $the_return;
   }
   if ($one == 'list_pids_in_tree'){
     $pids = sidora_get_pids_in_tree_from_nodes_by_root_pid($two);
@@ -5241,8 +5245,9 @@ function sidora_exact_duplicate($copy_from_pid) {
 }
 /**
  * Duplicate the tree structure, will ONLY duplicate items that are owned by the original pid's owner
+ * Return the pid of the duplicate root or FALSE
  */
-function sidora_duplicate_tree_and_resources($pid_of_item_to_duplicate, $pid_of_destination) {
+function sidora_duplicate_tree_and_resources($pid_of_item_to_duplicate) {
   // Things to look out for:
   //  Circular references
   //
@@ -5259,12 +5264,8 @@ function sidora_duplicate_tree_and_resources($pid_of_item_to_duplicate, $pid_of_
       // create duplicates of each resource
       $original_obj = sidora_obj($pid);
       $resource_rels = $original_obj->relationships->get(FEDORA_RELS_EXT_URI, 'hasResource');
-      dsm("resource_rels");
-      dsm($resource_rels);
       foreach($resource_rels as $resource_rel) {
         $original_resource_pid = $resource_rel['object']['value'];
-        dsm($original_resource_pid);
-        
         if (!array_key_exists($original_resource_pid, $processed_duplicates)) {
           $new_res = sidora_exact_duplicate($original_resource_pid);
           // Store the association between the old and new
@@ -5272,28 +5273,26 @@ function sidora_duplicate_tree_and_resources($pid_of_item_to_duplicate, $pid_of_
         }
       }
     }
-    dsm("duplicates");
-    dsm($processed_duplicates);
+    $original_pids_that_were_processed = array_keys($processed_duplicates);
     // For each of the new items
-  /* 
     foreach($processed_duplicates as $original_pid => $duplicate_pid) {
       $duplicate_obj = sidora_obj($duplicate_pid);
       // go through all of it's relationships
       $relationships = $duplicate_obj->relationships->get();
-      dsm($relationships);
       foreach($relationships as $relationship) {
-        dsm("start");
-        dsm($relationship);
         // replace the references to the old pids with the new pids
-//        $check_relationship_pid = $relationship['object']['value'];
-//        dsm(array('duplicate_pid'=>$duplicate_obj->id, 'relationship_to'=>$check_relationship_pid));
+        $check_relationship_pid = $relationship['object']['value'];
+        if (in_array($check_relationship_pid, $original_pids_that_were_processed)) {
+          $duplicate_obj->relationships->remove($relationship['predicate']['namespace'], $relationship['predicate']['value'], $check_relationship_pid);
+          $duplicate_obj->relationships->add($relationship['predicate']['namespace'], $relationship['predicate']['value'], $processed_duplicates[$check_relationship_pid]);
+        }
       }
     }
-*/
-    // Add the new pid to the end location's children
+    return $processed_duplicates[$pid_of_item_to_duplicate];
   }
   else {
     // Too many pids, will not duplicate
+    return FALSE;
   }
 }
 /*
