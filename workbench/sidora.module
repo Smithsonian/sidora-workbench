@@ -2545,7 +2545,7 @@ function sidora_get_project_spaces_from_og_groups($group_nodes, $user, $only_ret
   $project_spaces = array();
   foreach($group_nodes as $node){
       $pid = NULL;
-      if (array_key_exists($node->language, $node->field_fedora_pid)) {
+      if (!empty($node->field_fedora_pid) && array_key_exists($node->language, $node->field_fedora_pid)) {
         $pid = $node->field_fedora_pid[$node->language][0]['value'];
       }
       // Initially let's restrict this to people that are able to change permissions, may open it up later
@@ -2581,7 +2581,21 @@ function sidora_get_groups_for_project_space($pid) {
   } 
   return $to_return;
 }
-
+/**
+ * Returns a tree based on the project spaces the user has access to, defaults to 4 levels total
+ */
+function sidora_project_spaces_tree(){
+  $to_return = '';
+  $nodes = sidora_get_project_spaces_by_member();
+  $to_return .= "<ul>";
+  foreach($nodes as $node) {
+    $pid = $node->field_fedora_pid[$node->language][0]["safe_value"];
+    $standard_print = sidora_html_tree_for_ajax($pid);
+    $to_return .= substr($standard_print, 4, sizeof($standard_print) - 11);
+  }
+  $to_return .= "</ul>";
+  return $to_return;
+}
 /**
  * Used only for testing purposes.  Should not be called by the main application
  */
@@ -2591,6 +2605,10 @@ function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $ex
     return t("You must be an administrator or have an administrator set sidora_allow_all_to_debug in order to access this information");
   }
   if (!sidora_is_admin()) print t("Remember that nonadmins will NOT see output from dsm!");
+  if ($one == 'project_space_tree') {
+    print sidora_roject_spaces_tree();
+    exit();
+  }
   if ($one == 'convert') {
      $results = _sidora_get_child_results_cache($two);
      print "<pre>";
@@ -5189,25 +5207,18 @@ function sidora_sharing_put_all_owned_concepts_into_owned_groups($for_uid = NULL
   }
   return $owned_groups;
 }
-
+/*
+ * Returns the nodes of the project spaces of the specified user id (or current user on NULL)
+ */
 function sidora_get_project_spaces_by_member($uid = NULL){
   global $user;
-  if (!sidora_is_admin($user) && !empty($uid)){
-    $form['info'] = array(
-      '#markup' => t('Need administrator to load specific users.')
-    );
-    return $form;
-  }
   if ($uid == 'all') {
     $to_return = sidora_get_owned_project_spaces($uid);
   }
   else {
     $owner = sidora_get_drupal_user($uid);
     if (empty($owner)) {
-      $form['info'] = array(
-        '#markup' => t('User not found.')
-      );
-      return $form;
+      return array();
     }
     $group_nodes = sidora_get_groups_by_user();
     $to_return = sidora_get_project_spaces_from_og_groups($group_nodes, $user, FALSE);
@@ -5301,6 +5312,12 @@ function sidora_duplicate_tree_and_resources($pid_of_item_to_duplicate) {
 function sidora_project_spaces_form($form = array(), &$form_state, $uid = NULL) {
   drupal_add_css(drupal_get_path('module','sidora').'/css/workbench_basic_screen.css',array('weight' => '1000000', 'group' => CSS_THEME));
   global $user;
+  if (!sidora_is_admin($user) && !empty($uid)){
+    $form['info'] = array(
+      '#markup' => t('Need administrator to load specific users.')
+    );
+    return $form;
+  }
   $owned_groups = sidora_get_project_spaces_by_member($uid);
   $form['table'] = array(
     '#theme' => 'table',
@@ -5578,6 +5595,7 @@ function sidora_user_view($account, $view_mode, $langcode){
         $codebook = sidora_obj($codebook_pid);
         $codebook_html .= '<tr><td>'.$codebook_pid.'</td><td>'.$codebook->label.'</td>';
         $codebook_html .= '<td><a href="'.base_path().'sidora/workbench/#'.$codebook_pid.'">View In Workbench</a></td>';
+        $codebook_html .= '<td><a href="'.base_path().'sidora/ajax_parts/delete/'.$codebook_pid.'" target="_blank">Delete</a></td>';
         $codebook_html .= '</tr>';
       }
     }
@@ -6635,6 +6653,10 @@ function sidora_ontology_json_default() {
  */
 function sidora_ajax_parts($call_type, $param1 = '', $param2 = '', $param3 = '') {
   global $user;
+  if ($call_type == 'project_spaces_tree') {
+    print sidora_project_spaces_tree();
+    drupal_exit();
+  }
   if ($call_type == 'reprocess_incomplete_object_creation_forms') {
     sidora_reprocess_incomplete_object_creation_forms($param1);
     drupal_exit();
@@ -7475,8 +7497,7 @@ function sidora_json_for_delete($pid, $show_output = TRUE) {
 function sidora_html_tree_for_ajax($root_pid = '', $num_levels = 3, $url_params = ''){
   module_load_include('inc', 'sidora', 'includes/utils');
   if (empty($root_pid)) $root_pid = sidora_get_user_root_object();
-  print sidora_html_tree_from_given_pid($root_pid, NULL, $num_levels, $url_params);
-  drupal_exit();
+  return sidora_html_tree_from_given_pid($root_pid, NULL, $num_levels, $url_params);
 }
 
 /*
