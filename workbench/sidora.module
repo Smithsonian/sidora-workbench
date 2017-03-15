@@ -699,12 +699,12 @@ function sidora_process_object_with_build_id($form_build_id) {
      * Any subsequent operations on the object like copy or move do not change
      * this info in Sidora datastream.
      */
-    $dsids = sidora_get_proper_dsid($creation_info['model'],$creation_info['form']);
-    $creation_info['dsid'] = (empty($dsids)) ? '' : $dsids[0];
     $parent_pid = $creation_info['parent_pid'];
     $pid = $creation_info['pid'];
     $object = sidora_obj($pid);
-    if (empty($creation_info['added_sidora_ds'])) {
+    if (empty($creation_info['added_sidora_ds']) && !empty($creation_info['form']) && !empty($creation_info['model'])) {
+      $dsids = sidora_get_proper_dsid($creation_info['model'],$creation_info['form']);
+      $creation_info['dsid'] = (empty($dsids)) ? '' : $dsids[0];
       sidora_update_datastream($object, '<sidora>
 <model>'.$creation_info['model'].'</model>
 <form>'.$creation_info['form'].'</form>
