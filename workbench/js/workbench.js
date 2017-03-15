@@ -622,11 +622,6 @@ sidora.util.loadTreeSectionsIfNeeded = function(data){
   var jst = jQuery("#forjstree").jstree(true);
   var openingPid = node.a_attr.pid;
   var currentChildrenPids = sidora.util.childrenPidsListedInUIByNode(node);
-  var swmIndex = currentChildrenPids.indexOf("shared-with-me");
-  if (swmIndex >= 0) {
-    // Don't check the pid of shared-with-me, it's a special value
-    currentChildrenPids.splice(swmIndex, 1);
-  }
   var childPidsCsv = currentChildrenPids.join();
   if (childPidsCsv.length > 0) {
     sidora.util.checkUIForInvalidPids(openingPid, childPidsCsv);
@@ -806,7 +801,6 @@ sidora.InitiateJSTree = function(){
     }
 
     sidora.util.openToCurrentPathAndSelectItem(currentUrl);
-    if (typeof sidora.sharedWithMe !== 'undefined') sidora.sharedWithMe.CreateDefaultShareSection();
     //When you select a node, update the url in the browser, change the page title (not browser title) and load the concept content into the main window
     jQuery("#forjstree").unbind('select_node.jstree');
     jQuery('#forjstree').bind('select_node.jstree', function(e,data) {
@@ -1381,9 +1375,6 @@ sidora.ResizeToBrowser = function(){
   }
   jQuery("#rt").css("height",tableHeight+'px');
   jQuery("#rt").css("overflow",'auto');
-  if (typeof sidora.sharedWithMe !== 'undefined') {
-    sidora.sharedWithMe.Relocate();
-  }
 }
 /*
  * Checks to see if a user can communicate with the backend and redirects to user page if problem

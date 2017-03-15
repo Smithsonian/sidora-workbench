@@ -4834,51 +4834,6 @@ function sidora_allow($user_pid_or_drupal_user, $pid_or_fedora_object, $type_of_
 
   return FALSE;
 }
-/**
- * Creates a "  Shared With Me" node as if it was returned from the sparql query, with the concepts that have been shared
- * with the user as children
- */
-function sidora_get_shared_with_me($drupal_user = NULL) {
-  //BBB TBD TODO removing while trying other ideas
-  return NULL;
-  if (empty($drupal_user)) {
-    global $user;
-    $drupal_user = $user;
-  }
-  $gids = og_get_groups_by_user($drupal_user);
-  $groups = node_load_multiple($gids['node']);
-  $potential_child_pid_owner_ids = array();
-  foreach($groups as $group){
-    // Get the group owner
-    $g_owner_id = $group->uid;
-    if ($g_owner_id != $user->uid) {
-      $potential_child_pid_owner_ids[] = $g_owner_id;
-    }
-  }
-  $child_pid_owner_ids = array_unique($potential_child_pid_owner_ids);
-  $shared_with_me_children = array();
-  foreach($child_pid_owner_ids as $g_owner_id){
-    $g_owner = user_load($g_owner_id);
-    $g_owner_projects_pid = sidora_get_user_object($g_owner);
-    $node = sidora_get_update_or_create_concept_node($g_owner_projects_pid);
-    if (!empty($node)) {
-      $child_entry = sidora_build_tree_from_nodes($node->nid, 3);
-      $shared_with_me_children[] = $child_entry;
-    }
-  }
-  if (empty($shared_with_me_children)) {
-    return NULL;
-  }
-  $shared_with_me = array(
-    'o' => array('value' => 'shared-with-me'),
-    't' => array('value' => '  Shared With Me'),
-    'resourcecount' => array('value' => 0),
-    'crud' => array('c' => TRUE, 'r' => TRUE, 'u' => TRUE, 'd' => TRUE),
-    'owner' => array('value' => $drupal_user->name),
-    'children' => $shared_with_me_children,
-  );
-  return $shared_with_me;
-}
 function sidora_get_groups_by_user($uid = NULL){
   static $groups = NULL;
   if (empty($groups)) {
@@ -7503,7 +7458,7 @@ function sidora_html_tree_for_ajax($root_pid = '', $num_levels = 3, $url_params 
 /*
  * Returns a html_string for the concept tree
  */
-function sidora_html_tree_from_given_pid($root_pid = '', $root = NULL, $num_levels = 3, $url_params = '', $exclude_shared_with_me = FALSE){
+function sidora_html_tree_from_given_pid($root_pid = '', $root = NULL, $num_levels = 3, $url_params = ''){
   global $user;
   module_load_include('inc', 'sidora', 'includes/utils');
   if (empty($root_pid)) $root_pid = sidora_get_user_root_object();
@@ -7511,13 +7466,6 @@ function sidora_html_tree_from_given_pid($root_pid = '', $root = NULL, $num_leve
   if (empty($root_pid)) {
     sidora_user_initialize($user);
     $root_pid = sidora_get_user_root_object();
-  }
-  if ($root_pid == 'shared-with-me') {
-    $root_label = '  Shared With Me';
-    $swm = sidora_get_shared_with_me();
-    if (!empty($swm)) {
-      $filled = $swm['children'];
-    }
   }
   else { 
     if (empty($root)) {
@@ -7543,13 +7491,6 @@ function sidora_html_tree_from_given_pid($root_pid = '', $root = NULL, $num_leve
       return 'Invalid';
     }
     $filled = $filled[0]['children'];
-    if ($root_pid == sidora_get_user_root_object()) {
-      $shared_with_me = sidora_get_shared_with_me();
-      if (!empty($shared_with_me)) {
-        // The shared with me javascript now also relies on it being the first item in the tree
-        array_unshift($filled, $shared_with_me);
-      }
-    }
   }
   /* */
   $html_tree_from_query_result = sidora_html_tree_from_query_results_tree($filled, '', $num_levels, $url_params);
@@ -7617,7 +7558,6 @@ function sidora_block_content_navigation() {
   drupal_add_js(drupal_get_path('module','sidora') . '/js/workbench.js');
   drupal_add_js(drupal_get_path('module','sidora') . '/js/workbench_menus.js');
   drupal_add_js(drupal_get_path('module','sidora') . '/js/workbench_sidora_request.js');
-  drupal_add_js(drupal_get_path('module','sidora') . '/js/workbench_sharing.js');
   drupal_add_js(drupal_get_path('module','sidora') . '/js/paging.js'); 
   // adds paging capability to resources
   return $to_return;
