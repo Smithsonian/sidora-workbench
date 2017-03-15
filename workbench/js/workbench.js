@@ -1300,6 +1300,13 @@ sidora.resources.refreshSelectedResourceThumbnail = function(){
         }
       });
   }
+  jQuery('#resourceIframeHolder').children().remove();
+  jQuery('#resourceIframeHolder').append('<div id="gray_overlay" style="background-color:rgba(0,0,0,1);opacity:0.5;width:90%;height:90%;">');
+  jQuery("#gray_overlay").append('<div id="sb-loading"><div id="sb-loading-inner"><span>&nbsp;</span></div></div>');
+  setTimeout(function(){
+    sidora.resources.individualPanel.LoadContent();
+  },15000);
+
 }
 
 /*
