@@ -107,8 +107,19 @@ function sidora_project_spaces_tree(){
   $to_return .= "<ul>";
   foreach($nodes as $node) {
     $pid = $node->field_fedora_pid[$node->language][0]["safe_value"];
-    $standard_print = sidora_html_tree_for_ajax($pid);
-    $to_return .= substr($standard_print, 4, sizeof($standard_print) - 11);
+    $filled = sidora_build_tree_from_nodes_by_pid($pid);
+    $filled = $filled[0]['children'];
+    $num_levels = 3;
+    $root_label = 'Root';
+    $html_tree_from_query_result = sidora_html_tree_from_query_results_tree($filled, '', $num_levels, '', 'a', FALSE);
+    $html_escaped_name = htmlspecialchars($root_label);
+    $to_return = '';
+    $to_return .= '<ul>';
+    $to_return .= '<li>';
+    $to_return .= $root_label;
+    $to_return .= '<ul>';
+    $to_return .= $html_tree_from_query_result;
+    $to_return .= '</ul></li></ul>';
   }
   $to_return .= "</ul>";
   return $to_return;

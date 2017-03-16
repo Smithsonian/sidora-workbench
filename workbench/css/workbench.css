@@ -174,7 +174,7 @@ li a input {
   margin:0;
   padding:0 0 0 1em;
 }
-#forjstree ul, #forjstree .block ul, #forjstree .item-list ul {
+#forjstree ul, #forjstree .block ul, #forjstree .item-list ul, #destination-tree ul {
   margin: 0 0 0 1em;
 }
   /*

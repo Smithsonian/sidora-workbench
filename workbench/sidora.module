@@ -2520,7 +2520,8 @@ function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $ex
   }
   if (!sidora_is_admin()) print t("Remember that nonadmins will NOT see output from dsm!");
   if ($one == 'project_space_tree') {
-    print sidora_roject_spaces_tree();
+    module_load_include('inc', 'sidora', 'includes/project_spaces');
+    print sidora_project_spaces_tree();
     exit();
   }
   if ($one == 'convert') {
@@ -2749,7 +2750,6 @@ SELECT ?pid ?mod ?label ?created FROM <#ri>
     $root_pid = $two;
     $filled = sidora_build_tree_from_nodes_by_pid($root_pid);
     $filled = $filled[0]['children'];
-    /* */
     $num_levels = $parent_pid;
     if (empty($parent_pid)) $num_levels = 3;
     $root_label = 'Root';
@@ -6154,7 +6154,17 @@ function sidora_ontology_json_default() {
  */
 function sidora_ajax_parts($call_type, $param1 = '', $param2 = '', $param3 = '') {
   global $user;
+  if ($call_type == 'duplicate'){
+    var_dump($param1);
+    var_dump($param2);
+    exit();
+    if (!empty($param1) && !empty($param2)) {
+      $the_return = sidora_duplicate_tree_and_resources($param1);
+      sidora_copy($param2, $the_return);
+    }
+  }
   if ($call_type == 'project_spaces_tree') {
+    module_load_include('inc', 'sidora', 'includes/project_spaces');
     print sidora_project_spaces_tree();
     drupal_exit();
   }
@@ -6172,7 +6182,8 @@ function sidora_ajax_parts($call_type, $param1 = '', $param2 = '', $param3 = '')
   if ($call_type == 'tree'){
     ini_set('max_execution_time',60);
     ini_set('memory_limit','512M');
-    return sidora_html_tree_for_ajax($param1, $param2);
+    print sidora_html_tree_for_ajax($param1, $param2);
+    drupal_exit();
   }
   if ($call_type == 'unassociate_delete_orphan') {
     return sidora_unassociate_delete_if_orphaned($param1,$param2);
@@ -7586,7 +7597,7 @@ function sidora_cron() {
  * Creates the html_tree.
  * (This function should not be used to restrict view permissions, instead only pass in information that is allowed to be viewed.)
  */
-function sidora_html_tree_from_query_results_tree($query_result_tree, $input_path = '', $num_levels = 3, $url_params = ''){
+function sidora_html_tree_from_query_results_tree($query_result_tree, $input_path = '', $num_levels = 3, $url_params = '', $dom_type = 'a', $include_href = TRUE){
   if (empty($query_result_tree)) return '';
   global $user;
   // Every entry needs a label or we will not show it in the tree
@@ -7659,13 +7670,15 @@ function sidora_html_tree_from_query_results_tree($query_result_tree, $input_pat
         $class_for_default_project_space = ' default-project-space';
       }
       if (!empty($permissions)) {
-        $to_return .= '<li><a href="' . base_path() . 'sidora/workbench/' . $url_params . '#' . $pid . '?path=' . $input_path . '" pid="' . $pid . '" fullname="' . $html_escaped_name . '" conceptchildren="' . count($t_element['children']) . '" resourcechildren="' . $resource_children_num . '" class="' . $classes_for_permissions . $classes_for_ownership . $class_for_default_project_space . '" permissions="' . $permissions . '"' . $nid_info . $owner_info . '>';
+        $to_return .= '<li>';
+        $href = ($include_href)? ' href="' . base_path() . 'sidora/workbench/' . $url_params . '#' . $pid . '?path=' . $input_path . '"':'';
+        $to_return .= '<' . $dom_type . $href . ' pid="' . $pid . '" fullname="' . $html_escaped_name . '" conceptchildren="' . count($t_element['children']) . '" resourcechildren="' . $resource_children_num . '" class="' . $classes_for_permissions . $classes_for_ownership . $class_for_default_project_space . '" permissions="' . $permissions . '"' . $nid_info . $owner_info . '>';
         $to_return .= $t_element['t']['value'];
         if ($resource_children_num > 0) $to_return .= ' ('.$resource_children_num.')';
-        $to_return .= '</a>';
+        $to_return .= "</$dom_type>";
         if (array_key_exists('children',$t_element)){
           $to_return .= '<ul>';
-          $to_return .= sidora_html_tree_from_query_results_tree($t_element['children'], $current_path, $num_levels - 1, $url_params);
+          $to_return .= sidora_html_tree_from_query_results_tree($t_element['children'], $current_path, $num_levels - 1, $url_params, $dom_type);
           $to_return .= '</ul>';
         }
         if (array_key_exists('already_in_tree',$t_element) && $t_element['already_in_tree']){
@@ -11344,6 +11357,7 @@ function sidora_update_node_from_fedora($pid_or_fedora_obj_or_nid_or_node){
   if (empty($owner_id)) {
     $owner_id = 1;
   }
+  module_load_include('inc', 'sidora', 'includes/project_spaces');
   $owned_groups = sidora_get_owned_groups($owner_id);
   foreach($owned_groups as $owned_group) {
     og_group('node', $owned_group, array('entity_type' => 'node', 'entity' => $nid));

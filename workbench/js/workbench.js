@@ -670,20 +670,6 @@ sidora.ProjectSpaces.shareChoicesHtml = function() {
   }
   return toReturn;
 }
-sidora.ProjectSpaces.DuplicateOrTransferHtml = function(selectionIntroHtml, onSubmit){
-  var toReturn = "<div>";
-  toReturn += selectionIntroHtml;
-  toReturn += "<select name='target-ps' size='7' style='width:100%'>";
-  var currentPid = sidora.ProjectSpaces.currentPid();
-  jQuery("#j1_1").children("ul").children("li").children("a").each(function(){
-    if (jQuery(this).attr("permissions").indexOf("c") > -1 && jQuery(this).attr("pid") != currentPid) {
-      toReturn += '<option value="' + jQuery(this).attr("pid")+ '">'+jQuery(this).attr("fullname") + '</option>';
-    }
-  });
-  toReturn += "</select>";
-  toReturn += '<div class="sidora-ui-text sidora-thin-button" style="float:right">Submit</div>';
-  return toReturn;
-}
 sidora.ProjectSpaces.ChangeProjectSpace = function(selectedValue) {
   var projectSelectorCss = jQuery("#"+selectedValue).siblings().map(function(){return "#" + this.id;}).get().join(", ");
   projectSelectorCss += " , #j1_1 > i, #j1_1 > a { display:none } ";
@@ -698,6 +684,8 @@ sidora.ProjectSpaces.ChangeProjectSpace = function(selectedValue) {
       Shadowbox.open({
         content:    "<div style='height:100%;background:floralwhite;'><div style='padding:10px'>"+sidora.ProjectSpaces.shareChoicesHtml()+"</div></div>",
         player:     "html",
+        width: jQuery("body").width()-100,
+        height: Math.max(600,jQuery("body").height()-100),
         title:      sidora.display.PROJECT_SPACE_PERMISSION_TITLE,
         options: {
           onFinish:  function(){}
@@ -706,18 +694,6 @@ sidora.ProjectSpaces.ChangeProjectSpace = function(selectedValue) {
     },100 + (Shadowbox.isOpen() * 800));
     Shadowbox.close();
   });
-}
-sidora.ProjectSpaces.DuplicateOrTransfer = function(type, conceptsOrResources) {
-  var pids = [];
-  if (conceptsOrResources == 'resources') {
-    pids = sidora.resources.getHighlighted();
-  }
-  else {
-    pids.push(sidora.concept.GetPid()); 
-  }
-  var intro = sidora.ProjectSpaces.DuplicateOrTransferIntro(type, pids);
-  intro += "<p>Choose a destination below:</p>";
-  sidora.ProjectSpaces.ShowWhereToForm(intro, function(){console.log("done");});
 }
 sidora.ProjectSpaces.DuplicateOrTransferIntro = function(type, pids) {
   var intro = "<p>";
@@ -736,14 +712,48 @@ sidora.ProjectSpaces.DuplicateOrTransferIntro = function(type, pids) {
   intro += '</ul>';
   return intro;
 }
+sidora.ProjectSpaces.DuplicateOrTransfer = function(type, conceptsOrResources) {
+  var pids = [];
+  if (conceptsOrResources == 'resources') {
+    pids = sidora.resources.getHighlighted();
+  }
+  else {
+    pids.push(sidora.concept.GetPid()); 
+  }
+  var intro = sidora.ProjectSpaces.DuplicateOrTransferIntro(type, pids);
+  intro += "<p>Choose a destination below:</p>";
+  sidora.ProjectSpaces.ShowWhereToForm(intro, function(){console.log("done");});
+}
+sidora.ProjectSpaces.DuplicateOrTransferHtml = function(selectionIntroHtml, onSubmit){
+  var toReturn = "<div style='height:100%'>";
+  toReturn += selectionIntroHtml;
+  toReturn += "<div id='destination-tree' style='width:100%;overflow:scroll;height:calc(100% - 200px);'></div>";
+  toReturn += '<div class="sidora-ui-text sidora-thin-button" style="float:right">Submit</div>';
+  return toReturn;
+}
 sidora.ProjectSpaces.ShowWhereToForm = function(selectionIntro, onSubmit){
   setTimeout(function(){
     Shadowbox.open({
-      content:    "<div style='height:100%;background:floralwhite;'><div style='padding:10px'>"+sidora.ProjectSpaces.DuplicateOrTransferHtml(selectionIntro, onSubmit)+"</div></div>",
+      content:    "<div style='height:100%;background:floralwhite;'><div style='padding:10px;height:calc(100% - 20px);'>"+sidora.ProjectSpaces.DuplicateOrTransferHtml(selectionIntro, onSubmit)+"</div></div>",
       player:     "html",
       title:      sidora.display.PROJECT_SPACE_PERMISSION_TITLE,
+      width: 800,
+      height: Math.max(600,jQuery("body").height()-100),
       options: {
-        onFinish:  function(){}
+        onFinish:  function(){
+          jQuery.ajax({
+            "url":Drupal.settings.basePath+"sidora/ajax_parts/project_spaces_tree",
+            "success":function(data){
+              jQuery("#destination-tree").html(data);
+              jQuery("#destination-tree").jstree({
+                "core": { "multiple" : false }
+              });
+            },
+            "error":function(){
+              console.log("pst error");
+            }
+          });
+        }
       }
       });
   },100 + (Shadowbox.isOpen() * 800));
@@ -1480,7 +1490,7 @@ sidora.InitiatePage = function(){
             content:    Drupal.settings.basePath+"sidora/project_spaces",
             player:     "iframe",
             title:      "Project Spaces",
-            options: {
+            options:  {
               onFinish:  function(){}
             }
           });},100);
