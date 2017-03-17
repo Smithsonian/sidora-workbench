@@ -80,10 +80,92 @@ function exhibition_config_schema(){
       'is_available' => array(
         'type' => 'int',
       ),
+      'visibility' => array(
+        'type' => 'text',
+        'size' => 'big',
+      ),
     ),
   );
   return $schema;
 }
+/**
+ * Update from the original Exhibition config, enable the ability to hold visibility information
+ */
+function exhibition_config_update_7100() {
+  $spec = array(
+    'type' => 'text',
+    'description' => 'Visibility of all items within this exhibition',
+    'size' => 'big',
+  );
+  db_add_field('exhibition_config', 'visibility', $spec);
+}
+/**
+ * Update to database to hold 2 states of exhibition config, last edited and last published
+ */
+function exhibition_config_update_7200() {
+	if (!db_table_exists('exhibition_config_unserialized')){
+		$schema['exhibition_config_7200'] = array(
+    'description' => t('Stores information for exhibitions'),
+    'fields' => array(
+      'pid' => array(
+        'type' => 'varchar',
+        'length' => '256',
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'is_available' => array(
+        'type' => 'int',
+      ),
+			'last_edited' => array(
+			  'type' => 'text',
+				'size' => 'big',
+			),
+			'last_published' => array(
+			  'type' => 'text',
+				'size' => 'big',
+			),		
+      'visibility' => array(
+        'type' => 'text',
+        'size' => 'big',
+      ),
+    ),
+  );
+	db_rename_table('exhibition_config','exhibition_config_unserialized');  
+	db_create_table('exhibition_config', $schema['exhibition_config_7200']);
+  $select_query = db_query("select * from {exhibition_config_unserialized}");
+	$query = db_insert('exhibition_config')->fields(array('pid','is_available','last_edited','last_published','visibility'));
+	while($input = $select_query->fetchAssoc()){
+		$last_edited_values = array(
+      'logo' => $input['logo'],
+      'logo_width' => $input['logo_width'],
+      'logo_height' => $input['logo_height'],
+      'title' => $input['title'],
+      'header_html' => $input['header_html'],
+      'css_script' => unserialize($input['css_script']),
+      'footer_html' => $input['footer_html'],
+      'precontent_html' => $input['precontent_html'],
+      'postcontent_html' => $input['postcontent_html'],
+      'sidebar_left_html' => $input['sidebar_left_html'],
+      'sidebar_right_html' => $input['sidebar_right_html'],
+      'nav_location' => $input['nav_location'],
+      'nav_type' => $input['nav_type'],
+      'custom_url' => $input['custom_url'],
+      'link_bar_links' => unserialize($input['link_bar_links']),
+      'use_parent_config' => $input['use_parent_config'],
+		);
+		$row = array(
+		  'pid' => $input['pid'],
+			'is_available' => $input['is_available'],
+			'last_edited' => serialize($last_edited_values),
+			'last_published' => ($input['is_available'] == '1')? serialize($last_edited_values):'',
+			'visibility' => $input['visibility'],
+		);	
+	  $query->values($row);	
+	}
+	$query->execute();
+}		 
+}
+    
 /*
 * Implementation of hook_uninstall().
 */

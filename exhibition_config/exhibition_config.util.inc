@@ -1,4 +1,31 @@
 <?php
+/*
+ * Copyright 2015 Smithsonian Institution.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License.You may obtain a copy of
+ * the License at: http://www.apache.org/licenses/
+ *
+ * This software and accompanying documentation is supplied without
+ * warranty of any kind. The copyright holder and the Smithsonian Institution:
+ * (1) expressly disclaim any warranties, express or implied, including but not
+ * limited to any implied warranties of merchantability, fitness for a
+ * particular purpose, title or non-infringement; (2) do not assume any legal
+ * liability or responsibility for the accuracy, completeness, or usefulness of
+ * the software; (3) do not represent that use of the software would not
+ * infringe privately owned rights; (4) do not warrant that the software
+ * is error-free or will be maintained, supported, updated or enhanced;
+ * (5) will not be liable for any indirect, incidental, consequential special
+ * or punitive damages of any kind or nature, including but not limited to lost
+ * profits or loss of data, on any basis arising from contract, tort or
+ * otherwise, even if any of the parties has been warned of the possibility of
+ * such loss or damage.
+ *
+ *
+ * This distribution includes several third-party libraries, each with their own
+ * license terms. For a complete copy of all copyright and license terms, including
+ * those of third-party libraries, please see the product release notes.
+ */
 
 /**
  * @file
@@ -103,7 +130,56 @@ function si_exhibition_generate_child_concept_query($pid) {
      <info:fedora/' . $pid . '> <fedora-rels-ext:hasConcept> $o
      order by $t';
 }
-
+function si_exhibition_map_children($o) { 
+	  $child_array = array();
+		$type  = ($o['o']['value'])? 'Concept':'Resource';
+		$child_array['type'] = $type;
+		if ($type == 'Concept') {
+		  $child_array['pid'] = $o['o']['value'];
+			$child_array['title'] = $o['t']['value'];
+		//	$child_array['count'] = $o['k0']['value'];
+			$child_array['model'] = '';
+		}else{
+		  $child_array['pid'] = $o['res']['value'];
+			$child_array['title'] = $o['title']['value'];
+			$child_array['model'] = $o['model']['value'];
+		//	$child_array['count'] = '0';
+		}	
+	return $child_array;
+}
+function si_exhibition_get_children_info(FedoraObject $object) {
+  $repo = si_exhibition_get_repo();
+  $query = si_exhibition_generate_children_query($object->id);
+  $results = $repo->ri->sparqlQuery($query);
+	$children = array_map("si_exhibition_map_children", $results);
+  usort($children, function($a, $b){
+    if ($a['type'] == $b['type']){
+      return strcmp($a['title'],$b['title']);
+    } else {
+      return strcmp($b['type'],$a['type']);
+    }
+  });
+	return $children;
+}	 
+/**
+ * Query for generating the children tree for the new exhibition visibility
+ */
+function si_exhibition_generate_children_query($pid) {
+return 'select ?o ?t ?res ?title ?model from <#ri> where {
+    { ?o <info:fedora/fedora-system:def/model#state> <info:fedora/fedora-system:def/model#Active>;
+          <info:fedora/fedora-system:def/model#label> ?t .
+     <info:fedora/' . $pid . '> <info:fedora/fedora-system:def/relations-external#hasConcept> ?o
+   }
+Union {
+     ?res <info:fedora/fedora-system:def/model#state> <info:fedora/fedora-system:def/model#Active>;
+     <info:fedora/fedora-system:def/model#label> ?title .
+<info:fedora/' . $pid . '> <info:fedora/fedora-system:def/relations-external#hasResource> ?res .
+    ?res <info:fedora/fedora-system:def/model#hasModel> $model
+FILTER(!sameTerm(?model, <info:fedora/fedora-system:FedoraObject-3.0>) &&
+           !sameTerm(?model, <info:fedora/si:resourceCModel>))
+ }
+}';
+}		 
 /**
  * Fetchs some information about the given object's child resources.
  *

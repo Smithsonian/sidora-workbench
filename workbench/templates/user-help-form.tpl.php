@@ -53,7 +53,9 @@
 .form-item {
   text-align: center;
 }
-
+.form-item label {
+  float: left;
+}	
 input.form-text {
   width: 96%;
   height: 1.6rem;
@@ -62,10 +64,11 @@ input.form-text {
 }
 </style>
 <div id="logo_container">
-  <img src="<?php echo base_path() . drupal_get_path('module', 'sidora'); ?>/images/logo.png" alt="Smithsonian logo">
-  <h1>Sidora Workbench</h1>
+  <!--
+	<img src="<?php echo base_path() . drupal_get_path('module', 'sidora'); ?>/images/logo.png" alt="Smithsonian logo">
+	-->
+  <h1>Contact SIdora Administrators</h1>
 </div>
 <?php 
-$form['name']['#value'] = '';  //Security issue with reprinting name
 print drupal_render_children($form); 
 ?>
