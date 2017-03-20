@@ -5705,7 +5705,8 @@ function sidora_ajax_parts($call_type, $param1 = '', $param2 = '', $param3 = '')
     }
   }
  }
- print json_encode(array('status' => 'error', 'message' => 'Batch Status return ' . $ingest_status));
+ $res_count = db_query("select count from sidora_batch_ingest where batch_id = :batchid", array(':batchid' => $batch_id))->fetchField();
+ print json_encode(array('status' => 'error', 'message' => 'Batch Status return ' . $ingest_status, 'parent' => $parent_pid, 'count' => $res_count));
  drupal_exit();
 }
 
