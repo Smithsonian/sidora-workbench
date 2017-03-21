@@ -652,7 +652,7 @@ sidora.ProjectSpaces.writableProjectSpaces = function() {
   var domIdsOfProjectSpaces = jQuery("#psdd-select option").map(function(){return jQuery(this).val()});
   for (var dii = 0; dii < domIdsOfProjectSpaces.length; dii++){
     var permissions = jQuery("#" + domIdsOfProjectSpaces[dii]).children("a").attr("permissions");
-    if (permissions.indexOf("c") > -1) {
+    if (typeof(permissions) != 'undefined' && permissions.indexOf("c") > -1) {
       toReturn.push(jQuery("#" + domIdsOfProjectSpaces[dii]).children("a").attr("pid"));
     }
   }
@@ -687,8 +687,8 @@ sidora.ProjectSpaces.shareChoicesHtml = function() {
       toReturn += '<a href="#" onclick="sidora.ProjectSpaces.DuplicateOrTransfer(\'transfer\',\'concept\'); return false;"><i class="material-icons">lightbulb_outline redo</i> '+htmlEntities(sidora.display.PROJECT_SPACE_CHOICE_TRANSFER_CONCEPT)+'</a><br>';
     }
     if (sidora.resources.getHighlighted().length > 0) {
-      toReturn += '<a href="#" onclick="sidora.ProjectSpaces.DuplicateOrTransfer(\'duplicate\',\'resource\'); return false;"><i class="material-icons">panorama content_copy</i> '+htmlEntities(sidora.display.PROJECT_SPACE_CHOICE_DUPILCATE_RESOURCE)+'</a><br>';
-      toReturn += '<a href="#" onclick="sidora.ProjectSpaces.DuplicateOrTransfer(\'transfer\',\'resource\'); return false;"><i class="material-icons">panorama redo</i> '+htmlEntities(sidora.display.PROJECT_SPACE_CHOICE_TRANSFER_RESOURCE)+'</a><br>';
+      toReturn += '<a href="#" onclick="sidora.ProjectSpaces.DuplicateOrTransfer(\'duplicate\',\'resources\'); return false;"><i class="material-icons">panorama content_copy</i> '+htmlEntities(sidora.display.PROJECT_SPACE_CHOICE_DUPILCATE_RESOURCE)+'</a><br>';
+      toReturn += '<a href="#" onclick="sidora.ProjectSpaces.DuplicateOrTransfer(\'transfer\',\'resources\'); return false;"><i class="material-icons">panorama redo</i> '+htmlEntities(sidora.display.PROJECT_SPACE_CHOICE_TRANSFER_RESOURCE)+'</a><br>';
     }
   }
   return toReturn;
@@ -748,9 +748,32 @@ sidora.ProjectSpaces.DuplicateOrTransfer = function(type, conceptsOrResources) {
   }
   var intro = sidora.ProjectSpaces.DuplicateOrTransferIntro(type, pids);
   intro += "<p>Choose a destination below:</p>";
+  var onSubmit = function(){};
+  if (type == 'duplicate') {
+    onSubmit = function(){
+      sidora.util.Confirm(
+        Drupal.t("Duplicate Creation"),
+        Drupal.t("Confirm to duplicate objects to %friendlyname", {"%friendlyname":sidora.util.FriendlyNameDirect(destPid)}),
+        function(){
+          sidora.performDuplicate(destPid, pids);
+        }
+      );
+    }
+  }
+  if (type == 'transfer') {
+    onSubmit = function(){
+      sidora.util.Confirm(
+        Drupal.t("Transfer Object"),
+        Drupal.t("Confirm to transfer objects to %friendlyname", {"%friendlyname":sidora.util.FriendlyNameDirect(destPid)}),
+        function(){
+          sidora.performDuplicate(destPid, pids);
+        }
+      );
+    }
+  }
   sidora.ProjectSpaces.ShowWhereToForm(intro, pids, function(){console.log("done");});
 }
-sidora.ProjectSpaces.DuplicateOrTransferHtml = function(selectionIntroHtml, onSubmit){
+sidora.ProjectSpaces.DuplicateOrTransferHtml = function(selectionIntroHtml){
   var toReturn = "<div style='height:100%'>";
   toReturn += selectionIntroHtml;
   toReturn += "<div id='destination-tree' style='width:100%;overflow:auto;height:calc(100% - 200px);'>Loading destination trees...</div>";
@@ -785,13 +808,7 @@ sidora.ProjectSpaces.ShowWhereToForm = function(selectionIntro, pids, onSubmit){
                   alert('need to pick something'); 
                 }
                 else {
-                  sidora.util.Confirm(
-                     Drupal.t("Duplicate Creation"),
-                     Drupal.t("Confirm to duplicate objects to %friendlyname", {"%friendlyname":sidora.util.FriendlyNameDirect(destPid)}),
-                     function(){
-                       sidora.performDuplicate(destPid, pids);
-                     }
-                  );
+                  onSubmit();
                 }
               });
             },

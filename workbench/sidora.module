@@ -468,7 +468,7 @@ function sidora_management_panel($pid, $show_or_save = 'show', $dsid_to_remove =
        ',array('type' => 'inline', 'weight' => '1000000', 'group' => JS_THEME));
        return $to_return;
     }
-	}	
+	}
   if ($show_or_save == 'new_dsid'){
     if (!sidora_allow($user,$pid,'update')) {
       return 'This user is not authorized to change this object';
@@ -486,8 +486,8 @@ function sidora_management_panel($pid, $show_or_save = 'show', $dsid_to_remove =
       }
       if (empty($label)){
         $label = $current_uploads[0]->filename;
-      }	
-    }	
+      }
+    }
     sidora_management_ingest($pid, $identifier, $label, $mimeType);
     $to_return = 'complete';
     return $to_return;
@@ -4980,8 +4980,15 @@ function sidora_duplicate_tree_and_resources($pid_of_item_to_duplicate) {
   //  Circular references
   //
   $processed_duplicates = array();
-  // Plan: Pull all of the pids of the tree
-  $pids = sidora_get_pids_in_tree_from_nodes_by_root_pid($pid_of_item_to_duplicate);
+  if (sidora_is_concept(sidora_obj($pid_of_item_to_duplicate))) {
+    // Plan: Pull all of the pids of the tree
+    $pids = sidora_get_pids_in_tree_from_nodes_by_root_pid($pid_of_item_to_duplicate);
+  }
+  else {
+    // Something that does not have a node, therefore no tree
+    $new_obj = sidora_exact_duplicate($pid_of_item_to_duplicate);
+    return $new_obj->id;   
+  }
   if (!empty($pids)) {
   // For each item in this list
     foreach($pids as $pid => $node_id) {
@@ -5190,7 +5197,7 @@ function sidora_get_xsl_file_for_object($pid) {
   $curr_check = sidora_get_xsl_exhibition_config_for_object($pid);
   if ((!empty($curr_check)) && ($curr_check != 'none') && ($curr_check != 'direct') && (file_exists($curr_check))) {
     return $curr_check;
-  }	 
+  }
   $curr_check = sidora_get_xsl_file_config_for_object($pid);
   if (empty($curr_check)) return NULL;
   return (DRUPAL_ROOT . '/'. drupal_get_path('module','sidora') . '/XSL/' . $curr_check->file);
@@ -6150,42 +6157,62 @@ function sidora_ontology_json_default() {
 
 }
 
+/**
+ * duplciates the object to the destination, returning an array like the following:
+ * array( "error" => TRUE / FALSE, "description" => human readable description )
+ * $destination - pid to put the duplicates on
+ * $to_duplicate - pid of the root of the tree (or resource pid) to duplicate
+ */
+
+function sidora_duplicate($destination, $to_duplicate, $show_output = TRUE) {
+  // Duplicate the later pids, link them onto the first pid
+  $to_return = array("error" => TRUE, "description" => t('One or more pids were not set: destination, duplication root'));
+
+  if (!empty($destination) && !empty($to_duplicate)) {
+    // Check that we have permission to write to the destination and have no locks against it
+    $pid = $destination;
+    if (sidora_allow($user,$pid,'create')) {
+      if (sidora_ajax_lock($pid, 'obtain', FALSE)) {
+        $duplicated_root = sidora_duplicate_tree_and_resources($to_duplicate);
+        if ($duplicated_root === FALSE) {
+           $to_return = array("error" => TRUE, "description" => t('Unable to duplicate these objects'));
+        }
+        else {
+          $copy_return = sidora_copy($destination, $duplicated_root, FALSE);
+          sidora_ajax_lock($pid, 'release', FALSE);
+          if ($copy_return === TRUE) {
+            $to_return = array("error" => FALSE, "description" => t('Objects duplicated to destination'));
+          }
+          else {
+            $to_return = array("error" => TRUE, "description" => t('Problem linking to destination.'), 'internal_error' => $to_return['description']);
+            watchdog("sidora",t('Created duplicates but they got orphaned, root: %root', array('%root' => $duplicated_root)));
+          }
+        }
+      }
+      else {
+        $to_return = array("error" => TRUE, "description" => t('Pid locked'));
+      }
+    }
+    else {
+      $to_return = array("error" => TRUE, "description" => t('User does not have permission to create objects at destination'));
+    }
+  }
+  if ($show_output) {
+    print json_encode($to_return);
+    drupal_exit();
+  }
+  else {
+    return $to_return;
+  }
+}
+
 /*
  * Catch all for ajax
  */
 function sidora_ajax_parts($call_type, $param1 = '', $param2 = '', $param3 = '') {
   global $user;
   if ($call_type == 'duplicate'){
-    // Duplicate the later pids, link them onto the first pid
-    if (!empty($param1) && !empty($param2)) {
-      // Check that we have permission to write to the destination and have no locks against it
-      $pid = $param1;
-      if (sidora_allow($user,$pid,'create')) {
-        if (sidora_ajax_lock($pid)) {
-          $duplicated_root = sidora_duplicate_tree_and_resources($param2);
-          if ($duplicated_root === FALSE) {
-             $to_return = array("error" => TRUE, "description" => t('Unable to duplicate these objects'));
-          }
-          else {
-            $copy_return = sidora_copy($param1, $duplicated_root);
-            sidora_ajax_lock($pid, 'release');
-            if ($copy_return === TRUE) {
-              $to_return = array("error" => FALSE, "description" => t('Objects duplicated to destination'));
-            }
-            else {
-              $to_return = array("error" => TRUE, "description" => t('Problem linking to destination.'), 'internal_error' => $to_return['description']);
-              watchdog("sidora",t('Created duplicates but they got orphaned, root: %root', array('%root' => $duplicated_root)));
-            }
-          }
-        }
-        else {
-          $to_return = array("error" => TRUE, "description" => t('Pid locked'));
-        }
-      }
-      else {
-        $to_return = array("error" => TRUE, "description" => t('User does not have permission to create objects at destination'));
-      }
-    }
+    return sidora_duplicate($param1, $param2);
   }
   if ($call_type == 'project_spaces_tree') {
     module_load_include('inc', 'sidora', 'includes/project_spaces');
@@ -6444,7 +6471,7 @@ function sidora_allow_batch($user, $pids = array(), $type_of_operation = 'view')
  * always for the currently logged in user
  *
  */
-function sidora_ajax_lock($pid, $operation = 'obtain') {
+function sidora_ajax_lock($pid, $operation = 'obtain', $print_and_exit = TRUE) {
   if (variable_get('sidora_disable_locking_by_pid', '') == 1) {
     $to_print['error'] = false;
     $to_print['description'] = t('Pid locking is administratively disabled, no attempt at lock');
@@ -6512,8 +6539,13 @@ function sidora_ajax_lock($pid, $operation = 'obtain') {
       }
     }
   }
-  print json_encode($to_print);
-  drupal_exit();
+  if ($print_and_exit) {
+    print json_encode($to_print);
+    drupal_exit();
+  }
+  else {
+    return !$to_print['error'];
+  }
 }
 
 /**
