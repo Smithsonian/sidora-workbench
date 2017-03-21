@@ -4786,6 +4786,7 @@ function sidora_node_allow($type_of_operation, $node) {
     // So there needs to be a node for the pid
     // Get the owner of the node ( $node->uid )
     $groups = sidora_get_groups_by_user();
+
     // Get the current user's groups
     foreach($groups as $group){
       if (og_is_member('node',$group->vid,'node',$node)){
@@ -6155,12 +6156,35 @@ function sidora_ontology_json_default() {
 function sidora_ajax_parts($call_type, $param1 = '', $param2 = '', $param3 = '') {
   global $user;
   if ($call_type == 'duplicate'){
-    var_dump($param1);
-    var_dump($param2);
-    exit();
+    // Duplicate the later pids, link them onto the first pid
     if (!empty($param1) && !empty($param2)) {
-      $the_return = sidora_duplicate_tree_and_resources($param1);
-      sidora_copy($param2, $the_return);
+      // Check that we have permission to write to the destination and have no locks against it
+      $pid = $param1;
+      if (sidora_allow($user,$pid,'create')) {
+        if (sidora_ajax_lock($pid)) {
+          $duplicated_root = sidora_duplicate_tree_and_resources($param2);
+          if ($duplicated_root === FALSE) {
+             $to_return = array("error" => TRUE, "description" => t('Unable to duplicate these objects'));
+          }
+          else {
+            $copy_return = sidora_copy($param1, $duplicated_root);
+            sidora_ajax_lock($pid, 'release');
+            if ($copy_return === TRUE) {
+              $to_return = array("error" => FALSE, "description" => t('Objects duplicated to destination'));
+            }
+            else {
+              $to_return = array("error" => TRUE, "description" => t('Problem linking to destination.'), 'internal_error' => $to_return['description']);
+              watchdog("sidora",t('Created duplicates but they got orphaned, root: %root', array('%root' => $duplicated_root)));
+            }
+          }
+        }
+        else {
+          $to_return = array("error" => TRUE, "description" => t('Pid locked'));
+        }
+      }
+      else {
+        $to_return = array("error" => TRUE, "description" => t('User does not have permission to create objects at destination'));
+      }
     }
   }
   if ($call_type == 'project_spaces_tree') {
@@ -7089,13 +7113,20 @@ function sidora_block_content_navigation() {
   $to_return .= '<div id="concept-create-menu">';
   $to_return .= '</div>';
   $to_return .= '<div id="forjstree" root_pid="'.$root_pid.'">';
-  $to_return .= sidora_html_tree_from_given_pid($root_pid, NULL, 3, $send_params);
+  module_load_include('inc', 'sidora', 'includes/project_spaces');
+  if (sidora_is_admin()) {
+    $extra_admin_part = sidora_html_tree_from_given_pid($root_pid, NULL, 3, $send_params);
+    $to_return .= sidora_project_spaces_tree($extra_admin_part, TRUE, array());
+  }
+  else {
+    $to_return .= sidora_project_spaces_tree("", TRUE,  array("create","read","update","delete"));
+  }
   $to_return .= '</div></div>';
   // jQuery UI L&F
   drupal_add_css(drupal_get_path('module','sidora').'/css/themes/smoothness/jquery-ui.min.css');
   // jsTree lib
   $jstree_loc = variable_get('sidora_js_lib_location_jstree', '');
-  drupal_add_css(drupal_get_path('module','sidora') . '/css/jstree_custom/style.min.css');
+  drupal_add_css(drupal_get_path('module','sidora') . '/css/jstree_custom/style.min.css', array('weight' => 9000, 'group' => CSS_THEME));
   drupal_add_js($jstree_loc . 'jstree.js');
   // dataTables lib
   $datatables_loc =  variable_get('sidora_dataTables_location','');
@@ -7595,9 +7626,15 @@ function sidora_cron() {
 
 /*
  * Creates the html_tree.
- * (This function should not be used to restrict view permissions, instead only pass in information that is allowed to be viewed.)
+ * $num_levels is the number of tree levels to go down the tree
+ * $url_params is the additional parameters to put on the url: 'sidora/workbench/' . $url_params . '#' . $pid . '?path=' . $input_path
+ * $dom_type is the string name of the dom element to use for the objects in the <li>, for jstree you want these to be <a> so use 'a'
+ * $include_href is a boolean on whether to include an href on the dom object in the <li>
+ * $include_permission_types is an array of permission types to include
+ *   create, read, update, delete as expected, but an empty array or an array with an empty element means to output a tree even if the current user
+ *   does not have any access
  */
-function sidora_html_tree_from_query_results_tree($query_result_tree, $input_path = '', $num_levels = 3, $url_params = '', $dom_type = 'a', $include_href = TRUE){
+function sidora_html_tree_from_query_results_tree($query_result_tree, $input_path = '', $num_levels = 3, $url_params = '', $dom_type = 'a', $include_href = TRUE, $include_permission_types = array("create","read","update","delete")){
   if (empty($query_result_tree)) return '';
   global $user;
   // Every entry needs a label or we will not show it in the tree
@@ -7634,21 +7671,40 @@ function sidora_html_tree_from_query_results_tree($query_result_tree, $input_pat
       $resource_children_num = -1;
       if (array_key_exists('resourcecount',$t_element)) $resource_children_num = $t_element['resourcecount']['value'];
       $classes_for_permissions = "";
+      
       $permissions = '';
+      $included_in_output = FALSE;
+      if (empty($include_permission_types) || in_array("",$include_permission_types)) {
+        // Indicates no permissions on object, but still want to output it
+        $permissions .= " ";
+        $included_in_output = TRUE;
+      }
       if (array_key_exists('crud',$t_element)) {
         if ($t_element['crud']['c']) {
+          if (in_array("create",$include_permission_types)) {
+            $included_in_output = TRUE;
+          }
           $permissions .= 'c';
           $classes_for_permissions .= ' p_create';
         }
         if ($t_element['crud']['r']) {
+          if (in_array("read",$include_permission_types)) {
+            $included_in_output = TRUE;
+          }
           $permissions .= 'r';
           $classes_for_permissions .= ' p_read';
         }
         if ($t_element['crud']['u']) {
+          if (in_array("update",$include_permission_types)) {
+            $included_in_output = TRUE;
+          }
           $permissions .= 'u';
           $classes_for_permissions .= ' p_update';
         }
         if ($t_element['crud']['d']) {
+          if (in_array("delete",$include_permission_types)) {
+            $included_in_output = TRUE;
+          }
           $permissions .= 'd';
           $classes_for_permissions .= ' p_delete';
         }
@@ -7669,7 +7725,7 @@ function sidora_html_tree_from_query_results_tree($query_result_tree, $input_pat
       if ($pid == $default_ps) {
         $class_for_default_project_space = ' default-project-space';
       }
-      if (!empty($permissions)) {
+      if (!empty($permissions) && $included_in_output) {
         $to_return .= '<li>';
         $href = ($include_href)? ' href="' . base_path() . 'sidora/workbench/' . $url_params . '#' . $pid . '?path=' . $input_path . '"':'';
         $to_return .= '<' . $dom_type . $href . ' pid="' . $pid . '" fullname="' . $html_escaped_name . '" conceptchildren="' . count($t_element['children']) . '" resourcechildren="' . $resource_children_num . '" class="' . $classes_for_permissions . $classes_for_ownership . $class_for_default_project_space . '" permissions="' . $permissions . '"' . $nid_info . $owner_info . '>';
@@ -7678,7 +7734,7 @@ function sidora_html_tree_from_query_results_tree($query_result_tree, $input_pat
         $to_return .= "</$dom_type>";
         if (array_key_exists('children',$t_element)){
           $to_return .= '<ul>';
-          $to_return .= sidora_html_tree_from_query_results_tree($t_element['children'], $current_path, $num_levels - 1, $url_params, $dom_type);
+          $to_return .= sidora_html_tree_from_query_results_tree($t_element['children'], $current_path, $num_levels - 1, $url_params, $dom_type, $include_href, $include_permission_types);
           $to_return .= '</ul>';
         }
         if (array_key_exists('already_in_tree',$t_element) && $t_element['already_in_tree']){
@@ -11321,9 +11377,9 @@ function sidora_update_node_from_fedora($pid_or_fedora_obj_or_nid_or_node){
       $existing_child_nid = sidora_get_concept_node_id($child_pid);
       if (empty($existing_child_nid)) {
         // create the stub
-        $node = sidora_get_update_or_create_concept_node($child_pid, array());
-        if (!empty($node)) {
-          $child_nid = $node->nid;
+        $child_node = sidora_get_update_or_create_concept_node($child_pid, array());
+        if (!empty($child_node)) {
+          $child_nid = $child_node->nid;
         }
         else {
           $child_nid = NULL;
@@ -11369,9 +11425,17 @@ function sidora_update_node_from_fedora($pid_or_fedora_obj_or_nid_or_node){
  * Retrieves or creates and returns a concept node for this pid
  */
 function sidora_get_update_or_create_concept_node($pid, $info = NULL, $set_fedora_sync = FALSE){
-  $node_id = sidora_get_concept_node_id($pid, $info);
+  $node_id = sidora_get_concept_node_id($pid);
   if (empty($node_id)){
-    return sidora_create_concept_node($pid, $info, $set_fedora_sync);
+    $object = sidora_obj($pid);
+    $is_concept = sidora_is_concept($object);
+    if ($is_concept) {
+      watchdog('sidora', "Create:<pre>" . sidora_debug_string_backtrace()."</pre>info:".json_encode($info));
+      return sidora_create_concept_node($pid, $info, $set_fedora_sync);
+    }
+    else {
+      return NULL;
+    }
   }
   else {
     $node = node_load($node_id);
@@ -11451,6 +11515,7 @@ function sidora_get_uid_from_username($username) {
  * Updates an existing node with information
  */
 function sidora_update_concept_node($node, $info, $set_fedora_sync = FALSE) {
+  watchdog('sidora', "Update:<pre>" . sidora_debug_string_backtrace()."</pre>info:".json_encode($info));
   $node_wrapper = entity_metadata_wrapper('node', $node);
   if (array_key_exists('label',$info)) {
     $node_wrapper->field_fedora_label->set($info['label']);
@@ -11616,6 +11681,7 @@ function sidora_get_default_owner_id_under_pid($pid){
   //If there is a node, check to see if it's in a share group
   $node_groups = og_get_entity_groups('node', $node);
  
+  module_load_include('inc', 'sidora', 'includes/project_spaces');
   //If it is in a share group, return the node's owner
   $owned_groups = sidora_get_owned_groups($node->uid);
   $group_assoc = array();

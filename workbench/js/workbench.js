@@ -647,6 +647,17 @@ sidora.util.loadTreeSectionsIfNeeded = function(data){
 sidora.ProjectSpaces.currentPid = function() {
   return jQuery("#" + jQuery("#psdd-select").val()).children("a").attr("pid");
 }
+sidora.ProjectSpaces.writableProjectSpaces = function() {
+  var toReturn = [];
+  var domIdsOfProjectSpaces = jQuery("#psdd-select option").map(function(){return jQuery(this).val()});
+  for (var dii = 0; dii < domIdsOfProjectSpaces.length; dii++){
+    var permissions = jQuery("#" + domIdsOfProjectSpaces[dii]).children("a").attr("permissions");
+    if (permissions.indexOf("c") > -1) {
+      toReturn.push(jQuery("#" + domIdsOfProjectSpaces[dii]).children("a").attr("pid"));
+    }
+  }
+  return toReturn;
+}
 sidora.ProjectSpaces.isProjectSpace = function(pid) {
   // TBD TODO add a indicator on the item to indicate it is a project space instead of this
   var toCheck = jQuery("[pid='"+pid+"']").parent();
@@ -657,22 +668,37 @@ sidora.ProjectSpaces.isProjectSpace = function(pid) {
   }
   return false;
 }
+sidora.ProjectSpaces.isShareAvailable = function() {
+  // TBD check if the share button should be shown 
+}
 sidora.ProjectSpaces.shareChoicesHtml = function() {
   var toReturn = '<a href="#" onclick="sidora.ProjectSpaces.ShowPermissionsForm(); return false;"><i class="material-icons">group vpn_key</i> '+htmlEntities(sidora.display.PROJECT_SPACE_CHOICE_CHANGE_PERMISSIONS)+'</a><br>';
   toReturn += '<i class="material-icons">group redo</i> '+htmlEntities(sidora.display.PROJECT_SPACE_CHOICE_TRANSFER_PS_TO_NEW_OWNER)+'<br>';
-  if (!sidora.ProjectSpaces.isProjectSpace(sidora.concept.GetPid())) {
-    toReturn += '<a href="#" onclick="sidora.ProjectSpaces.DuplicateOrTransfer(\'duplicate\',\'concept\'); return false;"><i class="material-icons">lightbulb_outline content_copy</i> '+htmlEntities(sidora.display.PROJECT_SPACE_CHOICE_DUPLICATE_CONCEPT)+'</a><br>';
-    toReturn += '<a href="#" onclick="sidora.ProjectSpaces.DuplicateOrTransfer(\'transfer\',\'concept\'); return false;"><i class="material-icons">lightbulb_outline redo</i> '+htmlEntities(sidora.display.PROJECT_SPACE_CHOICE_TRANSFER_CONCEPT)+'</a><br>';
+  // Determine if there are additional project spaces where the user would be able to place the highlighted objects
+  var currentPS = sidora.ProjectSpaces.currentPid();
+  var writablePS = sidora.ProjectSpaces.writableProjectSpaces();
+  var indexCW = writablePS.indexOf(currentPS);
+  if (indexCW > -1) {
+    writablePS.splice(indexCW, 1);
   }
-  if (sidora.resources.getHighlighted().length > 0) {
-    toReturn += '<a href="#" onclick="sidora.ProjectSpaces.DuplicateOrTransfer(\'duplicate\',\'resource\'); return false;"><i class="material-icons">panorama content_copy</i> '+htmlEntities(sidora.display.PROJECT_SPACE_CHOICE_DUPILCATE_RESOURCE)+'</a><br>';
-    toReturn += '<a href="#" onclick="sidora.ProjectSpaces.DuplicateOrTransfer(\'transfer\',\'resource\'); return false;"><i class="material-icons">panorama redo</i> '+htmlEntities(sidora.display.PROJECT_SPACE_CHOICE_TRANSFER_RESOURCE)+'</a><br>';
+  if (writablePS.length > 0) {
+    if (!sidora.ProjectSpaces.isProjectSpace(sidora.concept.GetPid())) {
+      toReturn += '<a href="#" onclick="sidora.ProjectSpaces.DuplicateOrTransfer(\'duplicate\',\'concept\'); return false;"><i class="material-icons">lightbulb_outline content_copy</i> '+htmlEntities(sidora.display.PROJECT_SPACE_CHOICE_DUPLICATE_CONCEPT)+'</a><br>';
+      toReturn += '<a href="#" onclick="sidora.ProjectSpaces.DuplicateOrTransfer(\'transfer\',\'concept\'); return false;"><i class="material-icons">lightbulb_outline redo</i> '+htmlEntities(sidora.display.PROJECT_SPACE_CHOICE_TRANSFER_CONCEPT)+'</a><br>';
+    }
+    if (sidora.resources.getHighlighted().length > 0) {
+      toReturn += '<a href="#" onclick="sidora.ProjectSpaces.DuplicateOrTransfer(\'duplicate\',\'resource\'); return false;"><i class="material-icons">panorama content_copy</i> '+htmlEntities(sidora.display.PROJECT_SPACE_CHOICE_DUPILCATE_RESOURCE)+'</a><br>';
+      toReturn += '<a href="#" onclick="sidora.ProjectSpaces.DuplicateOrTransfer(\'transfer\',\'resource\'); return false;"><i class="material-icons">panorama redo</i> '+htmlEntities(sidora.display.PROJECT_SPACE_CHOICE_TRANSFER_RESOURCE)+'</a><br>';
+    }
   }
   return toReturn;
 }
 sidora.ProjectSpaces.ChangeProjectSpace = function(selectedValue) {
   var projectSelectorCss = jQuery("#"+selectedValue).siblings().map(function(){return "#" + this.id;}).get().join(", ");
-  projectSelectorCss += " , #j1_1 > i, #j1_1 > a { display:none } ";
+  if (projectSelectorCss.length > 0) {
+    projectSelectorCss += " , ";
+  }
+  projectSelectorCss += "#j1_1 > i, #j1_1 > a { display:none } ";
   projectSelectorCss += " #" + selectedValue + " { position: absolute; top: 0; left: 0; } ";
   jQuery("#project-selector-css").remove();
   jQuery("<style>").prop("type","text/css").prop("id","project-selector-css").html(projectSelectorCss).appendTo("head");
@@ -722,16 +748,16 @@ sidora.ProjectSpaces.DuplicateOrTransfer = function(type, conceptsOrResources) {
   }
   var intro = sidora.ProjectSpaces.DuplicateOrTransferIntro(type, pids);
   intro += "<p>Choose a destination below:</p>";
-  sidora.ProjectSpaces.ShowWhereToForm(intro, function(){console.log("done");});
+  sidora.ProjectSpaces.ShowWhereToForm(intro, pids, function(){console.log("done");});
 }
 sidora.ProjectSpaces.DuplicateOrTransferHtml = function(selectionIntroHtml, onSubmit){
   var toReturn = "<div style='height:100%'>";
   toReturn += selectionIntroHtml;
-  toReturn += "<div id='destination-tree' style='width:100%;overflow:scroll;height:calc(100% - 200px);'></div>";
-  toReturn += '<div class="sidora-ui-text sidora-thin-button" style="float:right">Submit</div>';
+  toReturn += "<div id='destination-tree' style='width:100%;overflow:auto;height:calc(100% - 200px);'>Loading destination trees...</div>";
+  toReturn += '<div id="destination-chosen" class="sidora-ui-text sidora-thin-button" style="float:right">Submit</div>';
   return toReturn;
 }
-sidora.ProjectSpaces.ShowWhereToForm = function(selectionIntro, onSubmit){
+sidora.ProjectSpaces.ShowWhereToForm = function(selectionIntro, pids, onSubmit){
   setTimeout(function(){
     Shadowbox.open({
       content:    "<div style='height:100%;background:floralwhite;'><div style='padding:10px;height:calc(100% - 20px);'>"+sidora.ProjectSpaces.DuplicateOrTransferHtml(selectionIntro, onSubmit)+"</div></div>",
@@ -742,11 +768,31 @@ sidora.ProjectSpaces.ShowWhereToForm = function(selectionIntro, onSubmit){
       options: {
         onFinish:  function(){
           jQuery.ajax({
-            "url":Drupal.settings.basePath+"sidora/ajax_parts/project_spaces_tree",
+            // Do not include the current project space as a place to duplicate the tree
+            "url":Drupal.settings.basePath+"sidora/ajax_parts/project_spaces_tree?ignore_pid=" + jQuery("#" + jQuery("#psdd-select").val()).children("a").attr("pid"),
             "success":function(data){
               jQuery("#destination-tree").html(data);
               jQuery("#destination-tree").jstree({
-                "core": { "multiple" : false }
+                "core": {
+                  "multiple" : false,
+                  "initially_open" : ["proj_spaces_tree_root"]
+                }
+              });
+              jQuery("#destination-chosen").click(function(){
+                var destree = jQuery("#destination-tree").jstree();
+                var destPid = jQuery("#"+destree.get_selected()).children("a").attr("pid");
+                if (typeof(destPid) == 'undefined') {
+                  alert('need to pick something'); 
+                }
+                else {
+                  sidora.util.Confirm(
+                     Drupal.t("Duplicate Creation"),
+                     Drupal.t("Confirm to duplicate objects to %friendlyname", {"%friendlyname":sidora.util.FriendlyNameDirect(destPid)}),
+                     function(){
+                       sidora.performDuplicate(destPid, pids);
+                     }
+                  );
+                }
               });
             },
             "error":function(){
@@ -1609,6 +1655,28 @@ sidora.resources.openInNewWindow = function(){
    window.open(sidora.resources.createViewerUrl(pids[i]));
   }
 }
+sidora.performDuplicate = function(toLocationPid, pids) {
+  var droppedOn = toLocationPid;
+  var action = "duplicate";
+  for(var i=0;i<pids.length;i++){
+    droppedPid = pids[i];
+    var userFriendlyName = sidora.display.UNKNOWN_ACTION;
+    var pidList = null;
+    var onSuccess = function() {
+    }
+    pidListForRequest = [droppedOn,droppedPid];
+    userFriendlyName = Drupal.t('Duplicating');
+    queueAction = 'duplication';
+    userFriendlyName += "<em>"+sidora.util.FriendlyNameDirect(droppedPid)+"</em>";
+    userFriendlyName += sidora.display.TO + "<em>"+sidora.util.FriendlyNameDirect(droppedOn)+"</em>";
+    var requestUrl = Drupal.settings.basePath+'sidora/ajax_parts/'+action+'/'+droppedOn+'/'+droppedPid;
+    sidora.queue.Request(userFriendlyName, requestUrl, onSuccess, null, pidListForRequest,queueAction,i+' of '+pids.length);
+    console.log(userFriendlyName);
+  }
+  sidora.queue.Next();
+
+}
+
 /*
  * Direct download of the resource.  ASSUMES OBJ AS DSID
  */

@@ -346,6 +346,8 @@ footer {
   width: 100%;
   bottom: 0;
   background: white;
+  z-index: 91; 
+  /* divider bar has z-index 90, so be above that */
 }
 /*
 Table paging
@@ -399,7 +401,10 @@ Table paging
 #fjt-holder {
   overflow:auto;
 	height:inherit;
-}	
+}
+.ui-widget-overlay, .ui-dialog.ui-widget.ui-widget-content {
+  z-index: 1000;
+}
 .ui-resizable-e{
   width:10px;
 }

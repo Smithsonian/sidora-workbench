@@ -442,7 +442,7 @@ SidoraQueue.prototype.updateFooterWithRequestInProcess = function(){
   setTimeout(sidora.ResizeTreeToBrowser,1000);
 }
 SidoraQueue.prototype.Next = function(){
-  if (jQuery("footer").length == 0) jQuery("body").parent().append("<footer></footer");
+  if (jQuery("footer").length == 0) jQuery("body").append("<footer></footer");
   if (this.requestInProcess == null){
     var nextItem = this.requests.shift();
     if (nextItem instanceof SidoraRequest){
