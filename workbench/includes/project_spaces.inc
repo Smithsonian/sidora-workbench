@@ -28,6 +28,104 @@
  */
 
 /**
+ * Assume that the passed in item has a node, and put that node into the project spaces
+ * of the best parent if not already in a project space of a parent
+ *
+ * To be "IN" the same project space as the parent, that means the node has the same 
+ * organic group memberships that the parent does.
+ * 
+ */
+
+function sidora_put_into_proper_project_space($pid_or_fedora_obj_or_nid_or_node) {
+  $sidora_obj_info = sidora_get_info($pid_or_fedora_obj_or_nid_or_node, FALSE);
+  if (empty($sidora_obj_info)) {
+    return FALSE;
+  }
+  $node = $sidora_obj_info['node'];
+  $nid = $sidora_obj_info['nid'];
+  // reminder obj may not be loaded (FALSE on 2nd param of sidora_get_info)
+  $pid = $sidora_obj_info['pid'];
+  // Parent choice decision priorities:
+  // If it IS the project space, put it into the right groups. Do not remove existing groups.
+  $project_space_groups = sidora_get_groups_for_project_space($pid, TRUE);
+  if (!empty($project_space_groups)) {
+    foreach($project_space_groups as $individual_group) {
+      og_group('node', $individual_group, array('entity_type' => 'node', 'entity' => $nid));
+    }
+  }
+  else {
+    // If already in a project space of one of its parents, then nothing needs to happen
+    module_load_include('inc', 'sidora', 'includes/utils');
+    $parent_infos = sidora_get_parent_concepts_by_pid($pid);
+    $is_in_a_parents_project_space = FALSE;
+    $current_gids = sidora_get_group_nids_membership($nid);
+    // Parent communal is used for checking if all the parents have the same project spaces
+    $parent_communal_gids = array();
+    $parents_are_communal = TRUE;
+    // Even if it doesn't have groups itself, go thru to see if parents have communal groups
+    foreach($parent_infos as $parent_info) {
+      $parent_pid = $parent_info['pid'];
+      $parent_gids = sidora_get_group_nids_membership(sidora_get_concept_node_id($parent_pid));
+      $intersect_check = array_intersect($current_gids, $parent_gids);
+      if (sizeof($intersect_check) == sizeof($parent_gids)) {
+        // Is in all the groups of this parent
+        $is_in_a_parents_project_space = TRUE;
+        break;
+      }
+      if (empty($parent_communal_gids)) {
+        $parent_communal_gids = $parent_gids;
+        sort($parent_communal_gids);
+      }
+      else {
+        sort($parent_gids);
+        if (!($parent_gids == $parent_communal_gids)) {
+          $parents_are_communal = FALSE;
+        }
+      }
+    }
+    if (!$is_in_a_parents_project_space){
+      // If there is only one parent, put it in there (communal will be true)
+      // If all parents have the same project spaces, put it there
+      if ($parents_are_communal) {
+        $parent_groups = node_load_multiple($parent_communal_gids);
+        foreach($parent_groups as $parent_group) {
+          og_group('node', $parent_group, array('entity_type' => 'node', 'entity' => $nid));
+        }
+      }
+      else {
+        // TODO TBD These will be more for legacy data than new objects
+        // If still a child of the original_parent from the SIDORA datastream,
+        //     put into that parent's project space
+        // Choose the parent that has the oldest node modification date
+      }
+    }
+  }
+}
+/*
+ * Returns the node ids of the groups that this node id is a member of
+ * So, if there's these groups
+ * NODE ID | GROUP NAME
+ *     908 | Happy Concept Create
+ *     909 | Happy Concept Delete
+ *    1024 | Happy Concept Update
+ * and this concept node:
+ *    1301 | Cars of the 1950s
+ * and "Cars of the 1950s" is a member of "Happy Concept Create" and "Happy Concept Update" then
+ * the return will be:
+ * array( 908, 1024 )
+ */
+function sidora_get_group_nids_membership($nid) {
+  $current_groups_info = og_get_entity_groups('node',$nid);
+  $current_gids = array();
+  if (array_key_exists('node',$current_groups_info)) {
+    foreach($current_groups_info['node'] as $group_node_id){
+      $current_gids[] = $group_node_id;
+    }
+  }
+  return $current_gids;
+}
+
+/**
  * Assumes owners of the project spaces should also own the organic groups
  * Uses logged in user if none specified
  * Special 'all' for load all users data
@@ -78,10 +176,10 @@ function sidora_get_project_spaces_from_og_groups($group_nodes, $user, $only_ret
 /**
  * Returns group nodes that have their group root pid set to the input value
  */
-function sidora_get_groups_for_project_space($pid) {
+function sidora_get_groups_for_project_space($pid, $administrative_bookkeeping = FALSE) {
   // Only allow owner / administrator to access this information
   global $user;
-  if (!sidora_allow($user, $pid, 'permission')) {
+  if (!sidora_allow($user, $pid, 'permission') && !$administrative_bookkeeping) {
     return array();
   }
   $query = new EntityFieldQuery();

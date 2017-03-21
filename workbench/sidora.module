@@ -751,7 +751,7 @@ function sidora_process_object_with_build_id($form_build_id) {
 <ontology_location_id>'.$creation_info['ontology_id'].'</ontology_location_id>
 <meta_requirements_fulfilled>'.$all_meta_entered.'</meta_requirements_fulfilled>
 <initial_dsid>'.$creation_info['dsid'].'</initial_dsid>
-<parent>'.$parent_pid.'</parent>
+<original_parent>'.$parent_pid.'</original_parent>
 <original_creator>'.$user->name.'</original_creator>
 </sidora>', 'SIDORA');
     }
@@ -2519,10 +2519,9 @@ function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $ex
     return t("You must be an administrator or have an administrator set sidora_allow_all_to_debug in order to access this information");
   }
   if (!sidora_is_admin()) print t("Remember that nonadmins will NOT see output from dsm!");
-  if ($one == 'project_space_tree') {
+  if ($one == 'pps') {
     module_load_include('inc', 'sidora', 'includes/project_spaces');
-    print sidora_project_spaces_tree();
-    exit();
+    sidora_put_into_proper_project_space($two);
   }
   if ($one == 'convert') {
      $results = _sidora_get_child_results_cache($two);
@@ -2598,28 +2597,6 @@ SELECT ?pid ?mod ?label ?created FROM <#ri>
      print 'no tuque';
     }
     exit();
-  }
-  if ($one == 'sample_stuff') {
-    module_load_include('inc', 'sidora', 'includes/project_spaces');
-    $owned_groups =  sidora_get_owned_project_spaces();
-      print '<table>';
-    foreach($owned_groups as $owned_group) {
-      print '<tr>';
-      print '<td>';
-      print $owned_group->field_fedora_label[$owned_group->language][0]["safe_value"];
-      print '</td>';
-      print '<td>';
-      $pid = $owned_group->field_fedora_pid[$owned_group->language][0]["safe_value"];
-      print '<a href="/sidora/sharing_permissions/'.$pid.'">Permissions</a>';
-      print '</td>';
-      print '<td>';
-      var_dump($owned_group);
-      //print $owned_group->field_fedora_label[$owned_group->language][0]["safe_value"];
-      print '</td>';
-      print '</tr>';
-    }
-      print '</table>';
-   exit();
   }
   if ($one == 'check_gids'){
      $parent_pid = $two;
@@ -2700,12 +2677,6 @@ SELECT ?pid ?mod ?label ?created FROM <#ri>
       $resync_to = 1;
     }
     //TBD TODO
-  }
-  if ($one == 'sharing_permission_form'){
-    module_load_include('inc', 'sidora', 'includes/project_spaces');
-    $form = drupal_get_form('sidora_sharing_permissions_form');
-    $to_return = drupal_render($form);
-    return $to_return;
   }
   if ($one == 'force_fedora_sync'){
     $the_return = sidora_update_node_from_fedora($two);
@@ -6172,7 +6143,7 @@ function sidora_duplicate($destination, $to_duplicate, $show_output = TRUE) {
     // Check that we have permission to write to the destination and have no locks against it
     $pid = $destination;
     if (sidora_allow($user,$pid,'create')) {
-      if (sidora_ajax_lock($pid, 'obtain', FALSE)) {
+      if (sidora_obtain_lock($pid)) {
         $duplicated_root = sidora_duplicate_tree_and_resources($to_duplicate);
         if ($duplicated_root === FALSE) {
            $to_return = array("error" => TRUE, "description" => t('Unable to duplicate these objects'));
@@ -6196,6 +6167,7 @@ function sidora_duplicate($destination, $to_duplicate, $show_output = TRUE) {
     else {
       $to_return = array("error" => TRUE, "description" => t('User does not have permission to create objects at destination'));
     }
+    sidora_release_lock($pid);
   }
   if ($show_output) {
     print json_encode($to_return);
@@ -11327,15 +11299,12 @@ function sidora_import_xml_form_submit(array $form, array &$form_state) {
   }
   $form_state['redirect'] = "admin/islandora/xmlform";
 }
-/**
- * Resets a node based on its Fedora object
- * $pid_or_nid - the pid or the node id, if it has a colon (:) then it's a pid, otherwise assumes node id
- */
-function sidora_update_node_from_fedora($pid_or_fedora_obj_or_nid_or_node){
+function sidora_get_info($pid_or_fedora_obj_or_nid_or_node, $load_from_fedora = TRUE){
   $node = FALSE;
   $nid = '';
   $obj = NULL;
   $pid = '';
+  $description = '';
   if (empty($pid_or_fedora_obj_or_nid_or_node)) {
     return FALSE;
   }
@@ -11349,29 +11318,36 @@ function sidora_update_node_from_fedora($pid_or_fedora_obj_or_nid_or_node){
       $nid = $pid_or_fedora_obj_or_nid_or_node;
       // Get the node
       $node = node_load($nid);
-      if ($node === FALSE) {
-        // This node id doesn't point to anything, we can't do an update
-        return FALSE;
-      }
-      // Pull the pid
-      if (array_key_exists($node->language, $node->field_fedora_pid)) {
-        $pid = $node->field_fedora_pid[$node->language][0]['value'];
+      if ($node !== FALSE) {
+        // Pull the pid
+        if (array_key_exists($node->language, $node->field_fedora_pid)) {
+          $pid = $node->field_fedora_pid[$node->language][0]['value'];
+          // Get the object
+          if ($load_from_fedora) {
+            $obj = sidora_obj($pid);
+          }
+        }
+        else {
+          // No PID in this node, we got passed something that isn't configured properly
+          $description = t('No pid in the node');
+        }
       }
       else {
-        // No PID in this node, we got passed something that isn't configured properly
-        return FALSE;
+        $description = t('No node with this nid');
       }
-      // Get the object
-      $obj = sidora_obj($pid);
     } else {
       // Had colon, it's a pid
       $pid = $pid_or_fedora_obj_or_nid_or_node;
       // Get the object
-      $obj = sidora_obj($pid);
+      if ($load_from_fedora) {
+        $obj = sidora_obj($pid);
+      }
       // Get the node
       $node = sidora_get_concept_node($pid);
-      // Get the nid
-      $nid = $node->nid;
+      if (!empty($node)) {
+        // Get the nid
+        $nid = $node->nid;
+      }
     }
   }
   elseif ("IslandoraFedoraObject" == get_class($pid_or_fedora_obj_or_nid_or_node)){
@@ -11380,8 +11356,10 @@ function sidora_update_node_from_fedora($pid_or_fedora_obj_or_nid_or_node){
     $pid = $obj->id;
     // Get the node
     $node = sidora_get_concept_node($pid);
-    // Get the nid
-    $nid = $node->nid;
+    if (!empty($node)){
+      // Get the nid
+      $nid = $node->nid;
+    }
   }
   else {
     // Node
@@ -11389,9 +11367,35 @@ function sidora_update_node_from_fedora($pid_or_fedora_obj_or_nid_or_node){
     $nid = $node->nid;
     $pid = $node->field_fedora_pid[$node->language][0]['value'];
     // Get the object
-    $obj = sidora_obj($pid);
+    if ($load_from_fedora) {
+      $obj = sidora_obj($pid);
+    }
   }
-  //  print 'Updating from fedora, pid:'.$pid.' node:'.$nid."\n<br>";
+  $to_return = array(
+    'node' => $node,
+    'nid' => $nid,
+    'obj' => $obj,
+    'pid' => $pid,
+    'description' => $description,
+  );
+  return $to_return;
+}
+/**
+ * Resets a node based on its Fedora object
+ * $pid_or_nid - the pid or the node id, if it has a colon (:) then it's a pid, otherwise assumes node id
+ */
+function sidora_update_node_from_fedora($pid_or_fedora_obj_or_nid_or_node){
+  $sidora_obj_info = sidora_get_info($pid_or_fedora_obj_or_nid_or_node);
+  if (empty($sidora_obj_info)) {
+    return FALSE;
+  }
+  $node = $sidora_obj_info['node'];
+  $nid = $sidora_obj_info['nid'];
+  $obj = $sidora_obj_info['obj'];
+  $pid = $sidora_obj_info['pid'];
+  if (empty($node) || empty($pid)) {
+    return FALSE;
+  }
   if (empty($obj)) {
     // This object couldn't be found in Fedora, we can't do an update
     $to_return = sidora_update_concept_node($node, array('label' => ''), TRUE);
@@ -11441,15 +11445,8 @@ function sidora_update_node_from_fedora($pid_or_fedora_obj_or_nid_or_node){
   else {
     $to_return = sidora_update_concept_node($node, $info, TRUE);
   }
-  $owner_id = sidora_get_uid_from_username($obj->owner);
-  if (empty($owner_id)) {
-    $owner_id = 1;
-  }
   module_load_include('inc', 'sidora', 'includes/project_spaces');
-  $owned_groups = sidora_get_owned_groups($owner_id);
-  foreach($owned_groups as $owned_group) {
-    og_group('node', $owned_group, array('entity_type' => 'node', 'entity' => $nid));
-  }
+  sidora_put_into_proper_project_space($nid);
   return $to_return;
 }
 
@@ -11801,9 +11798,6 @@ function sidora_debug_string_backtrace() {
   // Remove first item from backtrace as it's this function which
   // is redundant.
   $trace = preg_replace ('/^#0\s+' . __FUNCTION__ . "[^\n]*\n/", '', $trace, 1);
-
-  // Renumber backtrace items.
-  $trace = preg_replace ('/^#(\d+)/me', '\'#\' . ($1 - 1)', $trace);
 
   return $trace;
 }

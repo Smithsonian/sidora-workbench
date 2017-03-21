@@ -384,25 +384,28 @@ function sidora_get_where_codebook_used(AbstractObject $object) {
  *   An associative array describing the parent concepts.
  */
 function sidora_get_parent_concepts(AbstractObject $object) {
+  return sidora_get_parent_concepts_by_pid($object->id);
+}
+function sidora_get_parent_concepts_by_pid($pid) {
   $out = array();
   $query = "SELECT ?pid ?label ?model FROM <#ri> 
 	WHERE {
          {
-         ?pid <info:fedora/fedora-system:def/relations-external#hasConcept> <info:fedora/" . $object->id . "> .
+         ?pid <info:fedora/fedora-system:def/relations-external#hasConcept> <info:fedora/" . $pid . "> .
          ?pid <info:fedora/fedora-system:def/model#state> <info:fedora/fedora-system:def/model#Active> .
          ?pid <info:fedora/fedora-system:def/model#label> ?label .
          ?pid <info:fedora/fedora-system:def/model#hasModel> ?model .
           FILTER(!sameTerm(?model, <info:fedora/fedora-system:FedoraObject-3.0>) &&
                  !sameTerm(?model, <info:fedora/si:conceptCModel>))
          } UNION {
-         ?pid <info:fedora/fedora-system:def/relations-external#hasResource> <info:fedora/" . $object->id . "> .
+         ?pid <info:fedora/fedora-system:def/relations-external#hasResource> <info:fedora/" . $pid . "> .
          ?pid <info:fedora/fedora-system:def/model#state> <info:fedora/fedora-system:def/model#Active> .
          ?pid <info:fedora/fedora-system:def/model#label> ?label .
          ?pid <info:fedora/fedora-system:def/model#hasModel> ?model .
           FILTER(!sameTerm(?model, <info:fedora/fedora-system:FedoraObject-3.0>) &&
                  !sameTerm(?model, <info:fedora/si:resourceCModel>))
          } UNION {
-         ?pid <info:fedora/fedora-system:def/relations-external#managesCodebook> <info:fedora/" . $object->id . "> .
+         ?pid <info:fedora/fedora-system:def/relations-external#managesCodebook> <info:fedora/" . $pid . "> .
          ?pid <info:fedora/fedora-system:def/model#state> <info:fedora/fedora-system:def/model#Active> .
          ?pid <info:fedora/fedora-system:def/model#label> ?label .
          ?pid <info:fedora/fedora-system:def/model#hasModel> ?model .
@@ -411,7 +414,8 @@ function sidora_get_parent_concepts(AbstractObject $object) {
                  !sameTerm(?model, <info:fedora/si:conceptCModel>))
         }
       } ORDER BY ?label";
-  $results = $object->repository->ri->query($query, 'sparql');
+  $tuque = islandora_get_tuque_connection();
+  $results = $tuque->repository->ri->query($query, 'sparql');
   foreach ($results as $result) {
     $pid = $result['pid']['value'];
     $out[$pid]['pid'] = $pid;
