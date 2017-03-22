@@ -99,6 +99,9 @@ function exhibition_config_update_7100() {
   );
   db_add_field('exhibition_config', 'visibility', $spec);
 }
+/**
+ * Update to database to hold 2 states of exhibition config, last edited and last published
+ */
 function exhibition_config_update_7200() {
 	if (!db_table_exists('exhibition_config_unserialized')){
 		$schema['exhibition_config_7200'] = array(
