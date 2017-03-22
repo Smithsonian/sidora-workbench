@@ -750,28 +750,30 @@ sidora.ProjectSpaces.DuplicateOrTransfer = function(type, conceptsOrResources) {
   intro += "<p>Choose a destination below:</p>";
   var onSubmit = function(){};
   if (type == 'duplicate') {
-    onSubmit = function(){
+    onSubmit = function(destPid){
       sidora.util.Confirm(
         Drupal.t("Duplicate Creation"),
         Drupal.t("Confirm to duplicate objects to %friendlyname", {"%friendlyname":sidora.util.FriendlyNameDirect(destPid)}),
         function(){
           sidora.performDuplicate(destPid, pids);
+          Shadowbox.close();
         }
       );
     }
   }
   if (type == 'transfer') {
-    onSubmit = function(){
+    onSubmit = function(destPid){
       sidora.util.Confirm(
         Drupal.t("Transfer Object"),
         Drupal.t("Confirm to transfer objects to %friendlyname", {"%friendlyname":sidora.util.FriendlyNameDirect(destPid)}),
         function(){
           sidora.performDuplicate(destPid, pids);
+          Shadowbox.close();
         }
       );
     }
   }
-  sidora.ProjectSpaces.ShowWhereToForm(intro, pids, function(){console.log("done");});
+  sidora.ProjectSpaces.ShowWhereToForm(intro, pids, onSubmit);
 }
 sidora.ProjectSpaces.DuplicateOrTransferHtml = function(selectionIntroHtml){
   var toReturn = "<div style='height:100%'>";
@@ -808,7 +810,7 @@ sidora.ProjectSpaces.ShowWhereToForm = function(selectionIntro, pids, onSubmit){
                   alert('need to pick something'); 
                 }
                 else {
-                  onSubmit();
+                  onSubmit(destPid);
                 }
               });
             },
@@ -1650,13 +1652,6 @@ sidora.resources.refreshSelectedResourceThumbnail = function(){
         }
       });
   }
-  jQuery('#resourceIframeHolder').children().remove();
-  jQuery('#resourceIframeHolder').append('<div id="gray_overlay" style="background-color:rgba(0,0,0,1);opacity:0.5;width:90%;height:90%;">');
-  jQuery("#gray_overlay").append('<div id="sb-loading"><div id="sb-loading-inner"><span>&nbsp;</span></div></div>');
-  setTimeout(function(){
-    sidora.resources.individualPanel.LoadContent();
-  },15000);
-
 }
 
 /*
@@ -1679,6 +1674,26 @@ sidora.resources.openInNewWindow = function(){
    window.open(sidora.resources.createViewerUrl(pids[i]));
   }
 }
+sidora.performTransfer = function(toLocationPid, pids) {
+  var droppedOn = toLocationPid;
+  var action = "duplicate";
+  for(var i=0;i<pids.length;i++){
+    droppedPid = pids[i];
+    var userFriendlyName = sidora.display.UNKNOWN_ACTION;
+    var pidList = null;
+    var onSuccess = function() {
+    }
+    pidListForRequest = [droppedOn,droppedPid];
+    userFriendlyName = Drupal.t('Duplicating');
+    queueAction = 'duplication';
+    userFriendlyName += "<em>"+sidora.util.FriendlyNameDirect(droppedPid)+"</em>";
+    userFriendlyName += sidora.display.TO + "<em>"+sidora.util.FriendlyNameDirect(droppedOn)+"</em>";
+    var requestUrl = Drupal.settings.basePath+'sidora/ajax_parts/'+action+'/'+droppedOn+'/'+droppedPid;
+    sidora.queue.Request(userFriendlyName, requestUrl, onSuccess, null, pidListForRequest,queueAction,i+' of '+pids.length);
+    console.log(userFriendlyName);
+  }
+  sidora.queue.Next();
+}
 sidora.performDuplicate = function(toLocationPid, pids) {
   var droppedOn = toLocationPid;
   var action = "duplicate";
@@ -1698,7 +1713,6 @@ sidora.performDuplicate = function(toLocationPid, pids) {
     console.log(userFriendlyName);
   }
   sidora.queue.Next();
-
 }
 
 /*

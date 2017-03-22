@@ -6575,10 +6575,18 @@ function sidora_move($move_from_id, $copy_to_id, $pid, $show_output = TRUE) {
   }
   sidora_obtain_lock($copy_to_id);
   sidora_obtain_lock($move_from_id);
-  $unassociated = sidora_unassociate($move_from_id, $pid);
+  $unassociated = sidora_unassociate($move_from_id, $pid, FALSE);
   sidora_release_lock($copy_to_id);
   sidora_release_lock($move_from_id);
-  return $unassociated;
+  module_load_include('inc', 'sidora', 'includes/project_spaces');
+  sidora_put_into_proper_project_space($pid);
+  if ($show_output) {
+    print json_encode($unassociated);
+    drupal_exit();
+  }
+  else {
+    return $unassociated;
+  }
 }
 
 /**
@@ -7120,10 +7128,10 @@ function sidora_block_content_navigation() {
   module_load_include('inc', 'sidora', 'includes/project_spaces');
   if (sidora_is_admin()) {
     $extra_admin_part = sidora_html_tree_from_given_pid($root_pid, NULL, 3, $send_params);
-    $to_return .= sidora_project_spaces_tree($extra_admin_part, TRUE, array());
+    $to_return .= sidora_project_spaces_tree($extra_admin_part, TRUE, array(), FALSE);
   }
   else {
-    $to_return .= sidora_project_spaces_tree("", TRUE,  array("create","read","update","delete"));
+    $to_return .= sidora_project_spaces_tree("", TRUE,  array("create","read","update","delete"), FALSE);
   }
   $to_return .= '</div></div>';
   // jQuery UI L&F

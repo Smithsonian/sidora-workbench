@@ -199,13 +199,17 @@ function sidora_get_groups_for_project_space($pid, $administrative_bookkeeping =
 /**
  * Returns a tree based on the project spaces the user has access to, defaults to 4 levels total
  */
-function sidora_project_spaces_tree($root_label = 'Project Spaces where you can create duplicates:', $include_href = FALSE, $permissions = array("create")){
+function sidora_project_spaces_tree($root_label = 'Project Spaces where you can create:', $include_href = FALSE, $permissions = array("create"), $start_open = TRUE){
   $ignore_pid = filter_input(INPUT_GET, 'ignore_pid', FILTER_SANITIZE_STRING);
   global $user;
   $nodes = sidora_get_project_spaces_by_member();
   $to_return = '';
   $to_return .= '<ul>';
-  $to_return .= '<li>';// class="jstree-open">';
+  $to_return .= '<li';
+  if ($start_open) {
+    $to_return .= ' class="jstree-open"';
+  }
+  $to_return .= '>';
   $to_return .= $root_label;
   foreach($nodes as $node) {
     $pid = $node->field_fedora_pid[$node->language][0]["safe_value"];
