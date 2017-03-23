@@ -2705,6 +2705,10 @@ function exhibition_config_reset_visibility($vis_obj, $pid_that_requires_update,
       $children_of_object[] = $child['pid'];
     }
     $children_of_visibility = array();
+    if (!array_key_exists('children',$vis_obj)) {
+      watchdog('sidora',t('Missing children during exhibition visibility updates on:').$current_pid);
+      return $vis_obj;
+    }
     foreach($vis_obj['children'] as $child){
       $children_of_visibility[] = $child['pid'];
     }

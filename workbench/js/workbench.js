@@ -732,19 +732,30 @@ sidora.ProjectSpaces.DuplicateOrTransferIntro = function(type, pids) {
   intro += "</p><ul>";
   for(var pidIndex = 0; pidIndex < pids.length; pidIndex++) {
     intro += '<li>';
-    intro += jQuery("[pid='"+pids[pidIndex]+"'], "+jq(pids[pidIndex])).text();
+    intro += jQuery("[pid='"+pids[pidIndex]+"'], "+jq(pids[pidIndex])).first().text();
     intro += '</li>';
   }
   intro += '</ul>';
   return intro;
 }
+sidora.util.FirstVisibleNodeWithPid = function(pid) {
+  return jQuery.map(sidora.util.GetTreeNodesByPid(pid),function(a){
+    if (jQuery("#"+a.id).length > 0) return a; else return null;
+  })[0];
+}
 sidora.ProjectSpaces.DuplicateOrTransfer = function(type, conceptsOrResources) {
   var pids = [];
+  var parentPid = null;
   if (conceptsOrResources == 'resources') {
     pids = sidora.resources.getHighlighted();
+    parentPid = sidora.concept.GetPid();
   }
   else {
-    pids.push(sidora.concept.GetPid()); 
+    pids.push(sidora.concept.GetPid());
+    var jst = jQuery("#forjstree").jstree();
+    parentPid = jst.get_node(jst.get_node(jst.get_selected()).parent).a_attr.pid;
+    // parent SHOULD BE VISIBLE in order to see the current concept
+    // project spaces have no parent pids, but they should not be transferrable or duplicatable
   }
   var intro = sidora.ProjectSpaces.DuplicateOrTransferIntro(type, pids);
   intro += "<p>Choose a destination below:</p>";
@@ -767,7 +778,24 @@ sidora.ProjectSpaces.DuplicateOrTransfer = function(type, conceptsOrResources) {
         Drupal.t("Transfer Object"),
         Drupal.t("Confirm to transfer objects to %friendlyname", {"%friendlyname":sidora.util.FriendlyNameDirect(destPid)}),
         function(){
-          sidora.performDuplicate(destPid, pids);
+          var nodeMoveFrom = sidora.util.FirstVisibleNodeWithPid(parentPid);
+          var nodeMoveTo = sidora.util.FirstVisibleNodeWithPid(destPid);
+          if (nodeMoveTo == undefined) {
+            nodeMoveTo = sidora.util.GetTreeNodesByPid(destPid)[0];
+          }
+          var nodeThatIsMoving = sidora.util.FirstVisibleNodeWithPid(pids[0]);
+          if (nodeThatIsMoving == undefined) {
+            sidora.resources.performCopyOrMove('move', nodeMoveTo.id, pids);
+          }
+          else {
+            var data = {};
+            data.node = nodeThatIsMoving;
+            data.parent = nodeMoveTo.id;
+            data.old_parent = nodeMoveFrom.id;
+            data.moveFromPid = parentPid;
+            data.moveToPid = destPid;
+            sidora.concept.MoveNode(data);
+          }
           Shadowbox.close();
         }
       );
@@ -945,32 +973,7 @@ sidora.InitiateJSTree = function(){
     jQuery('#forjstree').bind('move_node.jstree',function(event,data){
       var jst = jQuery("#forjstree").jstree(true);
       if (typeof(jst.pureUIChange) != 'undefined' && jst.pureUIChange) return; //don't want a Fedora change
-      var toMovePid = data.node.a_attr.pid;
-      var moveToPid = jQuery("#"+data.parent+" a").attr('pid');
-      var moveFromPid = jQuery("#"+data.old_parent+" a").attr('pid');
-      console.log("Move:"+toMovePid+" from:"+moveFromPid+" to:"+moveToPid);
-      if (moveFromPid == moveToPid){ console.log('move to itself, ignoring...'); return; }
-      var actionUrl = Drupal.settings.basePath+'sidora/ajax_parts/move/'+moveFromPid+'/'+moveToPid+'/'+toMovePid;
-
-      //New Parent renumber
-      var newParentExistingChildConceptsNumber = parseInt(jQuery("#"+data.parent).children("a").attr("conceptchildren"));
-      var npReplacer = newParentExistingChildConceptsNumber+1;
-      jQuery("#"+data.parent).children("a").attr("conceptchildren",""+npReplacer);
-      jst.get_node(data.parent).a_attr.conceptchildren = ""+npReplacer;
-      //Old Parent renumber
-      var oldParentExistingChildConceptsNumber = parseInt(jQuery("#"+data.old_parent).children("a").attr("conceptchildren"));
-      var opReplacer = oldParentExistingChildConceptsNumber-1;
-      jQuery("#"+data.old_parent).children("a").attr("conceptchildren",""+opReplacer);
-      jst.get_node(data.old_parent).a_attr.conceptchildren = ""+opReplacer;
-      //next requests are silent
-      sidora.queue.incomingRequestsAreSilent = true;
-      sidora.queue.Request('Concept move', actionUrl, function(){
-        sidora.concept.LoadContentHelp.Relationships();
-      },
-      sidora.util.createFunctionRefreshTree([moveToPid,moveFromPid])
-      , [moveToPid,toMovePid,moveFromPid],'moveConcept');
-      sidora.queue.incomingRequestsAreSilent = false;
-      sidora.queue.Next();
+      sidora.concept.MoveNode(data);
     });
     jQuery("#forjstree").bind("before.jstree", function(e, data){
       console.log("bjt");
@@ -1886,6 +1889,57 @@ sidora.ResizeOnWindowResize = function(){
   jQuery('#conceptResizable').resizable('option', 'maxWidth', newMaxWidth);
   //Resize the resource information pane for the resource page 
   sidora.resources.individualPanel.ResizeAndStop();
+}
+
+/**
+ * Performs a the necessary changes to the data in the tree and Fedora after a tree node move has occurred (or should occur)
+ * data.node = node that is moving
+ * data.parent = ID of the node that it is being moved to
+ * data.old_parent = ID of the node that it used to be on
+ */
+sidora.concept.MoveNode = function(data) {
+  var jst = jQuery("#forjstree").jstree();
+  var toMovePid = data.node.a_attr.pid;
+  var moveToPid = jQuery("#"+data.parent+" a").attr('pid');
+  if (moveToPid == undefined) {
+    moveToPid = data.moveToPid;
+  }
+  var moveFromPid = jQuery("#"+data.old_parent+" a").attr('pid');
+  if (moveFromPid == undefined) {
+    moveFromPid = data.moveFromPid;
+  }
+  console.log("Move:"+toMovePid+" from:"+moveFromPid+" to:"+moveToPid);
+  if (moveFromPid == moveToPid){ console.log('move to itself, ignoring...'); return; }
+  var actionUrl = Drupal.settings.basePath+'sidora/ajax_parts/move/'+moveFromPid+'/'+moveToPid+'/'+toMovePid;
+
+  if ( jQuery("#"+data.parent+" a").length > 0) {
+    //New Parent renumber
+    var newParentExistingChildConceptsNumber = parseInt(jQuery("#"+data.parent).children("a").attr("conceptchildren"));
+    var npReplacer = newParentExistingChildConceptsNumber+1;
+    jQuery("#"+data.parent).children("a").attr("conceptchildren",""+npReplacer);
+    jst.get_node(data.parent).a_attr.conceptchildren = ""+npReplacer;
+  }
+  if ( jQuery("#"+data.old_parent+" a").length > 0) {
+    //Old Parent renumber
+    var oldParentExistingChildConceptsNumber = parseInt(jQuery("#"+data.old_parent).children("a").attr("conceptchildren"));
+    var opReplacer = oldParentExistingChildConceptsNumber-1;
+    jQuery("#"+data.old_parent).children("a").attr("conceptchildren",""+opReplacer);
+    jst.get_node(data.old_parent).a_attr.conceptchildren = ""+opReplacer;
+  }
+  //next requests are silent
+  sidora.queue.incomingRequestsAreSilent = true;
+  sidora.queue.Request(
+    'Concept move',
+    actionUrl, 
+    function(){
+      sidora.concept.LoadContentHelp.Relationships();
+    },
+    sidora.util.createFunctionRefreshTree([moveToPid,moveFromPid]),
+    [moveToPid,toMovePid,moveFromPid],
+    'moveConcept'
+  );
+  sidora.queue.incomingRequestsAreSilent = false;
+  sidora.queue.Next();
 }
 /*
  * Attempts to pull the number of child resources from the tree
