@@ -766,7 +766,7 @@ sidora.ProjectSpaces.DuplicateOrTransfer = function(type, conceptsOrResources) {
         Drupal.t("Duplicate Creation"),
         Drupal.t("Confirm to duplicate objects to %friendlyname", {"%friendlyname":sidora.util.FriendlyNameDirect(destPid)}),
         function(){
-          sidora.performDuplicate(destPid, pids);
+          sidora.performDuplicate(destPid, pids, sidora.util.loadTreeSection.bind(sidora.util, destPid));
           Shadowbox.close();
         }
       );
@@ -786,6 +786,7 @@ sidora.ProjectSpaces.DuplicateOrTransfer = function(type, conceptsOrResources) {
           var nodeThatIsMoving = sidora.util.FirstVisibleNodeWithPid(pids[0]);
           if (nodeThatIsMoving == undefined) {
             sidora.resources.performCopyOrMove('move', nodeMoveTo.id, pids);
+            sidora.util.loadTreeSection(destPid);
           }
           else {
             var data = {};
@@ -795,6 +796,7 @@ sidora.ProjectSpaces.DuplicateOrTransfer = function(type, conceptsOrResources) {
             data.moveFromPid = parentPid;
             data.moveToPid = destPid;
             sidora.concept.MoveNode(data);
+            sidora.util.loadTreeSection(destPid);
           }
           Shadowbox.close();
         }
@@ -1689,28 +1691,29 @@ sidora.performTransfer = function(toLocationPid, pids) {
     pidListForRequest = [droppedOn,droppedPid];
     userFriendlyName = Drupal.t('Duplicating');
     queueAction = 'duplication';
-    userFriendlyName += "<em>"+sidora.util.FriendlyNameDirect(droppedPid)+"</em>";
-    userFriendlyName += sidora.display.TO + "<em>"+sidora.util.FriendlyNameDirect(droppedOn)+"</em>";
+    userFriendlyName += " <em>"+sidora.util.FriendlyNameDirect(droppedPid)+"</em>";
+    userFriendlyName += sidora.display.TO + " <em>"+sidora.util.FriendlyNameDirect(droppedOn)+"</em>";
     var requestUrl = Drupal.settings.basePath+'sidora/ajax_parts/'+action+'/'+droppedOn+'/'+droppedPid;
     sidora.queue.Request(userFriendlyName, requestUrl, onSuccess, null, pidListForRequest,queueAction,i+' of '+pids.length);
     console.log(userFriendlyName);
   }
   sidora.queue.Next();
 }
-sidora.performDuplicate = function(toLocationPid, pids) {
+sidora.performDuplicate = function(toLocationPid, pids, onSuccess) {
   var droppedOn = toLocationPid;
   var action = "duplicate";
   for(var i=0;i<pids.length;i++){
     droppedPid = pids[i];
     var userFriendlyName = sidora.display.UNKNOWN_ACTION;
     var pidList = null;
-    var onSuccess = function() {
+    if (onSuccess == undefined) {
+      onSuccess = function() {};
     }
     pidListForRequest = [droppedOn,droppedPid];
     userFriendlyName = Drupal.t('Duplicating');
     queueAction = 'duplication';
-    userFriendlyName += "<em>"+sidora.util.FriendlyNameDirect(droppedPid)+"</em>";
-    userFriendlyName += sidora.display.TO + "<em>"+sidora.util.FriendlyNameDirect(droppedOn)+"</em>";
+    userFriendlyName += " <em>"+sidora.util.FriendlyNameDirect(droppedPid)+"</em>";
+    userFriendlyName += sidora.display.TO + " <em>"+sidora.util.FriendlyNameDirect(droppedOn)+"</em>";
     var requestUrl = Drupal.settings.basePath+'sidora/ajax_parts/'+action+'/'+droppedOn+'/'+droppedPid;
     sidora.queue.Request(userFriendlyName, requestUrl, onSuccess, null, pidListForRequest,queueAction,i+' of '+pids.length);
     console.log(userFriendlyName);
@@ -1781,9 +1784,9 @@ sidora.resources.performCopyOrMove = function(copyOrMove, toLocationId, resource
       onSuccess = onSuccessfulCopy;
       queueAction = 'copyResource';
     }
-    userFriendlyName += "<em>"+sidora.util.FriendlyNameDirect(droppedPid)+"</em>";
-    userFriendlyName += sidora.display.FROM + "<em>"+sidora.util.FriendlyNameDirect(fromParent)+"</em>";
-    userFriendlyName += sidora.display.TO + "<em>"+sidora.util.FriendlyNameDirect(droppedOn)+"</em>";
+    userFriendlyName += " <em>"+sidora.util.FriendlyNameDirect(droppedPid)+"</em>";
+    userFriendlyName += sidora.display.FROM + " <em>"+sidora.util.FriendlyNameDirect(fromParent)+"</em>";
+    userFriendlyName += sidora.display.TO + " <em>"+sidora.util.FriendlyNameDirect(droppedOn)+"</em>";
     var requestUrl = Drupal.settings.basePath+'sidora/ajax_parts/'+action+'/'+droppedOn+'/'+droppedPid;
     sidora.queue.Request(userFriendlyName, requestUrl, onSuccess, null, pidListForRequest,queueAction,i+' of '+pids.length);
     console.log(userFriendlyName);
@@ -2121,7 +2124,7 @@ sidora.util.reorderTreeChildrenAlphabetical = function(node) {
   });
   jst.pureUIChange = false;
 }
-sidora.util.treeAdditionSingleItem = function(mainItem, htmlTree, onLoadComplete, overwriteType, jst, documentFragment, currChild){
+sidora.util.treeAdditionSingleItem = function(onLoadComplete, overwriteType, jst, documentFragment, currChild){
   var ccp = currChild.a_attr.pid;
   var dfAnchor = jQuery(documentFragment).children().find("[pid='"+ccp+"']");
   //If the document fragment does not include the child then that concept was removed
@@ -2242,11 +2245,14 @@ sidora.util.treeAddition = function(htmlTree, onLoadComplete, overwriteType){
   mainItems = sidora.util.GetTreeNodesByPid(clickedOnPid);
   //mainItems now holds all the nodes which have a pid matching the root pid from the returned html
   jQuery.each(mainItems, function( mii, mainItem) {
+    //Update the current node of the main pid
+    sidora.util.treeAdditionSingleItem(onLoadComplete, overwriteType, jst, documentFragment, mainItem);
     var miChildrenIds = mainItem.children;
     //Go through the children
     for (var micIndex = 0; micIndex < miChildrenIds.length; micIndex++) {
       var currChild = jst.get_node(miChildrenIds[micIndex]);
-      setTimeout(sidora.util.treeAdditionSingleItem.bind(null, mainItem,htmlTree, onLoadComplete, overwriteType, jst, documentFragment, currChild ),
+      setTimeout(
+        sidora.util.treeAdditionSingleItem.bind(null, onLoadComplete, overwriteType, jst, documentFragment, currChild ),
         10 * (micIndex)
       );
     }//Ends micIndex
