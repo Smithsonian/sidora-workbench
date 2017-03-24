@@ -4692,6 +4692,12 @@ function sidora_allow($user_pid_or_drupal_user, $pid_or_fedora_object, $type_of_
   if (sidora_is_admin($drupal_user)){
     return TRUE;
   }
+  if (empty($drupal_user->name)) {
+    // Anonymous user comes here, which is true for exhibition
+    $pids_checked = Array();
+    $pid_with_exhibition = sidora_exhibition_exists_in_tree($pid, $pids_checked);
+    return (!empty($pid_with_exhibition));
+  }
   //the owner has rights to all except manage
   if (strtolower($object->owner) == strtolower($drupal_user->name) && $type_of_operation != 'manage'){
    return TRUE;
@@ -5179,9 +5185,12 @@ function sidora_get_xsl_file_for_object($pid) {
  * This function calls itself and keeps track of already checked items
  * returns the pid of what has the exhibition, or returns FALSE
  */
-function sidora_exhibition_exists_in_tree($pid_to_check, $pids_checked_array) {
+function sidora_exhibition_exists_in_tree($pid_to_check, $pids_checked_array, $recursing = FALSE) {
   module_load_include('inc', 'sidora', 'includes/utils');
   global $pids_checked_array;
+  if (!$recursing) {
+    $pids_checked_array = array();
+  }
   if (($pid_to_check != 'si:root') && ((!is_array($pids_checked_array)) || (!in_array($pid_to_check,$pids_checked_array)))) {
     $exhibition_data = exhibition_config_get_config_data($pid_to_check);
     if (!(empty($exhibition_data)) && !(is_null($exhibition_data['pid'])) && !(is_null($exhibition_data['last_published'])) && ($exhibition_data['last_published'] != '')){
@@ -5190,10 +5199,12 @@ function sidora_exhibition_exists_in_tree($pid_to_check, $pids_checked_array) {
     else {
       $pids_checked_array[] = $pid_to_check;
       $object = sidora_obj($pid_to_check);
-      if (empty($object)) return FALSE;
+      if (empty($object)) {
+        return FALSE;
+      }
       $parents = sidora_get_parent_concepts($object);
       foreach ($parents as $parent_pid => $parent) {
-        $parent_has_exhibition = sidora_exhibition_exists_in_tree($parent_pid, $pids_checked_array);
+        $parent_has_exhibition = sidora_exhibition_exists_in_tree($parent_pid, $pids_checked_array, TRUE);
         if ($parent_has_exhibition !== FALSE) {
           return $parent_has_exhibition;
         }
