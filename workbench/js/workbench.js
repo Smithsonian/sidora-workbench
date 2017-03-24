@@ -986,23 +986,49 @@ sidora.InitiateJSTree = function(){
 
     jst.open_node(jst.get_node("j1_1"));
     setTimeout(function(){
-    var mainTreeChildren = jQuery("#j1_1").children("ul").children();
-    jQuery("#conceptResizable").prepend("<div class='project-space-drop-down'><select id='psdd-select'></select></div>");
-    var selectedIndex = 0;
-    for(var mtci = 0; mtci < mainTreeChildren.length; mtci++){
-      var optionVal = mainTreeChildren[mtci].id;
-      var optionText = jQuery(mainTreeChildren[mtci]).children("a").attr("fullname");
-      var selected = "";
-      if (jQuery(mainTreeChildren[mtci]).children("a").hasClass('default-project-space')) {
-        selectedIndex = mtci;
-        selected = "selected";
+      var mainTreeChildren = jQuery("#j1_1").children("ul").children();
+      jQuery("#conceptResizable").prepend("<div class='project-space-drop-down'><select id='psdd-select'></select></div>");
+      var selectedIndex = 0;
+      for(var mtci = 0; mtci < mainTreeChildren.length; mtci++){
+        var optionVal = mainTreeChildren[mtci].id;
+        var optionText = jQuery(mainTreeChildren[mtci]).children("a").attr("fullname");
+        var selected = "";
+        if (jQuery(mainTreeChildren[mtci]).children("a").hasClass('default-project-space')) {
+          selectedIndex = mtci;
+          selected = "selected";
+        }
+        var optionToAdd = jQuery("<option value='"+optionVal+"'"+selected+">"+htmlEntities(optionText)+"</option>");
+        jQuery("#psdd-select").append(optionToAdd);      
       }
-      var optionToAdd = jQuery("<option value='"+optionVal+"'"+selected+">"+htmlEntities(optionText)+"</option>");
-      jQuery("#psdd-select").append(optionToAdd);      
-    }
-    var selectedValue = mainTreeChildren[selectedIndex].id;
-    sidora.ProjectSpaces.ChangeProjectSpace(selectedValue);
-    jQuery("#psdd-select").change(function(){ sidora.ProjectSpaces.ChangeProjectSpace(this.value); });
+      if (window.location.hash == "") {
+        var selectedValue = mainTreeChildren[selectedIndex].id;
+        sidora.ProjectSpaces.ChangeProjectSpace(selectedValue);
+      }
+      else {
+        // Perform the basic setup but don't change the dropdown
+        sidora.ProjectSpaces.ChangeProjectSpace();
+        // Set the dropdown to the space that the hash says
+        var hashInfo = window.location.hash.split(/#|\?path=|,/);
+        var setToPid = "";
+        if (hashInfo.length == 2) setToPid = hashInfo[1];
+        if (hashInfo.length > 2) setToPid = hashInfo[2];
+        if (setToPid.length > 0) {
+          var possibilities = jQuery.map(sidora.util.GetTreeNodesByPid(setToPid),function(a){ return a.id; })
+          var dropDownOptions = jQuery("#psdd-select option").map(function(){return jQuery(this).val()}).toArray();
+          var validChoices = possibilities.filter(function(n){return dropDownOptions.indexOf(n) !== -1;});
+          // SHOULD only have maximum 1 valid choice due to dropdown, so let's assume so
+          // Then set to the option obtained from the hash
+          if (validChoices.length > 0) {
+            jQuery("#psdd-select").val(validChoices[0]);
+          }
+          else {
+            // Set to the admin section that has no valid choice
+            // or somebody typed something wrong and we don't know what to do
+            jQuery("#psdd-select").val("j1_2");
+          }
+        }
+      }
+      jQuery("#psdd-select").change(function(){ sidora.ProjectSpaces.ChangeProjectSpace(this.value); });
     }, 200);
     jQuery("#page").show();
 

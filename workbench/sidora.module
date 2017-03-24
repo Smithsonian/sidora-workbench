@@ -6188,7 +6188,12 @@ function sidora_ajax_parts($call_type, $param1 = '', $param2 = '', $param3 = '')
   }
   if ($call_type == 'project_spaces_tree') {
     module_load_include('inc', 'sidora', 'includes/project_spaces');
-    print sidora_project_spaces_tree();
+    if (!empty($param1)) {
+      print sidora_project_spaces_tree("",TRUE, array("read"));
+    }
+    else {
+      print sidora_project_spaces_tree();
+    }
     drupal_exit();
   }
   if ($call_type == 'reprocess_incomplete_object_creation_forms') {
@@ -7073,6 +7078,11 @@ function sidora_html_tree_from_given_pid($root_pid = '', $root = NULL, $num_leve
     }
     else{
        $root_label = $root->label;
+    }
+
+    $children_resources = $root->relationships->get(FEDORA_RELS_EXT_URI, 'hasResource');
+    if (sizeof($children_resources) > 0) {
+      $root_label .= " (" . sizeof($children_resources) . ")";
     }
     /*
     $results = _sidora_get_child_results_cache($root_pid);

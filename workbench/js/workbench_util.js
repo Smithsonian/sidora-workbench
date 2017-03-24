@@ -374,9 +374,6 @@ jQuery(document).ready(function(){
 //https://gist.github.com/djKianoosh/7090542
 // Some common IE shims... indexOf, startsWith, trim
 
-/*
-  Really? IE8 Doesn't have .indexOf
-*/
 if (!Array.prototype.indexOf) {
   Array.prototype.indexOf = function (searchElement /*, fromIndex */ ) {
     "use strict";
@@ -412,7 +409,7 @@ if (!Array.prototype.indexOf) {
 }
 
 /*
-  IE Doesn't have a .startsWith either?
+  IE Doesn't have a .startsWith
 */
 if (!String.prototype.startsWith) {
   String.prototype.startsWith = function (str){
