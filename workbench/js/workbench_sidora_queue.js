@@ -341,7 +341,11 @@ SidoraQueue.prototype.Done = function(completedItem, ajaxReturn){
             // trying to get the last item of the current queue
             sidora_util.writeCookie('Drupal.selectResource','1','30');
             if (sidora_util.readCookie('Drupal.dtFilter') != ''){
-              if ((completedItem.fullObject.ajaxRequest.data.indexOf('islandora_ingest_form') > -1) && (completedItem.fullObject.ajaxRequest.data.indexOf('resource_model') > -1)){
+              if (typeof(completedItem.fullObject) != 'undefined' && completedItem.fullObject != null)
+              if (
+                (completedItem.fullObject.ajaxRequest.data.indexOf('islandora_ingest_form') > -1) &&
+                (completedItem.fullObject.ajaxRequest.data.indexOf('resource_model') > -1)
+              ){
                 var rmPattern = new RegExp('&resource_model=(.*)&');
                 var rmArray = rmPattern.exec(completedItem.fullObject.ajaxRequest.data);
                 if ((Array.isArray(rmArray))&& (rmArray.length >= 2) && (rmArray[1] != sidora_util.readCookie('Drupal.dtFilter'))){

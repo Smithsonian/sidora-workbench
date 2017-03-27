@@ -28,11 +28,17 @@
  */
 
 /**
- * Assume that the passed in item has a node, and put that node into the project spaces
+ * Assume that the passed in item has a node if it should, and put that node into the 
+ * project spaces
  * of the best parent if not already in a project space of a parent
  *
  * To be "IN" the same project space as the parent, that means the node has the same 
  * organic group memberships that the parent does.
+ * 
+ * Return TRUE if things went into proper project space --
+ *             this includes if there was NO proper project spaces to place it
+ *        FALSE if it was something that shouldn't go into a project space or
+ *              requires more set up (not a concept, or no node created yet for the concept)
  * 
  */
 
@@ -45,6 +51,10 @@ function sidora_put_into_proper_project_space($pid_or_fedora_obj_or_nid_or_node)
   $nid = $sidora_obj_info['nid'];
   // reminder obj may not be loaded (FALSE on 2nd param of sidora_get_info)
   $pid = $sidora_obj_info['pid'];
+  if (empty($node) || empty($nid)) {
+    // What was passed in was not a concept that already has a node created. Do nothing.
+    return FALSE;
+  }
   // Parent choice decision priorities:
   // If it IS the project space, put it into the right groups. Do not remove existing groups.
   $project_space_groups = sidora_get_groups_for_project_space($pid, TRUE);
@@ -100,6 +110,7 @@ function sidora_put_into_proper_project_space($pid_or_fedora_obj_or_nid_or_node)
       }
     }
   }
+  return TRUE;
 }
 /*
  * Returns the node ids of the groups that this node id is a member of

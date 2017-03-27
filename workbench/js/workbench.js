@@ -682,7 +682,7 @@ sidora.ProjectSpaces.shareChoicesHtml = function() {
     writablePS.splice(indexCW, 1);
   }
   if (writablePS.length > 0) {
-    if (!sidora.ProjectSpaces.isProjectSpace(sidora.concept.GetPid())) {
+    if (sidora.concept.GetPid() != "" && !sidora.ProjectSpaces.isProjectSpace(sidora.concept.GetPid())) {
       toReturn += '<a href="#" onclick="sidora.ProjectSpaces.DuplicateOrTransfer(\'duplicate\',\'concept\'); return false;"><i class="material-icons">lightbulb_outline content_copy</i> '+htmlEntities(sidora.display.PROJECT_SPACE_CHOICE_DUPLICATE_CONCEPT)+'</a><br>';
       toReturn += '<a href="#" onclick="sidora.ProjectSpaces.DuplicateOrTransfer(\'transfer\',\'concept\'); return false;"><i class="material-icons">lightbulb_outline redo</i> '+htmlEntities(sidora.display.PROJECT_SPACE_CHOICE_TRANSFER_CONCEPT)+'</a><br>';
     }
@@ -753,7 +753,7 @@ sidora.ProjectSpaces.DuplicateOrTransfer = function(type, conceptsOrResources) {
   else {
     pids.push(sidora.concept.GetPid());
     var jst = jQuery("#forjstree").jstree();
-    parentPid = jst.get_node(jst.get_node(jst.get_selected()).parent).a_attr.pid;
+    parentPid = jst.get_node(jst.get_node(jst.get_selected()[0]).parent).a_attr.pid;
     // parent SHOULD BE VISIBLE in order to see the current concept
     // project spaces have no parent pids, but they should not be transferrable or duplicatable
   }
@@ -1765,7 +1765,8 @@ sidora.resources.performCopyOrMove = function(copyOrMove, toLocationId, resource
     pids = sidora.util.dragResources;
   }
   var fromParent = window.sidora.concept.GetPid();
-  var droppedOn = jQuery("#"+toLocationId).find("a").attr("pid");
+  var jst = jQuery("#forjstree").jstree();
+  var droppedOn = jst.get_node(toLocationId).a_attr.pid;
   var droppingThese = pids.join(",");
   //do nothing if move/copy to existing place
   if (droppedOn == fromParent) {
@@ -1775,7 +1776,7 @@ sidora.resources.performCopyOrMove = function(copyOrMove, toLocationId, resource
   //by default this is a move
   var action = 'move/'+fromParent;
   if (copyOrMove == 'copy'){ action = 'copy'; }
-  console.log("FCR "+action+" pids:"+pids.join(",")+" dropped on:"+jQuery("#"+toLocationId).find("a").attr("pid"));
+  console.log("FCR "+action+" pids:"+pids.join(",")+" dropped on:"+droppedOn);
   var jst = jQuery("#forjstree").jstree(true);
   var newParentExistingChildResourcesCount = parseInt(jst.get_node(toLocationId).a_attr.resourcechildren);
   var onSuccessfulCopy = function(ajaxRequest,ajaxReturn){
@@ -2392,12 +2393,14 @@ sidora.util.refreshConceptChildrenNumberDirect = function(pid, number_of_childre
   var jst = jQuery("#forjstree").jstree(true);
   for(var tii = 0; tii < treeIdsToUpdate.length; tii++){
     var toUpdateId = treeIdsToUpdate[tii];
-    var existingChildResourceNumber = parseInt(jst.get_node(toUpdateId).a_attr.resourcechildren);
-    var parentName = jQuery("#"+toUpdateId+" a").attr("fullname");
-    var newFullName =  parentName + " (" + number_of_children + ")";
-    if (number_of_children == 0) newFullName = parentName;
-    jst.rename_node("#"+toUpdateId, newFullName);
-    jst.get_node(toUpdateId).a_attr.resourcechildren = ""+number_of_children;
+    if (typeof(jst.get_node(toUpdateId).a_attr) !== 'undefined') {
+      var existingChildResourceNumber = parseInt(jst.get_node(toUpdateId).a_attr.resourcechildren);
+      var parentName = jQuery("#"+toUpdateId+" a").attr("fullname");
+      var newFullName =  parentName + " (" + number_of_children + ")";
+      if (number_of_children == 0) newFullName = parentName;
+      jst.rename_node("#"+toUpdateId, newFullName);
+      jst.get_node(toUpdateId).a_attr.resourcechildren = ""+number_of_children;
+    }
   }
   jQuery("[pid='" + pid +"']").attr('resourcechildren',""+number_of_children)
 }
