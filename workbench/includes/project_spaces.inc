@@ -178,7 +178,8 @@ function sidora_get_project_spaces_from_og_groups($group_nodes, $user, $only_ret
       if (!$only_return_groups_that_owner_can_change || sidora_allow($user, $pid, 'permission')) {
          if (!in_array($pid, $pids) && !empty($pid)) {
            $pids[] = $pid;
-           $project_spaces[] = sidora_get_concept_node($pid);
+           $sgcn = sidora_get_concept_node($pid);
+           $project_spaces[] = $sgcn;
          }
       }
   }
@@ -617,3 +618,48 @@ function sidora_get_sidora_group_type($group){
   return NULL;
 }
 
+function sidora_create_personal_project_space($account) {
+  $owner = sidora_get_drupal_user($account);
+  $user_projects = islandora_object_load('si:user-projects');
+  if (!is_object($user_projects)) {
+    return FALSE;
+  }
+  module_load_include('inc', 'xml_form_builder', 'includes/associations');
+  $user_ps_object = $user_projects->repository->constructObject('si');
+  $user_ps_object->owner = $owner->name;
+  $user_ps_object->label = "{$owner->name} Project Space";
+  $user_ps_object->models = array('si:conceptCModel', variable_get('sidora_automatic_person_model', 'si:HierarchyObject'));
+  $associations = xml_form_builder_get_associations(array(), $user_ps_object->models, array());
+  if (count($associations) == 1){
+    sidora_update_datastream($user_ps_object, '<sidora>
+<model>'.$associations[0]['content_model'].'</model>
+<form>'.$associations[0]['form_name'].'</form>
+<ontology_location_id>AUTOMATIC_PROJECT_SPACE_CREATION</ontology_location_id>
+<meta_requirements_fulfilled>TRUE</meta_requirements_fulfilled>
+<initial_dsid>'.$associations[0]['dsid'].'</initial_dsid>
+</sidora>', 'SIDORA');
+  }else{
+    $dsid = variable_get('sidora_automatic_person_dsid', 'DESCMETA');
+    sidora_update_datastream($user_ps_object, '<sidora>
+<model>'.variable_get('sidora_automatic_person_model', 'si:HierarchyObject').'</model>
+<form>'. variable_get('sidora_automatic_person_form', 'Person 2015').'</form>
+<ontology_location_id>AUTOMATIC_USER_CREATION_FROM_SIDORA_DEFAULT</ontology_location_id>
+<meta_requirements_fulfilled>FALSE</meta_requirements_fulfilled>
+<initial_dsid>'.$dsid.'</initial_dsid>
+</sidora>', 'SIDORA');
+    if (empty($user_ps_object[$dsid])) sidora_update_datastream($user_ps_object, '<xml></xml>', $dsid);
+  }
+
+  sidora_add_child($user_projects, $user_ps_object);
+
+  // Create the concept
+  islandora_add_object($user_ps_object);
+  $concept_pid = $user_ps_object->id;
+  // Create a placeholder node that will be filled in when requested
+  $created_node = sidora_get_update_or_create_concept_node($concept_pid, array());
+  // Create the groups
+  sidora_create_sidora_group($owner, $concept_pid, 'create');
+  sidora_create_sidora_group($owner, $concept_pid, 'view');
+  sidora_create_sidora_group($owner, $concept_pid, 'edit');
+  sidora_create_sidora_group($owner, $concept_pid, 'delete');
+}

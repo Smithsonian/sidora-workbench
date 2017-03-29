@@ -730,7 +730,7 @@ function sidora_process_object_with_build_id($form_build_id) {
      * Any subsequent operations on the object like copy or move do not change
      * this info in Sidora datastream.
      */
-    $parent_pid = $creation_info['parent_pid'];
+    $parent_pid = empty($creation_info['parent_pid']) ? '' : $creation_info['parent_pid'];
     $pid = $creation_info['pid'];
     $object = sidora_obj($pid);
     if (sidora_is_fedora_user_pid($pid)) {
@@ -4598,6 +4598,7 @@ function sidora_create_and_set_new_user_object($account, $create_even_if_existin
   $object = sidora_create_user_object($account);
   sleep(15); 
   // Arbitrary sleep to allow fedora to create the objects.  Even though the ID comes back it's apparently not available immediately
+  sidora_create_personal_project_space($account);
   $data = array();
   $data['data'] = array();
   $data['data']['islandora_user_pid'] = $object->id;
