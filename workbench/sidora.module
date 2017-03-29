@@ -4598,7 +4598,10 @@ function sidora_create_and_set_new_user_object($account, $create_even_if_existin
   $object = sidora_create_user_object($account);
   sleep(15); 
   // Arbitrary sleep to allow fedora to create the objects.  Even though the ID comes back it's apparently not available immediately
-  sidora_create_personal_project_space($account);
+  $existing_project_spaces = sidora_get_project_spaces_by_member($account->uid);
+  if (empty($existing_project_spaces)) {
+    sidora_create_personal_project_space($account);
+  }
   $data = array();
   $data['data'] = array();
   $data['data']['islandora_user_pid'] = $object->id;
@@ -6201,7 +6204,7 @@ function sidora_ajax_parts($call_type, $param1 = '', $param2 = '', $param3 = '')
   if ($call_type == 'project_spaces_tree') {
     module_load_include('inc', 'sidora', 'includes/project_spaces');
     if (!empty($param1)) {
-      print sidora_project_spaces_tree("",TRUE, array("read"));
+      print sidora_project_spaces_tree("",TRUE, array("view"));
     }
     else {
       print sidora_project_spaces_tree();
@@ -7153,7 +7156,12 @@ function sidora_block_content_navigation() {
     $to_return .= sidora_project_spaces_tree($extra_admin_part, TRUE, array(), FALSE);
   }
   else {
-    $to_return .= sidora_project_spaces_tree("", TRUE,  array("create","read","update","delete"), FALSE);
+    $nodes = sidora_get_project_spaces_by_member();
+    // if a user ever logs in with all accesses revoked, create a personal space for them
+    if (empty($nodes)) {
+      sidora_create_personal_project_space($account);
+    }
+    $to_return .= sidora_project_spaces_tree("", TRUE,  array("create","view","update","delete"), FALSE);
   }
   $to_return .= '</div></div>';
   // jQuery UI L&F
@@ -7668,7 +7676,7 @@ function sidora_cron() {
  *   create, read, update, delete as expected, but an empty array or an array with an empty element means to output a tree even if the current user
  *   does not have any access
  */
-function sidora_html_tree_from_query_results_tree($query_result_tree, $input_path = '', $num_levels = 3, $url_params = '', $dom_type = 'a', $include_href = TRUE, $include_permission_types = array("create","read","update","delete")){
+function sidora_html_tree_from_query_results_tree($query_result_tree, $input_path = '', $num_levels = 3, $url_params = '', $dom_type = 'a', $include_href = TRUE, $include_permission_types = array("create","view","update","delete")){
   if (empty($query_result_tree)) return '';
   global $user;
   // Every entry needs a label or we will not show it in the tree
@@ -7722,7 +7730,7 @@ function sidora_html_tree_from_query_results_tree($query_result_tree, $input_pat
           $classes_for_permissions .= ' p_create';
         }
         if ($t_element['crud']['r']) {
-          if (in_array("read",$include_permission_types)) {
+          if (in_array("view",$include_permission_types)) {
             $included_in_output = TRUE;
           }
           $permissions .= 'r';
