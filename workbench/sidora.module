@@ -4646,13 +4646,15 @@ function sidora_open_access($info_type, $pid) {
       break;
     case 'xsl':
       $file = sidora_get_xsl_file_for_object($pid);
-      // empty string means use default xsl, NULL means there is no file
+      error_log("\nIn sidora_open_access, file :".print_r($file,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
+			// empty string means use default xsl, NULL means there is no file
       if ($file === '') {
         print sidora_xsl_string($xsl_file);
       }
       else {
         if ($file) {
-				  if (preg_match('^.*\/[^\.]*', $file)) {
+				  if (preg_match('/^.*\/[^\.]*/', $file)) {
+            error_log("\nIn sidora_open_access, preg match :".print_r(preg_match('/^.*\/[^\.]*/', $file),true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
 				    $output_info = readfile($file);
 					}
 					else {
@@ -4661,7 +4663,7 @@ function sidora_open_access($info_type, $pid) {
 						  $definition = new DOMDocument();
               $definition->loadXML($xsl_form_definition);
 				      $definition->formatOutput = TRUE;
-				      $output_info = $definition->saveXML();  
+				      print $definition->saveXML();  
 					  }
 					}
 				}			
@@ -4702,9 +4704,17 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
           $curr_item = array();
           $new_name = $curr_upload->filename;
           if (sidora_endsWith(strtolower($new_name),'.xsl')) {
-            $rename_worked = sidora_xsl_file_to_db($curr_upload->filepath,$new_name);
-            $curr_item['description'] = t('Attempted file write');
-            $curr_item['success'] = $rename_worked;
+            error_log("\nIn sidora_info_json, public path :".print_r($curr_upload->filepath,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
+						if (rename($curr_upload->filepath,DRUPAL_ROOT.'/'.drupal_get_path('module','sidora').'/XSL' . '/' . $new_name)) {
+            error_log("\nIn sidora_info_json, rename :".print_r($new_name,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
+						  $rename_worked = sidora_xsl_file_to_db(drupal_realpath('public://') . '/',$new_name);
+              $curr_item['description'] = t('Attempted file write');
+              $curr_item['success'] = $rename_worked;
+						}
+						else {
+						  $curr_item['success'] = FALSE;
+              $curr_item['description'] = t('Unable to move the uploaded file');
+						}		
           }
           else {
             $curr_item['success'] = FALSE;
@@ -10530,7 +10540,9 @@ function sidora_xsl_file_to_db($directory_to_list_for_xsl = '',$xsl_to_write = '
    $definition->load($directory_to_list_for_xsl . '/' . $xsl_to_write);
    $exists = db_query('SELECT 1 FROM {sidora_xsl} WHERE form_name = :form_name', array(':form_name' => $xsl_to_write))->fetchField();
    if ($exists) {
-     $xsl_query = db_update('sidora_xsl')
+     error_log("\nIn sidora_xsl_file_to_db, form definition :".print_r($definition->saveXML(),true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
+
+		 $xsl_query = db_update('sidora_xsl')
       ->fields(array(
        'form_definition' => $definition->saveXML(),
 		   'updated' => date('Y-m-d H:i:s'),

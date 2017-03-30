@@ -223,10 +223,7 @@ jQuery(document).ready(function(){
   jQuery("#anf-button").click(function(){
   var myWin = window.open(Drupal.settings.basePath+"sidora/info/xsl_Upload/upload2","XSL_UPLOAD","width=550,height=250,0,status=0,");
   });
- /* Delete XSL button - Lets user delete XSL files - Functionality added by ***REMOVED*** on 3/18/15 */
-  // add jquery to the delete xsl button
 	jQuery("#dxsl-button").click(function(){
- //   var delete_xslWin = window.open(Drupal.settings.basePath+"sidora/delete_xsl","XSL_DELETE","width=\'100%\',height=\'100%\',0,status=0,");
     Shadowbox.open({
       content:    Drupal.settings.basePath+"sidora/delete_xsl",
       player:     "iframe",
