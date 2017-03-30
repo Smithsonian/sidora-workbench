@@ -3349,24 +3349,24 @@ if ($one == 'deletexsl') {
     $modules = implode(PHP_EOL, module_list());
     print $modules;
   }
-        if ($one == 'test_curl') {
+  if ($one == 'test_curl') {
     $curl = curl_init();
     $batch_url = variable_get('sidora_batch_status_url', '') . '/' . $two . '/c8b4c3e1-1ca1-4445-9cfc-0f3deb7ada2f';
     curl_setopt($curl, CURLOPT_URL, $batch_url);
     curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1);
     var_dump(curl_getinfo($curl));
-                $result = curl_exec($curl);
+    $result = curl_exec($curl);
     var_dump($result);
-                var_dump(curl_error($curl));
-watchdog('SIdora Testing',t("Bulk metadata Curl reponse whole :<br/> %curl_response",
+    var_dump(curl_error($curl));
+    watchdog('SIdora Testing',t("Bulk metadata Curl reponse whole :<br/> %curl_response",
                 array('%curl_response' => $result))
-                );
+     );
     curl_close($curl);
-        }
-        if ($one == 'content_model') {
-          $obj = sidora_obj($two);
-                $models = $obj->models;
-                $file_extensions = array(
+  }
+  if ($one == 'content_model') {
+    $obj = sidora_obj($two);
+    $models = $obj->models;
+    $file_extensions = array(
     'si:imageCModel' => array('jpg', 'png', 'gif', 'tiff', 'tif', 'jp2'),
     'si:generalImageCModel' => array('jpg', 'png', 'gif', 'tiff', 'tif', 'jp2'),
     'si:datasetCModel' => array('csv', 'xml', 'xlsx', 'xls', 'dat', 'med', 'arg', 'slt'),
@@ -3374,15 +3374,15 @@ watchdog('SIdora Testing',t("Bulk metadata Curl reponse whole :<br/> %curl_respo
     'islandora:sp-audioCModel' => array('mp3','aiff','wav'),
     'islandora:sp_videoCModel' => array('ogg','mp4','mov','qt', 'm4a', 'm4v', 'avi', 'mkv'),
     '*' => array('*'),
-  );
-        foreach ($models as $model) {
-    if (array_key_exists($model, $file_extensions)) {
-      $extensions_for_model = $file_extensions[$model];
-       var_dump($extensions_for_model);
+    );
+    foreach ($models as $model) {
+      if (array_key_exists($model, $file_extensions)) {
+        $extensions_for_model = $file_extensions[$model];
+         var_dump($extensions_for_model);
+      }
     }
   }
-	}
-	//This ends the testing function and should also indicate the end of liberal use of the dsm function
+  //This ends the testing function and should also indicate the end of liberal use of the dsm function
 }
 
 /*

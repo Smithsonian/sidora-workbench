@@ -663,3 +663,12 @@ function sidora_create_personal_project_space($account) {
   sidora_create_sidora_group($owner, $concept_pid, 'edit');
   sidora_create_sidora_group($owner, $concept_pid, 'delete');
 }
+
+function sidora_transfer_project_space($project_space_node, $new_owner) {
+  global $user;
+  // The one requesting the transfer must be an admin or the owner
+  if (!sidora_is_admin() && !($user->uid == $project_space_node->uid)) {
+    watchdog("sidora",t("Invalid user attempted to change a project space to a new owner: %name", array("%name" => $new_owner->name)));
+  }
+  
+}
