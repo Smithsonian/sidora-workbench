@@ -2000,20 +2000,20 @@ Color Set:
       'Verdana' => t('Verdana'),
     ),
   );
-  $directory_to_list_for_xsl = DRUPAL_ROOT.'/'.drupal_get_path('module','sidora').'/XSL';
-  $xsl_filenames = array_diff(scandir($directory_to_list_for_xsl), array('..', '.', '.htaccess'));
   $custom_xslt_added = FALSE;
   $xsl_names_dd['none'] = '';
   $xsl_names_dd['direct'] = 'None - Direct metadata to browser';
-  $directory_to_list_for_xsl = DRUPAL_ROOT.'/'.drupal_get_path('module','sidora').'/XSL/';
-  foreach($xsl_filenames as $name) { 
-    if (strpos(strtolower($name), ".xsl", strlen(strtolower($name)) - strlen(".xsl")) !== FALSE){
-      $xsl_names_dd[$directory_to_list_for_xsl.$name] = $name; 
-     	if (isset($row['xslt']) && ($row['xslt'] == $name)) {
+  if (db_table_exists('sidora_xsl')) {
+	  $get_xsl_records = db_query("select form_name from sidora_xsl");
+		foreach ($get_xsl_records as $xsl_form_record) {
+    if (strpos(strtolower($xsl_form_record->form_name), ".xsl", strlen(strtolower($xsl_form_record->form_name)) - strlen(".xsl")) !== FALSE){
+     	$xsl_names_dd[$xsl_form_record->form_name] = $xsl_form_record->form_name;
+			if (isset($row['xslt']) && ($row['xslt'] == $xsl_form_record->form_name)) {
           $custom_xslt_added = TRUE;
-	}	
+	    }	
     }
   }
+	}
   if ((isset($row['xslt'])) && (!empty($row['xslt'])) && ($row['xslt'] != 'none') && ($row['xslt'] != 'direct') && !($custom_xslt_added)) {
     $custom_xslt = $row['xslt'];
     $xsl_names_dd[$custom_xslt] = basename($custom_xslt);

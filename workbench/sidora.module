@@ -299,6 +299,20 @@ function sidora_menu() {
       'access arguments' => array('Create XML Forms'),
       'type' => MENU_CALLBACK,
     ),
+   'admin/sidora/update_xsl_db' => array(
+      'title' => 'Update SIdora XSLs in database',
+      'description' => 'Update SIdora XSLs in database',
+      'page callback' => 'sidora_update_xsl',
+      'access arguments' => array('administer site configuration'),
+      'type' => MENU_CALLBACK,
+   ),
+   'admin/sidora/download_xsl' => array(
+      'title' => 'Download SIdora XSLs as archive',
+      'description' => 'Download SIdora XSLs as archive',
+      'page callback' => 'sidora_download_xsl',
+      'access arguments' => array('administer site configuration'),
+      'type' => MENU_CALLBACK,
+   ),
  );
 }
 
@@ -1279,16 +1293,13 @@ xmlns:cpf="urn:isbn:1-931666-33-4"
 /* Show the form used to delete a XSL file  */
 function sidora_delete_xsl_form($form,&$form_state) {
   $form = array();
-  $directory_to_list_for_xsl = DRUPAL_ROOT.'/'.drupal_get_path('module','sidora').'/XSL';
-  $xsl_filenames = array_diff(scandir($directory_to_list_for_xsl), array('..', '.', '.htaccess'));
+  $xsl_filenames = sidora_get_all_xsl_names();
   $xsl_names_dd = '<select class="xsl-names-dd form-select">';
   $xsl_names_dd .= '<option value="">None - Direct metadata to browser</option>';
   $xsl_form_dropdown = array();
   foreach ($xsl_filenames as $name) {
-    if (sidora_endsWith(strtolower($name), ".xsl")) {
       $xsl_names_dd .= '<option value="'.$name.'">'.$name.'</option>';
       $xsl_form_dropdown[$name] = $name;
-    }
   }
   $xsl_names_dd .= '</select>';
  // need to add the ui-dialog library here to be able to create a dialog box inside the Delete XSL Shadowbox
@@ -2128,8 +2139,10 @@ function sidora_config_transfer($direct_download = "") {
   }
   else {
     $form = drupal_get_form('sidora_config_form');
+  //error_log("\nIn sidora_config_transfer, form :".print_r($form,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
     $download_link = '<a href="config_transfer/'.$download_filename.'">Download current config</a>';
     $sidora_settings_object = sidora_settings_object();
+  //error_log("\nIn sidora_config_transfer, sidora settings object :".print_r($sidora_settings_object,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
     $servers_table = '<h3>Servers listing (These setting names should probably be in the "Ignore these settings if in the import file" text area above.)</h3><table id="sidora-server-table"><tr><th>Setting Name</th><th>Setting Value</th></tr>';
     foreach ($sidora_settings_object['admin_settings'] as $setting_name => $value) {
       if (is_string($value) && sidora_startsWith($value, 'http')) {
@@ -2139,6 +2152,7 @@ function sidora_config_transfer($direct_download = "") {
     $servers_table .= '</table>';
   $all_setting_indexes = '<h3>All Drupal Settings names</h3><table>';
   global $conf;
+  //error_log("\nIn sidora_config_transfer, conf :".print_r($conf,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
   foreach ($conf as $drupal_setting_index=>$drupal_setting) {
     $all_setting_indexes .= '<tr><td>' . $drupal_setting_index . '</td></tr>';
   }
@@ -2283,6 +2297,7 @@ function sidora_settings_object($ignore_list = array()) {
   $exact_match[] = 'account_request_email_from';
   $exact_match[] = 'site_admin_email_to';
   $settings_holder = array();
+  //error_log("\nIn sidora_settings_object, conf :".print_r($conf,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
   foreach ($conf as $drupal_setting_index=>$drupal_setting) {
     if (in_array($drupal_setting_index,$exact_match) && !in_array($drupal_setting_index,$ignore_list)) {
       $settings_holder[$drupal_setting_index] = $drupal_setting;
@@ -3057,6 +3072,16 @@ watchdog('SIdora Testing',t("Bulk metadata Curl reponse whole :<br/> %curl_respo
     }
   }
 	}
+	if ($one == 'delete_sidora_xsl') {
+	  $directory_to_list_for_xsl = DRUPAL_ROOT.'/'.drupal_get_path('module','sidora').'/XSL';
+  $xsl_filenames = array_diff(scandir($directory_to_list_for_xsl), array('..', '.', '.htaccess'));
+	foreach($xsl_filenames as $name){ 
+    if (sidora_endsWith(strtolower($name), ".xsl")){
+      echo "deleting : " . file_create_url('public://'.'/'.$name);
+			file_unmanaged_delete('http://sidora0c.myquotient.net/~ramlani/sidora/sidora0.4/sites/all/modules/sidora/workbench/XSL/'.$name);
+		}
+	}
+	}		
 	//This ends the testing function and should also indicate the end of liberal use of the dsm function
 }
 
@@ -4518,12 +4543,12 @@ function sidora_get_xsl_file_config_for_object($pid) {
  */
 function sidora_get_xsl_file_for_object($pid) {
   $curr_check = sidora_get_xsl_exhibition_config_for_object($pid);
-  if ((!empty($curr_check)) && ($curr_check != 'none') && ($curr_check != 'direct') && (file_exists($curr_check))) {
+  if ((!empty($curr_check)) && ($curr_check != 'none') && ($curr_check != 'direct')) {
     return $curr_check;
   }	 
   $curr_check = sidora_get_xsl_file_config_for_object($pid);
   if (empty($curr_check)) return NULL;
-  return (DRUPAL_ROOT . '/'. drupal_get_path('module','sidora') . '/XSL/' . $curr_check->file);
+  return $curr_check->file;
 }
 /*
  * If an item's ancestry (parent/grandparent/etc) includes an exhibition, then the item is allowed to be shown by exhibition
@@ -4626,9 +4651,20 @@ function sidora_open_access($info_type, $pid) {
         print sidora_xsl_string($xsl_file);
       }
       else {
-	//$directory_for_xsl = DRUPAL_ROOT.'/'.drupal_get_path('module','sidora').'/XSL';
-        //$full_file = ($directory_for_xsl . '/' . $file);
-        if ($file) $output_info = readfile($file);
+        if ($file) {
+				  if (preg_match('^.*\/[^\.]*', $file)) {
+				    $output_info = readfile($file);
+					}
+					else {
+            $xsl_form_definition = db_query("SELECT form_definition FROM {sidora_xsl} WHERE form_name = :form_name", array(':form_name' => $file))->fetchField();
+            if ($xsl_form_definition) {
+						  $definition = new DOMDocument();
+              $definition->loadXML($xsl_form_definition);
+				      $definition->formatOutput = TRUE;
+				      $output_info = $definition->saveXML();  
+					  }
+					}
+				}			
       }
       break;
     case 'xsl_config':
@@ -4660,18 +4696,13 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
     case 'xsl_upload':
       $return_when_encoded = array();
       $all_uploads = $_SESSION['file_uploads'][$user->uid];
-      $directory_to_list_for_xsl = DRUPAL_ROOT.'/'.drupal_get_path('module','sidora').'/XSL';
       $return_when_encoded['files'] = array();
       if (!empty($all_uploads)) {
         foreach ($all_uploads as $curr_upload) {
           $curr_item = array();
-          $new_name = $directory_to_list_for_xsl.'/'.$curr_upload->filename;
+          $new_name = $curr_upload->filename;
           if (sidora_endsWith(strtolower($new_name),'.xsl')) {
-            if (file_exists($new_name)) {
-              $rename_worked = rename($new_name, $directory_to_list_for_xsl.'/backups/'.'Prior_to_'.date('Ymd_His').'_'.$curr_upload->filename);
-              $curr_item['existing_moved'] = $rename_worked;
-            }
-            $rename_worked = rename($curr_upload->filepath,$new_name);
+            $rename_worked = sidora_xsl_file_to_db($curr_upload->filepath,$new_name);
             $curr_item['description'] = t('Attempted file write');
             $curr_item['success'] = $rename_worked;
           }
@@ -7216,11 +7247,13 @@ function sidora_xsl_string($xsl_file) {
   if (empty($xsl_file)) {
     return variable_get('sidora_metadata_xsl',sidora_xsl_string_default());
   }
-  $directory_for_xsl = DRUPAL_ROOT.'/'.drupal_get_path('module','sidora').'/XSL';
-  $file = $directory_for_xsl.'/'.$xsl_file;
-  $content = file_get_contents($file);
-  return $content;
-
+  $xsl_form_definition = db_query("SELECT form_definition FROM {sidora_xsl} WHERE form_name = :form_name", array(':form_name' => $xsl_file))->fetchField();
+  if ($xsl_form_definition) {
+		$definition = new DOMDocument();
+    $definition->loadXML($xsl_form_definition);
+		$definition->formatOutput = TRUE;
+		return $definition->saveXML();  
+  }
 }
 
 /*
@@ -9081,17 +9114,19 @@ function sidora_pretty_json($json) {
 function sidora_remove_xsl($param1, $param2, $param3) {
     $curr_item = array();
     if (sidora_endsWith(strtolower($param1),'.xsl')) {
-      $directory_to_list_for_xsl = DRUPAL_ROOT.'/'.drupal_get_path('module','sidora').'/XSL/';
-      if (file_exists($directory_to_list_for_xsl.$param1)) {
-        $rename_worked = rename(DRUPAL_ROOT.'/'.drupal_get_path('module','sidora').'/XSL/'.$param1,$directory_to_list_for_xsl.'backups/'.'Deleted_on_'.date('Ymd_His').'_'.$param1);
-        $curr_item['existing_moved'] = $rename_worked;
-        $curr_item['description'] = t('Attempted file write');
-        $curr_item['success'] = $rename_worked;
-     }
-     else {
-       $curr_item['success'] = FALSE;
-       $curr_item['description'] = t('XSL File not found');
-    }
+      $exists = db_query('SELECT 1 FROM {sidora_xsl} WHERE form_name = :form_name', array(':form_name' => $param1))->fetchField();
+      if ($exists) {
+         $rename_worked = db_delete('sidora_xsl')
+            ->condition('form_name', $param1)
+            ->execute();
+         $curr_item['existing_moved'] = $rename_worked;
+         $curr_item['description'] = t('Attempted file write');
+         $curr_item['success'] = $rename_worked;
+      }
+      else {
+        $curr_item['success'] = FALSE;
+        $curr_item['description'] = t('XSL File not found');
+      }
     }
     else {
        $curr_item['success'] = FALSE;
@@ -10417,3 +10452,117 @@ function sidora_get_xsl_exhibition_config_for_object($pid) {
    }
    return $exhibition_config_xsl_file;
 }
+function sidora_update_xsl() {
+	if (!db_table_exists('sidora_xsl')) {
+		$schema['sidora_xsl'] = array(
+     'description' => t('Stores SIdora XSLs'),
+     'fields' => array(
+       'form_name' => array(
+         'type' => 'varchar',
+         'length' => '256',
+         'not null' => TRUE,
+         'default' => '',
+       ),
+			 'form_definition' => array(
+			   'type' => 'text',
+				 'size' => 'big',
+			 ),
+       'updated' => array(
+         'type' => 'datetime',
+	       'mysql_type' => 'datetime',
+       ),
+     ),
+   );
+   db_create_table('sidora_xsl', $schema['sidora_xsl']);
+	}
+  $directory_to_list_for_xsl = DRUPAL_ROOT.'/'.drupal_get_path('module','sidora').'/XSL';
+  $xsl_filenames = array_diff(scandir($directory_to_list_for_xsl), array('..', '.', '.htaccess'));
+  $xsl_names_dd = array();
+	foreach($xsl_filenames as $name){ 
+    if (sidora_endsWith(strtolower($name), ".xsl")){
+      $xsl_names_dd[$name] = $name; 
+    }
+  }
+  foreach($xsl_names_dd as $xsl_to_write) {
+	  sidora_xsl_file_to_db($directory_to_list_for_xsl,$xsl_to_write);
+	}
+	drupal_set_message("All SIdora XSL's sucessfully added to the database");
+	drupal_goto('admin/sidora');
+	//drupal_exit();
+}	  
+function sidora_download_xsl() {
+  global $base_url;
+	if (db_table_exists('sidora_xsl')) {
+	  $get_xsl_records = db_query("select form_name, form_definition from sidora_xsl");
+		$xsl_zip = new ZipArchive();
+    $download_filename = 'sidora_xsl_from_';
+    $alpha_base_url = preg_replace('/[^a-zA-z0-9]/', '-', $base_url);
+    $alpha_base_url = preg_replace('/-+/', '-', $alpha_base_url);
+		$download_filename .= $alpha_base_url . '.zip';
+		if ($xsl_zip->open(drupal_realpath('public://').'/'.$download_filename, ZipArchive::CREATE | ZipArchive::OVERWRITE)) { 
+			foreach ($get_xsl_records as $xsl_form_record) {
+		    $definition = new DOMDocument();
+        $definition->loadXML($xsl_form_record->form_definition);
+				$definition->formatOutput = TRUE;
+				$xsl_zip->addFromString($xsl_form_record->form_name, $definition->saveXML());
+			}
+		  $xsl_zip->close();
+		  header("Content-type: application/zip"); 
+      header("Content-Disposition: attachment; filename=$download_filename");
+			header('Content-Length: '.filesize(drupal_realpath('public://').'/'.$download_filename)); 
+			header("Pragma: no-cache"); 
+      header("Expires: 0"); 
+			readfile(drupal_realpath('public://').'/'.$download_filename);
+			unlink(drupal_realpath('public://').'/'.$download_filename);		
+		}
+		else {
+		  drupal_set_message("Unable to create a zip file");
+		}
+	}
+	else {
+	  drupal_set_message("No sidora xsl's found in the database");
+	}
+	drupal_exit();
+}			
+function sidora_xsl_file_to_db($directory_to_list_for_xsl = '',$xsl_to_write = '') {
+  if ((!empty($directory_to_list_for_xsl)) && (!empty($xsl_to_write))) {
+   $definition = new DOMDocument();
+   $definition->load($directory_to_list_for_xsl . '/' . $xsl_to_write);
+   $exists = db_query('SELECT 1 FROM {sidora_xsl} WHERE form_name = :form_name', array(':form_name' => $xsl_to_write))->fetchField();
+   if ($exists) {
+     $xsl_query = db_update('sidora_xsl')
+      ->fields(array(
+       'form_definition' => $definition->saveXML(),
+		   'updated' => date('Y-m-d H:i:s'),
+      ))
+      ->condition('form_name', $xsl_to_write, '=');
+     $num_updated = $xsl_query->execute();
+     $new_entry = NULL;
+   }
+   else {
+	   $insert_query = db_insert('sidora_xsl')->fields(array('form_name','form_definition','updated'));
+	   $insert_row = array(
+		   'form_name' => $xsl_to_write,
+		   'form_definition' => $definition->saveXML(),
+			 'updated' => date('Y-m-d H:i:s'),
+		 );	
+	   $insert_query->values($insert_row);	
+     $new_entry = $insert_query->execute();
+   }
+   sidora_do_any_file_delete(file_create_url($directory_to_list_for_xsl . '/' . $xsl_to_write));
+	 return TRUE;
+	}
+	return FALSE;
+}
+function sidora_get_all_xsl_names() {
+  $xsl_filenames = array();
+  if (db_table_exists('sidora_xsl')) {
+	  $get_xsl_records = db_query("select form_name from sidora_xsl");
+    foreach ($get_xsl_records as $xsl_form_record) {
+      if (sidora_endsWith(strtolower($xsl_form_record->form_name), ".xsl")) {
+		    $xsl_filenames[$xsl_form_record->form_name] = $xsl_form_record->form_name;
+			}
+		}
+	}
+	return $xsl_filenames;
+}				 

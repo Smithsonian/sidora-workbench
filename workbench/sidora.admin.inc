@@ -166,17 +166,12 @@ jQuery("#edit-sidora-resource-ontology-json").on(\'change keyup paste\', functio
   $model_names_dd .= '<option value="sidora_all">All models that are not specifically called out</option>';
   foreach($model_names as $model => $name){ $model_names_dd .= '<option value="'.$model.'">'.$name.'</option>'; }
   $model_names_dd .= '</select>';
-  
-  $directory_to_list_for_xsl = DRUPAL_ROOT.'/'.drupal_get_path('module','sidora').'/XSL';
-  $xsl_filenames = array_diff(scandir($directory_to_list_for_xsl), array('..', '.', '.htaccess'));
-
   $xsl_names_dd = '<select class="xsl-names-dd form-select">';
   $xsl_names_dd .= '<option value="">None - Direct metadata to browser</option>';
-  foreach($xsl_filenames as $name){ 
-    if (sidora_endsWith(strtolower($name), ".xsl")){
-      $xsl_names_dd .= '<option value="'.$name.'">'.$name.'</option>'; 
-    }
-  }
+  $get_xsl_records = sidora_get_all_xsl_names();
+	foreach ($get_xsl_records as $xsl_form_record) {
+    $xsl_names_dd .= '<option value="' . $xsl_form_record . '">' . $xsl_form_record . '</option>'; 
+	}	
   $xsl_names_dd .= '</select>';
   /* example 
   $existing_json_sidora_form_config = '
@@ -596,6 +591,8 @@ tr.removed.odd {
 <li><a href="config_transfer">' . t('Config Transfer') . '</a>' . t(' Download or upload a SIdora configuration') . '</li>
 <li><a href="fedora_object_issues">' . t('Fedora Object Issues') . '</a>' . t(' Check object issues have been found by the workbench (Malformed objects list)') . '</li>
 <li><a href="check_user_projects">' . t('Check User Projects') . '</a>' . t(' Check if the children of si:user-projects is out of sync with the Drupal users') . '</li>
+<li><a href="update_xsl_db">' . t('Update Sidora XSLs in database') . '</a>' . t(' Update the Sidora XSLs in database') . '</li>
+<li><a href="download_xsl">' . t('Download Sidora XSLs') . '</a>' . t(' Download all the SIdora XSLs from the database as an archive') . '</li> 
 </ul>
 <script>
 
