@@ -664,11 +664,51 @@ function sidora_create_personal_project_space($account) {
   sidora_create_sidora_group($owner, $concept_pid, 'delete');
 }
 
-function sidora_transfer_project_space($project_space_node, $new_owner) {
+function sidora_transfer_project_space($ps_node, $new_owner) {
+  if (is_numeric($ps_node)) {
+    $ps_node = node_load($ps_node);
+  }
+  if (is_numeric($new_owner)) {
+    $new_owner = user_load($new_owner);
+  }
   global $user;
   // The one requesting the transfer must be an admin or the owner
-  if (!sidora_is_admin() && !($user->uid == $project_space_node->uid)) {
-    watchdog("sidora",t("Invalid user attempted to change a project space to a new owner: %name", array("%name" => $new_owner->name)));
+  if (empty($new_owner) || empty($new_owner->uid) || empty($ps_node) || empty($ps_node->uid)) {
+    watchdog("sidora", t("Invalid attempt to change a project space to a new owner, new owner or project space is invalid"));
+    return FALSE;
+  }
+  if (!sidora_is_admin() && !($user->uid == $ps_node->uid)) {
+    watchdog(
+      "sidora",
+      t(
+        "Invalid user attempted to change a project space to a new owner id: %name from owner id: %currentowner",
+        array("%name" => $new_owner->uid, "%currentowner" => $ps_node->uid)
+      )
+    );
+    return FALSE;
+  }
+  $pid = '';
+  if (!empty($ps_node->field_fedora_pid) && array_key_exists($ps_node->language, $ps_node->field_fedora_pid)) {
+    $pid = $ps_node->field_fedora_pid[$ps_node->language][0]['value'];
+  }
+  if (empty($pid)) {
+    watchdog(
+      "sidora",
+      t(
+        "Invalid attempt to change a project space to a new owner id: %name from owner id: %currentowner",
+        array("%name" => $new_owner->id, "%currentowner" => $ps_node->uid)
+      )
+    );
+    return FALSE;
   }
   
+  $groups = sidora_get_groups_for_project_space($pid);
+  $to_change = $groups;
+  $to_change[] = $ps_node;
+  foreach($to_change as $node) {
+    $node->uid = $new_owner->uid;
+    node_save($node);
+  }
+  // if there is a problem saving an exception gets thrown. Let it bubble up.
+  return TRUE;
 }

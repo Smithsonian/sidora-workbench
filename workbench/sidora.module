@@ -4598,6 +4598,7 @@ function sidora_create_and_set_new_user_object($account, $create_even_if_existin
   $object = sidora_create_user_object($account);
   sleep(15); 
   // Arbitrary sleep to allow fedora to create the objects.  Even though the ID comes back it's apparently not available immediately
+  module_load_include('inc', 'sidora', 'includes/project_spaces');
   $existing_project_spaces = sidora_get_project_spaces_by_member($account->uid);
   if (empty($existing_project_spaces)) {
     sidora_create_personal_project_space($account);
@@ -6198,6 +6199,12 @@ function sidora_duplicate($destination, $to_duplicate, $show_output = TRUE) {
  */
 function sidora_ajax_parts($call_type, $param1 = '', $param2 = '', $param3 = '') {
   global $user;
+  if ($call_type == 'transfer_ps'){
+    module_load_include('inc', 'sidora', 'includes/project_spaces');
+    $worked = sidora_transfer_project_space($param1, $param2); 
+    print '{"error":' . ($worked?"false":"true") . '}';
+    drupal_exit();
+  }
   if ($call_type == 'duplicate'){
     return sidora_duplicate($param1, $param2);
   }
