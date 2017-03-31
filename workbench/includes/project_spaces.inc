@@ -306,6 +306,98 @@ function sidora_get_project_spaces_by_member($uid = NULL){
   }
   return $to_return;
 }
+function sidora_project_space_transfer_form($form = array(), &$form_state, $pid = NULL, $to_username = NULL) {
+  drupal_add_css(drupal_get_path('module','sidora').'/css/workbench_basic_screen.css',array('weight' => '1000000', 'group' => CSS_THEME));
+  global $user;
+  $node = sidora_get_concept_node($pid);
+  if (empty($node) || ($node->uid != $user->uid && !sidora_is_admin())) {
+    $form['info'] = array(
+      '#markup' => t('You no longer have access to change the owner of this project space.')
+    );
+    return $form;
+  }
+  $label = $node->field_fedora_label[$node->language][0]["safe_value"];
+  $form['pid_info_1'] = array(
+    '#markup' => "<h1>$label</h1>",
+  );
+  if ($node->uid != $user->uid) {
+    $form['current_owner_info'] = array(
+      '#markup' => t('<h5> The current owner of this project is %uname. </h5>', array('%uname' => $node->name)),
+    );
+  }
+  $form['pid_info_2'] = array(
+    '#markup' => t('Transfer this project space to a new owner.'),
+  );
+  if (empty($to_username)) {
+    $form["username_new"] = array(
+      '#type' => 'textfield',
+      '#title' => t('Enter the username of the new owner'),
+    );
+    $form['submit'] = array(
+      '#type' => 'submit',
+      '#value' => t('Submit'),
+    );
+  }
+  else {
+    if (empty($form_state['input'])) {
+      if ($node->uid == $user->uid && !sidora_is_admin()) {
+        drupal_set_message(t("After you transfer ownership you will no longer be able to change permissions or transfer ownership on the project space."),"warning");
+      }
+      drupal_set_message(t("Are you sure you want to transfer this project space to the user listed below?"),"warning");
+    }
+    $to_user = user_load_by_name($to_username);
+    if (!empty($to_user)) {
+      $form["username_new"] = array(
+        '#type' => 'textfield',
+        '#value' => $to_user->name,
+        '#attributes' => array('readonly' => 'readonly'),
+      );
+    }
+    $form['submit'] = array(
+      '#type' => 'submit',
+      '#value' => t('Confirm'),
+    );
+  }
+  $form_state['storage']['pid'] = $pid;
+  return $form;
+}
+/*
+ * Validation for the project space transfer form
+ */
+function sidora_project_space_transfer_form_validate($form, &$form_state) {
+  $uid = '';
+  if (!empty($form_state['values']['username_new'])){
+    $result = (db_query("SELECT uid FROM users WHERE name = :s", array(':s' => $form_state['values']['username_new'])));
+    foreach($result as $indiv){
+      $uid = $indiv->uid;
+    }
+  }
+  if (empty($uid)){ 
+    form_set_error('username_new', 'Enter a valid username.');
+  }
+}
+
+function sidora_project_space_transfer_form_submit($form, &$form_state) {
+  if ($form_state['values']['op'] == 'Confirm') {
+    $to_user = user_load_by_name($form_state['values']['username_new']);
+    $pid = $form_state['storage']['pid'];
+    // The sidora_transfer_project_space will hold the functionality to stop unauthorized users from making the change
+    $node = sidora_get_concept_node($pid);
+    $worked = sidora_transfer_project_space($node, $to_user);
+    if ($worked) {
+      drupal_set_message("Project Space ownership transferred.");
+      drupal_goto(substr(current_path(), 0, strrpos(current_path(), '/')));
+    }
+    else {
+      drupal_set_message("Error during processing.");
+    }
+  }
+  if ($form_state['values']['op'] == 'Submit') {
+    $to_goto = (current_path() . '/' . $form_state['values']['username_new']);
+    drupal_goto($to_goto);
+  }
+}
+
 /**
  * Assumes the form was submitted for the logged in user
  */
@@ -668,15 +760,27 @@ function sidora_transfer_project_space($ps_node, $new_owner) {
   if (is_numeric($ps_node)) {
     $ps_node = node_load($ps_node);
   }
+  if (is_string($ps_node)) {
+    watchdog("sidora", t("Passed project space could not be determined. Did not pass in a node or node id. Function does not take pids."));
+    return FALSE;
+  }
   if (is_numeric($new_owner)) {
     $new_owner = user_load($new_owner);
   }
   global $user;
-  // The one requesting the transfer must be an admin or the owner
   if (empty($new_owner) || empty($new_owner->uid) || empty($ps_node) || empty($ps_node->uid)) {
-    watchdog("sidora", t("Invalid attempt to change a project space to a new owner, new owner or project space is invalid"));
+    $info = "|new_owner empty?" . empty($new_owner);
+    if (!empty($new_owner)) {
+      $info .= "|new_owner uid:" . $new_owner->uid;
+    }
+    $info .= "|ps_node empty?" . empty($ps_node);
+    if (!empty($ps_node)) {
+      $info .= "|ps_node uid:" . $ps_node->uid;
+    }
+    watchdog("sidora", t("Invalid attempt to change a project space to a new owner, new owner or project space is invalid. Info:".$info));
     return FALSE;
   }
+  // The one requesting the transfer must be an admin or the owner
   if (!sidora_is_admin() && !($user->uid == $ps_node->uid)) {
     watchdog(
       "sidora",

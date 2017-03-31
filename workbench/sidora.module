@@ -325,6 +325,13 @@ function sidora_menu() {
       'access callback' => 'user_is_logged_in',
       'file' => 'includes/project_spaces.inc',
     ),
+    'sidora/project_space_transfer' => array(
+      'title' => 'Project Space Transfer',
+      'page callback' => 'drupal_get_form',
+      'page arguments' => array('sidora_project_space_transfer_form', 2, 3),
+      'access callback' => 'user_is_logged_in',
+      'file' => 'includes/project_spaces.inc',
+    ),
  );
 }
 
