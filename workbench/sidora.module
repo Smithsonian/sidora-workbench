@@ -5903,8 +5903,13 @@ function sidora_xml_form_builder_get_transforms() {
  * Prepares the contents of the block.
  */
 function sidora_block_view($delta = '') {
+  global $user;
   try{
   drupal_add_js('jQuery.extend(Drupal.settings, { "pathToTheme": "' . base_path() . path_to_theme() . '" });', 'inline');
+  if (!empty($user->name)) {
+    drupal_add_js('jQuery.extend(Drupal.settings, { "username": "' . $user->name . '" });', 'inline');
+    drupal_add_js('jQuery.extend(Drupal.settings, { "is_admin": "' . sidora_is_admin() . '" });', 'inline');
+  }
   if (strpos(current_path(), 'sidora/workbench') === FALSE) {
     return;
   }
@@ -7106,11 +7111,10 @@ function sidora_html_tree_from_given_pid($root_pid = '', $root = NULL, $num_leve
        sidora_add_fedora_assumption_problem_other($description);
     }
     else{
-       $root_label = $root->label;
+      $root_label = $root->label;
+      $children_resources = $root->relationships->get(FEDORA_RELS_EXT_URI, 'hasResource');
     }
-
-    $children_resources = $root->relationships->get(FEDORA_RELS_EXT_URI, 'hasResource');
-    if (sizeof($children_resources) > 0) {
+    if (!empty($children_resources) > 0) {
       $root_label .= " (" . sizeof($children_resources) . ")";
     }
     /*

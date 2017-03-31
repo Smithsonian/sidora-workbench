@@ -389,7 +389,7 @@ function sidora_project_space_transfer_form_submit($form, &$form_state) {
       drupal_goto(substr(current_path(), 0, strrpos(current_path(), '/')));
     }
     else {
-      drupal_set_message("Error during processing.");
+      drupal_set_message("Error during processing.", "error");
     }
   }
   if ($form_state['values']['op'] == 'Submit') {
@@ -517,8 +517,8 @@ function sidora_sharing_permissions_form($form = array(), &$form_state, $pid) {
   $member_to_group_association = sidora_get_member_to_group_association($selected_groups);
   $rows = array();
   foreach($member_to_group_association as $uid => $groups) {
-    // Do not include yourself in the list of users
-    if ($uid != $user->uid) { 
+    // Do not include the owner, they have override on permissions
+    if ($uid != $node->uid) { 
       $username = sidora_get_username_from_uid($uid);
       $row = array(
         "username_$uid" => array(

@@ -671,9 +671,25 @@ sidora.ProjectSpaces.isProjectSpace = function(pid) {
 sidora.ProjectSpaces.isShareAvailable = function() {
   // TBD check if the share button should be shown 
 }
+sidora.ProjectSpaces.isAbleToTransfer = function() {
+  var projectSpaceRep = sidora.util.GetTreeNodesByPid(sidora.ProjectSpaces.currentPid())[0];
+  if (typeof(projectSpaceRep) == 'undefined') {
+    return false;
+  }
+  if (Drupal.settings.username == projectSpaceRep.a_attr.owner) {
+    return true;
+  }
+  if (Drupal.settings.is_admin == "1") {
+    return true;
+  }
+  return false;
+}
 sidora.ProjectSpaces.shareChoicesHtml = function() {
-  var toReturn = '<a href="#" onclick="sidora.ProjectSpaces.ShowPermissionsForm(); return false;"><i class="material-icons">group vpn_key</i> '+htmlEntities(sidora.display.PROJECT_SPACE_CHOICE_CHANGE_PERMISSIONS)+'</a><br>';
-  toReturn += '<i class="material-icons">group redo</i> '+htmlEntities(sidora.display.PROJECT_SPACE_CHOICE_TRANSFER_PS_TO_NEW_OWNER)+'<br>';
+  var toReturn = '';
+  if (sidora.ProjectSpaces.isAbleToTransfer()) {
+    toReturn += '<a href="#" onclick="sidora.ProjectSpaces.ShowPermissionsForm(); return false;"><i class="material-icons">group vpn_key</i> '+htmlEntities(sidora.display.PROJECT_SPACE_CHOICE_CHANGE_PERMISSIONS)+'</a><br>';
+    toReturn += '<a href="#" onclick="sidora.ProjectSpaces.ShowProjectSpaceTransferForm(); return false;"><i class="material-icons">group redo</i> '+htmlEntities(sidora.display.PROJECT_SPACE_CHOICE_TRANSFER_PS_TO_NEW_OWNER)+'</a><br>';
+  }
   // Determine if there are additional project spaces where the user would be able to place the highlighted objects
   var currentPS = sidora.ProjectSpaces.currentPid();
   var writablePS = sidora.ProjectSpaces.writableProjectSpaces();
@@ -870,6 +886,22 @@ sidora.ProjectSpaces.ShowPermissionsForm = function(pid){
   },100 + (Shadowbox.isOpen() * 800));
   Shadowbox.close();
 }
+sidora.ProjectSpaces.ShowProjectSpaceTransferForm = function(pid){
+  if (typeof(pid) == 'undefined') {
+    pid = sidora.ProjectSpaces.currentPid();
+  }
+  setTimeout(function(){
+    Shadowbox.open({
+      content:    Drupal.settings.basePath+"sidora/project_space_transfer/"+pid,
+      player:     "iframe",
+      title:      Drupal.t("Project Space Transfer"),
+      options: {
+        onFinish:  function(){}
+      }
+      });
+  },100 + (Shadowbox.isOpen() * 800));
+  Shadowbox.close();
+}
 
 sidora.queue = new SidoraQueue();
 sidora.InitiateJSTree = function(){
@@ -1010,8 +1042,8 @@ sidora.InitiateJSTree = function(){
         // Set the dropdown to the space that the hash says
         var hashInfo = window.location.hash.split(/#|\?path=|,/);
         var setToPid = "";
-        if (hashInfo.length == 2) setToPid = hashInfo[1];
-        if (hashInfo.length > 2) setToPid = hashInfo[2];
+        if (hashInfo.length > 1) setToPid = hashInfo[1];
+        if (hashInfo.length > 2 && hashInfo[2] != "") setToPid = hashInfo[2];
         if (setToPid.length > 0) {
           var possibilities = jQuery.map(sidora.util.GetTreeNodesByPid(setToPid),function(a){ return a.id; })
           var dropDownOptions = jQuery("#psdd-select option").map(function(){return jQuery(this).val()}).toArray();
@@ -1028,7 +1060,9 @@ sidora.InitiateJSTree = function(){
           }
         }
       }
-      jQuery("#psdd-select").change(function(){ sidora.ProjectSpaces.ChangeProjectSpace(this.value); });
+      // set the change handler and immediately call it
+      jQuery("#psdd-select").change(function(){ sidora.ProjectSpaces.ChangeProjectSpace(this.value); }).change();
+      
     }, 200);
     jQuery("#page").show();
 
@@ -1576,6 +1610,7 @@ sidora.InitiatePage = function(){
       { position: { my: "left-7 bottom", at: "right center" } }
     );
     jQuery("h1").remove();
+    // Below is the starburst image
     jQuery("#branding").append('<div style="float: left;"><img src="data:image/png;base64,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" height="20" width="20" style="padding-right: 10px;"><span style="font-size: 17px;font-weight: bold;font-family:Arial;color:#595959;text-decoration:none;"><span style="text-decoration: none; line-height: 20.5px;">SIdora Workbench</span></span></div>');
     jQuery("#branding").append("<div class='branding-user-info' style='float:right'> <a href='"+Drupal.settings.basePath+"user' class='sidora-thin-button'>Profile</a> <a href='"+Drupal.settings.basePath+"user/logout' class='sidora-thin-button'>Logout</a></div>");
     jQuery("#branding").append("<div class='branding-project-spaces' style='float:right'> <a id='proj-space-button' href='#' onclick='return false;' class='sidora-thin-button'>Project Spaces</a></div>");
