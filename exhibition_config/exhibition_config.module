@@ -2014,7 +2014,7 @@ Color Set:
       }
     }
   }
-  if ((isset($row['xslt'])) && (!empty($row['xslt'])) && ($row['xslt'] != 'none') && ($row['xslt'] != 'direct') && !($custom_xslt_added)) {
+  if ((isset($row['xslt'])) && (!empty($row['xslt'])) && ($row['xslt'] != 'none') && ($row['xslt'] != 'direct') && !($custom_xslt_added) && (preg_match('/^.*\/[^\.]*/', $row['xslt']))) {
     $custom_xslt = $row['xslt'];
     $xsl_names_dd[$custom_xslt] = basename($custom_xslt);
   }	
