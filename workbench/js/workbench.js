@@ -709,7 +709,7 @@ sidora.ProjectSpaces.shareChoicesHtml = function() {
   }
   return toReturn;
 }
-sidora.ProjectSpaces.ChangeProjectSpace = function(selectedValue) {
+sidora.ProjectSpaces.ChangeProjectSpace = function(selectedValue, suppressClick) {
   var projectSelectorCss = jQuery("#"+selectedValue).siblings().map(function(){return "#" + this.id;}).get().join(", ");
   if (projectSelectorCss.length > 0) {
     projectSelectorCss += " , ";
@@ -718,7 +718,9 @@ sidora.ProjectSpaces.ChangeProjectSpace = function(selectedValue) {
   projectSelectorCss += " #" + selectedValue + " { position: absolute; top: 0; left: 0; } ";
   jQuery("#project-selector-css").remove();
   jQuery("<style>").prop("type","text/css").prop("id","project-selector-css").html(projectSelectorCss).appendTo("head");
-  jQuery("#"+selectedValue).children("a").click(); 
+  if (!suppressClick) {
+    jQuery("#"+selectedValue).children("a").click();
+  }
   var owned = !jQuery("#"+selectedValue).children("a").hasClass("not-owned");
   jQuery("#share-project-space-button").toggle(true);
   jQuery("#share-project-space-button").click(function(){
@@ -1060,8 +1062,11 @@ sidora.InitiateJSTree = function(){
           }
         }
       }
+      // save the url path so we can go to that item
+      
       // set the change handler and immediately call it
-      jQuery("#psdd-select").change(function(){ sidora.ProjectSpaces.ChangeProjectSpace(this.value); }).change();
+      jQuery("#psdd-select").change(function(){ sidora.ProjectSpaces.ChangeProjectSpace(this.value); });
+      sidora.ProjectSpaces.ChangeProjectSpace( jQuery("#psdd-select").val(), true );
       
     }, 200);
     jQuery("#page").show();
