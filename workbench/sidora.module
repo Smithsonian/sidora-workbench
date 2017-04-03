@@ -2526,20 +2526,12 @@ function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $ex
     return t("You must be an administrator or have an administrator set sidora_allow_all_to_debug in order to access this information");
   }
   if (!sidora_is_admin()) print t("Remember that nonadmins will NOT see output from dsm!");
-  if ($one == 'pps') {
-    module_load_include('inc', 'sidora', 'includes/project_spaces');
-    sidora_put_into_proper_project_space($two);
-  }
   if ($one == 'convert') {
      $results = _sidora_get_child_results_cache($two);
      print "<pre>";
      var_dump($results);
      print "</pre>";
      return 'Done';
-  }
-  if ($one == 'duplicate'){
-    $the_return = sidora_duplicate_tree_and_resources($two);
-    return 'Done: '. $the_return;
   }
   if ($one == 'list_pids_in_tree'){
     $pids = sidora_get_pids_in_tree_from_nodes_by_root_pid($two);
@@ -3414,7 +3406,7 @@ function sidora_create_concept($parent_pid = 'si:root', $model = 'si:collectionC
   try
   {
     $tuque = islandora_get_tuque_connection();
-    $page = $tuque->repository->constructObject(islandora_get_namespace('si:root'));//$parent_pid));//'si:root'));//$object->id));
+    $page = $tuque->repository->constructObject(islandora_get_namespace('si:root'));
   }catch(Exception $e) {
     return t('The Fedora repository server is currently unavailable. Please contact the site administrator %email',
       array('%email' => (variable_get('site_admin_email_to', '') != ''?' at ' . variable_get('site_admin_email_to'):''))
@@ -3423,10 +3415,8 @@ function sidora_create_concept($parent_pid = 'si:root', $model = 'si:collectionC
   $page->owner = $user->name;
   $page->label = 'New Concept'; 
   // Label of object if no label gets put into place
-  $page->models = 'si:collectionCModel';//parent of the models being sent?
+  $page->models = 'si:collectionCModel';
   drupal_static('parent_collection_pid', $parent_pid);
-  // print $model;
-  // print $parent_pid;
   drupal_static('form_of_interest', $form_name);
   $form = drupal_get_form('islandora_ingest_form', array(
     'models' => array($model),
@@ -7114,7 +7104,7 @@ function sidora_html_tree_from_given_pid($root_pid = '', $root = NULL, $num_leve
       $root_label = $root->label;
       $children_resources = $root->relationships->get(FEDORA_RELS_EXT_URI, 'hasResource');
     }
-    if (!empty($children_resources) > 0) {
+    if (!empty($children_resources)) {
       $root_label .= " (" . sizeof($children_resources) . ")";
     }
     /*
