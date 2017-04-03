@@ -10598,7 +10598,6 @@ function sidora_xsl_file_to_db($directory_to_list_for_xsl = '',$xsl_to_write = '
       $insert_query->values($insert_row);	
       $new_entry = $insert_query->execute();
    }
-   sidora_do_any_file_delete(file_create_url($directory_to_list_for_xsl . '/' . $xsl_to_write));
     return TRUE;
   }
   return FALSE;

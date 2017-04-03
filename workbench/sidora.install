@@ -98,9 +98,6 @@ function sidora_update_7200() {
      $insert_query->values($insert_row);	
    }
    $insert_query->execute();
-   foreach($xsl_names_dd as $xsl_to_write) {
-     sidora_do_any_file_delete($directory_to_list_for_xsl . '/' . $xsl_to_write);
-   }	
   }		 
 }
     
