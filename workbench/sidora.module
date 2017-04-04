@@ -332,6 +332,13 @@ function sidora_menu() {
       'access callback' => 'user_is_logged_in',
       'file' => 'includes/project_spaces.inc',
     ),
+    'sidora/project_space_create' => array(
+      'title' => 'Project Space Creation',
+      'page callback' => 'drupal_get_form',
+      'page arguments' => array('sidora_project_space_creation_form'),
+      'access callback' => 'user_is_logged_in',
+      'file' => 'includes/project_spaces.inc',
+    ),
  );
 }
 
@@ -727,7 +734,6 @@ function sidora_process_object_with_build_id($form_build_id) {
     }
   }
   $creation_info = sidora_object_creation_info($form_build_id);
-  dsm($creation_info);
   $parent_pid = NULL;
   if (!empty($creation_info)) {
     $pid = $creation_info['pid'];

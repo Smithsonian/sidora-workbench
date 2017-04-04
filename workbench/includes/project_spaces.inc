@@ -306,6 +306,50 @@ function sidora_get_project_spaces_by_member($uid = NULL){
   }
   return $to_return;
 }
+function sidora_project_space_creation_form($form = array(), &$form_state) {
+  drupal_add_css(drupal_get_path('module','sidora').'/css/workbench_basic_screen.css',array('weight' => '1000000', 'group' => CSS_THEME));
+  global $user;
+  $form['info'] = array(
+    '#markup' => t('After the project space is created, you can choose who should be part of the project space.')
+  );
+  $form["ps_name"] = array(
+    '#type' => 'textfield',
+    '#size' => 128,
+    '#title' => t('Enter the new project space name'),
+  );
+  $form["ps_desc"] = array(
+    '#type' => 'textarea',
+    '#cols' => 80,
+    '#title' => t('Enter the new project space description'),
+  );
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Confirm'),
+  );
+  return $form;
+}
+
+function sidora_project_space_creation_form_validate($form, &$form_state) {
+  if (empty($form_state['values']['ps_name'])){ 
+    form_set_error('ps_name', 'Enter a name for the project space.');
+  }
+}
+function sidora_project_space_creation_form_submit($form, &$form_state) {
+  global $user;
+  module_load_include('inc', 'islandora', 'includes/utilities');
+  try
+  {
+    $tuque = islandora_get_tuque_connection();
+    $project_space_obj = $tuque->repository->constructObject(islandora_get_namespace('si:root'));
+   }catch(Exception $e) {
+     return t('The Fedora repository server is currently unavailable. Please contact the site administrator %email',
+       array('%email' => (variable_get('site_admin_email_to', '') != ''?' at ' . variable_get('site_admin_email_to'):''))
+    );
+  }
+  sidora_create_personal_project_space($user, $form_state['values']['ps_name']);
+}
+
+
 function sidora_project_space_transfer_form($form = array(), &$form_state, $pid = NULL, $to_username = NULL) {
   drupal_add_css(drupal_get_path('module','sidora').'/css/workbench_basic_screen.css',array('weight' => '1000000', 'group' => CSS_THEME));
   global $user;
@@ -427,6 +471,9 @@ function sidora_project_spaces_form($form = array(), &$form_state, $uid = NULL) 
     return $form;
   }
   $owned_groups = sidora_get_project_spaces_by_member($uid);
+  $form['cnps'] = array(
+    '#markup' => '<a style="float:right" href="project_space_create"><input type="button" id="cnps" name="cnps" value="Create New Project Space" class="form-submit"></a>',
+  );
   $form['table'] = array(
     '#theme' => 'table',
     '#header' => array(t('Name'), t('Description'), t('Owner')),
@@ -710,23 +757,32 @@ function sidora_get_sidora_group_type($group){
   return NULL;
 }
 
-function sidora_create_personal_project_space($account) {
+function sidora_create_personal_project_space($account, $label = NULL) {
   $owner = sidora_get_drupal_user($account);
   $user_projects = islandora_object_load('si:user-projects');
   if (!is_object($user_projects)) {
     return FALSE;
   }
   module_load_include('inc', 'xml_form_builder', 'includes/associations');
+  module_load_include('inc', 'islandora', 'includes/utilities');
+  module_load_include('inc', 'sidora', 'includes/utils');
   $user_ps_object = $user_projects->repository->constructObject('si');
   $user_ps_object->owner = $owner->name;
-  $user_ps_object->label = "{$owner->name} Project Space";
+  $ontology_location = "USER_INITIATED_PROJECT_SPACE_CREATION";
+  if (empty($label)) {
+    $user_ps_object->label = "{$owner->name} Project Space";
+    $ontology_location = "AUTOMATIC_PROJECT_SPACE_CREATION";
+  }
+  else {
+    $user_ps_object->label = $label;
+  }
   $user_ps_object->models = array('si:conceptCModel', variable_get('sidora_automatic_person_model', 'si:HierarchyObject'));
   $associations = xml_form_builder_get_associations(array(), $user_ps_object->models, array());
   if (count($associations) == 1){
     sidora_update_datastream($user_ps_object, '<sidora>
 <model>'.$associations[0]['content_model'].'</model>
 <form>'.$associations[0]['form_name'].'</form>
-<ontology_location_id>AUTOMATIC_PROJECT_SPACE_CREATION</ontology_location_id>
+<ontology_location_id>'.$ontology_location.'</ontology_location_id>
 <meta_requirements_fulfilled>TRUE</meta_requirements_fulfilled>
 <initial_dsid>'.$associations[0]['dsid'].'</initial_dsid>
 </sidora>', 'SIDORA');
@@ -754,6 +810,7 @@ function sidora_create_personal_project_space($account) {
   sidora_create_sidora_group($owner, $concept_pid, 'view');
   sidora_create_sidora_group($owner, $concept_pid, 'edit');
   sidora_create_sidora_group($owner, $concept_pid, 'delete');
+  drupal_set_message("New Project Space Created");
 }
 
 function sidora_transfer_project_space($ps_node, $new_owner) {
