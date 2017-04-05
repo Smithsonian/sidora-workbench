@@ -308,6 +308,7 @@ function sidora_get_project_spaces_by_member($uid = NULL){
 }
 function sidora_project_space_creation_form($form = array(), &$form_state) {
   drupal_add_css(drupal_get_path('module','sidora').'/css/workbench_basic_screen.css',array('weight' => '1000000', 'group' => CSS_THEME));
+  drupal_add_css(drupal_get_path('module','sidora').'/css/workbench_util.css',array('weight' => '1000000', 'group' => CSS_THEME));
   global $user;
   $form['info'] = array(
     '#markup' => t('After the project space is created, you can choose who should be part of the project space.')
@@ -325,6 +326,9 @@ function sidora_project_space_creation_form($form = array(), &$form_state) {
   $form['submit'] = array(
     '#type' => 'submit',
     '#value' => t('Confirm'),
+    '#attributes' => array(
+      'onclick' => 'jQuery(body).append("<div class=\"full-screen-overlay\"></div>");',
+    ),
   );
   return $form;
 }
@@ -346,7 +350,14 @@ function sidora_project_space_creation_form_submit($form, &$form_state) {
        array('%email' => (variable_get('site_admin_email_to', '') != ''?' at ' . variable_get('site_admin_email_to'):''))
     );
   }
-  sidora_create_personal_project_space($user, $form_state['values']['ps_name']);
+  $created_node = sidora_create_personal_project_space($user, array("label"=>$form_state['values']['ps_name'],"description"=>$form_state['values']['ps_desc']));
+  if (!empty($created_node)) {
+    drupal_set_message("New Project Space Created");
+    drupal_goto(substr(current_path(), 0, strrpos(current_path(), '/')).'/project_spaces');
+  }
+  else {
+    drupal_set_message("New Project Space Creation Failed", "warning");
+  }
 }
 
 
@@ -486,10 +497,10 @@ function sidora_project_spaces_form($form = array(), &$form_state, $uid = NULL) 
       $pid = $owned_group->field_fedora_pid[$owned_group->language][0]["safe_value"];
       $row = array(
         "name_$i" => array('data' => array(
-          '#markup' => $owned_group->field_fedora_label[$owned_group->language][0]["safe_value"],
+          '#markup' => (empty($owned_group->field_fedora_label[$owned_group->language]))?"(none)":$owned_group->field_fedora_label[$owned_group->language][0]["safe_value"],
         )),
         "desc_$i" => array('data' => array(
-          '#markup' => t('TBD'),
+          '#markup' => (empty($owned_group->body[$owned_group->language]))?"":$owned_group->body[$owned_group->language][0]["value"],
         )),
         "owner_$i" => array('data' => array(
           '#markup' => sidora_get_username_from_uid($owned_group->uid),
@@ -757,7 +768,7 @@ function sidora_get_sidora_group_type($group){
   return NULL;
 }
 
-function sidora_create_personal_project_space($account, $label = NULL) {
+function sidora_create_personal_project_space($account, $info = NULL) {
   $owner = sidora_get_drupal_user($account);
   $user_projects = islandora_object_load('si:user-projects');
   if (!is_object($user_projects)) {
@@ -769,12 +780,12 @@ function sidora_create_personal_project_space($account, $label = NULL) {
   $user_ps_object = $user_projects->repository->constructObject('si');
   $user_ps_object->owner = $owner->name;
   $ontology_location = "USER_INITIATED_PROJECT_SPACE_CREATION";
-  if (empty($label)) {
+  if (empty($info) || empty($info['label'])) {
     $user_ps_object->label = "{$owner->name} Project Space";
     $ontology_location = "AUTOMATIC_PROJECT_SPACE_CREATION";
   }
   else {
-    $user_ps_object->label = $label;
+    $user_ps_object->label = $info['label'];
   }
   $user_ps_object->models = array('si:conceptCModel', variable_get('sidora_automatic_person_model', 'si:HierarchyObject'));
   $associations = xml_form_builder_get_associations(array(), $user_ps_object->models, array());
@@ -803,14 +814,23 @@ function sidora_create_personal_project_space($account, $label = NULL) {
   // Create the concept
   islandora_add_object($user_ps_object);
   $concept_pid = $user_ps_object->id;
-  // Create a placeholder node that will be filled in when requested
-  $created_node = sidora_get_update_or_create_concept_node($concept_pid, array());
+  if (empty($info)) {
+    $info = array();
+  }
+  $info['label'] = $user_ps_object->label;
+  $info['concept_children'] = 0;
+  $info['resource_children'] = 0;
+  if (empty($info) || empty($info['owner'])){
+    $info['owner'] = $owner->name;
+  }
+
+  $created_node = sidora_get_update_or_create_concept_node($concept_pid, $info);
   // Create the groups
   sidora_create_sidora_group($owner, $concept_pid, 'create');
   sidora_create_sidora_group($owner, $concept_pid, 'view');
   sidora_create_sidora_group($owner, $concept_pid, 'edit');
   sidora_create_sidora_group($owner, $concept_pid, 'delete');
-  drupal_set_message("New Project Space Created");
+  return $created_node;
 }
 
 function sidora_transfer_project_space($ps_node, $new_owner) {

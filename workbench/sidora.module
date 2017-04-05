@@ -11735,6 +11735,14 @@ function sidora_create_concept_node($pid, $info = NULL, $set_fedora_sync = FALSE
     $newNode->field_fedora_label[$newNode->language][]['value'] = $info['label'];
     $newNode->field_sidora_concept_children[$newNode->language][]['value'] = $info['concept_children'];
     $newNode->field_sidora_resource_child_coun[$newNode->language][]['value'] = $info['resource_children'];
+    $newNode->body[$newNode->language][]['value'] = empty($info['description'])?"":$info['description'];
+    // overwrite the owner info if there is a valid owner listed in the info
+    if (!empty($info['owner'])) {
+      $owner_user = user_load_by_name($info['owner']);
+      if (!empty($owner_user)) {
+        $newNode->uid = $owner_user->uid;
+      }
+    }
   }
   
   if ($set_fedora_sync) {
