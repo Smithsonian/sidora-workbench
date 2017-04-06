@@ -588,7 +588,7 @@ tr.removed.odd {
 <li><a href="config_transfer">' . t('Config Transfer') . '</a>' . t(' Download or upload a SIdora configuration') . '</li>
 <li><a href="fedora_object_issues">' . t('Fedora Object Issues') . '</a>' . t(' Check object issues have been found by the workbench (Malformed objects list)') . '</li>
 <li><a href="check_user_projects">' . t('Check User Projects') . '</a>' . t(' Check if the children of si:user-projects is out of sync with the Drupal users') . '</li>
-<li><a href="update_xsl_db">' . t('Update Sidora XSLs in database') . '</a>' . t(' Update the Sidora XSLs in database') . '</li>
+<li><a href="update_xsl_db">' . t('Update Sidora XSLs in database') . '</a>' . t(' Update the Sidora XSLs in database (XSL file location - path_to_sidora/workbench/XSL/)') . '</li>
 <li><a href="download_xsl">' . t('Download Sidora XSLs') . '</a>' . t(' Download all the SIdora XSLs from the database as an archive') . '</li> 
 </ul>
 <script>
