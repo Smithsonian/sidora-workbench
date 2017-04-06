@@ -86,10 +86,10 @@ function sidora_update_7200() {
        $xsl_names_dd[$name] = $name; 
      }
    }
+   $insert_query = db_insert('sidora_xsl')->fields(array('form_name','form_definition','updated'));
    foreach($xsl_names_dd as $xsl_to_write) {
      $definition = new DOMDocument();
      $definition->load($directory_to_list_for_xsl . '/' . $xsl_to_write);
-     $insert_query = db_insert('sidora_xsl')->fields(array('form_name','form_definition','updated'));
      $insert_row = array(
        'form_name' => $xsl_to_write,
        'form_definition' => $definition->saveXML(),
