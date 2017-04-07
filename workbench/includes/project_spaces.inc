@@ -179,7 +179,13 @@ function sidora_get_project_spaces_from_og_groups($group_nodes, $user, $only_ret
          if (!in_array($pid, $pids) && !empty($pid)) {
            $pids[] = $pid;
            $sgcn = sidora_get_concept_node($pid);
-           $project_spaces[] = $sgcn;
+           if (!empty($sgcn)) {
+             $project_spaces[] = $sgcn;
+           }
+           else {
+             // if it's empty then there are permissions groups that point to pids that there is not a node for
+             watchdog('sidora','Permission groups exist for pid: '.$pid.' but no concept node exists for it.');
+           }
          }
       }
   }
@@ -323,6 +329,34 @@ function sidora_project_space_creation_form($form = array(), &$form_state) {
     '#cols' => 80,
     '#title' => t('Enter the new project space description'),
   );
+  $form["file"] = array(
+      '#type' => 'managed_file',
+      '#title' => t('Icon'),
+      '#description' => t('This file will be resized fit in a 24 x 24 space. Allowed extensions: gif png jpg jpeg'),
+      '#upload_validators' => array(
+        'file_validate_extensions' => array('gif png jpg jpeg'),
+        // Pass the maximum file size in bytes
+        'file_validate_size' => array(1 * 1024 * 1024),
+        'file_validate_image_resolution' => array('24x24', '1x1'),
+      ),
+      '#upload_location' => 'public://',
+      '#attributes' => array('default_image_path' => ''),
+  );
+  $form['logo_preview'] = array(
+    '#markup' => '<div><a href="#" onclick="doPreview();">Click here</a> to preview with current icon (must be uploaded) and name.<br><div class="logo-preview"></div></div>
+    <script>
+      doPreview=function(){
+        myHref = jQuery(".file a").attr("href");
+        myHtml = "";
+        if (typeof(myHref) != "undefined") {
+          myHtml =\'<img src="\' + jQuery(".file a").attr("href") + \'">\';
+        }
+        myHtml += " " + jQuery("#edit-ps-name").val();
+        jQuery(".logo-preview").html(myHtml);
+        return false;
+      }
+    </script>',
+  );
   $form['submit'] = array(
     '#type' => 'submit',
     '#value' => t('Confirm'),
@@ -353,6 +387,24 @@ function sidora_project_space_creation_form_submit($form, &$form_state) {
   $created_node = sidora_create_personal_project_space($user, array("label"=>$form_state['values']['ps_name'],"description"=>$form_state['values']['ps_desc']));
   if (!empty($created_node)) {
     drupal_set_message("New Project Space Created");
+    $file = file_load($form_state['values']['file']);
+    $file->status = FILE_STATUS_PERMANENT;
+    $file_after = file_save($file);
+    // Note: It was INCREDIBLY DIFFICULT to figure out how to save thumbnail, so I imagine
+    // that most people do not perform uploads the way this is set up.
+    // It looks generally obvious now, but look around and you'll see nobody does it this way 
+    // That may indicate this is not how Drupal expects you to do it.
+    // This does create an entry in the file_usage table, so we are not in a situation where
+    // it creates orphan managed files.
+    // It was designed to do file resizing on the upload, so that's where the validators are.
+    // Most have the validators on the form_validate step, but we wanted a resize and preview
+    // before the form was submitted.
+    $created_node->field_thumbnail['und'][0] = array(
+      'fid' => $file->fid,
+      'alt' => '',
+      'title' => '',
+    );
+    node_save($created_node);
     drupal_goto(substr(current_path(), 0, strrpos(current_path(), '/')).'/project_spaces');
   }
   else {
@@ -494,6 +546,10 @@ function sidora_project_spaces_form($form = array(), &$form_state, $uid = NULL) 
   $default_ps = (empty($user->data['default_ps']))?"":$user->data['default_ps'];
 
   foreach($owned_groups as $i => $owned_group) {
+    if (empty($owned_group) || empty($owned_group->field_fedora_pid[$owned_group->language])){
+      watchdog("sidora","Problem with group:" . (empty($owned_group)?"empty":$owned_group->id));
+    }
+    else {
       $pid = $owned_group->field_fedora_pid[$owned_group->language][0]["safe_value"];
       $row = array(
         "name_$i" => array('data' => array(
@@ -533,6 +589,7 @@ function sidora_project_spaces_form($form = array(), &$form_state, $uid = NULL) 
         ));
       }
       $rows['myrow'.$i] = $row;
+    }
   }
   if ($can_change_permission) {
     $form['table']['#header'][] = t('Permissions');

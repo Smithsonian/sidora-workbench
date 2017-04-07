@@ -3470,6 +3470,17 @@ function sidora_form_alter(&$form, &$form_state, $form_id) {
     'no-store, no-cache, must-revalidate, post-check=0, pre-check=0',
     FALSE
   );
+  if ($form_id == 'sidora_concept_node_form') {
+    dsm($form);
+    if (!sidora_is_admin()){
+      foreach($form as $form_element_id=>$form_element) {
+        if (!sidora_startsWith($form_element_id, "#")){
+          unset($form[$form_element_id]);
+        }
+      }
+      $form['info'] = array("#markup" => t("Special permission is required to edit this information"));
+    }
+  }
   if (($form_id == 'islandora_revert_datastream_version_form') || ($form_id == 'islandora_delete_datastream_version_form')) {
     unset($form['actions']['cancel']['#href']);
     $form['actions']['cancel']['#href'] = '';
@@ -3514,7 +3525,7 @@ function sidora_form_alter(&$form, &$form_state, $form_id) {
         $association_step_storage['association'] = $association;
       }
     }
-   remove_validation_for_this_and_children($form);
+    remove_validation_for_this_and_children($form);
     $form['all_meta_entered'] = array(
       '#name' => 'all_meta_entered',
       '#type' => 'hidden',
@@ -3529,7 +3540,7 @@ function sidora_form_alter(&$form, &$form_state, $form_id) {
       $form['next']['#submit'][] = 'sidora_process_batch_submit';
       if (isset($form['hidden_next'])) {
         unset($form['hidden_next']['#submit']);
-  $form['hidden_next']['#submit'][] = 'sidora_process_batch_submit';
+        $form['hidden_next']['#submit'][] = 'sidora_process_batch_submit';
       }
       if (isset($form['#action']) && (strpos($form['#action'],'metabulk') !== false)) {
         $form['#action'] = substr($form['#action'],0,strpos($form['#action'],'//metabulk'));
@@ -3540,7 +3551,7 @@ function sidora_form_alter(&$form, &$form_state, $form_id) {
          '#title' => 'Apply batch',
          '#description' => '',
          '#required' => false,
-   '#value' => 'batch',
+         '#value' => 'batch',
       );
     }
   }
