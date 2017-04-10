@@ -2200,8 +2200,8 @@ sidora.util.treeAdditionSingleItem = function(onLoadComplete, overwriteType, jst
   } else {
     //Find the current child representation in the document fragment
     var currRep = dfAnchor.parent();
-    //Replace the name if the name of the item changed
-    var dfAnchorText = jQuery(dfAnchor[0]).text();
+    //Replace the html if the name of the item changed
+    var dfAnchorText = jQuery(dfAnchor[0]).html();
     if (currChild.text != dfAnchorText) {
       jst.rename_node(currChild, dfAnchorText);
     }
@@ -2438,6 +2438,10 @@ sidora.util.refreshConceptChildrenNumberDirect = function(pid, number_of_childre
       var parentName = jQuery("#"+toUpdateId+" a").attr("fullname");
       var newFullName =  parentName + " (" + number_of_children + ")";
       if (number_of_children == 0) newFullName = parentName;
+      var thumbnail = jst.get_node(toUpdateId).a_attr.thumbnail;
+      if (typeof(thumbnail) != 'undefined') {
+        newFullName = '<img src="' + thumbnail + '" style="float:left"/>&nbsp;' + newFullName;
+      }
       jst.rename_node("#"+toUpdateId, newFullName);
       jst.get_node(toUpdateId).a_attr.resourcechildren = ""+number_of_children;
     }
@@ -2488,34 +2492,36 @@ sidora.util.RefreshTreeHelper = function(secondsOfWait, pid, onlyRefreshIfNew) {
       //window.location.reload(); //TBD give proper refresh when adding a concept to their root
     }
     var parentPid = parentNode.a_attr.pid;
-    setTimeout(function(myPid){
-      jQuery.ajax({
-        url: Drupal.settings.basePath+'sidora/ajax_parts/tree/'+myPid+"/2",
-      }).done(function(tree_html){
-        var suggestedAction = sidora.util.RefreshTreeSuggestAction(tree_html, true);
-        if (suggestedAction.suggestRedirect) { window.location = Drupal.settings.basePath+'user';  }
-        if (suggestedAction.suggestRetry){
-          sidora.util.refreshTreeFailuresInARow++;
-          if (sidora.util.refreshTreeFailuresInARow > 10) {
-            console.log(sidora.display.CONSOLE_OUTPUT_TOO_MANY_TREE_FAILURES_SO_QUITTING);
-            return;
-          } else {
-            console.log("Initiated retry:"+sidora.util.refreshTreeFailuresInARow);
-            sidora.util.RefreshTreeHelper(3, myPid, onlyRefreshIfNew);
-            return;
+    if (typeof(parentPid) != 'undefined') {
+      setTimeout(function(myPid){
+        jQuery.ajax({
+          url: Drupal.settings.basePath+'sidora/ajax_parts/tree/'+myPid+"/2",
+        }).done(function(tree_html){
+          var suggestedAction = sidora.util.RefreshTreeSuggestAction(tree_html, true);
+          if (suggestedAction.suggestRedirect) { window.location = Drupal.settings.basePath+'user';  }
+          if (suggestedAction.suggestRetry){
+            sidora.util.refreshTreeFailuresInARow++;
+            if (sidora.util.refreshTreeFailuresInARow > 10) {
+              console.log(sidora.display.CONSOLE_OUTPUT_TOO_MANY_TREE_FAILURES_SO_QUITTING);
+              return;
+            } else {
+              console.log("Initiated retry:"+sidora.util.refreshTreeFailuresInARow);
+              sidora.util.RefreshTreeHelper(3, myPid, onlyRefreshIfNew);
+              return;
+            }
           }
-        }
-        if (suggestedAction.suggestIgnore) { return; }
-        if (!suggestedAction.valid) { console.log(sidora.display.CONSOLE_OUTPUT_UNKNOWN_TREE_ISSUE); return; }
-        /*
-        */
-        sidora.util.treeAddition(tree_html);//, null, "changes");
-        sidora.util.refreshTreeFailuresInARow = 0;
-      }).fail(function(failure_obj){
-        sidora.recentAjaxFailure(failure_obj);
-      }).always(function(){
-      });
-    },secondsOfWait*1000,parentPid);
+          if (suggestedAction.suggestIgnore) { return; }
+          if (!suggestedAction.valid) { console.log(sidora.display.CONSOLE_OUTPUT_UNKNOWN_TREE_ISSUE); return; }
+          /*
+          */
+          sidora.util.treeAddition(tree_html);//, null, "changes");
+          sidora.util.refreshTreeFailuresInARow = 0;
+        }).fail(function(failure_obj){
+          sidora.recentAjaxFailure(failure_obj);
+        }).always(function(){
+        });
+      },secondsOfWait*1000,parentPid);
+    }
   }); //ends nodeIds.forEach
 }
 /*

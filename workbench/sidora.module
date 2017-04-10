@@ -3471,7 +3471,6 @@ function sidora_form_alter(&$form, &$form_state, $form_id) {
     FALSE
   );
   if ($form_id == 'sidora_concept_node_form') {
-    dsm($form);
     if (!sidora_is_admin()){
       foreach($form as $form_element_id=>$form_element) {
         if (!sidora_startsWith($form_element_id, "#")){
@@ -5048,7 +5047,7 @@ function sidora_user_view($account, $view_mode, $langcode){
   $user_pid = sidora_get_user_object($account);
     $members = array();
     if ($user_pid) {
-      
+      // If there's too many groups then things start to get a little long
       /*
       $collection = new Collection($user_pid);
       $members = $collection->getTreeMembers();
@@ -5097,12 +5096,20 @@ function sidora_user_view($account, $view_mode, $langcode){
         $codebook = sidora_obj($codebook_pid);
         $codebook_html .= '<tr><td>'.$codebook_pid.'</td><td>'.$codebook->label.'</td>';
         $codebook_html .= '<td><a href="'.base_path().'sidora/workbench/#'.$codebook_pid.'">View In Workbench</a></td>';
-        $codebook_html .= '<td><a href="'.base_path().'sidora/ajax_parts/delete/'.$codebook_pid.'" target="_blank">Delete</a></td>';
+        if (sidora_is_admin()) {
+          $codebook_html .= '<td><a href="'.base_path().'sidora/ajax_parts/delete/'.$codebook_pid.'" target="_blank">Delete</a></td>';
+        }
         $codebook_html .= '</tr>';
       }
     }
   }
   $account->content['workbench'] = array();
+  $account->content['workbench']['groups_sizer'] = array(
+    '#markup' => '<style>.field-name-og-user-node .field-items {max-height:500px;overflow:scroll;}</style>',
+    '#class' => 'islandora_user_pid',
+    '#type' => 'user_profile_item',
+    '#title' => '',
+  ); 
   $account->content['workbench']['link'] = array(
       '#title' => '',
       '#markup' => '<a href="'.base_path().'sidora/workbench/" class="button">Open Workbench</a><div style="float:right"><a href="'.base_path().'user/logout" class="button">Logout</a><div>',
@@ -5116,7 +5123,12 @@ function sidora_user_view($account, $view_mode, $langcode){
       '#type' => 'user_profile_item',
     );
   }
-  $codebook_html = '<table><tr><th>ID</th><th>Label</th><th>Link</th></tr>'.$codebook_html.'</table>';
+  
+  $codebook_header_html = '<table><tr><th>ID</th><th>Label</th><th>Link</th>';
+  if (sidora_is_admin()) {
+    $codebook_header_html .= '<th>Delete</th>';
+  }
+  $codebook_html = $codebook_header_html . '</tr>' . $codebook_html . '</table>';
   $account->content[] = array(//['workbench_islandora_user_pid'] = array(
     '#title' => t('Codebooks'),
     '#markup' => $codebook_html,
@@ -7140,9 +7152,31 @@ function sidora_html_tree_from_given_pid($root_pid = '', $root = NULL, $num_leve
   $html_escaped_name = htmlspecialchars($root_label);
   $to_return = '';
   $to_return .= '<ul>';
-  $to_return .= '<li><a href="'.base_path().'sidora/workbench/' . $url_params . '#'.$root_pid.'" pid="'.$root_pid.'" fullname="'.$html_escaped_name.'">';
+  $to_return .= '<li>';
+  $to_return .= '<a ';
+  $to_return .= 'href="'.base_path().'sidora/workbench/' . $url_params . '#'.$root_pid.'" pid="'.$root_pid.'" fullname="'.$html_escaped_name.'"';
+  // Count concept children
+  $cr = _sidora_get_child_results_cache($root_pid);
+  $to_return .= ' conceptchildren="'.sizeof($cr).'"';
+  $info = sidora_get_info($root_pid);
+  $node_wrapper = entity_metadata_wrapper('node', $info['node']);
+  $to_return .= ' resourcechildren="'.$node_wrapper->field_sidora_resource_child_coun->value().'"';
+  $to_return .= " owner='" . $info['obj']->owner . "'";
+  if (!empty($info['node']->field_thumbnail)) {
+    $to_return .= ' thumbnail_info="' . file_create_url($info['node']->field_thumbnail['und'][0]['uri']) . '"';
+    $root_label = '<img src="' .  file_create_url($info['node']->field_thumbnail['und'][0]['uri']) . '" style="float:left;"/>&nbsp;' . $root_label;
+  }
+  $to_return .= '>';
   $to_return .= $root_label;
   $to_return .= '</a>';
+  // $to_return .= '<' . $dom_type . $href . ' pid="' . $pid . '" fullname="' . $html_escaped_name . '"
+  // conceptchildren="' . count($t_element['children']) . '
+  // " resourcechildren="' . $resource_children_num . '" 
+  // class="' . $all_classes . '" 
+  // permissions="' . $permissions . '"' . 
+  // $nid_info . 
+  // $owner_info . 
+  // $thumbnail_info . '>';
   $to_return .= '<ul>';
   $to_return .= $html_tree_from_query_result;
   $to_return .= '</ul></li></ul>';
@@ -7795,7 +7829,18 @@ function sidora_html_tree_from_query_results_tree($query_result_tree, $input_pat
       if (!empty($permissions) && $included_in_output) {
         $to_return .= '<li>';
         $href = ($include_href)? ' href="' . base_path() . 'sidora/workbench/' . $url_params . '#' . $pid . '?path=' . $input_path . '"':'';
-        $to_return .= '<' . $dom_type . $href . ' pid="' . $pid . '" fullname="' . $html_escaped_name . '" conceptchildren="' . count($t_element['children']) . '" resourcechildren="' . $resource_children_num . '" class="' . $classes_for_permissions . $classes_for_ownership . $class_for_default_project_space . '" permissions="' . $permissions . '"' . $nid_info . $owner_info . '>';
+        $class_for_thumbnail = '';
+        $thumbnail_info = '';
+        if (!empty($t_element['t']['thumbnail'])){
+          $thumb_src = file_create_url($t_element['t']['thumbnail']);
+          $thumbnail_info = ' thumbnail="' . $thumb_src . '"';
+          $class_for_thumbnail = ' has-thumbnail';
+        }
+        $all_classes =  $classes_for_permissions . $classes_for_ownership . $class_for_default_project_space . $class_for_thumbnail;
+        $to_return .= '<' . $dom_type . $href . ' pid="' . $pid . '" fullname="' . $html_escaped_name . '" conceptchildren="' . count($t_element['children']) . '" resourcechildren="' . $resource_children_num . '" class="' . $all_classes . '" permissions="' . $permissions . '"' . $nid_info . $owner_info . $thumbnail_info . '>';
+        if (!empty($thumbnail_info)) {
+           $to_return .= '<img src="'.file_create_url($t_element['t']['thumbnail']).'" style="float:left"/>&nbsp;';
+        }
         $to_return .= $t_element['t']['value'];
         if ($resource_children_num > 0) $to_return .= ' ('.$resource_children_num.')';
         $to_return .= "</$dom_type>";
@@ -8072,6 +8117,13 @@ function sidora_build_tree_from_nodes($root_node_id, $max_depth = 3, $current_de
     $to_return['o']['value'] = $pid;
     $to_return['t'] = array();
     $to_return['t']['value'] = $node->field_fedora_label[$node->language][0]['value'];
+    $thumbnail = empty($node->field_thumbnail)?"":$node->field_thumbnail['und'][0]['uri'];
+    if (empty($thumbnail)) {
+      $to_return['t']['thumbnail'] = FALSE;
+    }
+    else {
+      $to_return['t']['thumbnail'] = file_create_url($thumbnail);
+    }
     $to_return['resourcecount'] = array();
     if (!empty($node->field_sidora_resource_child_coun) && !empty($node->field_sidora_resource_child_coun[$node->language])) {
       $to_return['resourcecount']['value'] = $node->field_sidora_resource_child_coun[$node->language][0]['value'];
