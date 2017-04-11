@@ -2443,7 +2443,7 @@ sidora.util.refreshConceptChildrenNumberDirect = function(pid, number_of_childre
       if (number_of_children == 0) newFullName = parentName;
       var thumbnail = jst.get_node(toUpdateId).a_attr.thumbnail;
       if (typeof(thumbnail) != 'undefined') {
-        newFullName = '<img src="' + thumbnail + '" style="float:left"/>&nbsp;' + newFullName;
+        newFullName = '<div><img src="' + thumbnail + '"/></div>' + newFullName;
       }
       jst.rename_node("#"+toUpdateId, newFullName);
       jst.get_node(toUpdateId).a_attr.resourcechildren = ""+number_of_children;

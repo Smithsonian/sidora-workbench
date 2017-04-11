@@ -77,6 +77,12 @@ li a.not-owned {
   max-height:90px;
   max-width:150px;
 }
+a.has-thumbnail > div {
+  float: left;
+}
+a.has-thumbnail > div > img {
+  vertical-align: sub;
+}
 .full-screen-overlay {
     position: fixed;
     top: 0;

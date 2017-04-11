@@ -824,7 +824,7 @@ function sidora_get_sidora_group_type($group){
   return NULL;
 }
 
-function sidora_create_personal_project_space($account, $info = NULL) {
+function sidora_create_personal_project_space($account = NULL, $info = NULL) {
   $owner = sidora_get_drupal_user($account);
   $user_projects = islandora_object_load('si:user-projects');
   if (!is_object($user_projects)) {
