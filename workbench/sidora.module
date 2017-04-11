@@ -6242,7 +6242,7 @@ function sidora_ajax_parts($call_type, $param1 = '', $param2 = '', $param3 = '')
   if ($call_type == 'project_spaces_tree') {
     module_load_include('inc', 'sidora', 'includes/project_spaces');
     if (!empty($param1)) {
-      print sidora_project_spaces_tree("",TRUE, array("view"));
+      print sidora_project_spaces_tree("",TRUE, array("view"), TRUE, $param1);
     }
     else {
       print sidora_project_spaces_tree();
@@ -7218,7 +7218,7 @@ function sidora_block_content_navigation() {
     $nodes = sidora_get_project_spaces_by_member();
     // if a user ever logs in with all accesses revoked, create a personal space for them
     if (empty($nodes)) {
-      sidora_create_personal_project_space($account);
+      sidora_create_personal_project_space();
     }
     $to_return .= sidora_project_spaces_tree("", TRUE,  array("create","view","update","delete"), FALSE);
   }

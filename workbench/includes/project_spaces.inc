@@ -217,7 +217,7 @@ function sidora_get_groups_for_project_space($pid, $administrative_bookkeeping =
 /**
  * Returns a tree based on the project spaces the user has access to, defaults to 4 levels total
  */
-function sidora_project_spaces_tree($root_label = 'Project Spaces where you can create:', $include_href = FALSE, $permissions = array("create"), $start_open = TRUE){
+function sidora_project_spaces_tree($root_label = 'Project Spaces where you can create:', $include_href = FALSE, $permissions = array("create"), $start_open = TRUE, $num_levels = 3){
   $ignore_pid = filter_input(INPUT_GET, 'ignore_pid', FILTER_SANITIZE_STRING);
   global $user;
   $nodes = sidora_get_project_spaces_by_member();
@@ -242,8 +242,7 @@ function sidora_project_spaces_tree($root_label = 'Project Spaces where you can 
         }
       }
       if ($continue_output) {
-        $filled = sidora_build_tree_from_nodes_by_pid($pid);
-        $num_levels = 3;
+        $filled = sidora_build_tree_from_nodes_by_pid($pid,$num_levels - 1);
         $html_tree_from_query_result = sidora_html_tree_from_query_results_tree($filled, '', $num_levels, '', 'a', $include_href, $permissions);
         $to_return .= '<ul>';
         $to_return .= $html_tree_from_query_result;

@@ -1627,6 +1627,9 @@ sidora.InitiatePage = function(){
             player:     "iframe",
             title:      "Project Spaces",
             options:  {
+              onClose: function(){
+                sidora.ProjectSpaces.refreshOptions();
+              },
               onFinish:  function(){}
             }
           });},100);
@@ -2644,6 +2647,48 @@ sidora.util.refreshConceptTreeUIDirect = function(pid, tree_html){
     jst.rename_node("#"+toUpdateId, newFullName);
     jst.get_node(toUpdateId).a_attr.resourcechildren = ""+number_of_children;
   }
+}
+/**
+ * Pulls the current project spaces from the backend and adds new ones
+ * Does not remove any that the user lost permissions to view
+ * Assumes any new project spaces it got are empty:
+ *   used for refreshing the options when a new one is created
+ * Not everything that is needed when an established project space
+ * permissions are updated to include the current user
+ */
+sidora.ProjectSpaces.refreshOptions = function(){
+  jQuery.ajax({
+    url: Drupal.settings.basePath+'sidora/ajax_parts/project_spaces_tree/1',
+  }).done(function(returnedHtml){
+    var jst = jQuery("#forjstree").jstree();
+    var mainNode = jst.get_node("j1_1");
+    var psPids = [];
+    mainNode.children.forEach(function(elem){
+      psPids.push(jst.get_node(elem).a_attr.pid)}
+    );
+    var df = jQuery(returnedHtml);
+    var psaList = jQuery(df).children("li").children("ul").children("li").children("a");
+    var missingElems = [];
+    psaList.each(function(index,elem){
+      var elemPid = elem.attributes['pid'].value;
+      if (psPids.indexOf(elemPid) == -1) {
+        missingElems.push(elem);
+      }
+    });
+    for (var ei = 0; ei < missingElems.length; ei++){
+      var elem = missingElems[ei];
+      var elemAttr = [];
+      jQuery.each(elem.attributes, function(ai, attr){
+        if (attr.specified){
+          elemAttr[attr.name] = attr.value;
+        }
+      });
+      // elemAttr now contains the information to give to jstree for this item
+      var newDomId = jst.create_node('j1_1' ,  { "text" : elem.innerHTML,"a_attr": elemAttr}, "last", function(){  console.log("done:"+elem.innerHTML); });
+      jQuery("#psdd-select").append("<option value='"+newDomId+"'>"+elem.innerHTML+"</option>");
+      sidora.ProjectSpaces.ChangeProjectSpace(jQuery("#psdd-select").val(), true);
+    };
+  });
 }
 /*
  * Opens the Manage panel
