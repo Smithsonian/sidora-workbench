@@ -9845,6 +9845,7 @@ function sidora_osd_proxy_version($pid, $datastream='OBJ', $version='0') {
   $ds = $obj[$datastream];
   $datastream_content = $ds[$version];
   $qs = $_SERVER['QUERY_STRING'];
+ error_log("\nIn sidora_osd_proxy_version, qs before :".print_r($qs,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
   $qs = str_replace(
           urlencode("{replacer}"),
           urlencode(variable_get('osd_proxy_pid_prefix', '')).
@@ -9854,8 +9855,10 @@ function sidora_osd_proxy_version($pid, $datastream='OBJ', $version='0') {
           urlencode($datastream_content->createdDate),
           $qs
   );
+ error_log("\nIn sidora_osd_proxy_version, qs after :".print_r($qs,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
   $url = variable_get('osd_proxy_resolver_url', '').'?'.$qs;
-  print file_get_contents($url);
+  error_log("\nIn sidora_osd_proxy_version, url :".print_r($url,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
+	print file_get_contents($url);
   drupal_exit();
 }
 
