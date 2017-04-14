@@ -142,17 +142,10 @@ function sidora_remove_from_incorrect_project_spaces($pid_or_fedora_obj_or_nid_o
     $parent_gids = sidora_get_group_nids_membership(sidora_get_concept_node_id($parent_pid));
     $proper_group_ids = array_merge($parent_gids, $proper_group_ids);
   }
-  dsm($current_gids);
-  dsm($proper_group_ids);
-  
   $remove_from_gids = array_diff($current_gids, $proper_group_ids);
-  dsm($remove_from_gids);
-  
   foreach($remove_from_gids as $gid) {
     og_ungroup('node', $gid, 'node', $nid);
-    watchdog('sidora',"Removing node: %nid from group: %gid", array("%nid" => $nid, "%gid" => $gid));
   }
-  
   return TRUE;
 }
 /*
