@@ -6762,6 +6762,8 @@ function sidora_unassociate($remove_from_pid, $pid_to_remove, $show_output = TRU
   $to_output['error'] = FALSE;
   $to_output['description'] = t("Object unassociated");
   $to_output['code'] = "una2";
+  module_load_include('inc', 'sidora', 'includes/project_spaces');
+  sidora_remove_from_incorrect_project_spaces($pid);
   if ($show_output) {
     print json_encode($to_output);
     drupal_exit();

@@ -112,6 +112,49 @@ function sidora_put_into_proper_project_space($pid_or_fedora_obj_or_nid_or_node)
   }
   return TRUE;
 }
+function sidora_remove_from_incorrect_project_spaces($pid_or_fedora_obj_or_nid_or_node) {
+  $sidora_obj_info = sidora_get_info($pid_or_fedora_obj_or_nid_or_node, FALSE);
+  if (empty($sidora_obj_info)) {
+    return FALSE;
+  }
+  $node = $sidora_obj_info['node'];
+  $nid = $sidora_obj_info['nid'];
+  // reminder obj may not be loaded (FALSE on 2nd param of sidora_get_info)
+  $pid = $sidora_obj_info['pid'];
+  if (empty($node) || empty($nid)) {
+    // What was passed in was not a concept that already has a node created. Do nothing.
+    return FALSE;
+  }
+  
+  $current_gids = sidora_get_group_nids_membership($nid);
+
+  // proper_groups is going to be a list of groups that we think it should be a part of
+  // So, if there are more groups that are not part of proper_groups remove it from those groups
+
+  // If it IS the project space, do not remove it from those groups
+  $proper_group_ids = sidora_get_groups_for_project_space($pid, TRUE, TRUE);
+
+  module_load_include('inc', 'sidora', 'includes/utils');
+  $parent_infos = sidora_get_parent_concepts_by_pid($pid);
+
+  foreach($parent_infos as $parent_info) {
+    $parent_pid = $parent_info['pid'];
+    $parent_gids = sidora_get_group_nids_membership(sidora_get_concept_node_id($parent_pid));
+    $proper_group_ids = array_merge($parent_gids, $proper_group_ids);
+  }
+  dsm($current_gids);
+  dsm($proper_group_ids);
+  
+  $remove_from_gids = array_diff($current_gids, $proper_group_ids);
+  dsm($remove_from_gids);
+  
+  foreach($remove_from_gids as $gid) {
+    og_ungroup('node', $gid, 'node', $nid);
+    watchdog('sidora',"Removing node: %nid from group: %gid", array("%nid" => $nid, "%gid" => $gid));
+  }
+  
+  return TRUE;
+}
 /*
  * Returns the node ids of the groups that this node id is a member of
  * So, if there's these groups
@@ -192,10 +235,10 @@ function sidora_get_project_spaces_from_og_groups($group_nodes, $user, $only_ret
   return $project_spaces; 
 }
 /**
- * Returns group nodes that have their group root pid set to the input value
+ * Returns group nodes or node ids that have their group root pid set to the input value
  */
-function sidora_get_groups_for_project_space($pid, $administrative_bookkeeping = FALSE) {
-  // Only allow owner / administrator to access this information
+function sidora_get_groups_for_project_space($pid, $administrative_bookkeeping = FALSE, $return_nids_only = FALSE) {
+  // Only allow owner / administrator to access this information, unless it's for bookkeeping
   global $user;
   if (!sidora_allow($user, $pid, 'permission') && !$administrative_bookkeeping) {
     return array();
@@ -210,7 +253,12 @@ function sidora_get_groups_for_project_space($pid, $administrative_bookkeeping =
   $to_return = array();
   if (isset($result['node'])) {
     $nids = array_keys($result['node']);
-    $to_return = entity_load('node', $nids);
+    if ($return_nids_only) {
+      $to_return = $nids;
+    }
+    else {
+      $to_return = entity_load('node', $nids);
+    }
   } 
   return $to_return;
 }
