@@ -51,7 +51,6 @@ jQuery().ready(function(){
         }else{
           //If successful, kill itself.
           newPid = data.substring(0,data.indexOf(")"+" has been ingested")).substring(data.substring(0,data.indexOf(")"+" has been ingested")).lastIndexOf("si:"))
-          console.log("new pid:"+newPid);
           sidora.util.RefreshTree(null, parentPid);
           //Guess at how long it will take for Fedora to update the relationships
           //On dev server it's done before these even get called

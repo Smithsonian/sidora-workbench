@@ -1877,7 +1877,6 @@ sidora.ontology.CreateConceptMenu = function(){
     },
     success: function (json_obj){
       window.sidora.ontology.tree = json_obj;
-      //jQuery("#concept-file-menu").append("<li id='sharing-permissions'><a href='#' onclick='return false;'>Sharing Permissions</a></li>");// BBB
       jQuery("#concept-file-menu").append("<li id='concept-create'><a href='#' onclick='return false;'><input type='image' src='"+Drupal.settings.basePath+"sites/all/modules/islandora_xml_forms-7.x-1.7/elements/images/add.png' title='" + sidora.display.CREATE_A_CONCEPT_AS_CHILD_OF_HIGHLIGHT + "'>" + sidora.display.BUTTON_HTML_ADD_A_NEW_CONCEPT + "</a><ul>"+window.sidora.ontology._createSubmenu(window.sidora.ontology.tree)+"</ul></li>");
       resetMenu("concept-menu");
       jQuery("#concept-create").find("a").not(".ui-state-disabled").bind("click.createConcept",function(){
@@ -2053,7 +2052,6 @@ sidora.concept.GetName = function(suggestedName){
  * Rename the in-page name to reflect the new conceptName passed in
  */
 sidora.UpdateTitleBasedOnNameInTree = function(conceptName){
-  return; //BBB remove
   var newTitle = sidora.concept.GetName();
   if (newTitle == "") return; //If there's no concept selected leave it as "Sidora Workbench" (the default)
   jQuery(".page-title").text(newTitle);
@@ -2061,14 +2059,14 @@ sidora.UpdateTitleBasedOnNameInTree = function(conceptName){
 /*
  * Generally used as a callback from iframes to close the shadowbox they are contained in
  */
-sidora.CloseIFrame = function(newlyCreatedConceptId, typeOfClosure){
+sidora.CloseIFrame = function(info, typeOfClosure){
   //if it's the shadowbox, close it
   Shadowbox.close();
   if (typeOfClosure == 'simple close'){
     return;
   }
-  console.log(sidora.display.CONSOLE_OUTPUT_NEW_PID+newlyCreatedConceptId);
   if (typeOfClosure == 'concept create'){
+    return;
   }
   if (typeOfClosure == 'edit metadata'){
     //Nothing?  do users need a confirmation? the reloaded page should be good enough
@@ -2080,7 +2078,12 @@ sidora.CloseIFrame = function(newlyCreatedConceptId, typeOfClosure){
     var node = jst.get_node(itemsSelected[isi]);
     if (node.a_attr.pid == sidora.concept.GetPid()) {
       var parentPid = jst.get_node(node.parent).a_attr.pid;
-      sidora.util.RefreshTree(null, parentPid); 
+      if (typeof(parentPid) == 'undefined') {
+        sidora.util.RefreshTree(null, node.a_attr.pid);
+      }
+      else {
+        sidora.util.RefreshTree(null, parentPid);
+      }
     }
   }
 }
@@ -2487,15 +2490,6 @@ sidora.util.RefreshTreeHelper = function(secondsOfWait, pid, onlyRefreshIfNew) {
   if (typeof(secondsOfWait) == 'undefined' || secondsOfWait == null) secondsOfWait = .01;
   //Since we are concerned about the children of this and our treeAddition function expects to get the grandparent
   //of newly changed items, find an appropriate parent 
-  var nodeIds = sidora.util.GetTreeNodesByPid(pid);
-  var jst = jQuery("#forjstree").jstree();
-  nodeIds.forEach(function(node, index, arr) {
-    var parentNode = jst.get_node(node.parent);
-    if (parentNode.id == '#') {
-      //window.location.reload(); //TBD give proper refresh when adding a concept to their root
-    }
-    var parentPid = parentNode.a_attr.pid;
-    if (typeof(parentPid) != 'undefined') {
       setTimeout(function(myPid){
         jQuery.ajax({
           url: Drupal.settings.basePath+'sidora/ajax_parts/tree/'+myPid+"/2",
@@ -2523,15 +2517,17 @@ sidora.util.RefreshTreeHelper = function(secondsOfWait, pid, onlyRefreshIfNew) {
           sidora.recentAjaxFailure(failure_obj);
         }).always(function(){
         });
-      },secondsOfWait*1000,parentPid);
-    }
-  }); //ends nodeIds.forEach
+      },secondsOfWait*1000,pid);
 }
 /*
  * These two are the functions that get called in practice
  */
-sidora.util.RefreshTreeIfNew = function(secondsOfWait, pid){ sidora.util.RefreshTreeHelper(secondsOfWait, pid, true); }
-sidora.util.RefreshTree      = function(secondsOfWait, pid){ sidora.util.RefreshTreeHelper(secondsOfWait, pid, false); }
+sidora.util.RefreshTreeIfNew = function(secondsOfWait, pid){
+  sidora.util.RefreshTreeHelper(secondsOfWait, pid, true);
+}
+sidora.util.RefreshTree      = function(secondsOfWait, pid){
+  sidora.util.RefreshTreeHelper(secondsOfWait, pid, false);
+}
 
 /*
  * Does NOT return a true / false
