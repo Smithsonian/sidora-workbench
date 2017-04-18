@@ -1016,14 +1016,12 @@ function sidora_islandora_datastream_modified(AbstractObject $object, AbstractDa
       $mrf = $doc->getElementsByTagName('meta_requirements_fulfilled');
       if (!empty($mrf) && $mrf->length > 0) {
         foreach ($mrf as $smrf) {
-         // $smrf->nodeValue = 'TRUE';
          $smrf->nodeValue = $all_meta_entered;
         }
       }
       else {
         $node = $doc->createElement('meta_requirements_fulfilled');
         $node->nodeValue = $all_meta_entered;
-        // $node->nodeValue = 'TRUE';
         $sidora_node = $doc->getElementsByTagName('sidora');
         $sidora_node->item(0)->appendChild($node);
       }
@@ -2604,60 +2602,9 @@ SELECT ?pid ?mod ?label ?created FROM <#ri>
     }
     exit();
   }
-  if ($one == 'check_gids'){
-     $parent_pid = $two;
-     $parent_gids = og_get_entity_groups('node', $parent_pid);
-     dpm($parent_gids);
-     dpm($parent_gids['node']);
-     foreach($parent_gids['node'] as $group_node_id){
-       dpm($group_node_id);
-     } 
-     return 'complete';
-  }
-  if ($one == 'put_my_stuff_in_og') {
-    sidora_sharing_put_all_owned_concepts_into_owned_groups();
-  }
-  if ($one == 'load_entities'){
-    // 
-    $query = new EntityFieldQuery();
-    $query->entityCondition('entity_type', 'node')
-      ->entityCondition('bundle',  sidora_get_concept_content_type())
-      ->propertyCondition('status', 1)
-      ->addMetaData('account', user_load(1)); // Run the query as user 1.
-    $result = $query->execute();
-    if (sizeof($result) === 0){
-      print 'no results';
-    }
-    $nids = array();
-    foreach($result["node"] as $nid => $obj){
-      $nids[] = $nid;
-    }
-    $entities = entity_load('node',$nids);
-    foreach($entities as $entity) {
-      if (!empty($entity->field_sidora_fedora_sync[$entity->language][0]['value'])) {
-        $entity->field_sidora_fedora_sync[$entity->language][0]['value'] = '0';
-        node_save($entity);
-      }
-    }
-    exit();
-  }
-  if ($one == 'concepts_owned'){
-    sidora_add_all_owned_concepts_to_owned_groups($two);
-    exit();
-  }
-  if ($one == 'sidora_update_concept_node_add_child') {
-    $node = node_load($two);
-    $node = sidora_update_concept_node_add_child($node, $parent_pid);
-    var_dump($node);
-  }
   if ($one == 'node_dump') {
     $node = node_load($two);
     var_dump($node);
-    exit();
-  }
-  if ($one == 'get_default_owner') {
-    print sidora_get_default_owner_id_under_pid($two);
-    print 'done';
     exit();
   }
   if ($one == 'create_og_groups') {
@@ -2677,36 +2624,10 @@ SELECT ?pid ?mod ?label ?created FROM <#ri>
     var_dump($entity);
     exit();
   }
-  if ($one == 'set_all_nodes_resync') {
-    $resync_to = 0;
-    if ($two == '1'){
-      $resync_to = 1;
-    }
-    //TBD TODO
-  }
   if ($one == 'force_fedora_sync'){
     $the_return = sidora_update_node_from_fedora($two);
     var_dump($the_return);
     exit();
-  }
-  if ($one == 'show_types'){
-    $obj = sidora_obj("si:root");
-    print get_class($obj);
-    print "\n---\n";
-    $node = node_load(668);
-    print get_class($node);
-    print "\n---\n";
-    $node = node_load(111111668);
-    var_dump($node);
-    print "\n---\n";
-    $nid = sidora_get_concept_node_id("sample_no_exist");
-    print $nid;
-    exit();
-  }
-  if ($one == 'show_node') {
-    $node = node_load($two);
-    var_dump($node);
-    drupal_exit();
   }
   if ($one == 'create_node_tree') {
     $pid = $two;
@@ -2847,19 +2768,6 @@ SELECT ?pid ?mod ?label ?created FROM <#ri>
     exit();
   }
   global $conf;
-  if ($one == 'export_settings') {
-    $full_export = sidora_settings_object();
-    print json_encode($full_export);
-    drupal_exit();
-  }
-  if ($one == 'import_tester') {
-    /*
-    Used to have $import_obj_string here but it made things go wonky in the editor
-    */
-    $settings_obj = json_decode($import_obj_string);
-    sidora_settings_import($settings_obj);
-    return "settings import test complete";
-  }
   if ($one == 'conf') {
     var_dump($conf);
   }
@@ -2894,17 +2802,12 @@ SELECT ?pid ?mod ?label ?created FROM <#ri>
     return drupal_render(sidora_account_request_form());
     drupal_exit();
   }
-  if ($one == 'user_help') {
-   // var_dump(sidora_help_form());
-    print drupal_render_children(sidora_help_form());
-    // exit();
-  }
   if ($one == 'modules') {
     $modules = implode(', ', module_list());
     print $modules;
   }
   if ($one == 'xsl_config') {
-		$pid = $two;
+    $pid = $two;
     dsm($pid);
     $obj = sidora_obj($pid);
     dsm($obj);
@@ -2987,9 +2890,6 @@ SELECT ?pid ?mod ?label ?created FROM <#ri>
     }
     return "Form<pre>".htmlentities($form_content).'<pre>';
   }
-  if ($one == 'parenttable') {
-    return sidora_get_parent_table($two);
-  }
   if ($one == 'formassociations2') {
     module_load_include('inc', 'xml_form_builder', 'XMLFormRepository');
     module_load_include('inc', 'xml_form_builder', 'includes/associations');
@@ -3012,36 +2912,6 @@ SELECT ?pid ?mod ?label ?created FROM <#ri>
       var_dump($dsids);
       drupal_exit();
     }
-  }
-  if ($one == 'guesser') {
-    $object = sidora_obj($two);
-    $the_guess = sidora_guess_dsid_and_form_name($object);
-    var_dump($the_guess);
-    drupal_exit();
-    return;
-  }
-  if ($one == 'models') {
-    $root_pid = 'si:root';
-    $results = _sidora_get_child_results_cache($root_pid);
-    $filled = sidora_fill_concepts_children($results);
-    print '<pre>';
-    // var_dump ($filled);
-    $html_tree_from_query_result = sidora_html_tree($filled);
-    $ht = str_replace('<',' ',$html_tree_from_query_result);
-    $parts = explode(' pid="',$ht);
-    foreach ($parts as $i=>$part) { $parts[$i] = substr($part,0,strpos($part,'"')); if (strpos($parts[$i],'si:') === FALSE) {
-      unset($parts[$i]);} }
-    $models = array();
-    foreach ($parts as $i=>$part) {
-      $obj = sidora_obj($part);
-      foreach ($obj->models as $model) {
-        if (empty($models[$model])) $models[$model] = array();
-        $models[$model][] = $part;
-      }
-    }
-    var_dump($models);
-
-    drupal_exit();
   }
   if ($one == 'upload2') {
     $configure = array(
@@ -3166,14 +3036,6 @@ SELECT ?pid ?mod ?label ?created FROM <#ri>
     var_dump(gd_info());
     drupal_exit();
   }
-  if ($one == 'get_user_root') {
-    print 'gur<br/>';
-    print $two;
-    print '<br/><pre>'."\n";
-    $drupal_user = user_load_by_name($two);
-    var_dump($drupal_user);
-    drupal_exit();
-  }
   if ($one == 'current_file_uploads') {
     $current_uploads = sidora_create_resource_get_current_uploads();
     dsm($current_uploads);
@@ -3215,13 +3077,6 @@ SELECT ?pid ?mod ?label ?created FROM <#ri>
     dsm($_SESSION['file_uploads'][$user->uid]);
     return 'files';
   }
-  if ($one == 'user') {
-    dsm($user);
-    $edit['data']['yes'] = 'yes';
-    $uso = user_save($user, $edit);
-    dsm($uso);
-    return 'user';
-  }
   if ($one == 'sessionImage') {
     $fileinfo = $_SESSION['file_uploads'][$user->uid][$two];
     $filename = $fileinfo->filename;
@@ -3236,57 +3091,6 @@ SELECT ?pid ?mod ?label ?created FROM <#ri>
     // header("Content-type: image/jpeg");
     // print $contents;
     drupal_exit();
-  }
-  if ($one == 'id_to_filename') {
-    $id_to_filename = cache_get("sidora:form_id_to_filename");
-    dsm($id_to_filename);
-    return 'form to filename';
-  }
-  if ($one == 'add_concept') {
-    module_load_include('inc', 'islandora', 'includes/utilities');
-    module_load_include('inc', 'islandora', 'includes/ingest.form');
-    module_load_include('inc', 'sidora', 'includes/utils');
-    $parent_pid = 'si-user:105';
-    $object_pid = 'si:141451';
-    $parent = sidora_obj($parent_pid);
-    $object = sidora_obj($object_pid);
-    // link to parent with Sidora nomenclature
-    $is_concept = sidora_is_concept($object);
-    if ($is_concept) {
-      $parent->relationships->add(FEDORA_RELS_EXT_URI, 'hasConcept', $object->id);
-      // clear THEIR parents out since the number in parens is held there
-      $grandparents = sidora_get_parent_concepts($parent);
-      foreach ($grandparents as $grandparent_pid => $grandparent) {
-        sidora_clear_tree_cache($grandparent_pid);
-      }
-    }
-    else {
-      $parent->relationships->add(FEDORA_RELS_EXT_URI, 'hasResource', $object->id);
-      $tuque = islandora_get_tuque_connection();
-      $apim = $tuque->repository->api->m;
-      $mime_detect = new MimeDetect();
-      $mimeType = $mime_detect->getMimeType('logo11w.png');
-      $apim->addDatastream($object->id, 'OBJ', 'url', 'http://www.google.com/images/srpr/logo11w.png',
-      // http://www.iana.org/_img/2013.1/iana-logo-header.svg',
-        array(
-          'controlGroup'=>'M',
-          'dsLabel'=>'Google Logo',
-          'mimeType'=>$mimeType,
-        )
-      );
-    }
-  }
-  if ($one == 'xsl') {
-    print sidora_xsl_string();
-    drupal_exit();
-  }
-  if ($one == 'upload') {
-    $elements = array(
-      '#extensions' => array(
-        'gif','jpg'
-      )
-    );
-    return sidora_get_plupload_html($elements);
   }
 if ($one == 'exhibition') {
 //  if (module_exists('exhibition_config')) {
@@ -3341,16 +3145,6 @@ if ($one == 'deletexsl') {
     }
    var_dump($curr_item);
    }
-  if ($one == 'edit_metadata') {
-    if ($two != '0') {
-    header($_SERVER['SERVER_PROTOCOL'] . ' 500 Internal Server Error', true, 500);}
-  }
-  if ($one == 'get_cache') {
-    var_dump(cache_get("sidora:children_results:".$two));
-  }
-  if ($one == 'get_tree_by_id') {
-    var_dump(sidora_html_tree_for_ajax($two));
-  }
   if ($one == 'module_weight') {
     $modules = implode(PHP_EOL, module_list());
     print $modules;
