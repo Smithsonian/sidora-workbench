@@ -703,8 +703,9 @@ function sidora_get_info($pid_or_fedora_obj_or_nid_or_node, $load_from_fedora = 
   return $to_return;
 }
 /**
- * Resets a node based on its Fedora object
- * $pid_or_nid - the pid or the node id, if it has a colon (:) then it's a pid, otherwise assumes node id
+ * Resets a node based on its Fedora object. Requires node to already exist
+ * $pid_or_fedora_obj_or_nid_or_node - some identifier of the thing to update
+ * returns the node or FALSE if it couldn't perform the action
  */
 function sidora_update_node_from_fedora($pid_or_fedora_obj_or_nid_or_node){
   $sidora_obj_info = sidora_get_info($pid_or_fedora_obj_or_nid_or_node);
@@ -712,7 +713,6 @@ function sidora_update_node_from_fedora($pid_or_fedora_obj_or_nid_or_node){
     return FALSE;
   }
   $node = $sidora_obj_info['node'];
-  $nid = $sidora_obj_info['nid'];
   $obj = $sidora_obj_info['obj'];
   $pid = $sidora_obj_info['pid'];
   if (empty($node) || empty($pid)) {
@@ -721,6 +721,26 @@ function sidora_update_node_from_fedora($pid_or_fedora_obj_or_nid_or_node){
   if (empty($obj)) {
     // This object couldn't be found in Fedora, we can't do an update
     $to_return = sidora_update_concept_node($node, array('label' => ''), TRUE);
+    return FALSE;
+  }
+  sidora_update_or_create_node_from_fedora($pid_or_fedora_obj_or_nid_or_node);
+}
+/**
+ * Updates or creates a node based on its Fedora object. Requires that the object is a concept
+ * $pid_or_fedora_obj_or_nid_or_node - some identifier of the thing to update
+ * returns the node or FALSE if it couldn't perform the action
+ */
+function sidora_update_or_create_node_from_fedora($pid_or_fedora_obj_or_nid_or_node) {
+  $sidora_obj_info = sidora_get_info($pid_or_fedora_obj_or_nid_or_node);
+  if (empty($sidora_obj_info)) {
+    return FALSE;
+  }
+  $node = $sidora_obj_info['node'];
+  $nid = $sidora_obj_info['nid'];
+  $obj = $sidora_obj_info['obj'];
+  $pid = $sidora_obj_info['pid'];
+  $is_concept = sidora_is_concept($obj);
+  if (!$is_concept){
     return FALSE;
   }
   // Pull the information from fedora and fill the info section which will be passed to the node updater
@@ -761,7 +781,7 @@ function sidora_update_node_from_fedora($pid_or_fedora_obj_or_nid_or_node){
   ); 
   $to_return = NULL;
   // If the node doesn't exist, create it
-  if ($node === FALSE) {
+  if (empty($node)) {
     $to_return = sidora_get_update_or_create_concept_node($pid, $info);
   }
   else {
@@ -798,6 +818,8 @@ function sidora_get_update_or_create_concept_node($pid, $info = NULL, $set_fedor
 }
 /*
  * Removes a child to the from the child list
+ * If no child_node_id is entered, assumes the thing removed was a resource
+ * returns the node that was input
  */
 function sidora_update_concept_node_remove_child($node, $child_node_id = NULL) {
   $node_wrapper = entity_metadata_wrapper('node', $node);
@@ -824,6 +846,8 @@ function sidora_update_concept_node_remove_child($node, $child_node_id = NULL) {
 }
 /*
  * Adds a child to the end of the child list
+ * If no child_node_id is entered, assumes the thing added was a resource
+ * returns the node that was input
  */
 function sidora_update_concept_node_add_child($node, $child_node_id = NULL) {
   watchdog("sidora","sidora_update_concept_node_add_child, node id:" . $node->nid . " new child node id:" . $child_node_id);
@@ -856,6 +880,7 @@ function sidora_update_concept_node_add_child($node, $child_node_id = NULL) {
 function sidora_update_concept_node($node, $info, $set_fedora_sync = FALSE) {
   watchdog('sidora', "Update:<pre>" . sidora_debug_string_backtrace()."</pre>info:".json_encode($info));
   $node_wrapper = entity_metadata_wrapper('node', $node);
+  var_dump($node);
   if (array_key_exists('label',$info)) {
     $node_wrapper->field_fedora_label->set($info['label']);
   }

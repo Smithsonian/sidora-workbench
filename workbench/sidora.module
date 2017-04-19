@@ -4631,9 +4631,11 @@ function sidora_exact_duplicate($copy_from_pid) {
 }
 /**
  * Duplicate the tree structure, will ONLY duplicate items that are owned by the original pid's owner
+ * If a project space is specified, create nodes for the objects in that project space
+ *   DOES NOT add the item as a child of the project space's pid
  * Return the pid of the duplicate root or FALSE
  */
-function sidora_duplicate_tree_and_resources($pid_of_item_to_duplicate) {
+function sidora_duplicate_tree_and_resources($pid_of_item_to_duplicate, $project_space_pid = NULL) {
   // Things to look out for:
   //  Circular references
   //
@@ -4652,6 +4654,11 @@ function sidora_duplicate_tree_and_resources($pid_of_item_to_duplicate) {
     foreach($pids as $pid => $node_id) {
       // create a duplicate
       $new_obj = sidora_exact_duplicate($pid);
+      if (!empty($project_space_pid)) {
+        $node = sidora_update_or_create_node_from_fedora($new_obj);
+        module_load_include('inc', 'sidora', 'includes/project_spaces');
+        sidora_put_into_project_spaces($node, $project_space_pid);
+      }
       //  Store the association between the old and new
       $processed_duplicates[$pid] = $new_obj->id;
       // create duplicates of each resource
@@ -4663,6 +4670,8 @@ function sidora_duplicate_tree_and_resources($pid_of_item_to_duplicate) {
           $new_res = sidora_exact_duplicate($original_resource_pid);
           // Store the association between the old and new
           $processed_duplicates[$original_resource_pid] = $new_res->id;
+          // Check the resource's codebook, and duplicate that as well
+          // Put the new codebook on the project space, if specified
         }
       }
     }
@@ -5852,9 +5861,25 @@ function sidora_duplicate($destination, $to_duplicate, $show_output = TRUE) {
   if (!empty($destination) && !empty($to_duplicate)) {
     // Check that we have permission to write to the destination and have no locks against it
     $pid = $destination;
+
+    // Get the project spaces that we want to put the duplicates into
+    $node = sidora_get_concept_node($pid);
+    module_load_include('inc', 'sidora', 'includes/project_spaces');
+    $group_nids = sidora_get_group_nids_membership($node->nid);
+    $group_nodes = node_load_multiple($group_nids);
+    $ps_groups = sidora_get_project_spaces_from_og_groups($group_nodes, NULL, FALSE);
+    $project_space_pid = NULL;
+    foreach($ps_groups as $i => $ps_group) {
+      if (!empty($ps_group) && !empty($ps_group->field_fedora_pid)) {
+        $project_space_pid = $ps_group->field_fedora_pid['und'][0]["safe_value"];
+      }
+    }
+    // Just take the last pid, assume it's only one project space
+    global $user;
+
     if (sidora_allow($user,$pid,'create')) {
       if (sidora_obtain_lock($pid)) {
-        $duplicated_root = sidora_duplicate_tree_and_resources($to_duplicate);
+        $duplicated_root = sidora_duplicate_tree_and_resources($to_duplicate, $project_space_pid);
         if ($duplicated_root === FALSE) {
            $to_return = array("error" => TRUE, "description" => t('Unable to duplicate these objects'));
         }
@@ -6284,7 +6309,6 @@ function sidora_move($move_from_id, $copy_to_id, $pid, $show_output = TRUE) {
   $copied = sidora_copy($copy_to_id, $pid, FALSE);
   sidora_release_lock($copy_to_id);
   sidora_release_lock($move_from_id);
-  // SID-141- When moving duplicate resources, resources were not being removed from the source.
   if (($copied['error']) && ($copied['code'] != 'copy4')) {
     if ($show_output) {
       print json_encode($copied);

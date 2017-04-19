@@ -27,6 +27,27 @@
  * those of third-party libraries, please see the product release notes.
  */
 
+/*
+ * Put the item into the project spaces that are associated with the selected project space
+ */
+function sidora_put_into_project_spaces($item_identifier, $project_space_identifier) {
+  $obj_info = sidora_get_info($item_identifier, FALSE);
+  $ps_info = sidora_get_info($project_space_identifier, FALSE);
+  if (empty($obj_info) || empty($ps_info) || empty($obj_info['nid']) || empty($ps_info['pid'])) {
+    return FALSE;
+  }
+  $nid = $obj_info['nid'];
+  $ps_pid = $ps_info['pid'];
+  $project_space_groups = sidora_get_groups_for_project_space($ps_pid, TRUE);
+  if (empty($project_space_groups)){
+    return FALSE;
+  }
+  foreach($project_space_groups as $individual_group) {
+    og_group('node', $individual_group, array('entity_type' => 'node', 'entity' => $nid));
+  }
+  return TRUE;
+}
+
 /**
  * Assume that the passed in item has a node if it should, and put that node into the 
  * project spaces
@@ -206,6 +227,8 @@ function sidora_get_project_spaces_from_og_groups($group_nodes, $user, $only_ret
   $pids = array();
   $project_spaces = array();
   foreach($group_nodes as $node){
+      //print "BBB\n";
+      //var_dump($node);
       $pid = NULL;
       if (!empty($node->field_fedora_pid) && array_key_exists($node->language, $node->field_fedora_pid)) {
         $pid = $node->field_fedora_pid[$node->language][0]['value'];
