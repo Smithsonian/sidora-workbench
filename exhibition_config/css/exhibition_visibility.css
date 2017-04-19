@@ -32,9 +32,9 @@ ul.visibility-list-table li {display:table-row;list-style:none;}
 .visibility-list-table div.visibility-name,div.visibility-type,div.visibility-path,div.visibility-setting,div.empty-visibility-setting {display:block;float:left;padding:3px 5px;display:table-cell;}
 .visibility-list-table div.visibility-name{width:22%;border-left:1px solid #ccc;display:table-cell;}
 .visibility-list-table div.visibility-type{width:5%;display:table-cell;}
-.visibility-list-table div.visibility-path{width:44%;display:table-cell;}
-.visibility-list-table div.visibility-setting{width:5%;display:table-cell;min-width:47px}
-.visibility-list-table div.empty-visibility-setting{width:5%;display:table-cell;height:100%;min-width:47px}
+.visibility-list-table div.visibility-path{width:35%;display:table-cell;}
+.visibility-list-table div.visibility-setting{width:5%;display:table-cell;min-width:37px}
+.visibility-list-table div.empty-visibility-setting{width:5%;display:table-cell;height:100%;min-width:37px}
 .visibility-list-table div.form-item{margin:0;}
 #visibility-list-table ul.visibility-sub-list {list-style:none; margin:0;padding:0;}
 .visibility_checkbox {border:1px solid #000000;}

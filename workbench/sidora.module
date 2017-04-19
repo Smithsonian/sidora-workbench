@@ -3087,24 +3087,24 @@ if ($one == 'deletexsl') {
     $modules = implode(PHP_EOL, module_list());
     print $modules;
   }
-        if ($one == 'test_curl') {
+  if ($one == 'test_curl') {
     $curl = curl_init();
     $batch_url = variable_get('sidora_batch_status_url', '') . '/' . $two . '/c8b4c3e1-1ca1-4445-9cfc-0f3deb7ada2f';
     curl_setopt($curl, CURLOPT_URL, $batch_url);
     curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1);
     var_dump(curl_getinfo($curl));
-                $result = curl_exec($curl);
+    $result = curl_exec($curl);
     var_dump($result);
-                var_dump(curl_error($curl));
-watchdog('SIdora Testing',t("Bulk metadata Curl reponse whole :<br/> %curl_response",
-                array('%curl_response' => $result))
-                );
-    curl_close($curl);
-        }
-        if ($one == 'content_model') {
-          $obj = sidora_obj($two);
-                $models = $obj->models;
-                $file_extensions = array(
+    var_dump(curl_error($curl));
+    watchdog('SIdora Testing',t("Bulk metadata Curl reponse whole :<br/> %curl_response",
+       array('%curl_response' => $result))
+   );
+   curl_close($curl);
+ }
+ if ($one == 'content_model') {
+   $obj = sidora_obj($two);
+   $models = $obj->models;
+   $file_extensions = array(
     'si:imageCModel' => array('jpg', 'png', 'gif', 'tiff', 'tif', 'jp2'),
     'si:generalImageCModel' => array('jpg', 'png', 'gif', 'tiff', 'tif', 'jp2'),
     'si:datasetCModel' => array('csv', 'xml', 'xlsx', 'xls', 'dat', 'med', 'arg', 'slt'),
@@ -3113,13 +3113,13 @@ watchdog('SIdora Testing',t("Bulk metadata Curl reponse whole :<br/> %curl_respo
     'islandora:sp_videoCModel' => array('ogg','mp4','mov','qt', 'm4a', 'm4v', 'avi', 'mkv'),
     '*' => array('*'),
   );
-        foreach ($models as $model) {
+  foreach ($models as $model) {
     if (array_key_exists($model, $file_extensions)) {
       $extensions_for_model = $file_extensions[$model];
        var_dump($extensions_for_model);
     }
   }
-	}
+ }
 	//This ends the testing function and should also indicate the end of liberal use of the dsm function
 }
 
@@ -9845,20 +9845,25 @@ function sidora_osd_proxy_version($pid, $datastream='OBJ', $version='0') {
   $ds = $obj[$datastream];
   $datastream_content = $ds[$version];
   $qs = $_SERVER['QUERY_STRING'];
- error_log("\nIn sidora_osd_proxy_version, qs before :".print_r($qs,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
   $qs = str_replace(
-          urlencode("{replacer}"),
-          urlencode(variable_get('osd_proxy_pid_prefix', '')).
-          urlencode($pid).
-          urlencode(variable_get('osd_proxy_pid_postfix', '')).
-          '?asOfDateTime=' .
-          urlencode($datastream_content->createdDate),
-          $qs
+    urlencode("{replacer}"),
+    urlencode(variable_get('osd_proxy_pid_prefix', '')).
+    urlencode($pid).
+    urlencode(variable_get('osd_proxy_pid_postfix', '')).
+    '?asOfDateTime=' .
+    urlencode($datastream_content->createdDate),
+    $qs
   );
- error_log("\nIn sidora_osd_proxy_version, qs after :".print_r($qs,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
+  if (strpos($qs,'degraded') !== false) {
+    $qs = preg_replace('/svc.region'.'=[^&]+(&|$)/', '', $qs);
+  }		
   $url = variable_get('osd_proxy_resolver_url', '').'?'.$qs;
-  error_log("\nIn sidora_osd_proxy_version, url :".print_r($url,true),"3",DRUPAL_ROOT.'/'.drupal_get_path('module','sidora')."/errorlog.txt");
-	print file_get_contents($url);
+  if (strpos($qs,'degraded') !== false) {
+     print $url;
+  }
+  else { 
+    print file_get_contents($url);
+  } 
   drupal_exit();
 }
 
