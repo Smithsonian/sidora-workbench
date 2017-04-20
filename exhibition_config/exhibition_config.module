@@ -2041,11 +2041,11 @@ Color Set:
     '#type' => 'select',
     '#title' => 'Select a level (for degraded image preview)',
     '#options' => array(
-      '1' => '1',
-      '2' => '2',
-      '3' => '3',
-      '4' => '4',
-      '5' => '5',
+      '1' => 'Level 1 - No bigger than 125px X 125px',
+      '2' => 'Level 2 - No bigger than 250px X 250px',
+      '3' => 'Level 3 - No bigger than 500px X 500px',
+      '4' => 'Level 4 - No bigger than 1000px X 1000px',
+      '5' => 'Level 5 - No bigger than 2000px X 2000px',
      ),
      '#default_value' => isset($row['image_degradation'])?$row['image_degradation']:'2',
    );		

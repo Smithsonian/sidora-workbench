@@ -4713,7 +4713,7 @@ function sidora_open_access($info_type, $pid) {
       print json_encode($return_when_encoded);
       break;
     case 'osd':
-      sidora_osd_proxy_version($pid);
+			sidora_osd_proxy_version($pid);
       break;
   }
   drupal_exit();
@@ -9859,7 +9859,11 @@ function sidora_osd_proxy_version($pid, $datastream='OBJ', $version='0') {
   }		
   $url = variable_get('osd_proxy_resolver_url', '').'?'.$qs;
   if (strpos($qs,'degraded') !== false) {
-     print $url;
+    $im = imagecreatefromstring(file_get_contents($url));
+    ob_start();
+    imagejpeg($im);
+    $img = ob_get_clean();
+    print "data:image/jpeg;base64," . base64_encode($img);
   }
   else { 
     print file_get_contents($url);
@@ -10621,4 +10625,4 @@ function sidora_get_all_xsl_names() {
     }
   }
   return $xsl_filenames;
-}				 
+}
