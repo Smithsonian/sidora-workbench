@@ -4686,10 +4686,12 @@ function sidora_open_access($info_type, $pid) {
       $file = sidora_get_xsl_file_for_object($pid);
 			// empty string means use default xsl, NULL means there is no file
       if ($file === '') {
+        header("Content-type: text/xml");
         print sidora_xsl_string($xsl_file);
       }
       else {
         if ($file) {
+          header("Content-type: text/xml");
 				  if (preg_match('/^.*\/[^\.]*/', $file)) {
 				    $output_info = readfile($file);
 					}
@@ -10091,10 +10093,6 @@ function sidora_debug_string_backtrace() {
   // Remove first item from backtrace as it's this function which
   // is redundant.
   $trace = preg_replace ('/^#0\s+' . __FUNCTION__ . "[^\n]*\n/", '', $trace, 1);
-
-  // Renumber backtrace items.
-  $trace = preg_replace ('/^#(\d+)/me', '\'#\' . ($1 - 1)', $trace);
-
   return $trace;
 }
 
