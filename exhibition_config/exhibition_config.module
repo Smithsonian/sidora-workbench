@@ -30,6 +30,14 @@
  * hook menu
  */
 function exhibition_config_menu(){
+  $items['admin/exhibition_config/direct_visibility_update'] = array(
+      'title' => 'Exhibition Configuration Direct Visibility Update',
+      'description' => 'Allow an admin to directly edit the visibility JSON object',
+      'page callback' => 'exhibition_config_direct_visibility_update',
+      'page arguments' => array(3),
+      'access arguments' => array('administer site configuration'),
+      'type' => MENU_CALLBACK,
+  );
   $items['admin/exhibition_config/configure'] = array(
       'title' => 'Exhibition Configuration',
       'description' => 'Configure the Exhibition Configuration Module.',
@@ -94,6 +102,75 @@ function exhibition_config_menu(){
     'type' => MENU_CALLBACK,
   );	
   return $items;
+}
+function exhibition_config_direct_visibility_update($pid) {
+  $pid = urldecode($pid);
+  return drupal_get_form('exhibition_config_direct_visibility_form',$pid);
+}
+function exhibition_config_direct_visibility_form($form, $form_state){
+  $pid = $form_state['build_info']['args'][0];
+  $visibility = exhibition_config_load_visibility($pid);
+  $form['visibility'] = array(
+    '#type' => 'textarea',
+    '#title' => t('Actual'),
+    '#maxlength' => 500100100, 
+    '#default_value' => json_encode($visibility),
+  );
+  if (!empty($_GET['create_form'])){
+    $initial_settings = array();
+    $initial_settings['concept_show_name'] = !empty($_GET['concept_show_name']);
+    $initial_settings['concept_show_meta'] = !empty($_GET['concept_show_meta']);
+    $initial_settings['future_children_show_name'] = !empty($_GET['future_children_show_name']);
+    $initial_settings['future_children_show_meta'] = !empty($_GET['future_children_show_meta']);
+    $initial_settings['future_children_show_preview'] = !empty($_GET['future_children_show_preview']);
+    $initial_settings['future_children_allow_download'] = !empty($_GET['future_children_allow_download']);
+    $initial_settings['resource_show_name'] = !empty($_GET['resource_show_name']);
+    $initial_settings['resource_show_meta'] = !empty($_GET['resource_show_meta']);
+    $initial_settings['show_preview'] = !empty($_GET['show_preview']);
+    $initial_settings['allow_download'] = !empty($_GET['allow_download']);
+    $initial_settings['show_degraded'] = !empty($_GET['show_degraded']);
+    $initial_settings['exclude_relationship_info'] = TRUE;
+    $initial_settings['include_label'] = TRUE;
+    $initial_settings['exclude_title'] = TRUE;
+    $initial_settings['include_concept_model'] = '';
+
+    $pid_list = array();
+    $ecgpt = exhibition_config_get_pid_tree($pid, $pid_list, '', '', $initial_settings);
+    $form['generated'] = array(
+      '#type' => 'textarea',
+      '#title' => t('Newly Generated'),
+      '#maxlength' => 500100100, 
+      '#default_value' => json_encode($ecgpt),
+    );
+  }
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => 'Submit',
+  );
+  $form['showeee'] = array(
+    '#type' => 'markup',
+    '#markup' => '<hr>Reminder:
+<br>if (!empty(_GET[\'create_form\'])){
+<br>    initial_settings[\'concept_show_name\'] = !empty(_GET[\'concept_show_name\']);
+<br>    initial_settings[\'concept_show_meta\'] = !empty(_GET[\'concept_show_meta\']);
+<br>    initial_settings[\'future_children_show_name\'] = !empty(_GET[\'future_children_show_name\']);
+<br>    initial_settings[\'future_children_show_meta\'] = !empty(_GET[\'future_children_show_meta\']);
+<br>    initial_settings[\'future_children_show_preview\'] = !empty(_GET[\'future_children_show_preview\']);
+<br>    initial_settings[\'future_children_allow_download\'] = !empty(_GET[\'future_children_allow_download\']);
+<br>    initial_settings[\'resource_show_name\'] = !empty(_GET[\'resource_show_name\']);
+<br>    initial_settings[\'resource_show_meta\'] = !empty(_GET[\'resource_show_meta\']);
+<br>    initial_settings[\'show_preview\'] = !empty(_GET[\'show_preview\']);
+<br>    initial_settings[\'allow_download\'] = !empty(_GET[\'allow_download\']);
+<br>    initial_settings[\'show_degraded\'] = !empty(_GET[\'show_degraded\']);
+<br>'
+  );
+  return $form;
+}
+function exhibition_config_direct_visibility_form_submit($form, &$form_state) {
+  $pid = $form_state['build_info']['args'][0];
+  $visibility_json = $form_state['input']['visibility'];
+  exhibition_config_save_visibility($pid, $visibility_json);
+  drupal_set_message("Saved");
 }
 /*
  * Returns an array of exhibition information for the input user (or all users if empty string
@@ -2083,38 +2160,61 @@ function exhibition_config_get_pid_tree($pid,&$pid_list = array(),$parent = '',$
   $to_return['pid'] = $pid;
   $repo = si_exhibition_get_repo();
   $object = $repo->getObject($pid);
+  if (empty($initial_settings['include_label'])?FALSE:$initial_settings['include_label']) {
+    $to_return['label'] = $object->label;
+  }
+  if (array_key_exists('include_concept_model', $initial_settings) && ($initial_settings['include_concept_model'] !== FALSE)){
+    $to_return['model'] = $initial_settings['include_concept_model'];
+  }
   $to_return['type'] = 'Concept';
-  $to_return['title'] = $object->label;
-  if ($parent == '') {
-    $to_return['relationship'] = $object->label;
-    $to_return['relationship_pid'] = $to_return['pid'];
-  }else{
-    $to_return['relationship'] = $parent . "\\" . $object->label;
-    $to_return['relationship_pid'] = $parent_pid . "/" . $to_return['pid'];
-  } 
-  $relationship = $to_return['relationship'];
-  $relationship_pid = $to_return['relationship_pid'];
-  $to_return['show_name'] = False;
-  $to_return['show_meta'] = False;
-  $to_return['future_children_show_name'] = False;
-  $to_return['future_children_show_meta'] = False;
-  $to_return['future_children_show_preview'] = False;
-  $to_return['future_children_allow_download'] = False;
+  if (empty($initial_settings['exclude_title'])) {
+    $to_return['title'] = $object->label;
+  }
+  if (empty($initial_settings['exclude_relationship_info'])) {
+    if ($parent == '') {
+      $to_return['relationship'] = $object->label;
+      $to_return['relationship_pid'] = $to_return['pid'];
+    }else{
+      $to_return['relationship'] = $parent . "\\" . $object->label;
+      $to_return['relationship_pid'] = $parent_pid . "/" . $to_return['pid'];
+    } 
+    $relationship = $to_return['relationship'];
+    $relationship_pid = $to_return['relationship_pid'];
+  }
+  else {
+    $relationship = $parent;
+    $relationship_pid = $parent_pid;
+  }
+  $to_return['show_name'] = !empty($initial_settings['concept_show_name']);
+  $to_return['show_meta'] = !empty($initial_settings['concept_show_meta']);
+  $to_return['future_children_show_name'] = !empty($initial_settings['future_children_show_name']);
+  $to_return['future_children_show_meta'] = !empty($initial_settings['future_children_show_meta']);
+  $to_return['future_children_show_preview'] = !empty($initial_settings['future_children_show_preview']);
+  $to_return['future_children_allow_download'] = !empty($initial_settings['future_children_allow_download']);
   $to_return['children'] = array();
   $pid_list[] = $pid;
   $children = si_exhibition_get_children_info($object);
   foreach($children as $child){
-    $child['relationship'] = $relationship . "\\" . $child['title'];
-    $child['relationship_pid'] = $relationship_pid . "/" . $child['pid'];
+    if (empty($initial_settings['include_label'])?FALSE:$initial_settings['include_label']) {
+      $child['label'] = $child['title'];
+    }
+    if (empty($initial_settings['exclude_title'])?FALSE:$initial_settings['exclude_title']) {
+      unset($child['title']);
+    }
+    if (empty($initial_settings['exclude_relationship_info'])) {
+      $child['relationship'] = $relationship . "\\" . $child['title'];
+      $child['relationship_pid'] = $relationship_pid . "/" . $child['pid'];
+    }
     if ($child['type'] == 'Concept') {
       if (!(in_array($child['pid'],$pid_list))){
-        $to_return['children'][] = exhibition_config_get_pid_tree($child['pid'],$pid_list,$relationship,$relationship_pid);
+        $to_return['children'][] = exhibition_config_get_pid_tree($child['pid'],$pid_list,$relationship,$relationship_pid, $initial_settings);
       }
     }else{
-    $child['show_name'] = False;
-    $child['show_meta'] = False;
-    $child['show_preview'] = False;
-    $child['allow_download'] = False;
+    $child['show_name'] = !empty($initial_settings['resource_show_name']);
+    $child['show_meta'] = !empty($initial_settings['resource_show_meta']);
+    $child['show_preview'] = !empty($initial_settings['show_preview']);
+    $child['allow_download'] = !empty($initial_settings['allow_download']);
+    $child['show_degraded'] = !empty($initial_settings['show_degraded']);
     $to_return['children'][]= $child;
     }
   }
@@ -2486,11 +2586,17 @@ function exhibition_config_save_visibility($pid, $visibility_obj_tree) {
   if (empty($visibility_obj_tree['pid']) && !empty($visibility_obj_tree[0])){
     $visibility_obj_tree = $visibility_obj_tree[0];
   }
+  if (is_string($visibility_obj_tree)) {
+    $visibility_string = $visibility_obj_tree;
+  }
+  else {
+    $visibility_string = json_encode($visibility_obj_tree);
+  }
   $exists = db_query('SELECT 1 FROM {exhibition_config} WHERE pid = :pid', array(':pid' => $pid))->fetchField();
   if ($exists) {
     $query = db_update('exhibition_config')
       ->fields(array(
-        'visibility' => json_encode($visibility_obj_tree),
+        'visibility' => $visibility_string,
       ))
       ->condition('pid', $pid, '=');
     $num_updated = $query->execute();
@@ -2506,7 +2612,7 @@ function exhibition_config_save_visibility($pid, $visibility_obj_tree) {
     $insert_query->values( 
       array(
         'pid' => $pid,
-        'visibility' => json_encode($visibility_obj_tree),
+        'visibility' => $visibility_string,
       )
     );
     $new_entry = $insert_query->execute();
