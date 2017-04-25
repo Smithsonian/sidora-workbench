@@ -2582,14 +2582,14 @@ function exhibition_config_save_visibility($pid, $visibility_obj_tree) {
     drupal_not_found();
     drupal_exit();
   }
-  //if the tree is a child array, just take the first element
-  if (empty($visibility_obj_tree['pid']) && !empty($visibility_obj_tree[0])){
-    $visibility_obj_tree = $visibility_obj_tree[0];
-  }
   if (is_string($visibility_obj_tree)) {
     $visibility_string = $visibility_obj_tree;
   }
   else {
+    //if the tree is a child array, just take the first element
+    if (empty($visibility_obj_tree['pid']) && !empty($visibility_obj_tree[0])){
+      $visibility_obj_tree = $visibility_obj_tree[0];
+    }
     $visibility_string = json_encode($visibility_obj_tree);
   }
   $exists = db_query('SELECT 1 FROM {exhibition_config} WHERE pid = :pid', array(':pid' => $pid))->fetchField();
