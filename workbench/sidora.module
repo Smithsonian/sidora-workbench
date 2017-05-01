@@ -726,7 +726,7 @@ function sidora_process_object_with_build_id($form_build_id) {
 <meta_requirements_fulfilled>'.$all_meta_entered.'</meta_requirements_fulfilled>
 <initial_dsid>'.$creation_info['dsid'].'</initial_dsid>
 <parent>'.$creation_info['parent_pid'].'</parent>
-</sidora>', 'SIDORA');
+</sidora>', 'SIDORA',NULL,NULL,'X');
     }
     sidora_object_creation_info($form_build_id,'added_sidora_ds',TRUE);
 
@@ -973,7 +973,7 @@ function sidora_islandora_datastream_modified(AbstractObject $object, AbstractDa
       sidora_update_datastream($object, '<sidora>
       <meta_requirements_fulfilled>'.$all_meta_entered.'</meta_requirements_fulfilled>
       <form>'.$form_name.'</form>
-      </sidora>', 'SIDORA');
+      </sidora>', 'SIDORA',NULL,NULL,'X');
     }
   }
   sidora_clear_tree_cache($object->id);
