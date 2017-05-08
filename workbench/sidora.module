@@ -3479,8 +3479,8 @@ function sidora_create_resource_get_upload_form_html($model, $form_name, $ontolo
     $to_return .= "<div id='create-resource-upload'>";
     $to_return .= sidora_get_plupload_html($elements, $upload_button_text);
     $to_return .= "<input class=\"form-submit\" id=\"Next\" value=\"Individual Metadata\" onclick=\"jQuery('#create-resource-upload').hide(); location.reload();\"></input>";
-    $to_return .= "<input class=\"form-submit\" id=\"applyBatch\" value=\"Apply Metadata\" onclick=\"jQuery('#create-resource-upload').hide(); if (window.location.href.indexOf('metabulk') == -1) {window.location.href += '//metabulk';}\"></input>";
-                $to_return .= "</div>";
+    if ($elements['#extensions'][0] != '*') $to_return .= "<input class=\"form-submit\" id=\"applyBatch\" value=\"Apply Metadata\" onclick=\"jQuery('#create-resource-upload').hide(); if (window.location.href.indexOf('metabulk') == -1) {window.location.href += '//metabulk';}\"></input>";
+    $to_return .= "</div>";
     if ($clear_file_list) {
       $_SESSION['file_uploads'][$user->uid] = array();
     }
