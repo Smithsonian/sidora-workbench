@@ -521,6 +521,7 @@ function sidora_project_space_transfer_form($form = array(), &$form_state, $pid 
         '#type' => 'textfield',
         '#value' => $to_user->name,
         '#attributes' => array('readonly' => 'readonly'),
+        '#attributes' => array('style' => 'background: #aaa'),
       );
     }
     $form['submit'] = array(
