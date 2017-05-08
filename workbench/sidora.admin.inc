@@ -561,7 +561,7 @@ tr.removed.odd {
     '#description' => t('Usually pids have locks to eliminate multiple users attempting to access it at one.  Checking this box turns off that feature.'),
     '#default_value' => variable_get('sidora_disable_locking_by_pid', ''),
   );
-	$form['batch_url'] = array(
+  $form['batch_url'] = array(
      'fieldset' => array(
       '#type' => 'fieldset',
       '#title' => 'Batch Ingest URL',
@@ -580,6 +580,21 @@ tr.removed.odd {
 	'#default_value' => variable_get('sidora_batch_status_url', ''),
 	'#description' => t('The location of endpoint for checking the status of a batch ingest. Valid entry looks like this: http://&lt;server&gt;:&lt;port&gt;/batch/newBatchResource/'),
      ),	
+    ),
+  );
+  $form['fuseki_url'] = array(
+     'fieldset' => array(
+      '#type' => 'fieldset',
+      '#title' => 'Fuseki URL',
+      '#description' => t(''),
+      '#collapsible' => TRUE,
+      '#collapsed' => TRUE,
+      'sidora_fuseki_url' => array(
+        '#type' => 'textfield',
+        '#title' => t('Fuseki url'),
+        '#default_value' => variable_get('sidora_fuseki_url', ''),
+        '#description' => t('The location of Fuseki endpoint. Valid entry looks like this: http://&lt;server&gt;:&lt;port&gt;/fuseki/dataset.html'),
+      ),	
     ),
   );
   $form['#attributes'] = array('OnSubmit' => 'formPreSubmit();');
