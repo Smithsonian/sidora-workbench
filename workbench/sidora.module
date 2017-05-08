@@ -3512,10 +3512,11 @@ function sidora_create_resource_get_upload_form_html($model, $form_name, $ontolo
   $file_extensions = array(
     'si:imageCModel' => array('jpg', 'png', 'gif', 'tiff', 'tif', 'jp2'),
     'si:generalImageCModel' => array('jpg', 'png', 'gif', 'tiff', 'tif', 'jp2'),
-    'si:datasetCModel' => array('csv', 'xml', 'xlsx', 'xls', 'dat', 'med', 'arg', 'slt'),
+    'si:datasetCModel' => array('csv', 'xlsx', 'xls'),
     'si:fieldbookCModel' => array('pdf'),
     'islandora:sp-audioCModel' => array('mp3','aiff','wav'),
     'islandora:sp_videoCModel' => array('ogg','mp4','mov','qt', 'm4a', 'm4v', 'avi', 'mkv'),
+    'si:genericCModel' => array('*'),
     '*' => array('*'),
   );
   $elements = NULL;
@@ -3541,8 +3542,8 @@ function sidora_create_resource_get_upload_form_html($model, $form_name, $ontolo
     $to_return .= "<div id='create-resource-upload'>";
     $to_return .= sidora_get_plupload_html($elements, $upload_button_text);
     $to_return .= "<input class=\"form-submit\" id=\"Next\" value=\"Individual Metadata\" onclick=\"jQuery('#create-resource-upload').hide(); location.reload();\"></input>";
-    $to_return .= "<input class=\"form-submit\" id=\"applyBatch\" value=\"Apply Metadata\" onclick=\"jQuery('#create-resource-upload').hide(); if (window.location.href.indexOf('metabulk') == -1) {window.location.href += '//metabulk';}\"></input>";
-                $to_return .= "</div>";
+    if ($elements['#extensions'][0] != '*') $to_return .= "<input class=\"form-submit\" id=\"applyBatch\" value=\"Apply Metadata\" onclick=\"jQuery('#create-resource-upload').hide(); if (window.location.href.indexOf('metabulk') == -1) {window.location.href += '//metabulk';}\"></input>";
+    $to_return .= "</div>";
     if ($clear_file_list) {
       $_SESSION['file_uploads'][$user->uid] = array();
     }
@@ -4913,13 +4914,14 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
       break;
     case 'resources':
       $resource_types = array(
-        'all' => array('si:imageCModel', 'si:generalImageCModel','si:fieldbookCModel','si:datasetCModel','islandora:sp-audioCModel','islandora:sp_videoCModel'),
+        'all' => array('si:imageCModel', 'si:generalImageCModel','si:fieldbookCModel','si:datasetCModel','islandora:sp-audioCModel','islandora:sp_videoCModel','si:genericCModel'),
         'images' => array('si:imageCModel', 'si:generalImageCModel'),
         'pdf' => array('si:fieldbookCModel'),
         'csv' => array('si:datasetCModel'),
         'audio' => array('islandora:sp-audioCModel'),
         'video' => array('islandora:sp_videoCModel'),
-        'text' => FALSE
+        'text' => FALSE,
+				'generic' => array('si:genericCModel')
       );
       if ($download == 'browser' && $formatted == 'dataTableServerSideProcessing') {
         $jsdt_title_and_type_search_val = filter_var($_GET['search']['value'], FILTER_SANITIZE_STRING);
@@ -6590,8 +6592,41 @@ function sidora_get_plupload_html($elements, $button_text = 'Browse'){
   if (navigator.userAgent.match(/(Firefox)/i) != null){
     //Firefox gets weird with the flash version between http and https, sometimes http doesnt work
     runtimesBrowserSpecific = "html5,html4";
-  }
-  window.uploader = new plupload.Uploader({
+  }';
+	if ($elements['#extensions'][0] == '*') {
+	  print '
+	    plupload.addFileFilter("excluded_extensions", function(filter, file, cb){
+ 	    var self = this;
+	    var permitted = true;
+            var mimeTypes = this.settings.filters.excluded_extensions[0];
+	    Object.keys(mimeTypes).forEach(function(key){
+	      var exts = mimeTypes[key].split(",");
+              if(exts.length === 1 && exts[0] === "-")
+                 permitted = true;
+              else
+              {
+                for(var i = 0; i < exts.length; i++) {
+                  var fileArray = file.name.split(".");
+                  var extension = fileArray[fileArray.length - 1];
+                  if(exts[i].toUpperCase() === extension.toUpperCase()) {
+                    self.trigger("Error", {
+                      code: plupload.GENERIC_ERROR,
+                      message: file.name + " must be ingested using " + key + " resource type",
+                      file: file
+                    });
+                    permitted = false;
+                    cb(false);
+                    return;
+                  }
+                }
+              }
+            });
+            if(permitted)
+              cb(true);
+          });';
+        }		
+	print '			
+	window.uploader = new plupload.Uploader({
     runtimes : runtimesBrowserSpecific, //No silverlight - gets bad if user does not allow it and it tries to use.
     browse_button : "pickfiles", // you can pass in id...
     container : document.getElementById("container"),'; // ... or DOM Element itself
@@ -6629,6 +6664,7 @@ function sidora_get_plupload_html($elements, $button_text = 'Browse'){
   print 'Moxie.xap",
     
     filters : {
+      excluded_extensions : [{"Basic Image" : "jpg,jpeg,jp2,tiff","PDF Text" : "pdf","Tabular Datasets" : "csv,xls,xlsx","Basic Audio" : "aiff,wav,mp3","Basic Video" : "ogg,mp4,mov,qt,m4a,m4v,avi,mkv"}],
       max_file_size : "1000mb",
       mime_types: [
         {title : "';
