@@ -42,7 +42,8 @@ jQuery().ready(function(){
     jQuery(".top-panel").append("<input value=\"Finish\" class='form-submit sidora-form-finish' style='float:right;'></input>");
     jQuery(".bottom-panel").append("<input value=\"Finish\" class='form-submit sidora-form-finish' style='float:right;'></input>");
   }
-  else {
+  else if (jQuery("#edit-gen-codebook").length = 0){
+    // for all other uploads other than the codebook choose/create page
     // Don't bother showing the unusable submitting buttons
     jQuery(".form-submit").hide();
     // Don't show the green + buttons to add list items
