@@ -787,49 +787,47 @@ function sidora_process_object_with_build_id($form_build_id) {
     // link to parent with Sidora nomenclature
     $is_concept = sidora_is_concept($object);
     $is_codebook = sidora_is_codebook($object);
-    if ($is_concept) {
-      // Create the Drupal node to go along with it
-      $info = array("label"=>$object->label,"concept_children"=>'',"resource_children"=>0);
-      $concept_node = sidora_create_concept_node($object->id, $info, TRUE, $owner_id);
+    if ($is_concept || $is_codebook) { 
       $parent_node = sidora_get_concept_node($parent_pid);
       $parent_node_id = $parent_node->nid;
-      $parent_group_info = og_get_entity_groups('node', $parent_node_id);
-      $parent_gids = array();
-      if (array_key_exists('node',$parent_group_info)) {
-        foreach($parent_group_info['node'] as $group_node_id){
-          $parent_gids[] = $group_node_id;
+      $parent_gids = sidora_get_group_nids_membership($parent_node_id);
+      $parent_groups = node_load_multiple($parent_gids);
+      if ($is_concept) {
+        // Create the Drupal node to go along with it
+        $info = array("label"=>$object->label,"concept_children"=>'',"resource_children"=>0);
+        $concept_node = sidora_create_concept_node($object->id, $info, TRUE, $owner_id);
+        foreach($parent_groups as $parent_group) {
+          og_group('node', $parent_group, array('entity_type' => 'node', 'entity' => $concept_node->nid));
+        }
+        // Update Drupal node of parent
+        sidora_update_concept_node_add_child($parent_node, $concept_node->nid);
+
+        
+        // Update Fedora parent
+        if (empty($creation_info['added_to_parent'])) {
+          $parent->relationships->add(FEDORA_RELS_EXT_URI, 'hasConcept', $object->id);
+        }
+        sidora_object_creation_info($form_build_id,'added_to_parent',TRUE);
+        // clear THEIR parents out since the number in parens is held there
+        $grandparents = sidora_get_parent_concepts($parent);
+        foreach ($grandparents as $grandparent_pid => $grandparent) {
+          sidora_clear_tree_cache($grandparent_pid);
         }
       }
-      $parent_groups = node_load_multiple($parent_gids);
-      foreach($parent_groups as $parent_group) {
-        og_group('node', $parent_group, array('entity_type' => 'node', 'entity' => $concept_node->nid));
+      elseif ($is_codebook) {
+        // add codebook to project space's main item
+        // find the project space's main item by getting the node of the parent and finding its organic groups
+        $pids = sidora_get_project_space_pids_from_og_groups($parent_groups, NULL, FALSE);
+        // then get the main pid for the organic group
+        $ps_object = sidora_obj($pids[0]);
+        if (empty($creation_info['added_to_parent'])) {
+          $ps_object->relationships->add(FEDORA_RELS_EXT_URI, 'managesCodebook', $object->id);
+        }
+        sidora_object_creation_info($form_build_id,'added_to_parent',TRUE);
+        // set the user's recent codebook to this new codebook
+        $edit['data']['recent_codebook_id'] = $object->id;
+        user_save($user,$edit);
       }
-      // Update Drupal node of parent
-      sidora_update_concept_node_add_child($parent_node, $concept_node->nid);
-
-      
-      // Update Fedora parent
-      if (empty($creation_info['added_to_parent'])) {
-        $parent->relationships->add(FEDORA_RELS_EXT_URI, 'hasConcept', $object->id);
-      }
-      sidora_object_creation_info($form_build_id,'added_to_parent',TRUE);
-      // clear THEIR parents out since the number in parens is held there
-      $grandparents = sidora_get_parent_concepts($parent);
-      foreach ($grandparents as $grandparent_pid => $grandparent) {
-        sidora_clear_tree_cache($grandparent_pid);
-      }
-    }
-    elseif ($is_codebook) {
-      // add codebook to user object (not the intended parent)
-      $user_projects_pid = sidora_get_user_object();
-      $user_projects = sidora_obj($user_projects_pid);
-      if (empty($creation_info['added_to_parent'])) {
-        $user_projects->relationships->add(FEDORA_RELS_EXT_URI, 'managesCodebook', $object->id);
-      }
-      sidora_object_creation_info($form_build_id,'added_to_parent',TRUE);
-      // set the user's recent codebook to this new codebook
-      $edit['data']['recent_codebook_id'] = $object->id;
-      user_save($user,$edit);
     }
     else {
       if (empty($creation_info['added_to_parent'])) {
@@ -5513,11 +5511,6 @@ function sidora_concept_resource_listing($pid, $resource_types, $limit, $offset,
         $results[$resindex]['original_metadata'] = $original_metadata;
       }
     }
-    /*
-    print "\n<pre>\n";
-    print_r($results);
-    print "\n</pre>\n";
-    */
     return $results;
   }
   return $to_return;

@@ -880,7 +880,6 @@ function sidora_update_concept_node_add_child($node, $child_node_id = NULL) {
 function sidora_update_concept_node($node, $info, $set_fedora_sync = FALSE) {
   watchdog('sidora', "Update:<pre>" . sidora_debug_string_backtrace()."</pre>info:".json_encode($info));
   $node_wrapper = entity_metadata_wrapper('node', $node);
-  var_dump($node);
   if (array_key_exists('label',$info)) {
     $node_wrapper->field_fedora_label->set($info['label']);
   }

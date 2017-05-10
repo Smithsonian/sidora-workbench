@@ -221,14 +221,32 @@ function sidora_get_owned_project_spaces($user_of_interest = NULL) {
 }
 
 /**
+ * Returns the concept pids for fedora objects that represent the project spaces for a set of permission groups nodes
+ */
+function sidora_get_project_space_pids_from_og_groups($group_nodes, $user, $only_return_groups_that_owner_can_change = TRUE) {
+  $pids = array();
+  $project_spaces = array();
+  foreach($group_nodes as $node){
+      $pid = NULL;
+      if (!empty($node->field_fedora_pid) && array_key_exists($node->language, $node->field_fedora_pid)) {
+        $pid = $node->field_fedora_pid[$node->language][0]['value'];
+      }
+      // Initially let's restrict this to people that are able to change permissions, may open it up later
+      if (!$only_return_groups_that_owner_can_change || sidora_allow($user, $pid, 'permission')) {
+         if (!in_array($pid, $pids) && !empty($pid)) {
+           $pids[] = $pid;
+         }
+      }
+  }
+  return $pids; 
+}
+/**
  * Returns the concept nodes that represent the project spaces for a set of permission groups nodes
  */
 function sidora_get_project_spaces_from_og_groups($group_nodes, $user, $only_return_groups_that_owner_can_change = TRUE) {
   $pids = array();
   $project_spaces = array();
   foreach($group_nodes as $node){
-      //print "BBB\n";
-      //var_dump($node);
       $pid = NULL;
       if (!empty($node->field_fedora_pid) && array_key_exists($node->language, $node->field_fedora_pid)) {
         $pid = $node->field_fedora_pid[$node->language][0]['value'];
