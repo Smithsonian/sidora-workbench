@@ -87,6 +87,14 @@ function exhibition_config_menu(){
     'description' => t('JSON Visibility data'),
     'type' => MENU_CALLBACK,
   );
+  $items['exhibition_config/json_visibility_new'] = array(
+    'title' => t('JSON data'),
+    'page callback' => 'exhibition_config_json_visibility_new',
+    'page arguments' => array(2),
+    'access callback' => TRUE, 
+    'description' => t('JSON Visibility data'),
+    'type' => MENU_CALLBACK,
+  );
   $items['exhibition_config/preview_warning'] = array(
     'title' => t('Visibility Settings Info'),
     'page callback' => 'exhibition_config_info',
@@ -2622,18 +2630,77 @@ function exhibition_config_save_visibility($pid, $visibility_obj_tree) {
 /*
  * Retrieves the visibility tree from the database or the default show nothing visibility
  */
-function exhibition_config_load_visibility($pid) {
+function exhibition_config_load_visibility_new($pid,$path_to_pid = NULL) {
   $result = db_query("Select ". //SELECT
 "visibility ". 
-"FROM {exhibition_config} where pid = :pid", array(':pid'=>$pid));
+"FROM {exhibition_config_visibility} where pid = :pid", array(':pid'=>$pid));
   $row = array();
   foreach ($result as $input){
     foreach($input as $name=>$value){
       if ($name == 'visibility'){
         $json_decoded_visibility = json_decode($value, TRUE);
-        if ($json_decoded_visibility !== NULL) return $json_decoded_visibility;
-        $unserialized_visibility = unserialize($value); 
-        return $unserialized_visibility;
+        if ($path_to_pid !== NULL) {
+				    if ($json_decoded_visibility !== NULL) {
+						  $decoded_visibility = $json_decoded_visibility;
+						}
+						else {	
+              $decoded_visibility = unserialize($value); 
+						}
+				  if ((isset($decoded_visibility['path'])) && ($path_to_pid == $decoded_visibility['path'])) { 
+            return $decoded_visibility;
+					}
+				}
+				else {
+				    if ($json_decoded_visibility !== NULL) return $json_decoded_visibility;
+            $unserialized_visibility = unserialize($value); 
+            return $unserialized_visibility;
+				}		
+      }
+    }
+  }
+  return array(
+    "pid" => $pid,
+    "type" => 'Concept',
+    "show_name" => FALSE,
+    "show_meta" => FALSE,
+  );
+}
+function exhibition_config_load_visibility_children($pid,$path_to_pid = NULL) {
+    $path_to_pid .= '_';
+		$ec_query = db_select('exhibition_config_visibility', 'ecv')
+      ->fields('ecv');
+    $ec_db_or = db_or();
+    $ec_db_or->condition('ecv.visibility', '%' . db_like('"path":"'.$path_to_pid.'"') . '%', 'LIKE'); //json_encoded
+    $ec_query->condition($ec_db_or);
+    $result = $ec_query
+      ->execute()
+      ->fetchAll();
+    foreach ($result as $exhibition_root_line){
+		 
+  $result = db_query("Select ". //SELECT
+"pid, visibility ". 
+"FROM {exhibition_config_visibility} where visibility like = :pid", array(':pid'=>$pid));
+  $row = array();
+  foreach ($result as $input){
+    foreach($input as $name=>$value){
+      if ($name == 'visibility'){
+        $json_decoded_visibility = json_decode($value, TRUE);
+        if ($path_to_pid !== NULL) {
+				    if ($json_decoded_visibility !== NULL) {
+						  $decoded_visibility = $json_decoded_visibility;
+						}
+						else {	
+              $decoded_visibility = unserialize($value); 
+						}
+				  if ((isset($decoded_visibility['path'])) && ($path_to_pid == $decoded_visibility['path'])) { 
+            return $decoded_visibility;
+					}
+				}
+				else {
+				    if ($json_decoded_visibility !== NULL) return $json_decoded_visibility;
+            $unserialized_visibility = unserialize($value); 
+            return $unserialized_visibility;
+				}		
       }
     }
   }
@@ -2645,137 +2712,57 @@ function exhibition_config_load_visibility($pid) {
   );
 }
 
+function exhibition_config_load_visibility($pid) {
+  $result = db_query("Select ". //SELECT
+"visibility ". 
+"FROM {exhibition_config} where pid = :pid", array(':pid'=>$pid));
+  $row = array();
+  foreach ($result as $input){
+    foreach($input as $name=>$value){
+      if ($name == 'visibility'){
+        $json_decoded_visibility = json_decode($value, TRUE);
+				    if ($json_decoded_visibility !== NULL) return $json_decoded_visibility;
+            $unserialized_visibility = unserialize($value); 
+            return $unserialized_visibility;
+      }
+    }
+  }
+  return array(
+    "pid" => $pid,
+    "type" => 'Concept',
+    "show_name" => FALSE,
+    "show_meta" => FALSE,
+  );
+}
 /*
  * Prints the JSON of the visibility tree for exhibition
  */
-function exhibition_config_json_visibility($pid) {
-  $pid = urldecode($pid);
-/*
-  $hard_coded = 
-array(
-  "pid" => "si:365717",
-  "label" => "randerson6",
-  "type" => "concept",
-  "show_meta" => TRUE,
-  "show_name" => TRUE,
-  "children" => array (array(
-    "pid" => "si:386769",
-    "label" => "Image 1",
-    "type" => "concept",
-    "show_meta" => TRUE,
-    "show_name" => TRUE,
-    "children" => array (array(
-      "pid" => "si:386976",
-      "type" => "concept",
-      "show_meta" => TRUE,
-      "show_name" => TRUE,
-      "children" => array (array(
-        "pid" => "si:389039",
-        "label" => "1400 Pachelbel - Canon in D Major",
-        "type" => "resource",
-        "show_meta" => FALSE,
-        "show_name" => TRUE,
-        "show_preview" => TRUE,
-        "allow_download" => TRUE,
-        "models" => array(
-          "islandora:sp-audioCModel"
-        )
-      ),array(
-        "pid" => "si:389041",
-        "type" => "resource",
-        "label" => "not shown",
-        "show_meta" => TRUE,
-        "show_name" => FALSE,
-        "show_preview" => TRUE,
-        "allow_download" => TRUE
-      ),array(
-        "pid" => "si:389043",
-        "label" => "not shown",
-        "type" => "resource",
-        "show_meta" => TRUE,
-        "show_name" => FALSE,
-        "show_preview" => TRUE,
-        "allow_download" => TRUE
-      ),array(
-        "pid" => "si:388548",
-        "label" => "Fake name for Book1.xls",
-        "type" => "resource",
-        "show_meta" => TRUE,
-        "show_name" => TRUE,
-        "show_preview" => FALSE,
-        "allow_download" => TRUE,
-        "models" => array(
-          "si:datasetCModel"
-        )
-      ),array(
-        "pid" => "si:389449",
-        "label" => "HAS A PROXY_MP3 Datastream",
-        "type" => "resource",
-        "show_meta" => TRUE,
-        "show_name" => TRUE,
-        "show_preview" => TRUE,
-        "allow_download" => FALSE,
-        "models" => array(
-          "islandora:sp-audioCModel"
-        )
-      ),array(
-        "pid" => "si:389037",
-        "label" => "Pachelbel - Canon in D Major JSON name",
-        "type" => "resource",
-        "show_meta" => TRUE,
-        "show_name" => TRUE,
-        "show_preview" => TRUE,
-        "allow_download" => FALSE,
-        "models" => array(
-          "islandora:sp-audioCModel"
-        )
-      ),array(
-        "pid" => "si:388546",
-        "label" => "Talent Skills and Capabilities.xslx JSON name",
-        "type" => "resource",
-        "show_meta" => TRUE,
-        "show_name" => TRUE,
-        "show_preview" => TRUE,
-        "allow_download" => TRUE,
-        "models" => array(
-          "si:datasetCModel"
-        )
-      ))
-    ))
-  ),array(
-    "pid" => "si:386002",
-    "label" => "Chrysanthemum.jpg JSON name",
-    "type" => "resource",
-    "show_meta" => TRUE,
-    "show_name" => TRUE,
-    "show_preview" => TRUE,
-    "allow_download" => TRUE,
-    "models" => array(
-      "si:generalImageCModel"
-    )
-  ),array(
-    "pid" => "si:12346",
-    "label" => "Incomplete folder, will hold more info later",
-    "type" => "concept",
-    "show_meta" => FALSE,
-    "show_name" => TRUE,
-    "children" => array (array(
-      "pid" => "si:12347",
-      "label" => "CSV filled with data",
-      "type" => "resource",
-      "show_meta" => TRUE,
-      "show_name" => TRUE,
-      "show_preview" => TRUE,
-      "allow_download" => TRUE
-    ))
-  ))
-);
-  exhibition_config_save_visibility($pid,$hard_coded);
-*/
-  $visibility_obj = exhibition_config_load_visibility($pid);
+function exhibition_config_json_visibility_new($path_to_pid) {
+  $path_to_pid = urldecode($path_to_pid);
+	$path_to_pid_array = explode('_',$path_to_pid);
+ 	$pid = array_pop($path_to_pid_array);
+
+  $visibility_obj = exhibition_config_load_visibility_new($pid,$path_to_pid);
   //Anything with show_name as false we do not want the outside world knowing about
   return drupal_json_output(exhibition_config_filter_visibility_show_name($visibility_obj));
 }
+function exhibition_config_json_visibility($pid) {
+  $pid = urldecode($pid);
+   $visibility_obj = exhibition_config_load_visibility($pid);
+  //Anything with show_name as false we do not want the outside world knowing about
+  return drupal_json_output(exhibition_config_filter_visibility_show_name($visibility_obj));
+}
+function exhibition_config_json_visibility_children($path_to_pid) {
+  $path_to_pid = urldecode($path_to_pid);
+	$path_to_pid_array = explode('_',$path_to_pid);
+ 	$pid = array_pop($path_to_pid_array);
+
+  $visibility_obj = exhibition_config_load_visibility_new($pid,$path_to_pid);
+	$visibility_obj['children'] = exhibition_config_load_visibility_children($pid,$path_to_pid);
+  //Anything with show_name as false we do not want the outside world knowing about
+  return drupal_json_output(exhibition_config_filter_visibility_show_name($visibility_obj));
+}
+
 /*
  * Implements hook_islandora_datastream_modified().
  *
