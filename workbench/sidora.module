@@ -4650,8 +4650,10 @@ function sidora_duplicate_tree_and_resources($pid_of_item_to_duplicate, $project
   }
   else {
     // Something that does not have a node, therefore no tree
+    // If it has codebooks, those will be taken care of in the 
+    // assocation process (this function or sidora_copy) to its new parent
     $new_obj = sidora_exact_duplicate($pid_of_item_to_duplicate);
-    return $new_obj->id;   
+    return $new_obj->id;
   }
   if (!empty($pids)) {
   // For each item in this list
@@ -4675,7 +4677,29 @@ function sidora_duplicate_tree_and_resources($pid_of_item_to_duplicate, $project
           // Store the association between the old and new
           $processed_duplicates[$original_resource_pid] = $new_res->id;
           // Check the resource's codebook, and duplicate that as well
-          // Put the new codebook on the project space, if specified
+          $codebook_pids = sidora_get_codebook_pids($original_resource_pid);
+          foreach($codebook_pids as $codebook_pid){
+            // If the codebook's owner is already the project space that it's being moved into
+            // then there's no need to duplicate it
+            $codebook_manager_pid = sidora_get_codebook_manager_pid($codebook_pid);
+            // Below line includes the idea that if they are both empty then no need to duplicate
+            if ($project_space_pid != $codebook_manager_pid){
+              // If it's already been duplicated, then do not reduplicate
+              $duplicated_pids = array_keys($processed_duplicates);
+              if (!in_array($codebook_pid, $duplicated_pids)) {
+                // Put the new codebook on the project space, if specified
+                $new_codebook = sidora_exact_duplicate($codebook_pid);
+                // Manager of the new codebook is the project space the tabular data got copied into
+                if (!empty($project_space_pid)) {
+                  $ps_obj = sidora_obj($project_space_pid);
+                  $ps_obj->relationships->add(FEDORA_RELS_EXT_URI, 'managesCodebook', $new_codebook->id);
+                }
+                // Add this to the list of duplicated items, which will allow checking
+                // to not reduplicate and also perform the reassociation of relationships
+                $processed_duplicates[$codebook_pid] = $new_codebook->id;
+              }
+            }
+          }
         }
       }
     }
@@ -9797,6 +9821,35 @@ function sidora_generate_child_resource_pid_only_sparql_query($pid) {
  $query = "select ?object ?title from <#ri>
          where {
           <info:fedora/{$pid}> <info:fedora/fedora-system:def/relations-external#hasResource> ?object .
+          ?object <info:fedora/fedora-system:def/model#state> <info:fedora/fedora-system:def/model#Active> .
+          ?object <info:fedora/fedora-system:def/model#label> ?title
+         }";
+  return $query;
+}
+
+/**
+ * Return the codebook manager's pid or NULL. Does not guarantee the manager object exists
+ */
+function sidora_get_codebook_manager_pid($pid) {
+  $to_return = array();
+  $tuque = islandora_get_tuque_connection();
+  $concept_pid = $pid;
+  if ($tuque) {
+    $query = sidora_generate_codebook_manager_sparql_query($concept_pid, array());
+    $ri = $tuque->repository->ri;
+    $results = $ri->sparqlQuery($query);
+    $resources_array = array();
+    foreach ($results as $resindex=>$result) {
+      return $result['object']['value'];
+    }
+  }
+  return NULL;
+}
+
+function sidora_generate_codebook_manager_sparql_query($pid) {
+ $query = "select ?object ?title from <#ri>
+         where {
+          ?object <info:fedora/fedora-system:def/relations-external#hasResource> <info:fedora/{$pid}> .
           ?object <info:fedora/fedora-system:def/model#state> <info:fedora/fedora-system:def/model#Active> .
           ?object <info:fedora/fedora-system:def/model#label> ?title
          }";
