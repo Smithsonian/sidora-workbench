@@ -194,6 +194,51 @@ function sidora_get_group_nids_membership($nid) {
 }
 
 /**
+ * Returns the PIDs for the project spaces that this pid is in
+ */
+function sidora_get_project_space_pids_for_pid($pid){
+  $to_return = array();
+  $gids = sidora_get_project_space_nodes_for_pid($pid);
+  foreach($gids as $gid){
+    $groups = node_load_multiple($gids);
+    $pids = sidora_get_project_space_pids_from_og_groups($groups, NULL, FALSE);
+    $to_return += $pids;
+  }
+  $to_return = array_unique($to_return);
+  return $to_return;
+}
+/**
+ * Returns the group node ids for the project spaces that this pid is in
+ */
+function sidora_get_project_space_nodes_for_pid($pid){
+  module_load_include('inc', 'sidora', 'includes/utils');
+  if (!is_string($pid)){
+    debug_print_backtrace();
+  }
+  $nid = sidora_quick_pid_to_node_id($pid);
+  $gids = array();
+  if (empty($nid)){
+    // We'll assume this is a resource now since there's not a node for this pid
+    $parent_pid_info = sidora_get_parent_concepts_by_pid($pid);
+    foreach($parent_pid_info as $curr_parent_info) {
+      $parent_pid = $curr_parent_info['pid'];
+      $parent_nid = sidora_quick_pid_to_node_id($parent_pid);
+      // We could call this function again to get the project space pids but I
+      // don't want to worry about garbage data putting us in an infinite loop and
+      // unneeded complexity to the base cases. So ONLY check the listed parents
+      // and if they don't have the information return nothing.
+      $some_gids = sidora_get_group_nids_membership($parent_nid);
+      $gids += $some_gids; 
+    }
+  }
+  else {
+    $gids = sidora_get_group_nids_membership($nid);
+  }
+  $gids = array_unique($gids);
+  return $gids;
+}
+
+/**
  * Assumes owners of the project spaces should also own the organic groups
  * Uses logged in user if none specified
  * Special 'all' for load all users data
@@ -301,6 +346,7 @@ function sidora_get_groups_for_project_space($pid, $administrative_bookkeeping =
  */
 function sidora_project_spaces_tree($root_label = 'Project Spaces where you can create:', $include_href = FALSE, $permissions = array("create"), $start_open = TRUE, $num_levels = 3){
   $ignore_pid = filter_input(INPUT_GET, 'ignore_pid', FILTER_SANITIZE_STRING);
+  $always_ignore_pids = array('si:root','si:user-projects');
   global $user;
   $nodes = sidora_get_project_spaces_by_member();
   $to_return = '';
@@ -313,7 +359,7 @@ function sidora_project_spaces_tree($root_label = 'Project Spaces where you can 
   $to_return .= $root_label;
   foreach($nodes as $node) {
     $pid = $node->field_fedora_pid[$node->language][0]["safe_value"];
-    if ($ignore_pid != $pid) {
+    if ($ignore_pid != $pid || in_array($pid, $always_ignore_pids)) {
       $continue_output = FALSE;
       if (empty($permissions)) {
         $continue_output = TRUE;
@@ -492,8 +538,65 @@ function sidora_project_space_creation_form_submit($form, &$form_state) {
     drupal_set_message("New Project Space Creation Failed", "warning");
   }
 }
-
-
+/**
+ * Removes a link to codebooks if the resource was unassociated from the project space
+ */
+function sidora_remove_old_codebook_associations_after_unassociating_resource_from_project_space($resource_pid){
+  // Find out if it has codebooks, if not, do nothing
+  $codebook_pids = sidora_get_codebook_pids($resource_pid);
+  if (!empty($codebook_pids)){
+    // Find out the project spaces of the resource
+    $resource_ps_pids = sidora_get_project_space_pids_for_pid($resource_pid);
+    // For each codebook
+    foreach($codebook_pids as $codebook_pid){
+      // Find out the project space it's owned by
+      $curr_codebook_ps_pids = sidora_get_project_space_pids_for_pid($codebook_pid);
+      // Simplifying assumption that this codebook is managed by a single project space
+      $curr_codebook_ps_pid = array_pop($curr_codebook_ps_pids);
+      // If the current codebook is not controlled by a project space, do not remove the link
+      // If this resource is in the codebook's project space then do not remove the link
+      if (!empty($curr_codebook_ps_pid) && !in_array($curr_codebook_ps_pid, $resource_ps_pids)){
+        $object = sidora_obj($resource_pid);
+        $object->relationships->remove(FEDORA_RELS_EXT_URI, 'hasCodebook', $codebook_pid);
+      }
+    }
+  }
+}
+/**
+ * Ensures that linking a resource to a different project space will have a codebook in the new project space
+ */
+function sidora_maintain_codebooks_when_linking_resource_to_new_project_space($resource_pid, $destination_pid){
+  $new_ps_pids = sidora_get_project_space_pids_for_pid($destination_pid);
+  if (!empty($new_ps_pids)){
+    // Simplifying assumption that the place we are copying it to has a single project space
+    // if above line not true then change "if (!empty" line to "foreach($new_ps_pids as $new_ps_pid){"
+    $new_ps_pid = $new_ps_pids[0];
+    $codebook_pids = sidora_get_codebook_pids($resource_pid);
+    if (!empty($codebook_pids)){
+      foreach($codebook_pids as $codebook_pid){
+        // if the same project space then no need to do anything
+        $curr_codebook_ps_pids = sidora_get_project_space_pids_for_pid($codebook_pid);
+        // Simplifying assumption that this codebook is managed by a single project space
+        $curr_codebook_ps_pid = array_pop($curr_codebook_ps_pids);
+        if ($curr_codebook_ps_pid != $new_ps_pid) {
+          // Do not remove the new object's refrences to the old codebook (done by unassociate)
+          // Create a new set of codebooks and add in references on the new object
+          $new_codebook = sidora_exact_duplicate($codebook_pid);
+          // Manager of the new codebook is the project space the tabular data got copied into
+          $ps_obj = sidora_obj($new_ps_pid);
+          $ps_obj->relationships->add(FEDORA_RELS_EXT_URI, 'managesCodebook', $new_codebook->id);
+          // Add the relationship of the duplicated codebook to the copied ("linked") object
+          // So this means this object will point to DOUBLE the original number of codebooks if
+          // the target project space doesn't already own the codebooks. Copying ("linking")
+          // back and forth will continue duplicating codebooks on each link.
+          // Use unassociate to remove unneeded linkages before copying ("linking") back and forth
+          $object = sidora_obj($resource_pid);
+          $object->relationships->add(FEDORA_RELS_EXT_URI, 'hasCodebook', $new_codebook->id);
+        }
+      }
+    }
+  }
+}
 function sidora_project_space_transfer_form($form = array(), &$form_state, $pid = NULL, $to_username = NULL) {
   drupal_add_css(drupal_get_path('module','sidora').'/css/workbench_basic_screen.css',array('weight' => '1000000', 'group' => CSS_THEME));
   global $user;

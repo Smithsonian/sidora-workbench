@@ -2529,6 +2529,12 @@ function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $ex
     return t("You must be an administrator or have an administrator set sidora_allow_all_to_debug in order to access this information");
   }
   if (!sidora_is_admin()) print t("Remember that nonadmins will NOT see output from dsm!");
+  if ($one == 'psp') {
+     module_load_include('inc', 'sidora', 'includes/project_spaces');
+     $results = sidora_get_project_space_pids_for_pid($two);
+     var_dump($results);
+     return 'Done';
+  }
   if ($one == 'convert') {
      $results = _sidora_get_child_results_cache($two);
      print "<pre>";
@@ -6329,6 +6335,23 @@ function sidora_move($move_from_id, $copy_to_id, $pid, $show_output = TRUE) {
 
 /**
  * Return the codebook pids that have been associated with this item (hasCodebook)
+ * DOES NOT CHECK IF THE OBJECTS EXIST FOR THE PIDS
+ * Should only exist on tabular data objects
+ */
+function sidora_get_codebook_pids($pid) {
+  $object = sidora_obj($pid);
+  $to_return = array();
+  if (!empty($object)) {
+    $codebooks = $object->relationships->get(FEDORA_RELS_EXT_URI, 'hasCodebook');
+    foreach ($codebooks as $codebook_info) {
+      $to_return[] = ($codebook_info['object']['value']);
+    }
+  }
+  return $to_return;
+}
+
+/**
+ * Return the codebook objects that have been associated with this item (hasCodebook)
  * Should only exist on tabular data objects
  */
 function sidora_get_codebooks($pid) {
@@ -6436,6 +6459,8 @@ function sidora_unassociate($remove_from_pid, $pid_to_remove, $show_output = TRU
     $parent_pid = $remove_from_pid;
     $parent_node = sidora_get_concept_node($parent_pid);
     sidora_update_concept_node_remove_child($parent_node);
+    module_load_include('inc', 'sidora', 'includes/project_spaces');
+    sidora_remove_old_codebook_associations_after_unassociating_resource_from_project_space($pid_to_remove);
   }
   sidora_clear_tree_cache($remove_from_pid);
   sidora_release_lock($remove_from_pid);
@@ -6443,7 +6468,7 @@ function sidora_unassociate($remove_from_pid, $pid_to_remove, $show_output = TRU
   $to_output['description'] = t("Object unassociated");
   $to_output['code'] = "una2";
   module_load_include('inc', 'sidora', 'includes/project_spaces');
-  sidora_remove_from_incorrect_project_spaces($pid);
+  sidora_remove_from_incorrect_project_spaces($pid_to_remove);
   if ($show_output) {
     print json_encode($to_output);
     drupal_exit();
@@ -6593,6 +6618,7 @@ function sidora_copy($copy_to_id, $pid, $show_output = TRUE) {
   module_load_include('inc', 'sidora', 'includes/utils');
   // determine if this is a resource or a concept
   $to_output = array();
+  $object = NULL;
   try{
     $copy_to = sidora_obj($copy_to_id);
     $object = sidora_obj($pid);
@@ -6665,6 +6691,12 @@ function sidora_copy($copy_to_id, $pid, $show_output = TRUE) {
     $parent_pid = $copy_to_id;
     $parent_node = sidora_get_concept_node($parent_pid);
     sidora_update_concept_node_add_child($parent_node, $child_node->nid);
+  }
+  // If it's a tabular data, copy the codebook to the new project space
+  // tabular data is a resource, don't bother unless we know its a resource
+  if (!$is_concept && !$is_codebook) {
+    module_load_include('inc', 'sidora', 'includes/project_spaces');
+    sidora_maintain_codebooks_when_linking_resource_to_new_project_space($pid, $copy_to_id);
   }
   sidora_clear_tree_cache($copy_to_id);
   if ($show_output) {
