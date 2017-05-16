@@ -2942,6 +2942,7 @@ SELECT ?pid ?mod ?label ?created FROM <#ri>
   }
   if ($one == 'lock') {
     $to_return ='';
+    dsm(time());
     if ($two == 'two') {
       $to_return .= 'Use with /_pid_/_user_/obtain or /_pid_/_user_/clear.  ';
       $to_return .= 'Use with /_pid_/ to see current lock on pid';
