@@ -95,6 +95,14 @@ function exhibition_config_menu(){
     'description' => t('JSON Visibility data'),
     'type' => MENU_CALLBACK,
   );
+  $items['exhibition_config/json_visibility_children'] = array(
+    'title' => t('JSON data'),
+    'page callback' => 'exhibition_config_json_visibility_children',
+    'page arguments' => array(2),
+    'access callback' => TRUE, 
+    'description' => t('JSON Visibility data'),
+    'type' => MENU_CALLBACK,
+  );
   $items['exhibition_config/preview_warning'] = array(
     'title' => t('Visibility Settings Info'),
     'page callback' => 'exhibition_config_info',
@@ -2646,8 +2654,13 @@ function exhibition_config_load_visibility_new($pid,$path_to_pid = NULL) {
 						else {	
               $decoded_visibility = unserialize($value); 
 						}
-				  if ((isset($decoded_visibility['path'])) && ($path_to_pid == $decoded_visibility['path'])) { 
-            return $decoded_visibility;
+				  if ((isset($decoded_visibility['path'])) && (!empty($decoded_visibility['path']))) {
+					  if ($path_to_pid == $decoded_visibility['path']) { 
+              return $decoded_visibility;
+						}
+					}
+					else {
+						return $decoded_visibility;	
 					}
 				}
 				else {
@@ -2665,51 +2678,21 @@ function exhibition_config_load_visibility_new($pid,$path_to_pid = NULL) {
     "show_meta" => FALSE,
   );
 }
-function exhibition_config_load_visibility_children($pid,$path_to_pid = NULL) {
-    $path_to_pid .= '_';
-		$ec_query = db_select('exhibition_config_visibility', 'ecv')
-      ->fields('ecv');
-    $ec_db_or = db_or();
-    $ec_db_or->condition('ecv.visibility', '%' . db_like('"path":"'.$path_to_pid.'"') . '%', 'LIKE'); //json_encoded
-    $ec_query->condition($ec_db_or);
-    $result = $ec_query
-      ->execute()
-      ->fetchAll();
-    foreach ($result as $exhibition_root_line){
-		 
-  $result = db_query("Select ". //SELECT
-"pid, visibility ". 
-"FROM {exhibition_config_visibility} where visibility like = :pid", array(':pid'=>$pid));
-  $row = array();
-  foreach ($result as $input){
-    foreach($input as $name=>$value){
-      if ($name == 'visibility'){
-        $json_decoded_visibility = json_decode($value, TRUE);
-        if ($path_to_pid !== NULL) {
-				    if ($json_decoded_visibility !== NULL) {
-						  $decoded_visibility = $json_decoded_visibility;
-						}
-						else {	
-              $decoded_visibility = unserialize($value); 
-						}
-				  if ((isset($decoded_visibility['path'])) && ($path_to_pid == $decoded_visibility['path'])) { 
-            return $decoded_visibility;
-					}
-				}
-				else {
-				    if ($json_decoded_visibility !== NULL) return $json_decoded_visibility;
-            $unserialized_visibility = unserialize($value); 
-            return $unserialized_visibility;
-				}		
-      }
-    }
-  }
-  return array(
-    "pid" => $pid,
-    "type" => 'Concept',
-    "show_name" => FALSE,
-    "show_meta" => FALSE,
-  );
+
+function exhibition_config_load_visibility_children($path_to_pid) {
+	$result = db_query('Select * from {exhibition_config_visibility} where path = :path', array(':path' => $path_to_pid));
+  $children = array();
+	while ($exhibition_root_line = $result->fetchAssoc()) {
+		$json_decoded_visibility = json_decode($exhibition_root_line['visibility'],true);
+    if ($json_decoded_visibility !== NULL) {
+			$decoded_visibility = $json_decoded_visibility;
+		}
+		else {	
+      $decoded_visibility = unserialize($exhibition_root_line['visibility']); 
+		}	
+		array_push($children,$decoded_visibility);
+		}
+		return $children;
 }
 
 function exhibition_config_load_visibility($pid) {
@@ -2741,7 +2724,7 @@ function exhibition_config_json_visibility_new($path_to_pid) {
   $path_to_pid = urldecode($path_to_pid);
 	$path_to_pid_array = explode('_',$path_to_pid);
  	$pid = array_pop($path_to_pid_array);
-
+  $path_to_pid = implode('_',$path_to_pid_array);
   $visibility_obj = exhibition_config_load_visibility_new($pid,$path_to_pid);
   //Anything with show_name as false we do not want the outside world knowing about
   return drupal_json_output(exhibition_config_filter_visibility_show_name($visibility_obj));
@@ -2752,13 +2735,16 @@ function exhibition_config_json_visibility($pid) {
   //Anything with show_name as false we do not want the outside world knowing about
   return drupal_json_output(exhibition_config_filter_visibility_show_name($visibility_obj));
 }
+
 function exhibition_config_json_visibility_children($path_to_pid) {
   $path_to_pid = urldecode($path_to_pid);
 	$path_to_pid_array = explode('_',$path_to_pid);
  	$pid = array_pop($path_to_pid_array);
-
+  $path_to_pid = implode('_',$path_to_pid_array);
   $visibility_obj = exhibition_config_load_visibility_new($pid,$path_to_pid);
-	$visibility_obj['children'] = exhibition_config_load_visibility_children($pid,$path_to_pid);
+	array_push($path_to_pid_array,$pid);
+	$path_to_pid = implode('_',$path_to_pid_array);
+	$visibility_obj['children'] = exhibition_config_load_visibility_children($path_to_pid);
   //Anything with show_name as false we do not want the outside world knowing about
   return drupal_json_output(exhibition_config_filter_visibility_show_name($visibility_obj));
 }

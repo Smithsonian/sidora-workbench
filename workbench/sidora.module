@@ -3120,8 +3120,300 @@ if ($one == 'deletexsl') {
     }
   }
  }
+ /*
+ if ($one == 'visibility_testing') {
+   module_load_include('inc', 'sidora', 'includes/utils');
+  $get_objects_query = "select ?object ?title from <#ri> where {
+  ?object <info:fedora/fedora-system:def/model#state> <info:fedora/fedora-system:def/model#Active> .
+  ?object <info:fedora/fedora-system:def/model#label> ?title
+  FILTER regex(?title,'^gg','i')
+  }";
+    $tuque = islandora_get_tuque_connection();
+    if ($tuque) {
+      $ri = $tuque->repository->ri;
+      $results = $ri->sparqlQuery($get_objects_query);
+				$copy_to_pid = "si-user:124";
+    $copy_to = sidora_obj($copy_to_id);
+    foreach ($results as $resindex=>$result) {
+      $tobj = sidora_obj($result['object']['value']);
+      if (!empty($tobj)) {
+			  $to_move_pid = $result['object']['value'];
+    echo $to_move_pid . " - Parents:";
+  $parents_query = "SELECT ?pid FROM <#ri> 
+	WHERE {
+         ?pid <info:fedora/fedora-system:def/relations-external#hasConcept> <info:fedora/" . $to_move_pid . "> .
+         ?pid <info:fedora/fedora-system:def/model#state> <info:fedora/fedora-system:def/model#Active> .
+          FILTER(!sameTerm(?model, <info:fedora/fedora-system:FedoraObject-3.0>) &&
+                 !sameTerm(?model, <info:fedora/si:conceptCModel>))
+				}";
+  $results = $tuque->repository->ri->query($parents_query, 'sparql');
+  $parent_pid = array();
+	foreach ($results as $result) {
+    $p_pid = $result['pid']['value'];
+		$parent_pid[$p_pid]['pid'] = $p_pid;
+	}	
+    $existing_rels = $copy_to->relationships->get(FEDORA_RELS_EXT_URI,'hasConcept',$to_move_pid);
+    var_dump($parent_pid);
+		if (sizeof($existing_rels) > 0) {
+      print("Object already exists on target");
+    }
+    else {
+      //$copy_to->relationships->add(FEDORA_RELS_EXT_URI, 'hasConcept', $move_to_pid);
+    }
+  $parent = sidora_obj($remove_from_pid);
+  if (empty($parent) || empty($to_remove)) {
+    sidora_release_lock($remove_from_pid);
+    $to_output['error'] = TRUE;
+    $to_output['description'] = t("Object not found in the repository");
+    $to_output['code'] = "una";
+    if ($show_output) {
+      print json_encode($to_output);
+      drupal_exit();
+    }
+    else {
+      return $to_output;
+    }
+  }
+  $is_concept = sidora_is_concept($to_remove);
+  $is_codebook = sidora_is_codebook($to_remove);
+  if ($is_concept) {
+    $parent->relationships->remove(FEDORA_RELS_EXT_URI, 'hasConcept', $pid_to_remove);
+  }
+  elseif ($is_codebook) {
+    $parent->relationships->remove(FEDORA_RELS_EXT_URI, 'hasCodebook', $pid_to_remove);
+  }
+  else {
+    $parent->relationships->remove(FEDORA_RELS_EXT_URI, 'hasResource', $pid_to_remove);
+  }
+
+}
+}
+}
+ }*/ 
+ if ($one == 'get_json_visibility_new') {
+   $path_to_pid = $two;
+	$path_to_pid_array = explode('_',$path_to_pid);
+ 	$pid = array_pop($path_to_pid_array);
+  $path_to_pid = implode('_',$path_to_pid_array);
+  echo $pid;
+	echo "path" . $path_to_pid;
+	$visibility_obj = exhibition_config_load_visibility_new($pid,$path_to_pid);
+	$path_to_pid_array[] = $pid;
+	$path_to_pid = implode('_',$path_to_pid_array);
+	$visibility_obj['children'] = exhibition_config_load_visibility_children($path_to_pid);
+	print_r($visibility_obj);
+	print_r(drupal_json_output(exhibition_config_filter_visibility_show_name($visibility_obj)));
+}
+   if ($one == 'get_exhibition_children') {
+	  $path_to_pid = $two;
+		echo $path_to_pid;
+		$result = db_query('Select * from {exhibition_config_visibility} where path = :path', array(':path' => $path_to_pid));
+    $children = array();
+		while ($exhibition_root_line = $result->fetchAssoc()) {
+     //print_r($exhibition_root_line['visibility']);
+		  $json_decoded_visibility = json_decode($exhibition_root_line['visibility'],true);
+     if ($json_decoded_visibility !== NULL) {
+				$decoded_visibility = $json_decoded_visibility;
+			}
+			else {	
+        $decoded_visibility = unserialize($exhibition_root_line['visibility']); 
+			}	
+			array_push($children,$decoded_visibility);
+		}
+		print_r(json_encode($children));
+		} 
+
+
+ if ($one == 'test_local') {
+$pid = $two;
+  $result = db_query("Select ". //SELECT
+"visibility ". 
+"FROM {exhibition_config} where pid = :pid", array(':pid'=>$pid));
+  $row = array();
+  foreach ($result as $input){
+    foreach($input as $name=>$value){
+      if ($name == 'visibility'){
+		        $json_decoded_visibility = json_decode($value, TRUE);
+        if ($json_decoded_visibility !== NULL) {
+				  $unserialized_visibility = $json_decoded_visibility;
+        }else{
+				  $unserialized_visibility = unserialize($value); 
+				}	
+				$unserialized_visibility = array($unserialized_visibility);
+				echo "after db read";
+				var_dump($unserialized_visibility);
+				  $visibility_settings = array(
+  'show_name' => 'Show Name',
+  'show_meta' => 'Show Meta',
+  'show_preview' => 'Show Preview',
+  'allow_download' => 'Show Download',
+  'show_degraded' => 'Show Degraded',
+  'future_children_show_name' => 'Show Name',
+  'future_children_show_meta' => 'Show Meta',
+  'future_children_show_preview' => 'Show Preview',
+  'future_children_allow_download' => 'Show Download',
+  'future_children_show_degraded' => 'Show Degraded');
+  $flat_visibility = array();
+	sidora_flatten_tree($unserialized_visibility,$flat_visibility,$visibility_settings,$pid);
+	echo "flattened : ";
+	print_r($flat_visibility);
+	  $fields = 
+      array(
+        'pid',
+				'path', 
+        'visibility', 
+      );
+    $insert_query = db_insert('exhibition_config_visibility')->fields($fields);
+	foreach ($flat_visibility as $key => $value) {
+		echo "Key : " . $value['pid'];
+		$key = preg_replace('/[\/]/', '_', $key);
+		$path_array = explode('_',$key);
+		array_pop($path_array);
+		$key = implode('_',$path_array);
+    $insert_query->values( 
+      array(
+        'pid' => $value['pid'],
+				'path' => $key,
+        'visibility' => json_encode($value),
+      )
+    );
+	}
+	    $new_entry = $insert_query->execute();
+}
+}
+}
+}
+ if ($one == 'insert_serialized') {
+   $serialized_visibility = file_get_contents('public://' . 'test.txt');
+	 //var_dump($serialized_visibility);
+	 $json_decoded_visibility = json_decode($serialized_visibility, TRUE);
+        if ($json_decoded_visibility !== NULL) {
+				  $unserialized_visibility = $json_decoded_visibility;
+        }else{
+				  $unserialized_visibility = unserialize($serialized_visibility); 
+				}	
+				$unserialized_visibility = array($unserialized_visibility);
+				$visibility_array = $unserialized_visibility[0]['si:2773778_si:2773778'];
+				print_r($visibility_array);
+				$visibility_string = json_encode($visibility_array);
+	 $fields = 
+      array(
+        'pid', 
+        'visibility', 
+      );
+    $insert_query = db_insert('exhibition_config_copy')->fields($fields);
+    $insert_query->values( 
+      array(
+        'pid' => 'si:2773778',
+        'visibility' => $visibility_string,
+      )
+    );
+    $new_entry = $insert_query->execute();
+		echo "after inserting in exhibition_config_copy";
+$pid = 'si:2773778';
+  $result = db_query("Select ". //SELECT
+"visibility ". 
+"FROM {exhibition_config_copy} where pid = :pid", array(':pid'=>$pid));
+  $row = array();
+  foreach ($result as $input){
+    foreach($input as $name=>$value){
+      if ($name == 'visibility'){
+		        $json_decoded_visibility = json_decode($value, TRUE);
+        if ($json_decoded_visibility !== NULL) {
+				  $unserialized_visibility = $json_decoded_visibility;
+        }else{
+				  $unserialized_visibility = unserialize($value); 
+				}	
+				$unserialized_visibility = array($unserialized_visibility);
+				echo "after db read";
+				//print_r($unserialized_visibility);
+				/*$visibility_array = $unserialized_visibility[0]['si:2773778_si:2773778'];
+				print_r($unserialized_visibility[0]['si:2773778_si:2773778']);
+				$visibility_string = json_encode($visibility_array);
+				print_r($visibility_string);
+				$query = db_update('exhibition_config')
+      ->fields(array(
+        'visibility' => $visibility_string,
+      ))
+      ->condition('pid', $pid, '=');
+    $num_updated = $query->execute();*/
+				  $visibility_settings = array(
+  'show_name' => 'Show Name',
+  'show_meta' => 'Show Meta',
+  'show_preview' => 'Show Preview',
+  'allow_download' => 'Show Download',
+  'show_degraded' => 'Show Degraded',
+  'future_children_show_name' => 'Show Name',
+  'future_children_show_meta' => 'Show Meta',
+  'future_children_show_preview' => 'Show Preview',
+  'future_children_allow_download' => 'Show Download',
+  'future_children_show_degraded' => 'Show Degraded');
+  $flat_visibility = array();
+	sidora_flatten_tree($unserialized_visibility,$flat_visibility,$visibility_settings,$pid);
+	echo "flattened : ";
+	//print_r($flat_visibility);
+	  $fields = 
+      array(
+        'pid', 
+        'visibility', 
+      );
+    $insert_query = db_insert('exhibition_config_visibility')->fields($fields);
+	foreach ($flat_visibility as $key => $value) {
+		echo "Key : " . $value['pid'];
+		$key = preg_replace('/[\/]/', '-', $key);
+		$value['path'] = $key;
+    $insert_query->values( 
+      array(
+        'pid' => $value['pid'],
+        'visibility' => json_encode($value),
+      )
+    );
+	}
+	    $new_entry = $insert_query->execute();
+
+  }
+	}
+	}
+  }
 	//This ends the testing function and should also indicate the end of liberal use of the dsm function
 }
+
+function sidora_flatten_tree($branch, &$rows,$visibility_settings,$path) {
+  //var_dump($branch);
+	if (isset($branch) && sizeof($branch) && !empty($branch)) {
+    $resource_visibility_settings = array('show_name','show_meta','show_preview','allow_download','show_degraded');
+    $concept_visibility_settings = array('show_name','show_meta','future_children_show_name','future_children_show_meta','future_children_show_preview','future_children_allow_download','future_children_show_degraded');
+    foreach ($branch as $child_array) {
+      if (sizeof($child_array)) {
+        $tree_depth = substr_count($path,'/');
+        if ($path == '') {
+          $array_index = $child_array['pid'];
+        }else{  
+          $array_index = $path;
+        } 
+        if ($tree_depth > 0) $array_index = $path.$child_array['pid'];
+        $rows[$array_index] = array(
+           'pid' => $child_array['pid'],
+           'type' => $child_array['type'],
+					 'label' => $child_array['label'],
+					 'model' => $child_array['model']);
+        foreach ($visibility_settings as $setting => $name) {
+          if (($child_array['type'] == 'Concept') && (in_array($setting,$concept_visibility_settings))) {
+            $visibility_value = (isset($child_array[$setting]))?($child_array[$setting]):'';
+            $rows[$array_index][$setting] = $visibility_value;
+          }
+          if (($child_array['type'] == 'Resource') && (in_array($setting,$resource_visibility_settings))) {
+            $visibility_value = (isset($child_array[$setting]))?($child_array[$setting]):'';
+            $rows[$array_index][$setting] = $visibility_value;
+          }
+        } 
+      } 
+      if ((isset($child_array['children'])) && (sizeof($child_array['children']) > 0)) {
+        sidora_flatten_tree($child_array['children'],$rows,$visibility_settings,$array_index.'/');
+      }
+    }
+  }
+} 
 
 /*
  * Show the form to create a concept
@@ -5349,42 +5641,6 @@ function sidora_block_view($delta = '') {
     case 'sidora_concept_info':
       $block['content'] = '<div id="workbench-menu" style="display:none;">' .
                           '</div><div id="sidora_content_concept_info">'.
-/*
-                          '<ul id="menu000">
-  <li class="ui-state-disabled">Aberdeen</li>
-  <li><a href="">Ada</a></li>
-  <li>Adamsville</li>
-  <li>Addyston</li>
-  <li>Delphi
-    <ul>
-      <li class="ui-state-disabled">Ada</li>
-      <li>Saarland</li>
-      <li>Salzburg an der schö Donau</li>
-    </ul>
-  </li>
-  <li>Saarland</li>
-  <li><a href="">Salzburg</a>
-    <ul>
-      <li><a href="">Delphi</a>
-        <ul>
-          <li>Ada</li>
-          <li>Saarland</li>
-          <li>Salzburg</li>
-        </ul>
-      </li>
-      <li>Delphi
-        <ul>
-          <li>Ada</li>
-          <li>Saarland</li>
-          <li>Salzburg</li>
-        </ul>
-      </li>
-      <li>Perch</li>
-    </ul>
-  </li>
-  <li class="ui-state-disabled">Amesville</li>
-</ul>'.
-*/
  '';
         $block['content'] .= '
   <div id="concept_tabs">
@@ -6611,7 +6867,7 @@ function sidora_get_plupload_html($elements, $button_text = 'Browse'){
                   if(exts[i].toUpperCase() === extension.toUpperCase()) {
                     self.trigger("Error", {
                       code: plupload.GENERIC_ERROR,
-                      message: file.name + " must be ingested using " + key + " resource type",
+                      message: " must be ingested using " + key + " resource type",
                       file: file
                     });
                     permitted = false;
@@ -6755,7 +7011,7 @@ print  '
         if (err.code == -601) document.getElementById("console").innerHTML += "  Usable extensions are:';
   print implode(",",$elements['#extensions']);
   print '";
-      },
+			},
       UploadComplete: function(up,files){
         if (typeof(sidoraUploadComplete) == "function"){ sidoraUploadComplete(up,files); }
         if (jQuery("#Next").length > 0)
