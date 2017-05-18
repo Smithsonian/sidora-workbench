@@ -6463,7 +6463,7 @@ function sidora_get_plupload_html($elements, $button_text = 'Browse'){
   $path_for_remove_icon = base_path() . drupal_get_path('module', 'xml_forms') . '/elements/images/';
   $multi_selection = 'true';
   $drag_and_drop = 'true';
-  if (strpos(strtoupper($button_text),"OBJ") !== FALSE){
+  if ((strpos(strtoupper($button_text),"OBJ") !== FALSE) || ($elements['#extensions'][0] == '*')) {
     $multi_selection = 'false';
     $drag_and_drop = 'false';
     $button_text = 'Browse';
@@ -6641,9 +6641,9 @@ function sidora_get_plupload_html($elements, $button_text = 'Browse'){
         jQuery("#Next").addClass("form-button-disabled");
         if (jQuery("#applyBatch").length > 0)
           document.getElementById("applyBatch").disabled=true;
-        jQuery("#applyBatch").addClass("form-button-disabled");
-        plupload.each(files, function(file) {
-					var item = jQuery("<li class=\"plupload_view_list plupload_file ui-state-default plupload_file_loading plupload_delete\"></li>");
+          jQuery("#applyBatch").addClass("form-button-disabled");
+          plupload.each(files, function(file) {
+	  var item = jQuery("<li class=\"plupload_view_list plupload_file ui-state-default plupload_file_loading plupload_delete\"></li>");
           item.attr("id",file.id);
           item.html("<div class=\"plupload_file_name\">"+file.name + "</div><div class=\"plupload_file_size\" style=\"width:100px;\">" + plupload.formatSize(file.size) + "   <b></b></div>" + "<div class=\"plupload_file_action\"><a class=\'remove-file-btn\' href=\'\'><img src=\'' . $path_for_remove_icon . 'minus_small.png\'/></a></div>");
           jQuery("#create-resource-upload_filelist").append(item);
