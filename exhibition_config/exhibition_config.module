@@ -2718,12 +2718,12 @@ function exhibition_config_load_visibility($pid) {
   );
 }
 /*
- * Prints the JSON of the visibility tree for exhibition
+ * Prints the JSON of the visibility tree for exhibition - optimized version
  */
 function exhibition_config_json_visibility_new($path_to_pid) {
   $path_to_pid = urldecode($path_to_pid);
-	$path_to_pid_array = explode('_',$path_to_pid);
- 	$pid = array_pop($path_to_pid_array);
+  $path_to_pid_array = explode('_',$path_to_pid);
+  $pid = array_pop($path_to_pid_array);
   $path_to_pid = implode('_',$path_to_pid_array);
   $visibility_obj = exhibition_config_load_visibility_new($pid,$path_to_pid);
   //Anything with show_name as false we do not want the outside world knowing about
@@ -2738,13 +2738,13 @@ function exhibition_config_json_visibility($pid) {
 
 function exhibition_config_json_visibility_children($path_to_pid) {
   $path_to_pid = urldecode($path_to_pid);
-	$path_to_pid_array = explode('_',$path_to_pid);
- 	$pid = array_pop($path_to_pid_array);
+  $path_to_pid_array = explode('_',$path_to_pid);
+  $pid = array_pop($path_to_pid_array);
   $path_to_pid = implode('_',$path_to_pid_array);
   $visibility_obj = exhibition_config_load_visibility_new($pid,$path_to_pid);
-	array_push($path_to_pid_array,$pid);
-	$path_to_pid = implode('_',$path_to_pid_array);
-	$visibility_obj['children'] = exhibition_config_load_visibility_children($path_to_pid);
+  array_push($path_to_pid_array,$pid);
+  $path_to_pid = implode('_',$path_to_pid_array);
+  $visibility_obj['children'] = exhibition_config_load_visibility_children($path_to_pid);
   //Anything with show_name as false we do not want the outside world knowing about
   return drupal_json_output(exhibition_config_filter_visibility_show_name($visibility_obj));
 }
