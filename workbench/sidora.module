@@ -3214,97 +3214,73 @@ $pid = $two;
 }
 }
  if ($one == 'insert_serialized') {
-   $serialized_visibility = file_get_contents('public://' . 'test.txt');
-	 //var_dump($serialized_visibility);
-	 $json_decoded_visibility = json_decode($serialized_visibility, TRUE);
-        if ($json_decoded_visibility !== NULL) {
-				  $unserialized_visibility = $json_decoded_visibility;
-        }else{
-				  $unserialized_visibility = unserialize($serialized_visibility); 
-				}	
-				$unserialized_visibility = array($unserialized_visibility);
-				$visibility_array = $unserialized_visibility[0]['si:2773778_si:2773778'];
-				print_r($visibility_array);
-				$visibility_string = json_encode($visibility_array);
-	 $fields = 
-      array(
-        'pid', 
-        'visibility', 
-      );
-    $insert_query = db_insert('exhibition_config_copy')->fields($fields);
-    $insert_query->values( 
-      array(
-        'pid' => 'si:2773778',
-        'visibility' => $visibility_string,
-      )
-    );
-    $new_entry = $insert_query->execute();
-		echo "after inserting in exhibition_config_copy";
-$pid = 'si:2773778';
   $result = db_query("Select ". //SELECT
-"visibility ". 
-"FROM {exhibition_config_copy} where pid = :pid", array(':pid'=>$pid));
+      "pid, visibility ". 
+      "FROM {exhibition_config}");
   $row = array();
-  foreach ($result as $input){
-    foreach($input as $name=>$value){
-      if ($name == 'visibility'){
-		        $json_decoded_visibility = json_decode($value, TRUE);
-        if ($json_decoded_visibility !== NULL) {
-				  $unserialized_visibility = $json_decoded_visibility;
-        }else{
-				  $unserialized_visibility = unserialize($value); 
-				}	
-				$unserialized_visibility = array($unserialized_visibility);
-				echo "after db read";
-				//print_r($unserialized_visibility);
-				/*$visibility_array = $unserialized_visibility[0]['si:2773778_si:2773778'];
-				print_r($unserialized_visibility[0]['si:2773778_si:2773778']);
-				$visibility_string = json_encode($visibility_array);
-				print_r($visibility_string);
-				$query = db_update('exhibition_config')
-      ->fields(array(
-        'visibility' => $visibility_string,
-      ))
-      ->condition('pid', $pid, '=');
-    $num_updated = $query->execute();*/
-				  $visibility_settings = array(
-  'show_name' => 'Show Name',
-  'show_meta' => 'Show Meta',
-  'show_preview' => 'Show Preview',
-  'allow_download' => 'Show Download',
-  'show_degraded' => 'Show Degraded',
-  'future_children_show_name' => 'Show Name',
-  'future_children_show_meta' => 'Show Meta',
-  'future_children_show_preview' => 'Show Preview',
-  'future_children_allow_download' => 'Show Download',
-  'future_children_show_degraded' => 'Show Degraded');
-  $flat_visibility = array();
-	sidora_flatten_tree($unserialized_visibility,$flat_visibility,$visibility_settings,$pid);
-	echo "flattened : ";
-	//print_r($flat_visibility);
-	  $fields = 
-      array(
-        'pid', 
-        'visibility', 
-      );
-    $insert_query = db_insert('exhibition_config_visibility')->fields($fields);
-	foreach ($flat_visibility as $key => $value) {
-		echo "Key : " . $value['pid'];
-		$key = preg_replace('/[\/]/', '-', $key);
-		$value['path'] = $key;
-    $insert_query->values( 
-      array(
-        'pid' => $value['pid'],
-        'visibility' => json_encode($value),
-      )
-    );
-	}
+	while($input = $result->fetchAssoc()){
+	$root_pid = $input['pid'];
+  if ($input['visibility'] !== NULL) {
+	echo "Root exhibition pid : " . $root_pid;
+	$exists = db_query('SELECT 1 FROM {exhibition_config_visibility} WHERE pid = :pid', array(':pid' => $root_pid))->fetchField();
+  if (!($exists)) {
+    $root_visibility = $input['visibility'];
+		var_dump($root_visibility);
+	  $json_decoded_visibility = json_decode($root_visibility, TRUE);
+    if ($json_decoded_visibility !== NULL) {
+		  $unserialized_visibility = $json_decoded_visibility;
+    }else{
+		  $unserialized_visibility = unserialize($root_visibility); 
+	  }	
+		$unserialized_visibility = array($unserialized_visibility);
+		echo "after db read";
+		var_dump($unserialized_visibility);
+		$visibility_settings = array(
+      'show_name' => 'Show Name',
+      'show_meta' => 'Show Meta',
+      'show_preview' => 'Show Preview',
+      'allow_download' => 'Show Download',
+      'show_degraded' => 'Show Degraded',
+      'future_children_show_name' => 'Show Name',
+      'future_children_show_meta' => 'Show Meta',
+      'future_children_show_preview' => 'Show Preview',
+      'future_children_allow_download' => 'Show Download',
+      'future_children_show_degraded' => 'Show Degraded');
+      $flat_visibility = array();
+	    sidora_flatten_tree($unserialized_visibility,$flat_visibility,$visibility_settings,$root_pid);
+	    echo "flattened : ";
+	    print_r($flat_visibility);
+	    $fields = 
+        array(
+          'pid',
+				  'path', 
+          'visibility', 
+        );
+      $insert_query = db_insert('exhibition_config_visibility')->fields($fields);
+	    foreach ($flat_visibility as $key => $value) {
+		   echo "inserting visibility for : " . $value['pid'];
+		   $key = preg_replace('/[\/]/', '_', $key);
+		   $path_array = explode('_',$key);
+		   array_pop($path_array);
+		   $key = implode('_',$path_array);
+       $insert_query->values( 
+         array(
+           'pid' => $value['pid'],
+				   'path' => $key,
+           'visibility' => json_encode($value),
+         )
+       );
+	    }
 	    $new_entry = $insert_query->execute();
-
   }
 	}
-	}
-  }
+ }
+ echo "insert serialized completed!";
+ }
+ if ($one =='check_public_path') {
+   echo is_file(drupal_realpath('public://'.'ccc.csv'));
+	 var_dump(file_get_contents(drupal_realpath('public://'.'ccc.csv')));
+	} 
 	//This ends the testing function and should also indicate the end of liberal use of the dsm function
 }
 
