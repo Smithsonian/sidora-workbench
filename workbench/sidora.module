@@ -410,7 +410,7 @@ function sidora_management_panel($pid, $show_or_save = 'show', $dsid_to_remove =
       $dsid_to_remove = strtoupper('obj');
         $model_for_extensions = '*';
 	$models = $object->models;
-        $sidora_models = array('si:imageCModel','si:generalImageCModel','si:datasetCModel','si:fieldbookCModel','islandora:sp-audioCModel','islandora:sp_videoCModel');
+        $sidora_models = array('si:imageCModel','si:generalImageCModel','si:datasetCModel','si:fieldbookCModel','islandora:sp-audioCModel','islandora:sp_videoCModel','si:genericCModel');
       foreach($models as $model){
           if (in_array($model, $sidora_models)){
             $model_for_extensions = $model;
@@ -3799,7 +3799,8 @@ function sidora_create_resource_get_metadata_form_html($parent_pid, $model, $for
         'si:fieldbookCModel' => 'pdf',
         'si:datasetCModel' => 'csv',
         'islandora:sp-audioCModel' => 'audio',
-        'islandora:sp_videoCModel' => 'video'
+        'islandora:sp_videoCModel' => 'video',
+				'si:genericCModel' => 'generic'
       );
       $form['resource_model'] = array(
       '#name' => 'resource_model',
