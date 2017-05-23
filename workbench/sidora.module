@@ -6862,6 +6862,7 @@ function sidora_html_tree_from_given_pid($root_pid = '', $root = NULL, $num_leve
       $root = sidora_obj($root_pid);
     }
     $root_label = '';
+    $root_suffix = '';
     if (empty($root)) {
        $root_label = t('Invalid object set as root');
        $description = t('Invalid object set as root: %root_pid for user: %user_name %uid', 
@@ -6873,7 +6874,7 @@ function sidora_html_tree_from_given_pid($root_pid = '', $root = NULL, $num_leve
       $children_resources = $root->relationships->get(FEDORA_RELS_EXT_URI, 'hasResource');
     }
     if (!empty($children_resources)) {
-      $root_label .= " (" . sizeof($children_resources) . ")";
+      $root_suffix = " (" . sizeof($children_resources) . ")";
     }
     /*
     $results = _sidora_get_child_results_cache($root_pid);
@@ -6887,7 +6888,7 @@ function sidora_html_tree_from_given_pid($root_pid = '', $root = NULL, $num_leve
     $filled = $filled[0]['children'];
   }
   /* */
-  $html_tree_from_query_result = sidora_html_tree_from_query_results_tree($filled, '', $num_levels, $url_params);
+  $html_tree_from_query_result = sidora_html_tree_from_query_results_tree($filled, $root_pid, $num_levels, $url_params);
   $html_escaped_name = htmlspecialchars($root_label);
   $to_return = '';
   $to_return .= '<ul>';
@@ -6906,7 +6907,7 @@ function sidora_html_tree_from_given_pid($root_pid = '', $root = NULL, $num_leve
     $root_label = '<div><img src="' .  file_create_url($info['node']->field_thumbnail['und'][0]['uri']) . '"/></div>' . $root_label;
   }
   $to_return .= '>';
-  $to_return .= $root_label;
+  $to_return .= $root_label . $root_suffix;
   $to_return .= '</a>';
   // $to_return .= '<' . $dom_type . $href . ' pid="' . $pid . '" fullname="' . $html_escaped_name . '"
   // conceptchildren="' . count($t_element['children']) . '
@@ -7506,7 +7507,7 @@ function sidora_html_tree_from_query_results_tree($query_result_tree, $input_pat
     if (!empty($html_escaped_name)) {
       $pid = $t_element['o']['value'];
       $current_path = $input_path;
-      if ($input_path != '') $current_path .= ',';
+      if (!empty($input_path)) $current_path .= ',';
       $current_path .= $pid;
       $resource_children_num = -1;
       if (array_key_exists('resourcecount',$t_element)) $resource_children_num = $t_element['resourcecount']['value'];
