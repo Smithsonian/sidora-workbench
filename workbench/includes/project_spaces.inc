@@ -79,14 +79,31 @@ function sidora_put_into_proper_project_space($pid_or_fedora_obj_or_nid_or_node)
   // Parent choice decision priorities:
   // If it IS the project space, put it into the right groups. Do not remove existing groups.
   $project_space_groups = sidora_get_groups_for_project_space($pid, TRUE);
+  $check_legacy_parents = TRUE;
   if (!empty($project_space_groups)) {
     foreach($project_space_groups as $individual_group) {
       og_group('node', $individual_group, array('entity_type' => 'node', 'entity' => $nid));
     }
+    $check_legacy_parents = FALSE;
   }
   else {
     // If already in a project space of one of its parents, then nothing needs to happen
     module_load_include('inc', 'sidora', 'includes/utils');
+    $owning_pid = sidora_get_owning_parent_concept_pid_by_constituent_pid($pid);
+    if (empty($owning_pid)) {
+      $check_legacy_parents = TRUE;
+    }
+    else {
+      $check_legacy_parents = FALSE;
+      $owning_parent_gids = sidora_get_group_nids_membership(sidora_get_concept_node_id($owning_pid));
+      $parent_groups = node_load_multiple($owning_parent_gids);
+      foreach($parent_groups as $parent_group) {
+        og_group('node', $parent_group, array('entity_type' => 'node', 'entity' => $nid));
+      }
+    }
+  }
+  if ($check_legacy_parents) {
+    watchdog('sidora',t("This pid does not have proper isConstituentOf relationship: %pid" , array("%pid"=>$pid)));
     $parent_infos = sidora_get_parent_concepts_by_pid($pid);
     $is_in_a_parents_project_space = FALSE;
     $current_gids = sidora_get_group_nids_membership($nid);
@@ -133,7 +150,11 @@ function sidora_put_into_proper_project_space($pid_or_fedora_obj_or_nid_or_node)
   }
   return TRUE;
 }
+/**
+ * Remove the node from project spaces that its parent does not belong
+ */
 function sidora_remove_from_incorrect_project_spaces($pid_or_fedora_obj_or_nid_or_node) {
+  
   $sidora_obj_info = sidora_get_info($pid_or_fedora_obj_or_nid_or_node, FALSE);
   if (empty($sidora_obj_info)) {
     return FALSE;
@@ -156,13 +177,29 @@ function sidora_remove_from_incorrect_project_spaces($pid_or_fedora_obj_or_nid_o
   $proper_group_ids = sidora_get_groups_for_project_space($pid, TRUE, TRUE);
 
   module_load_include('inc', 'sidora', 'includes/utils');
-  $parent_infos = sidora_get_parent_concepts_by_pid($pid);
 
-  foreach($parent_infos as $parent_info) {
-    $parent_pid = $parent_info['pid'];
+  // If it has a real owner, use that
+  $obj = sidora_obj($pid);
+  $rels = $user_projects->relationships->get(SI_RELS_EXT_URI, 'isConstituentOf');
+  $ignore_other_parents = FALSE;
+  foreach ($rels as $rel) {
+    $ignore_other_parents = TRUE;
+    $parent_pid = $rel['object']['value'];
     $parent_gids = sidora_get_group_nids_membership(sidora_get_concept_node_id($parent_pid));
     $proper_group_ids = array_merge($parent_gids, $proper_group_ids);
   }
+
+  // Below is for NON-MIGRATED DATA which should be none, but things change
+  if (!$ignore_other_parents) {
+    watchdog('sidora',t('This pid does not have proper isConstituentOf relationship: %pid' , array("%pid"=>$pid)));
+    $parent_infos = sidora_get_parent_concepts_by_pid($pid);
+    foreach($parent_infos as $parent_info) {
+      $parent_pid = $parent_info['pid'];
+      $parent_gids = sidora_get_group_nids_membership(sidora_get_concept_node_id($parent_pid));
+      $proper_group_ids = array_merge($parent_gids, $proper_group_ids);
+    }
+  }
+
   $remove_from_gids = array_diff($current_gids, $proper_group_ids);
   foreach($remove_from_gids as $gid) {
     og_ungroup('node', $gid, 'node', $nid);
@@ -219,16 +256,29 @@ function sidora_get_project_space_nodes_for_pid($pid){
   $gids = array();
   if (empty($nid)){
     // We'll assume this is a resource now since there's not a node for this pid
-    $parent_pid_info = sidora_get_parent_concepts_by_pid($pid);
-    foreach($parent_pid_info as $curr_parent_info) {
-      $parent_pid = $curr_parent_info['pid'];
-      $parent_nid = sidora_quick_pid_to_node_id($parent_pid);
+    $owner_pid = sidora_get_owning_parent_concept_pid_by_constituent_pid($pid);
+    if (!empty($owner_pid)) {
+      $parent_nid = sidora_quick_pid_to_node_id($owner_pid);
       // We could call this function again to get the project space pids but I
       // don't want to worry about garbage data putting us in an infinite loop and
       // unneeded complexity to the base cases. So ONLY check the listed parents
       // and if they don't have the information return nothing.
       $some_gids = sidora_get_group_nids_membership($parent_nid);
       $gids += $some_gids; 
+    }
+    else {
+      watchdog('sidora',t('This pid does not have proper isConstituentOf relationship: %pid' , array("%pid"=>$pid)));
+      $parent_pid_info = sidora_get_parent_concepts_by_pid($pid);
+      foreach($parent_pid_info as $curr_parent_info) {
+        $parent_pid = $curr_parent_info['pid'];
+        $parent_nid = sidora_quick_pid_to_node_id($parent_pid);
+        // We could call this function again to get the project space pids but I
+        // don't want to worry about garbage data putting us in an infinite loop and
+        // unneeded complexity to the base cases. So ONLY check the listed parents
+        // and if they don't have the information return nothing.
+        $some_gids = sidora_get_group_nids_membership($parent_nid);
+        $gids += $some_gids; 
+      }
     }
   }
   else {

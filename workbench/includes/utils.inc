@@ -374,6 +374,42 @@ function sidora_get_where_codebook_used(AbstractObject $object) {
   }
   return $out;
 }
+/*
+ * Helper function to just directly get a pid, so will not have to go thru the util query array return
+ */
+function sidora_get_owning_parent_concept_pid_by_constituent_pid($pid) {
+  $owning_parents = sidora_get_owning_parent_concept_by_constituent_pid($pid);
+  foreach ($owning_parents as $owning_parent) {
+    return $owning_parent['pid']; 
+  }
+  return NULL;
+}
+/**
+ * Returns the standard array('pid'=>pid,'label'=>label,'models'=>array(model1,model2)) from the util queries
+ */
+function sidora_get_owning_parent_concept_by_constituent_pid($pid) {
+  $out = array();
+  $query = "SELECT ?pid ?label ?model FROM <#ri> 
+      WHERE {
+         {
+         <info:fedora/" . $pid . "> <info:smithsonian/relations-external#isConstituentOf> ?pid .
+         ?pid <info:fedora/fedora-system:def/model#state> <info:fedora/fedora-system:def/model#Active> .
+         ?pid <info:fedora/fedora-system:def/model#label> ?label .
+         ?pid <info:fedora/fedora-system:def/model#hasModel> ?model .
+          FILTER(!sameTerm(?model, <info:fedora/fedora-system:FedoraObject-3.0>) &&
+                 !sameTerm(?model, <info:fedora/si:conceptCModel>))
+        }
+      } ORDER BY ?label";
+  $tuque = islandora_get_tuque_connection();
+  $results = $tuque->repository->ri->query($query, 'sparql');
+  foreach ($results as $result) {
+    $pid = $result['pid']['value'];
+    $out[$pid]['pid'] = $pid;
+    $out[$pid]['label'] = $result['label']['value'];
+    $out[$pid]['models'][] = $result['model']['value'];
+  }
+  return $out;
+}
 /**
  * Gets the parent concepts the given object belongs to.
  *

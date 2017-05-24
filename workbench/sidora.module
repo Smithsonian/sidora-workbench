@@ -29,6 +29,7 @@
 
 
 define('SIDORA_NEVER_SET',"Never Set");
+define('SI_RELS_EXT_URI',"info:smithsonian/relations-external#");
 
 /*
  * hook_init
@@ -806,6 +807,7 @@ function sidora_process_object_with_build_id($form_build_id) {
         // Update Fedora parent
         if (empty($creation_info['added_to_parent'])) {
           $parent->relationships->add(FEDORA_RELS_EXT_URI, 'hasConcept', $object->id);
+          $object->relationships->add(SI_RELS_EXT_URI, 'isConstituentOf', $parent->id);
         }
         sidora_object_creation_info($form_build_id,'added_to_parent',TRUE);
         // clear THEIR parents out since the number in parens is held there
@@ -6330,6 +6332,10 @@ function sidora_move($move_from_id, $copy_to_id, $pid, $show_output = TRUE) {
       return $to_output;
     }
   }
+  $owning_pid = sidora_get_owning_parent_concept_pid_by_constituent_pid($pid);
+  $reassign_owner = ($owning_pid == $move_from_id);
+
+  
   $copied = sidora_copy($copy_to_id, $pid, FALSE);
   sidora_release_lock($copy_to_id);
   sidora_release_lock($move_from_id);
@@ -6344,6 +6350,16 @@ function sidora_move($move_from_id, $copy_to_id, $pid, $show_output = TRUE) {
   }
   sidora_obtain_lock($copy_to_id);
   sidora_obtain_lock($move_from_id);
+
+  // When perfoming a move of something from it's owning isConstituentOf parent:
+  //   Remove the relationship
+  //   Do the copy & unassociate
+  //   Attach the relationship to the pid where it was copied
+  if ($reassign_owner) {
+    $object = sidora_obj($pid);
+    $object->relationships->remove(SI_RELS_EXT_URI, 'isConstituentOf', $move_from_id);
+    $object->relationships->add(SI_RELS_EXT_URI, 'isConstituentOf', $copy_to_id);
+  }
   $unassociated = sidora_unassociate($move_from_id, $pid, FALSE);
   sidora_release_lock($copy_to_id);
   sidora_release_lock($move_from_id);
@@ -6403,6 +6419,15 @@ function sidora_get_codebooks($pid) {
  * Unassociate requires update of the move_from_id
  */
 function sidora_unassociate($remove_from_pid, $pid_to_remove, $show_output = TRUE, $allow_orphan = FALSE) {
+  // Setup:
+  // A isConstituentOf B
+  // B hasConcept A
+  // C hasConcept B
+  // unassociate A from B:
+  //   if A has no other parents: No because orphan
+  //   if A has other parents: Need to ask if we can move the isConstituentOf or simply not allow
+  // Unknown what to do, in confluence for discussion, TBD TODO BBB
+  
   global $user;
   if (
        !sidora_allow($user, $remove_from_pid, 'update')
@@ -6509,6 +6534,8 @@ function sidora_unassociate($remove_from_pid, $pid_to_remove, $show_output = TRU
  * returns TRUE or an array of this type: $to_output['description'] = t("Object not found in the repository");
  */
 function sidora_unassociate_delete_if_orphaned($remove_from_pid, $pid_to_remove, $show_output = TRUE) {
+  //what to do about isConstituentOf
+  // Unknown what to do, in confluence for discussion, TBD TODO BBB
   global $user;
   if (
        !sidora_allow($user, $remove_from_pid, 'update') ||
@@ -6778,6 +6805,8 @@ function sidora_json_for_delete($pid, $show_output = TRUE) {
   $is_concept = sidora_is_concept($object);
   $is_codebook = sidora_is_codebook($object);
   if ($is_concept) {
+    // Here we would also theoretically check isConstituentOf to see if something is pointing to the object to be deleted
+    // However, this should be unnecessary since there should be a hasConcept or hasResource pointing to its children
     $children_concepts = $object->relationships->get(FEDORA_RELS_EXT_URI, 'hasConcept');
     $children_resources = $object->relationships->get(FEDORA_RELS_EXT_URI, 'hasResource');
     $children_codebooks = $object->relationships->get(FEDORA_RELS_EXT_URI, 'hasCodebook');
@@ -6796,7 +6825,7 @@ function sidora_json_for_delete($pid, $show_output = TRUE) {
     }
   }
 
-  //Set it to deleted and remove the links to it from its parents
+  // Set it to deleted and remove the links to it from its parents
   $parents = sidora_get_parent_concepts($object);
   $node = sidora_get_update_or_create_concept_node($pid);
   foreach($parents as $parent_pid => $parent){
