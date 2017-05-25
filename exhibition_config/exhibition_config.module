@@ -248,10 +248,10 @@ function exhibition_config_get_exhibition_html_table_for_user($user_name){
     $epid_html .= '<td><a target="_blank" href ="'.variable_get('si_exhibition_website_location', '').''.$epid['pid'].'">'.variable_get('si_exhibition_website_location', '').$epid['pid'].'</a></td>';
     if ($epid['custom_url']){
       $epid_html .= '<td><a target="_blank" href ="'.
-                  variable_get('si_exhibition_friendly_website_location', '').
-                  $epid['custom_url'].'">'.
-                  variable_get('si_exhibition_friendly_website_location', '').
-                  $epid['custom_url'].'</a></td>';
+      variable_get('si_exhibition_friendly_website_location', '').
+      $epid['custom_url'].'">'.
+      variable_get('si_exhibition_friendly_website_location', '').
+      $epid['custom_url'].'</a></td>';
     }else{
       $epid_html .= '<td>None set</td>';
     }
@@ -2647,27 +2647,28 @@ function exhibition_config_load_visibility_new($pid,$path_to_pid = NULL) {
     foreach($input as $name=>$value){
       if ($name == 'visibility'){
         $json_decoded_visibility = json_decode($value, TRUE);
+        //$json_decoded_visibility = json_decode($input->visibility, TRUE);
         if ($path_to_pid !== NULL) {
-				    if ($json_decoded_visibility !== NULL) {
-						  $decoded_visibility = $json_decoded_visibility;
-						}
-						else {	
-              $decoded_visibility = unserialize($value); 
-						}
-				  if ((isset($decoded_visibility['path'])) && (!empty($decoded_visibility['path']))) {
-					  if ($path_to_pid == $decoded_visibility['path']) { 
+	 if ($json_decoded_visibility !== NULL) {
+	  $decoded_visibility = $json_decoded_visibility;
+	 }
+	 else {	
+           $decoded_visibility = unserialize($value); 
+	 }
+	 if ((isset($decoded_visibility['path'])) && (!empty($decoded_visibility['path']))) {
+	   if ($path_to_pid == $decoded_visibility['path']) { 
               return $decoded_visibility;
-						}
-					}
-					else {
-						return $decoded_visibility;	
-					}
-				}
-				else {
-				    if ($json_decoded_visibility !== NULL) return $json_decoded_visibility;
-            $unserialized_visibility = unserialize($value); 
-            return $unserialized_visibility;
-				}		
+	   }
+	 }
+	 else {
+	   return $decoded_visibility;	
+	}
+      }
+      else {
+        if ($json_decoded_visibility !== NULL) return $json_decoded_visibility;
+          $unserialized_visibility = unserialize($value); 
+          return $unserialized_visibility;
+	}		
       }
     }
   }
@@ -2680,19 +2681,19 @@ function exhibition_config_load_visibility_new($pid,$path_to_pid = NULL) {
 }
 
 function exhibition_config_load_visibility_children($path_to_pid) {
-	$result = db_query('Select * from {exhibition_config_visibility} where path = :path', array(':path' => $path_to_pid));
+  $result = db_query('Select * from {exhibition_config_visibility} where path = :path', array(':path' => $path_to_pid));
   $children = array();
-	while ($exhibition_root_line = $result->fetchAssoc()) {
-		$json_decoded_visibility = json_decode($exhibition_root_line['visibility'],true);
+  while ($exhibition_root_line = $result->fetchAssoc()) {
+    $json_decoded_visibility = json_decode($exhibition_root_line['visibility'],true);
     if ($json_decoded_visibility !== NULL) {
-			$decoded_visibility = $json_decoded_visibility;
-		}
-		else {	
+      $decoded_visibility = $json_decoded_visibility;
+    }
+    else {	
       $decoded_visibility = unserialize($exhibition_root_line['visibility']); 
-		}	
-		array_push($children,$decoded_visibility);
-		}
-		return $children;
+    }	
+    array_push($children,$decoded_visibility);
+  }
+  return $children;
 }
 
 function exhibition_config_load_visibility($pid) {
@@ -2704,7 +2705,7 @@ function exhibition_config_load_visibility($pid) {
     foreach($input as $name=>$value){
       if ($name == 'visibility'){
         $json_decoded_visibility = json_decode($value, TRUE);
-				    if ($json_decoded_visibility !== NULL) return $json_decoded_visibility;
+        if ($json_decoded_visibility !== NULL) return $json_decoded_visibility;
             $unserialized_visibility = unserialize($value); 
             return $unserialized_visibility;
       }
