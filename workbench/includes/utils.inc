@@ -27,6 +27,8 @@
  * those of third-party libraries, please see the product release notes.
  */
 
+defined("SI_RELS_EXT_URI") or define('SI_RELS_EXT_URI',"http://oris.si.edu/2017/01/relations#");
+
 /**
  * @file
  * Helper functions.
@@ -377,8 +379,8 @@ function sidora_get_where_codebook_used(AbstractObject $object) {
 /*
  * Helper function to just directly get a pid, so will not have to go thru the util query array return
  */
-function sidora_get_owning_parent_concept_pid_by_constituent_pid($pid) {
-  $owning_parents = sidora_get_owning_parent_concept_by_constituent_pid($pid);
+function sidora_get_owning_parent_concept_pid_by_administered_pid($pid) {
+  $owning_parents = sidora_get_owning_parent_concept_by_administered_pid($pid);
   foreach ($owning_parents as $owning_parent) {
     return $owning_parent['pid']; 
   }
@@ -387,12 +389,12 @@ function sidora_get_owning_parent_concept_pid_by_constituent_pid($pid) {
 /**
  * Returns the standard array('pid'=>pid,'label'=>label,'models'=>array(model1,model2)) from the util queries
  */
-function sidora_get_owning_parent_concept_by_constituent_pid($pid) {
+function sidora_get_owning_parent_concept_by_administered_pid($pid) {
   $out = array();
   $query = "SELECT ?pid ?label ?model FROM <#ri> 
       WHERE {
          {
-         <info:fedora/" . $pid . "> <info:smithsonian/relations-external#isConstituentOf> ?pid .
+         <info:fedora/" . $pid . "> <" . SI_RELS_EXT_URI . "isAdministeredBy> ?pid .
          ?pid <info:fedora/fedora-system:def/model#state> <info:fedora/fedora-system:def/model#Active> .
          ?pid <info:fedora/fedora-system:def/model#label> ?label .
          ?pid <info:fedora/fedora-system:def/model#hasModel> ?model .

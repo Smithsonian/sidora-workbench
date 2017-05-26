@@ -89,7 +89,7 @@ function sidora_put_into_proper_project_space($pid_or_fedora_obj_or_nid_or_node)
   else {
     // If already in a project space of one of its parents, then nothing needs to happen
     module_load_include('inc', 'sidora', 'includes/utils');
-    $owning_pid = sidora_get_owning_parent_concept_pid_by_constituent_pid($pid);
+    $owning_pid = sidora_get_owning_parent_concept_pid_by_administered_pid($pid);
     if (empty($owning_pid)) {
       $check_legacy_parents = TRUE;
     }
@@ -103,7 +103,7 @@ function sidora_put_into_proper_project_space($pid_or_fedora_obj_or_nid_or_node)
     }
   }
   if ($check_legacy_parents) {
-    watchdog('sidora',t("This pid does not have proper isConstituentOf relationship: %pid" , array("%pid"=>$pid)));
+    watchdog('sidora',t("This pid does not have proper isAdministeredBy relationship: %pid" , array("%pid"=>$pid)));
     $parent_infos = sidora_get_parent_concepts_by_pid($pid);
     $is_in_a_parents_project_space = FALSE;
     $current_gids = sidora_get_group_nids_membership($nid);
@@ -180,7 +180,7 @@ function sidora_remove_from_incorrect_project_spaces($pid_or_fedora_obj_or_nid_o
 
   // If it has a real owner, use that
   $obj = sidora_obj($pid);
-  $rels = $user_projects->relationships->get(SI_RELS_EXT_URI, 'isConstituentOf');
+  $rels = $user_projects->relationships->get(SI_RELS_EXT_URI, 'isAdministeredBy');
   $ignore_other_parents = FALSE;
   foreach ($rels as $rel) {
     $ignore_other_parents = TRUE;
@@ -191,7 +191,7 @@ function sidora_remove_from_incorrect_project_spaces($pid_or_fedora_obj_or_nid_o
 
   // Below is for NON-MIGRATED DATA which should be none, but things change
   if (!$ignore_other_parents) {
-    watchdog('sidora',t('This pid does not have proper isConstituentOf relationship: %pid' , array("%pid"=>$pid)));
+    watchdog('sidora',t('This pid does not have proper isAdministeredBy relationship: %pid' , array("%pid"=>$pid)));
     $parent_infos = sidora_get_parent_concepts_by_pid($pid);
     foreach($parent_infos as $parent_info) {
       $parent_pid = $parent_info['pid'];
@@ -256,7 +256,7 @@ function sidora_get_project_space_nodes_for_pid($pid){
   $gids = array();
   if (empty($nid)){
     // We'll assume this is a resource now since there's not a node for this pid
-    $owner_pid = sidora_get_owning_parent_concept_pid_by_constituent_pid($pid);
+    $owner_pid = sidora_get_owning_parent_concept_pid_by_administered_pid($pid);
     if (!empty($owner_pid)) {
       $parent_nid = sidora_quick_pid_to_node_id($owner_pid);
       // We could call this function again to get the project space pids but I
@@ -267,7 +267,7 @@ function sidora_get_project_space_nodes_for_pid($pid){
       $gids += $some_gids; 
     }
     else {
-      watchdog('sidora',t('This pid does not have proper isConstituentOf relationship: %pid' , array("%pid"=>$pid)));
+      watchdog('sidora',t('This pid does not have proper isAdministeredBy relationship: %pid' , array("%pid"=>$pid)));
       $parent_pid_info = sidora_get_parent_concepts_by_pid($pid);
       foreach($parent_pid_info as $curr_parent_info) {
         $parent_pid = $curr_parent_info['pid'];

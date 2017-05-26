@@ -28,8 +28,8 @@
  */
 
 
-define('SIDORA_NEVER_SET',"Never Set");
-define('SI_RELS_EXT_URI',"info:smithsonian/relations-external#");
+defined("SIDORA_NEVER_SET") or define('SIDORA_NEVER_SET',"Never Set");
+defined("SI_RELS_EXT_URI") or define('SI_RELS_EXT_URI',"http://oris.si.edu/2017/01/relations#");
 
 /*
  * hook_init
@@ -807,7 +807,8 @@ function sidora_process_object_with_build_id($form_build_id) {
         // Update Fedora parent
         if (empty($creation_info['added_to_parent'])) {
           $parent->relationships->add(FEDORA_RELS_EXT_URI, 'hasConcept', $object->id);
-          $object->relationships->add(SI_RELS_EXT_URI, 'isConstituentOf', $parent->id);
+          $object->relationships->registerNamespace("sidora", SI_RELS_EXT_URI);
+          $object->relationships->add(SI_RELS_EXT_URI, 'isAdministeredBy', $parent->id);
         }
         sidora_object_creation_info($form_build_id,'added_to_parent',TRUE);
         // clear THEIR parents out since the number in parens is held there
@@ -834,6 +835,8 @@ function sidora_process_object_with_build_id($form_build_id) {
     else {
       if (empty($creation_info['added_to_parent'])) {
         $parent->relationships->add(FEDORA_RELS_EXT_URI, 'hasResource', $object->id);
+        $object->relationships->registerNamespace("sidora", SI_RELS_EXT_URI);
+        $object->relationships->add(SI_RELS_EXT_URI, 'isAdministeredBy', $parent->id);
       }
       sidora_object_creation_info($form_build_id,'added_to_parent',TRUE);
       $tuque = islandora_get_tuque_connection();
@@ -6351,14 +6354,14 @@ function sidora_move($move_from_id, $copy_to_id, $pid, $show_output = TRUE) {
   sidora_obtain_lock($copy_to_id);
   sidora_obtain_lock($move_from_id);
 
-  // When perfoming a move of something from it's owning isConstituentOf parent:
+  // When perfoming a move of something from it's owning isAdministeredBy parent:
   //   Remove the relationship
   //   Do the copy & unassociate
   //   Attach the relationship to the pid where it was copied
   if ($reassign_owner) {
     $object = sidora_obj($pid);
-    $object->relationships->remove(SI_RELS_EXT_URI, 'isConstituentOf', $move_from_id);
-    $object->relationships->add(SI_RELS_EXT_URI, 'isConstituentOf', $copy_to_id);
+    $object->relationships->remove(SI_RELS_EXT_URI, 'isAdministeredBy', $move_from_id);
+    $object->relationships->add(SI_RELS_EXT_URI, 'isAdministeredBy', $copy_to_id);
   }
   $unassociated = sidora_unassociate($move_from_id, $pid, FALSE);
   sidora_release_lock($copy_to_id);
@@ -6420,12 +6423,12 @@ function sidora_get_codebooks($pid) {
  */
 function sidora_unassociate($remove_from_pid, $pid_to_remove, $show_output = TRUE, $allow_orphan = FALSE) {
   // Setup:
-  // A isConstituentOf B
+  // A isAdministeredBy B
   // B hasConcept A
   // C hasConcept B
   // unassociate A from B:
   //   if A has no other parents: No because orphan
-  //   if A has other parents: Need to ask if we can move the isConstituentOf or simply not allow
+  //   if A has other parents: Need to ask if we can move the isAdministeredBy or simply not allow
   // Unknown what to do, in confluence for discussion, TBD TODO BBB
   
   global $user;
@@ -6534,7 +6537,7 @@ function sidora_unassociate($remove_from_pid, $pid_to_remove, $show_output = TRU
  * returns TRUE or an array of this type: $to_output['description'] = t("Object not found in the repository");
  */
 function sidora_unassociate_delete_if_orphaned($remove_from_pid, $pid_to_remove, $show_output = TRUE) {
-  //what to do about isConstituentOf
+  //what to do about isAdministeredBy
   // Unknown what to do, in confluence for discussion, TBD TODO BBB
   global $user;
   if (
@@ -6805,7 +6808,7 @@ function sidora_json_for_delete($pid, $show_output = TRUE) {
   $is_concept = sidora_is_concept($object);
   $is_codebook = sidora_is_codebook($object);
   if ($is_concept) {
-    // Here we would also theoretically check isConstituentOf to see if something is pointing to the object to be deleted
+    // Here we would also theoretically check isAdministeredBy to see if something is pointing to the object to be deleted
     // However, this should be unnecessary since there should be a hasConcept or hasResource pointing to its children
     $children_concepts = $object->relationships->get(FEDORA_RELS_EXT_URI, 'hasConcept');
     $children_resources = $object->relationships->get(FEDORA_RELS_EXT_URI, 'hasResource');
@@ -10437,6 +10440,14 @@ function sidora_resource_version_viewer_display($pid, $dsid, $viewer, $version =
           }
         }
         break;
+      case 'img_src_webpage':
+        print '<html><body>';
+        print '<img src="';
+        print $GLOBALS['base_url'].'/sidora/info/'.$pid.'/meta/OBJ/download';
+        print '">';
+        print '</body></html>';
+        drupal_exit();
+        break;
       case 'pdfjs':
         sidora_get_html_pdfjs($pid, $dsid, $version);
         drupal_exit();
@@ -11187,4 +11198,17 @@ function sidora_get_xsl_exhibition_config_for_object($pid) {
      }
    }
    return $exhibition_config_xsl_file;
+}
+
+
+function sidora_islandora_derivative_alter(&$derivatives, AbstractObject $object = NULL, $ds_modified_params = array()) {
+  dsm( $derivatives);
+  dsm($ds_modified_params);
+  foreach ($derivatives as $key => $derivative) {
+    dsm($key);
+    dsm($derivative);
+    if ($derivative['destination_dsid'] == 'DC') {
+      print 'TRYING TO DO DC DERIVATIVE!'; exit();
+    }
+  }
 }
