@@ -73,6 +73,9 @@ li a.not-owned {
   margin-right: 0px;
   display: none; /* Get rid of the non-stylized information, will show at end of initialization */
 }
+.sidora-info-holder {
+  display: none;
+}
 .resource-list-tn {
   max-height:90px;
   max-width:150px;

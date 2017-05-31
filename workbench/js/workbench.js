@@ -939,6 +939,10 @@ sidora.InitiateJSTree = function(){
       }
     }
 
+    jQuery("#forjstree").unbind('open_node.jstree');
+    jQuery('#forjstree').bind('open_node.jstree', function (e, data) {
+      sidora.util.loadTreeSectionsIfNeeded(data);
+    });
     sidora.util.openToCurrentPathAndSelectItem(currentUrl);
     //When you select a node, update the url in the browser, change the page title (not browser title) and load the concept content into the main window
     jQuery("#forjstree").unbind('select_node.jstree');
@@ -975,10 +979,6 @@ sidora.InitiateJSTree = function(){
       , [moveToPid,toMovePid],'copyConcept');
       sidora.queue.incomingRequestsAreSilent = false;
       sidora.queue.Next();
-    });
-    jQuery("#forjstree").unbind('open_node.jstree');
-    jQuery('#forjstree').bind('open_node.jstree', function (e, data) {
-      sidora.util.loadTreeSectionsIfNeeded(data);
     });
 
     jQuery("#forjstree").unbind('delete_node.jstree');
@@ -2201,9 +2201,7 @@ sidora.util.treeAdditionSingleItem = function(onLoadComplete, overwriteType, jst
   var ccp = currChild.a_attr.pid;
   var dfAnchor = jQuery(documentFragment).children().find("[pid='"+ccp+"']");
   //If the document fragment does not include the child then that concept was removed
-  if (dfAnchor.length == 0) {
-    //TBD remove this
-  } else {
+  if (dfAnchor.length > 0) {
     //Find the current child representation in the document fragment
     var currRep = dfAnchor.parent();
     //Replace the html if the name of the item changed
@@ -2278,7 +2276,7 @@ sidora.util.treeAdditionSingleItem = function(onLoadComplete, overwriteType, jst
         //must pull information from the existing tree for the current path we've used
         var prependHrefPath = "?path=" + currChild.a_attr.href.split("?path=")[1] + ',';
         var currRepHrefPathParts = jQuery(currRepChild).children("a").attr("href").split("?path=");
-        newHrefPath = currRepHrefPathParts[0] + prependHrefPath + currRepHrefPathParts[1];
+        newHrefPath = currRepHrefPathParts[0] + prependHrefPath + ccp;
         a_attr_obj['href'] = newHrefPath;
         if (!isFound) {
           var newNodeId = jQuery("#forjstree").jstree(
@@ -2792,11 +2790,7 @@ sidora.concept.DeleteConcept = function(){
       }
     });
 }
-/*
- * Confirm with the user that they want the resource unassociated / deleted and performs the unassociate/delete
- */
-sidora.resources.DeleteResource = function(){
-  var pids = sidora.resources.getHighlighted();
+sidora.resources.UserFriendlyListing = function(pids) {
   var userFriendlyListing = '<ul>';
   for (var i = 0; i < pids.length; i++){
     userFriendlyListing += '<li>';
@@ -2805,9 +2799,70 @@ sidora.resources.DeleteResource = function(){
     userFriendlyListing += '</li>';
   }
   userFriendlyListing += '</ul>';
+  return userFriendlyListing;
+}
+/*
+ * Confirm with the user that they want the resource unassociated / deleted and performs the unassociate/delete
+ */
+sidora.resources.DeleteResource = function(){
+  var allPids = sidora.resources.getHighlighted();
+  var sendOutPids = [];
+  var removeLinksPids = [];
+  var deletePids = [];
+  var cantRemoveLinksPids = [];
+  for (var i = 0; i < allPids.length; i++) {
+    var pid = allPids[i];
+    var infoHolder = jQuery(jq(pid)).find(".sidora-info-holder");
+    var administeredBy = infoHolder.attr("administered-by-pid");
+    var numLinks = infoHolder.attr("num-links");
+    if (numLinks == "1") {
+      deletePids.push(pid); 
+      sendOutPids.push(pid);
+    }
+    else {
+      if (administeredBy == sidora.concept.GetPid()) {
+        cantRemoveLinksPids.push(pid);
+      }
+      else {
+        removeLinksPids.push(pid);
+        sendOutPids.push(pid);
+      }
+    }
+  }
 
   jQuery('#deleteResourceDialog').remove();
-  jQuery("body").append("<div id='deleteResourceDialog' style='display:none;' title='Delete Resource'><p>The following will be removed from "+sidora.concept.GetName()+" ("+sidora.concept.GetPid()+")</p>"+userFriendlyListing+"<p>If there are no other parents for a resource, the resource will also be deleted.</div>");
+  var informationText = "";
+  var removeFromParentTextBlock = "";
+  if (cantRemoveLinksPids.length > 0) {
+    removeFromParentTextBlock += "The following will <strong>not</strong> be removed:";
+    removeFromParentTextBlock += sidora.resources.UserFriendlyListing(cantRemoveLinksPids);
+    removeFromParentTextBlock += "To remove the correlation between a resource above and this concept, please do one of the following:<br>";
+    removeFromParentTextBlock += " 1) move the resource to another location<br>";
+    removeFromParentTextBlock += " or<br>";
+    removeFromParentTextBlock += " 2) remove all other links to the resource and then you may delete it from this concept.<br><br>";
+  }
+  if (cantRemoveLinksPids.length == allPids.length) {
+    informationText += "<strong>Your selection can not be removed. </strong>You've selected only resources that are administered by the current concept that are linked to other concepts. Check the resource's 'Relationships' pane to see these links.<br>";
+    informationText += removeFromParentTextBlock;
+  }
+  else {
+    if (cantRemoveLinksPids.length > 0) {
+      informationText += "<strong>Not all of your selections can be removed. </strong> Some of the selected resources are administered by the current concept and are linked to other concepts. Check the resource's 'Relationships' pane to see these links.";
+      informationText += removeFromParentTextBlock;
+    }
+    if (removeLinksPids.length > 0) {
+      informationText += "<strong>The following links will be removed from this concept:</strong>";
+      informationText += sidora.resources.UserFriendlyListing(removeLinksPids);
+    }
+    if (deletePids.length > 0) {
+      informationText += "<strong>The following will be deleted:</strong>";
+      informationText += sidora.resources.UserFriendlyListing(deletePids);
+    }
+  }
+  jQuery("body").append("<div id='deleteResourceDialog' style='display:none;' title='Remove Resource'>"+informationText+"</div>");
+
+/*<p>The following will be removed from "+sidora.concept.GetName()+" ("+sidora.concept.GetPid()+")</p>"+userFriendlyListing+"<p>If there are no other parents for a resource, the resource will also be deleted.</div>");
+ */
   jQuery("#deleteResourceDialog").dialog({
     resizable: false,
     height:445,
@@ -2817,7 +2872,7 @@ sidora.resources.DeleteResource = function(){
       "Delete resource": function() {
         var onDeleteWorked = sidora.util.createFunctionRefreshTree(sidora.concept.GetPid());
         var onDeleteFailed = function(data){};
-        sidora.resources.DeleteResourceBusinessLogic(onDeleteWorked,onDeleteFailed);
+        sidora.resources.DeleteResourceBusinessLogic(sendOutPids, onDeleteWorked, onDeleteFailed);
         jQuery( this ).dialog( "close" );
       },
       Cancel: function() {
@@ -2996,8 +3051,7 @@ sidora.resources.individualPanel.LoadContent = function(suppressResourceViewerRe
 sidora.util.getErrorMessageHtml = function(){
   return '<div class="error-message">Fedora Commons returned unexpected information.  The Fedora Commons connection may not be available</div>';
 }
-sidora.resources.DeleteResourceBusinessLogic = function(onSuccess, onFailure){
-  var pids = sidora.resources.getHighlighted();
+sidora.resources.DeleteResourceBusinessLogic = function(pids, onSuccess, onFailure){
   for (var i = 0; i < pids.length; i++){
     sidora.util.deletePid(pids[i], onSuccess, onFailure);
   }

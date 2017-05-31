@@ -1707,12 +1707,15 @@ function sidora_get_parent_table($pid) {
   $header = array(t('Title'), t('Type'));
   if (sizeof($parents) > 1) $header[] = t('Remove');
   $unassociate_location = $GLOBALS['base_url'].'/sidora/ajax_parts/unassociate/';
-
+  $administering_pid = sidora_get_owning_parent_concept_pid_by_administered_pid($pid);
+  if (empty($administering_pid)) {
+    $output .= "<br>" . t("None of this object's parents have been selected as the administration parent.");
+  }
   foreach ($parents as $parent) {
 
     $text_link = array(
       '#type' => 'submit',
-      '#value' => t('Remove'),
+      '#value' => t('Remove Link'),
       '#attributes' => array("ppid"=>$parent['pid'], "class"=>array('parent-removal')),
     );
     $sidora_data = sidora_get_form_and_dsid($parent['pid']);
@@ -1726,7 +1729,14 @@ function sidora_get_parent_table($pid) {
       array('data' => $parent['label'], 'ppid' => $parent['pid']),
       array('data' => $concept_type),
     );
-    if (sizeof($parents) > 1) $row[] = array('data' => drupal_render($text_link));
+    if (sizeof($parents) > 1) {
+      if ($parent['pid'] == $administering_pid) {
+       $row[] = array('data' => t('Administering parent'));
+      }
+      else {
+        $row[] = array('data' => drupal_render($text_link));
+      }
+    }
     $rows[] = $row;
   }
   $table_attributes = array('id' => 'sidora_exhibit_projects_table');
@@ -5273,7 +5283,7 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
             $jsdt_data[] = array(
               "DT_RowId"=>$element['object']['value'],
               /*$element['o']['value'],*/
-              0=>'<div class="resource-list-tn">'.$tn.'</div>',
+              0=>'<div class="sidora-info-holder" administered-by-pid="'.$element['administeredBy']['value'].'" num-links="'.$element['incomingLinks']['value'].'"></div><div class="resource-list-tn">'.$tn.'</div>',
               1=>$omdText,
               /*$element['m']['value'],*/
               2=>'<div class="resource-list-label">'.$element['title']['value'].'</div>',
@@ -5749,7 +5759,7 @@ function sidora_block_view($delta = '') {
           <ul id="resource-menu">
             <li><a href="#" onclick="return false;">Resources</a>
               <ul id="resource-files-menu">
-                <li id="delete-resource"><a href="#" onclick="return false;">Delete Selected</a>
+                <li id="delete-resource"><a href="#" onclick="return false;">Remove Selected</a>
               </ul>
             </li>
             <li><a href="#" onclick="return false;">Edit</a>
@@ -8616,18 +8626,21 @@ function sidora_generate_child_resource_sparql_query($pid, array $resource_types
     $search_filter =  "                FILTER(regex(?title, '{$search}', 'i'))";
   }
 
-      $query = "select ?object ?title ?model ?created from <#ri> where {
+      $query = "select ?object ?title ?model ?created ?administeredBy (count(distinct ?incomingLink) as ?incomingLinks) from <#ri> where {
           <info:fedora/{$pid}> <info:fedora/fedora-system:def/relations-external#hasResource> ?object .
           ?object <info:fedora/fedora-system:def/model#state> <info:fedora/fedora-system:def/model#Active> .
   ?object <info:fedora/fedora-system:def/model#label> ?title .
   ?object <info:fedora/fedora-system:def/model#hasModel> ?model .
-  ?object <info:fedora/fedora-system:def/model#createdDate> ?created;
+  ?object <info:fedora/fedora-system:def/model#createdDate> ?created . 
+  ?incomingLink <info:fedora/fedora-system:def/relations-external#hasResource> ?object .
+  OPTIONAL { ?object <" . SI_RELS_EXT_URI . "isAdministeredBy> ?administeredBy } 
           ".$search_filter."
           FILTER(
           ".$limit_types."
               !sameTerm(?model, <info:fedora/fedora-system:FedoraObject-3.0>) &&
               !sameTerm(?model, <info:fedora/si:resourceCModel>))
         }
+        GROUP BY ?object ?title ?model ?created ?administeredBy
                 ORDER BY {$sort}(?{$sort_by})
         OFFSET {$offset}
         LIMIT {$limit}";
@@ -11198,17 +11211,4 @@ function sidora_get_xsl_exhibition_config_for_object($pid) {
      }
    }
    return $exhibition_config_xsl_file;
-}
-
-
-function sidora_islandora_derivative_alter(&$derivatives, AbstractObject $object = NULL, $ds_modified_params = array()) {
-  dsm( $derivatives);
-  dsm($ds_modified_params);
-  foreach ($derivatives as $key => $derivative) {
-    dsm($key);
-    dsm($derivative);
-    if ($derivative['destination_dsid'] == 'DC') {
-      print 'TRYING TO DO DC DERIVATIVE!'; exit();
-    }
-  }
 }
