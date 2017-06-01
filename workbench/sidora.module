@@ -3792,7 +3792,7 @@ function sidora_create_resource_get_upload_form_html($model, $form_name, $ontolo
     'islandora:sp_videoCModel' => array('ogg','mp4','mov','qt', 'm4a', 'm4v', 'avi', 'mkv'),
     'si:rawGeneSequenceCModel' => array('txt','xml'),
     'si:assembledGeneSequenceCModel' => array('fasta','fa'),
-    '*' => array('*'),
+    '*' => array('*')
   );
   $elements = NULL;
   if (!empty($ontology_location)) {
@@ -5192,14 +5192,15 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
       break;
     case 'resources':
       $resource_types = array(
-        'all' => array('si:imageCModel', 'si:generalImageCModel','si:fieldbookCModel','si:datasetCModel','islandora:sp-audioCModel','islandora:sp_videoCModel','si:rawGeneSequenceCModel','si:assembledGeneSequenceCModel'),
+        'all' => array('si:imageCModel', 'si:generalImageCModel','si:fieldbookCModel','si:datasetCModel','islandora:sp-audioCModel','islandora:sp_videoCModel','si:genericCModel','si:rawGeneSequenceCModel','si:assembledGeneSequenceCModel'),
         'images' => array('si:imageCModel', 'si:generalImageCModel'),
         'pdf' => array('si:fieldbookCModel'),
         'csv' => array('si:datasetCModel'),
         'audio' => array('islandora:sp-audioCModel'),
         'video' => array('islandora:sp_videoCModel'),
 	'rawsequence' => array('si:rawGeneSequenceCModel'),
-	'assembledsequence' => array('si:assembledGeneSequenceCModel')
+	'assembledsequence' => array('si:assembledGeneSequenceCModel'),
+	'generic' => array('si:genericCModel'),
         'text' => FALSE
 				);
       if ($download == 'browser' && $formatted == 'dataTableServerSideProcessing') {
