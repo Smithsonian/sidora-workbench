@@ -3313,7 +3313,7 @@ if ($one == 'deletexsl') {
          'future_children_allow_download' => 'Show Download',
          'future_children_show_degraded' => 'Show Degraded');
        $flat_visibility = array();
-       sidora_flatten_tree($unserialized_visibility,$flat_visibility,$visibility_settings,$pid);
+       sidora_flatten_tree($unserialized_visibility,$flat_visibility,$visibility_settings,$root_pid);
        echo "flattened : ";
       print "<pre>";
       print_r($flat_visibility);
