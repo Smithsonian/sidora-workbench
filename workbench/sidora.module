@@ -6776,7 +6776,7 @@ function sidora_get_plupload_html($elements, $button_text = 'Browse'){
   $path_for_remove_icon = base_path() . drupal_get_path('module', 'xml_forms') . '/elements/images/';
   $multi_selection = 'true';
   $drag_and_drop = 'true';
-  if (strpos(strtoupper($button_text),"OBJ") !== FALSE){
+  if ((strpos(strtoupper($button_text),"OBJ") !== FALSE) || ($elements['#extensions'][0] == '*')) {
     $multi_selection = 'false';
     $drag_and_drop = 'false';
     $button_text = 'Browse';
@@ -6834,7 +6834,7 @@ function sidora_get_plupload_html($elements, $button_text = 'Browse'){
     runtimes : runtimesBrowserSpecific, //No silverlight - gets bad if user does not allow it and it tries to use.
     browse_button : "pickfiles", // you can pass in id...
     container : document.getElementById("container"),'; // ... or DOM Element itself
-    if ($drag_and_drop == 'false') {
+    if (($drag_and_drop == 'false') || ($elements['#extensions'][0] == '*')) {
       print '
 	max_files : "1",';
     }
@@ -6911,17 +6911,19 @@ function sidora_get_plupload_html($elements, $button_text = 'Browse'){
       },
       FilesAdded: function(up, files) {
         if (typeof(sidoraUploaderFilesAdded) == "function"){ sidoraUploaderFilesAdded(up,files); }
-        if ((typeof up.settings.max_files !== "undefined") && (up.settings.max_files !== null) && (up.files.length == up.settings.max_files)) {
-          jQuery(up.settings.browse_button).attr("disabled", true).addClass("form-button-disabled");
+        if ((typeof up.settings.max_files !== "undefined") && (up.settings.max_files !== null) && (up.files.length >= up.settings.max_files)) {
+          up.splice(up.settings.max_files);
+	  if (files.length > (up.settings.max_files - up.total.uploaded)) files.splice((up.settings.max_files - up.total.uploaded),(files.length - (up.settings.max_files - up.total.uploaded)));
+	  jQuery(up.settings.browse_button).attr("disabled", true).addClass("form-button-disabled");
         }
         if (jQuery("#Next").length > 0)
           document.getElementById("Next").disabled=true;
         jQuery("#Next").addClass("form-button-disabled");
         if (jQuery("#applyBatch").length > 0)
           document.getElementById("applyBatch").disabled=true;
-        jQuery("#applyBatch").addClass("form-button-disabled");
-        plupload.each(files, function(file) {
-					var item = jQuery("<li class=\"plupload_view_list plupload_file ui-state-default plupload_file_loading plupload_delete\"></li>");
+          jQuery("#applyBatch").addClass("form-button-disabled");
+          plupload.each(files, function(file) {
+	  var item = jQuery("<li class=\"plupload_view_list plupload_file ui-state-default plupload_file_loading plupload_delete\"></li>");
           item.attr("id",file.id);
           item.html("<div class=\"plupload_file_name\">"+file.name + "</div><div class=\"plupload_file_size\" style=\"width:100px;\">" + plupload.formatSize(file.size) + "   <b></b></div>" + "<div class=\"plupload_file_action\"><a class=\'remove-file-btn\' href=\'\'><img src=\'' . $path_for_remove_icon . 'minus_small.png\'/></a></div>");
           jQuery("#create-resource-upload_filelist").append(item);
