@@ -3356,6 +3356,15 @@ if ($one == 'deletexsl') {
 	}
 }
 }
+if ($one == 'get_pid_tree') {
+  $pid_tree = array(
+    '0' => exhibition_config_get_pid_tree($two)
+  );
+	   echo "<pre>";
+   var_dump($pid_tree);
+    //  print_r($pid_tree);
+			echo "</pre>";
+} 
 	//This ends the testing function and should also indicate the end of liberal use of the dsm function
 }
 
