@@ -2995,17 +2995,16 @@ function exhibition_permission_form_submit($form, &$form_state) {
   }
   $visibility_settings_array = array();
   foreach($post_array as $key => $value) {
-	  $visibility_array = array();
-		$visibility_array['pid'] = $value['pid'];
+    $visibility_array = array();
+    $visibility_array['pid'] = $value['pid'];
     $path = preg_replace('/[\/]/', '_', $key);	
-		$path_array = explode('_',$path);
-	  array_pop($path_array);
-	  $path = implode('_',$path_array);
-		$visibility_array['path'] = $path;
-		$visibility_array['visibility'] = $value;
-		exhibition_config_save_visibility_optimized($visibility_array);	
+    $path_array = explode('_',$path);
+    array_pop($path_array);
+    $path = implode('_',$path_array);
+    $visibility_array['path'] = $path;
+    $visibility_array['visibility'] = $value;
+    exhibition_config_save_visibility_optimized($visibility_array);	
   }
-	exhibition_config_clear_exhibition_cache();
 }
 function exhibition_config_info () {
   return drupal_json_output(variable_get('si_exhibition_preview_warning',''));
