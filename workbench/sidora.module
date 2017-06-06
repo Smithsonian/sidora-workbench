@@ -6908,7 +6908,7 @@ function sidora_get_plupload_html($elements, $button_text = 'Browse'){
   print 'Moxie.xap",
     
     filters : {
-      excluded_extensions : [{"Basic Image" : "jpg,jpeg,jp2,tiff","PDF Text" : "pdf","Tabular Datasets" : "csv,xls,xlsx","Basic Audio" : "aiff,wav,mp3","Basic Video" : "ogg,mp4,mov,qt,m4a,m4v,avi,mkv","Raw Sequence" : "xml","Assembled Sequence" : "fasta,fa"}],
+      excluded_extensions : [{"Basic Image" : "jpg,jpeg,jp2,tiff","PDF Text" : "pdf","Tabular Datasets" : "csv,xls,xlsx","Basic Audio" : "aiff,wav,mp3","Basic Video" : "ogg,mp4,mov,qt,m4a,m4v,avi,mkv","Raw Sequence" : "fasta,fa,fas,fsn,fna,faa","Assembled Sequence" : "fasta,fa,fas,fsn,fna,faa"}],
       max_file_size : "1000mb",
       mime_types: [
         {title : "';
