@@ -2341,7 +2341,11 @@ function exhibition_permission_form($form, $form_state){
   $checkbox_rows = array();
   exhibition_config_generate_checkboxes($pid_tree,$checkbox_rows,$visibility_settings,$pid);
 	$form['visibility']['#tree'] = 'TRUE';
-  foreach($checkbox_rows as $key => $row) {
+	$objects_per_page = 100;
+	$page_number = 1;
+  $current_page = array();
+	exhibition_config_paginate_visibility($checkboxes_rows,$current_page,$objects_per_page,$page_number);
+  foreach($current_page as $key => $row) {
     $form['visibility'][$key]['#tree'] = 'TRUE';
     $depth = $key;
     foreach($row['checkboxes'] as $checkbox_id => $checkbox_value) {
@@ -2446,7 +2450,15 @@ function exhibition_permission_form($form, $form_state){
   $tree_html .= '<div id="action-bar"><div class="action-button"><a href="javascript:void(0);" class="button" id="change_all">Change All Selected</a></div><div class="action-button"><a href="javascript:void(0);" class="button" id="open-advanced">Advanced</a></div><div class="action-button">';
   $post_html = '</div><div class="action-button"><a href="javascript:void(0);" class="button" id="cancel-button">Cancel</a></div></div>';
   $post_html .= '<div id="advanced_hidden"></div></td>'; 
-  $post_html .= "<script>
+if (ceil(count($checkbox_rows) / $objects_per_page) > 1) {
+        $post_html .= '<div style="float:right;display: inline;height: 40px;width: 50%;"><div id="sidora-resources-button-row" style="left: 150px;width: 50%;">';
+				// Assign the 'previous page' link into the array if we are not on the first page
+        if ($page_number != 1) {
+          $post_html .= ' <a href="?page=1">&laquo;&laquo; First </a> ';
+          $plinks[] = ' <a href="?page='.($page_number - 1).'">&laquo; Prev</a> ';
+        }
+				<input id="sidora-resources-page-number" type="text" size="2" class="form-text" value="5"><div id="sidora-resources-page-count" style="display:inline-block"> of 80</div>
+	$post_html .= "<script>
 jQuery(document).ready(function(){
 jQuery(\"#exhibition-permission-form\").submit(function(){
 var packed = '';
@@ -2574,6 +2586,13 @@ return true;});
   );
   drupal_add_js(drupal_get_path('module', 'exhibition_config') . '/js/exhibition_config_visibility.js');
   return $form;
+}
+function exhibition_config_paginate_visibility($visibility_array,&$checkbox_rows,$per_page=100,$page_number=1) {
+  $total_pages = ceil(count($visibility_array) / $per_page);
+	$starting_point = ceil(($page_number - -1) * $per_page);
+  $resource_visibility_only = array('show_preview','allow_download','show_degraded');
+  $concept_visibility_only = array('future_children_show_name','future_children_show_meta','future_children_show_preview','future_children_allow_download','future_children_show_degraded');
+	$checkbox_rows = array_slice($visibility_array,$starting_point,$per_page);
 }
 /*
  * Saves the visibility tree in the database
