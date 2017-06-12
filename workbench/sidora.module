@@ -2544,6 +2544,11 @@ function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $ex
     return t("You must be an administrator or have an administrator set sidora_allow_all_to_debug in order to access this information");
   }
   if (!sidora_is_admin()) print t("Remember that nonadmins will NOT see output from dsm!");
+  if ($one == 'incoming_links') {
+     module_load_include('inc', 'sidora', 'includes/ps_migration');
+    return drupal_render(sidora_incoming_links_form());
+    drupal_exit();
+  }
   if ($one == 'psp') {
      module_load_include('inc', 'sidora', 'includes/project_spaces');
      $results = sidora_get_project_space_pids_for_pid($two);
