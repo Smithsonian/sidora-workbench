@@ -180,7 +180,7 @@ function sidora_remove_from_incorrect_project_spaces($pid_or_fedora_obj_or_nid_o
 
   // If it has a real owner, use that
   $obj = sidora_obj($pid);
-  $rels = $user_projects->relationships->get(SI_RELS_EXT_URI, 'isAdministeredBy');
+  $rels = $obj->relationships->get(SI_RELS_EXT_URI, 'isAdministeredBy');
   $ignore_other_parents = FALSE;
   foreach ($rels as $rel) {
     $ignore_other_parents = TRUE;

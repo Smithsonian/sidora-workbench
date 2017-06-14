@@ -49,10 +49,11 @@ function sidora_incoming_links_form($form = array(), &$form_state = NULL) {
     $limit = 100;
   }
     $pids_with_more_than_one_incoming_link_query = "
-select ?object (count(distinct ?incomingLink) as ?incomingLinks) from <#ri> where {
+select ?object ?title (count(distinct ?incomingLink) as ?incomingLinks) from <#ri> where {
+    ?object <info:fedora/fedora-system:def/model#label> ?title .
     ?incomingLink <info:fedora/fedora-system:def/relations-external#hasConcept> ?object .
 }
-GROUP BY ?object
+GROUP BY ?object ?title
 HAVING (count(distinct ?incomingLink) > 1)
 OFFSET $offset
 LIMIT $limit
@@ -114,6 +115,9 @@ select ?object ?incomingLink from <#ri> where {
 }
 ';
     $query = $pids_from_all_that_need_administered_by_with_num_incoming_links;
+    if (!empty($_GET['multiparent'])) {
+      $query = $pids_with_more_than_one_incoming_link_query;
+    }
 //    $query = $pids_with_administered_by;
     $tuque = islandora_get_tuque_connection();
     if ($tuque) {
@@ -140,11 +144,12 @@ select ?object ?incomingLink from <#ri> where {
     }
     foreach($results as $result) {
       $pid = $result['object']['value'];
-      $pid_table .= '<tr class="before-' . str_replace(":", "-", $pid) . ' ' . $row_class[$row_num++%2]  . '"><td>' . $pid . '</td><td>' . $result['title']['value'] . '</td><td>' . $result['incomingLinks']['value'] . '</td>';
+      $pid_with_replacement_dash = str_replace(":", "-", $pid);
+      $pid_table .= '<tr class="before-' . $pid_with_replacement_dash . ' ' . $row_class[$row_num++%2]  . '"><td>' . $pid . '</td><td>' . $result['title']['value'] . '</td><td>' . $result['incomingLinks']['value'] . '</td>';
       $table_pids[] = $result['object']['value'];
       $pid_table .= '<td>';
       if (intval($result['incomingLinks']['value']) > 1) {
-        $pid_table .= 'Click to pick';
+        $pid_table .= '<input id="load-' . $pid_with_replacement_dash . '" pid="' . $pid . '" onclick="loadParents(\'load-' . $pid_with_replacement_dash . '\', \'' . $pid . '\');" type="submit" value="Load Parent Table" class="form-submit">';
       }
       else {
         // nothing in the cell
@@ -166,19 +171,53 @@ select ?object ?incomingLink from <#ri> where {
         $pid_table .= '<br>No administered by for:'.$snabp;
       }
       foreach($tpab as $pid => $administered_by) {
-        $pid_table .= '<tr class="after-' . str_replace(":", "-", $pid) . '"><td>' . $pid . '</td><td>' . $administered_by . '</td></tr>';
+        $pid_table .= '<tr class="after-' . $pid_with_replacement_dash . '"><td>' . $pid . '</td><td>' . $administered_by . '</td></tr>';
       }
       $pid_table .= '</tbody></table>';
     }
   global $user;
   $form['info'] = array(
-    '#markup' => t('After the project space is created, you can choose who should be part of the project space.')
+    '#markup' => t('')
   );
   $form["pids_to_automatically_set_administered_by"] = array(
     '#type' => 'hidden',
   );
   $form["pid_table"] = array(
     '#markup' => $pid_table,
+  );
+  $form['results_limit'] = array(
+    '#type' => 'textfield',
+    '#value' => 100,
+    '#description' => t('Maximum number of items in table for the next load'), 
+    '#attributes' => array(
+      'id' => 'results-limit',
+    ),
+  );
+  $form['results_offset'] = array(
+    '#type' => 'textfield',
+    '#value' => 0,
+    '#description' => t('Results Offset (not recommended)'), 
+    '#attributes' => array(
+      'id' => 'results-offset',
+    ),
+  );
+  $form['show_basic_table'] = array(
+    '#type' => 'submit',
+    '#value' => t('Load the basic table'),
+    '#description' => t('Reloads the page with the basic table information'),
+    '#attributes' => array(
+      'id' => 'load-basic',
+      'onclick' => 'loadBasic();',
+    ),
+  );
+  $form['show_only_multiparent'] = array(
+    '#type' => 'submit',
+    '#value' => t('Load only multiparent'),
+    '#description' => t('Reloads the page with the table only listing items with multiple hasConcept / hasResource parents'),
+    '#attributes' => array(
+      'id' => 'load-multiparent',
+      'onclick' => 'loadMultiparent();',
+    ),
   );
   $form['batch_size'] = array(
     '#type' => 'textfield',
@@ -362,47 +401,50 @@ function sidora_incoming_links_list_parents($pids) {
   return $to_return;
 }
 
-function sidora_incoming_links_form_validate($form, &$form_state) {
-  if (empty($form_state['values']['ps_name'])){ 
-    form_set_error('ps_name', 'Enter a name for the project space.');
-  }
-}
-function sidora_incoming_links_form_submit($form, &$form_state) {
-  global $user;
-  module_load_include('inc', 'islandora', 'includes/utilities');
-  try
-  {
-    $tuque = islandora_get_tuque_connection();
-    $project_space_obj = $tuque->repository->constructObject(islandora_get_namespace('si:root'));
-   }catch(Exception $e) {
-     return t('The Fedora repository server is currently unavailable. Please contact the site administrator %email',
-       array('%email' => (variable_get('site_admin_email_to', '') != ''?' at ' . variable_get('site_admin_email_to'):''))
+/*
+ * Creates a new project space and copies information from the concept to the new project space.
+ * Within the project space there will be the original concept, renamed "Metadata for <name>"
+ */
+function sidora_project_space_convert_concept($original_pid) {
+  module_load_include('inc', 'sidora', 'includes/project_spaces');
+  $original = sidora_obj($original_pid);
+  if (!empty($original)) {
+    // Tries to make the owner the drupal user associated
+    $owner = sidora_get_drupal_user($original->owner);
+    // If the owner doesn't exist any more, then set the owner to the current drupal user
+    if (empty($owner)) {
+      $owner = sidora_get_drupal_user();
+    }
+
+    $ps_node = sidora_create_personal_project_space(
+      $owner->name,
+      array("label"=>$original->label,"description"=>"Project Space from converted concept")
     );
+    $ps_pid = '';
+    if (!empty($ps_node->field_fedora_pid) && array_key_exists($ps_node->language, $ps_node->field_fedora_pid)) {
+      $ps_pid = $ps_node->field_fedora_pid[$ps_node->language][0]['value'];
+    }
+
+    // just the concepts
+    $cr =  _sidora_get_child_results_cache($original_pid);
+    foreach ($cr as $child) {
+      $child_pid = $child['o']['value'];
+      sidora_copy($ps_pid, $child_pid, FALSE);
+      sidora_unassociate($original_pid, $child_pid, FALSE);
+    }
+    // add the original to the project space
+    sidora_copy($ps_pid, $original_pid, FALSE);
+
+    // just the resources
+    $resource_rels = $original->relationships->get(FEDORA_RELS_EXT_URI, 'hasResource');
+    foreach($resource_rels as $resource_rel) {
+      $resource_pid = $resource_rel['object']['value'];
+      sidora_copy($ps_pid, $resource_pid, FALSE);
+      sidora_unassociate($original_pid, $resource_pid, FALSE);
+    }
+    
   }
-  $created_node = sidora_create_personal_project_space($user, array("label"=>$form_state['values']['ps_name'],"description"=>$form_state['values']['ps_desc']));
-  if (!empty($created_node)) {
-    drupal_set_message("New Project Space Created");
-    $file = file_load($form_state['values']['file']);
-    $file->status = FILE_STATUS_PERMANENT;
-    $file_after = file_save($file);
-    // Note: It was INCREDIBLY DIFFICULT to figure out how to save thumbnail, so I imagine
-    // that most people do not perform uploads the way this is set up.
-    // It looks generally obvious now, but look around and you'll see nobody does it this way 
-    // That may indicate this is not how Drupal expects you to do it.
-    // This does create an entry in the file_usage table, so we are not in a situation where
-    // it creates orphan managed files.
-    // It was designed to do file resizing on the upload, so that's where the validators are.
-    // Most have the validators on the form_validate step, but we wanted a resize and preview
-    // before the form was submitted.
-    $created_node->field_thumbnail['und'][0] = array(
-      'fid' => $file->fid,
-      'alt' => '',
-      'title' => '',
-    );
-    node_save($created_node);
-    drupal_goto(substr(current_path(), 0, strrpos(current_path(), '/')).'/project_spaces');
-  }
-  else {
-    drupal_set_message("New Project Space Creation Failed", "warning");
-  }
+  $original->label = "Metadata for " . $original->label;
+  $original->relationships->registerNamespace("sidora", SI_RELS_EXT_URI);
+  $original->relationships->add(SI_RELS_EXT_URI, 'isAdministeredBy', $ps_pid);
 }

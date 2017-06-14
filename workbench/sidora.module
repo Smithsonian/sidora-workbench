@@ -267,6 +267,14 @@ function sidora_menu() {
       'access arguments' => array('administer site configuration'),
       'type' => MENU_CALLBACK,
    ),
+   'admin/sidora/incoming_links' => array(
+      'title' => 'SIdora check isAdministeredBy status',
+      'description' => 'Status of items in Fedora repo of hasConcept / hasResource vs isAdministeredBy',
+      'page callback' => 'sidora_incoming_links_form',
+      'access arguments' => array('administer site configuration'),
+      'file' => 'includes/ps_migration.inc',
+      'type' => MENU_CALLBACK,
+   ),
    'sidora/workbench/contact_us' => array(
       'title' => 'Contact Us',
       'description' => 'Contact Us',
@@ -1695,9 +1703,12 @@ jQuery(document).ready(function() {
  * Returns HTML that is a table containing the parents with removal links (if more than one parent) or
  * HTML indicating it is an orphan.
  */
-function sidora_get_parent_table($pid) {
+function sidora_get_parent_table($pid, $only_basic_table_and_direct_removal_call = FALSE) {
   module_load_include('inc', 'sidora', 'includes/utils');
-  $output = t('Parents');
+  $output = '';
+  if (empty($only_basic_table_and_direct_removal_call)) {
+    $output = t('Parents');
+  }
   $object = sidora_obj($pid);
   if (empty($object)) {
     return '';
@@ -1708,7 +1719,7 @@ function sidora_get_parent_table($pid) {
   if (sizeof($parents) > 1) $header[] = t('Remove');
   $unassociate_location = $GLOBALS['base_url'].'/sidora/ajax_parts/unassociate/';
   $administering_pid = sidora_get_owning_parent_concept_pid_by_administered_pid($pid);
-  if (empty($administering_pid)) {
+  if (empty($administering_pid) && !$only_basic_table_and_direct_removal_call) {
     $output .= "<br>" . t("None of this object's parents have been selected as the administration parent.");
   }
   foreach ($parents as $parent) {
@@ -1716,7 +1727,7 @@ function sidora_get_parent_table($pid) {
     $text_link = array(
       '#type' => 'submit',
       '#value' => t('Remove Link'),
-      '#attributes' => array("ppid"=>$parent['pid'], "class"=>array('parent-removal')),
+      '#attributes' => array("directlink"=>$pid . '-' . $parent['pid'], "ppid"=>$parent['pid'], "class"=>array('parent-removal')),
     );
     $sidora_data = sidora_get_form_and_dsid($parent['pid']);
     $form_name = $sidora_data['form_name'];
@@ -1746,7 +1757,36 @@ function sidora_get_parent_table($pid) {
   else {
     $output .= '<div>'.t('This is an orphan.').'</div>';
   }
-  $output .= '<script>jQuery(document).ready(function() {
+  if ($only_basic_table_and_direct_removal_call) {
+    $output .= '<script>jQuery(document).ready(function() {
+  jQuery("input.parent-removal").click(function() {
+    var directLink = jQuery(this).attr("directlink");
+    var ppid = jQuery(this).attr("ppid");
+    var pid = "'.$pid.'";
+    var clicked = jQuery("input[directlink=\'"+directLink+"\']");
+    var cp = clicked.parent();
+    cp.children().remove();
+    cp.append("<div>Removing...</div>");
+    jQuery.ajax({
+      "url" : "'.$unassociate_location.'"+ ppid + "/" + pid
+    }).done(
+      function(data) {
+        if (typeof(data) == "string") data = jQuery.parseJSON(data);
+        if (data.error) {
+          cp.children().remove();
+          cp.append("<div>Problem removing: "+data.description+"</div>");
+        }
+        else {
+          cp.children().remove();
+          cp.append("<div style=\"background: rgba(111,222,111,0.5);\">Removed</div>");
+        }
+      }
+    );
+  });
+});</script>';
+  }
+  else {
+    $output .= '<script>jQuery(document).ready(function() {
   jQuery("input.parent-removal").click(function() {
     var ppid = jQuery(this).attr("ppid");
     var pid = "'.$pid.'";
@@ -1781,6 +1821,7 @@ function sidora_get_parent_table($pid) {
 
   });
 });</script>';
+  }
   return $output;
 }
 
@@ -2544,6 +2585,11 @@ function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $ex
     return t("You must be an administrator or have an administrator set sidora_allow_all_to_debug in order to access this information");
   }
   if (!sidora_is_admin()) print t("Remember that nonadmins will NOT see output from dsm!");
+  if ($one == 'convert_concept') {
+    module_load_include('inc', 'sidora', 'includes/ps_migration');
+    sidora_project_space_convert_concept($two);
+    exit();
+  }
   if ($one == 'incoming_links') {
      module_load_include('inc', 'sidora', 'includes/ps_migration');
     return drupal_render(sidora_incoming_links_form());
@@ -5047,6 +5093,9 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
   global $user;
   $to_output = '';
   switch ($type) {
+    case 'relationships_basic':
+      print sidora_get_parent_table($pid, TRUE);
+      break;
     case 'relationships':
       print sidora_get_parent_table($pid);
       print sidora_get_related_codebook_table($pid);
@@ -6350,7 +6399,7 @@ function sidora_move($move_from_id, $copy_to_id, $pid, $show_output = TRUE) {
       return $to_output;
     }
   }
-  $owning_pid = sidora_get_owning_parent_concept_pid_by_constituent_pid($pid);
+  $owning_pid = sidora_get_owning_parent_concept_pid_by_administered_pid($pid);
   $reassign_owner = ($owning_pid == $move_from_id);
 
   
