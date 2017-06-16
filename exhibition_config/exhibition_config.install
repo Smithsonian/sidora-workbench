@@ -165,6 +165,99 @@ function exhibition_config_update_7200() {
 	$query->execute();
 }		 
 }
+/**
+ * Update to database to store visibililty of individual concepts and resources in a separate table
+ */
+function exhibition_config_update_7300() {
+	if (!db_table_exists('exhibition_config_visibility')){
+		$schema['exhibition_config_7300'] = array(
+    'description' => t('Stores individual visibilities for exhibitions'),
+    'fields' => array(
+      'pid' => array(
+        'type' => 'varchar',
+        'length' => '256',
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'path' => array(
+        'type' => 'text',
+				'size' => 'normal',
+      ),
+      'visibility' => array(
+        'type' => 'text',
+        'size' => 'big',
+      ),
+    ),
+  );
+	db_create_table('exhibition_config_visibility', $schema['exhibition_config_7300']);
+	}
+  $result = db_query("Select ". //SELECT
+"pid, visibility ". 
+"FROM {exhibition_config}");
+  $row = array();
+  while($input = $result->fetchAssoc()){
+    $root_pid = $input['pid'];
+    if (($input['visibility'] !== NULL) && ($input['visibility'] !== 'false')) {
+      $root_visibility = $input['visibility'];
+	    $exists = db_query("SELECT 1 FROM {exhibition_config_visibility} WHERE pid = :pid", array(':pid' => $root_pid))->fetchField();
+	if (!$exists) {
+      $json_decoded_visibility = json_decode($root_visibility, TRUE);
+      if ($json_decoded_visibility !== NULL) {
+        $unserialized_visibility = $json_decoded_visibility;
+      }else{
+        $unserialized_visibility = unserialize($root_visibility); 
+      }	
+      $unserialized_visibility = array($unserialized_visibility);
+      $visibility_settings = array(
+         'show_name' => 'Show Name',
+         'show_meta' => 'Show Meta',
+         'show_preview' => 'Show Preview',
+         'allow_download' => 'Show Download',
+         'show_degraded' => 'Show Degraded',
+         'future_children_show_name' => 'Show Name',
+         'future_children_show_meta' => 'Show Meta',
+         'future_children_show_preview' => 'Show Preview',
+         'future_children_allow_download' => 'Show Download',
+         'future_children_show_degraded' => 'Show Degraded');
+       $flat_visibility = array();
+       exhibition_config_flatten_tree($unserialized_visibility,$flat_visibility,$visibility_settings,$root_pid);
+       $inserted_records = 0;
+       foreach ($flat_visibility as $key => $value) {
+	$path = preg_replace('/[\/]/', '_', $key);
+	$path_array = explode('_',$path);
+	array_pop($path_array);
+	$path = implode('_',$path_array);
+ 	 $pid_visibility = json_encode($value);
+	if ($path == ''){
+	  $exists = db_query("SELECT 1 FROM {exhibition_config_visibility} WHERE pid = :pid", array(':pid' => $value['pid']))->fetchField();
+	}else{
+	  $exists = db_query("SELECT 1 FROM {exhibition_config_visibility} WHERE pid = :pid and path = :path", array(':pid' => $value['pid'],':path' => $path))->fetchField();
+  }
+	if (!$exists) {
+        $fields = 
+        array(
+          'pid',
+	  'path', 
+          'visibility', 
+        );
+        $insert_query = db_insert('exhibition_config_visibility')->fields($fields);
+        $insert_query->values( 
+         array(
+           'pid' => $value['pid'],
+	   'path' => $path,
+           'visibility' => $pid_visibility,
+         )
+       );
+       $new_entry = $insert_query->execute();
+	$inserted_records++;
+     }
+    }
+  watchdog("exhibition_config",'exhibition_config visibility update completed. Inserted :' . $inserted_records);
+  }
+}
+			 
+}		 
+}
     
 /*
 * Implementation of hook_uninstall().

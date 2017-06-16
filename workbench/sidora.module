@@ -349,7 +349,21 @@ function sidora_menu() {
       'access callback' => 'user_is_logged_in',
       'file' => 'includes/project_spaces.inc',
     ),
- );
+    'admin/sidora/update_xsl_db' => array(
+      'title' => 'Update SIdora XSLs in database',
+      'description' => 'Update SIdora XSLs in database',
+      'page callback' => 'sidora_update_xsl',
+      'access arguments' => array('administer site configuration'),
+      'type' => MENU_CALLBACK,
+    ),
+    'admin/sidora/download_xsl' => array(
+      'title' => 'Download SIdora XSLs as archive',
+      'description' => 'Download SIdora XSLs as archive',
+      'page callback' => 'sidora_download_xsl',
+      'access arguments' => array('administer site configuration'),
+      'type' => MENU_CALLBACK,
+    ),
+  );
 }
 
 
@@ -446,7 +460,7 @@ function sidora_management_panel($pid, $show_or_save = 'show', $dsid_to_remove =
       $dsid_to_remove = strtoupper('obj');
         $model_for_extensions = '*';
 	$models = $object->models;
-        $sidora_models = array('si:imageCModel','si:generalImageCModel','si:datasetCModel','si:fieldbookCModel','islandora:sp-audioCModel','islandora:sp_videoCModel');
+        $sidora_models = array('si:imageCModel','si:generalImageCModel','si:datasetCModel','si:fieldbookCModel','islandora:sp-audioCModel','islandora:sp_videoCModel','si:genericCModel','si:rawGeneSequenceCModel','si:assembledGeneSequenceCModel');
       foreach($models as $model){
           if (in_array($model, $sidora_models)){
             $model_for_extensions = $model;
@@ -1054,7 +1068,7 @@ function sidora_islandora_datastream_modified(AbstractObject $object, AbstractDa
       sidora_update_datastream($object, '<sidora>
       <meta_requirements_fulfilled>'.$all_meta_entered.'</meta_requirements_fulfilled>
       <form>'.$form_name.'</form>
-      </sidora>', 'SIDORA');
+      </sidora>', 'SIDORA',NULL,NULL,'X');
     }
   }
   sidora_clear_tree_cache($object->id);
@@ -1380,16 +1394,13 @@ xmlns:cpf="urn:isbn:1-931666-33-4"
 /* Show the form used to delete a XSL file  */
 function sidora_delete_xsl_form($form,&$form_state) {
   $form = array();
-  $directory_to_list_for_xsl = DRUPAL_ROOT.'/'.drupal_get_path('module','sidora').'/XSL';
-  $xsl_filenames = array_diff(scandir($directory_to_list_for_xsl), array('..', '.', '.htaccess'));
+  $xsl_filenames = sidora_get_all_xsl_names();
   $xsl_names_dd = '<select class="xsl-names-dd form-select">';
   $xsl_names_dd .= '<option value="">None - Direct metadata to browser</option>';
   $xsl_form_dropdown = array();
   foreach ($xsl_filenames as $name) {
-    if (sidora_endsWith(strtolower($name), ".xsl")) {
       $xsl_names_dd .= '<option value="'.$name.'">'.$name.'</option>';
       $xsl_form_dropdown[$name] = $name;
-    }
   }
   $xsl_names_dd .= '</select>';
  // need to add the ui-dialog library here to be able to create a dialog box inside the Delete XSL Shadowbox
@@ -2018,8 +2029,7 @@ function sidora_settings_import($object, $settings = array(), $dry_run = TRUE) {
   $process_forms             = isset($settings['process_forms']) ?             $settings['process_forms']              : TRUE;
   $process_form_associations = isset($settings['process_form_associations']) ? $settings['process_form_associations']  : TRUE;
   $process_admin_settings    = isset($settings['process_admin_settings']) ?    $settings['process_admin_settings']     : TRUE;
-
-
+  $process_xslts             = isset($settings['process_xslts']) ?             $settings['process_xslts']              : TRUE;
   $ignore_message_type = $show_ignores_as_warnings?'warning':'status';
   // make the comparisons case insensitive by having all lower
   $ignore_settings = array_map('strtolower',$ignore_settings);
@@ -2035,6 +2045,7 @@ function sidora_settings_import($object, $settings = array(), $dry_run = TRUE) {
   // $full_export['admin_settings'] = $settings_holder;
   $forms = ($process_forms) ? $object->forms : array();
   $associations = ($process_form_associations) ? $object->associations : array();
+  $xslts = ($process_xslts) ? $object->xslt : array();
   $admin_settings = ($process_admin_settings) ? $object->admin_settings : array();
   module_load_include('inc', 'xml_form_builder', 'XMLFormRepository');
   module_load_include('inc', 'xml_form_builder', 'XMLFormDatabase');
@@ -2108,25 +2119,59 @@ function sidora_settings_import($object, $settings = array(), $dry_run = TRUE) {
       drupal_set_message($dry_run_prefix . t('Ignored association "%name" to "%model" ( "%model-%name"  ).', array('%name' => $form_name, '%model' => $model)),$ignore_message_type);
     }
   }
-  foreach ($admin_settings as $setting_name=>$setting_value) {
+  if ($process_xslts) {
+    $setting_name_for_ignore = 'sidora_xslts';
     if (
+      !in_array(strtolower($setting_name_for_ignore),$ignore_settings)
+      &&
+      (empty($only_apply_settings) || sidora_contains($setting_name_for_ignore,$only_apply_settings,TRUE))
+      ) {
+        if (!($dry_run)) {
+	 db_truncate('sidora_xsl')->execute();
+	}	 
+	$truncate_success = ( $dry_run || (db_query('select count(*) from {sidora_xsl}')->fetchField() == '0'));
+        if ($truncate_success) {
+	  foreach ($xslts as $xslt_name => $xslt_definition) {
+           $insert_success = ( $dry_run ||
+             db_insert('sidora_xsl')
+               ->fields(array('form_name' => $xslt_name, 'form_definition' => $xslt_definition,'updated' => date('Y-m-d H:i:s'),))
+               ->execute()
+              );
+            if ($insert_success) {
+              drupal_set_message($dry_run_prefix . t('Successfully imported xslt "%name".', array('%name' => $xslt_name)));
+            }
+            else {
+              drupal_set_message($dry_run_prefix . t('FAILED imported on xslt "%name".', array('%name' => $xslt_name)),'error');
+            }
+	  }
+	}
+	else {
+        drupal_set_message($dry_run_prefix . t('FAILED to delete existing xslts in database.'),'error');
+        }
+      }
+      else {
+        drupal_set_message($dry_run_prefix . t('Ignored xslts'),$ignore_message_type);
+      }
+    } 	   
+    foreach ($admin_settings as $setting_name=>$setting_value) {
+      if (
       !in_array(strtolower($setting_name),$ignore_settings)
       &&
       (empty($only_apply_settings) || sidora_contains($setting_name,$only_apply_settings,TRUE))
-    ) {
-      $original_value = variable_get($setting_name);
-      if (json_encode($original_value) === json_encode($setting_value)) {
-        drupal_set_message($dry_run_prefix . t('Administrative setting "%name" was already set to the content specified in this configuration.',array('%name' => json_encode($setting_name))));
-      }
-      else {
-        if (!$dry_run) variable_set($setting_name,$setting_value);
-        drupal_set_message($dry_run_prefix . t('Administrative setting "%name" set from <br/>"%original" <br/>to <br/>"%newval".',array('%name' => $setting_name,'%original'=>json_encode($original_value),'%newval'=>json_encode($setting_value))));
-      }
-    }
-    else {
-      drupal_set_message($dry_run_prefix . t('Ignored administrative setting "%name".',array('%name' => $setting_name)),$ignore_message_type);
-    }
-  }
+      ) {
+        $original_value = variable_get($setting_name);
+        if (json_encode($original_value) === json_encode($setting_value)) {
+          drupal_set_message($dry_run_prefix . t('Administrative setting "%name" was already set to the content specified in this configuration.',array('%name' => json_encode($setting_name))));
+        }
+         else {
+            if (!$dry_run) variable_set($setting_name,$setting_value);
+            drupal_set_message($dry_run_prefix . t('Administrative setting "%name" set from <br/>"%original" <br/>to <br/>"%newval".',array('%name' => $setting_name,'%original'=>json_encode($original_value),'%newval'=>json_encode($setting_value))));
+         }
+       }
+       else {
+         drupal_set_message($dry_run_prefix . t('Ignored administrative setting "%name".',array('%name' => $setting_name)),$ignore_message_type);
+       }
+     }
 }
 
 /*
@@ -2348,6 +2393,11 @@ function sidora_config_form($form, &$form_state) {
     '#title'=>t('Process Form Associations'),
     '#default_value' => variable_get('sidora_config_process_form_associations',TRUE),
   );
+  $form['process_xslts'] = array(
+    '#type' =>'checkbox',
+    '#title'=>t('Process SIdora XSLTs'),
+    '#default_value' => variable_get('sidora_config_process_xslts',TRUE),
+  );
   $form['process_admin_settings'] = array(
     '#type' =>'checkbox',
     '#title'=>t('Process Administrative Settings'),
@@ -2385,8 +2435,10 @@ function sidora_config_form_submit($form, &$form_state) {
   variable_set("sidora_config_process_forms",$form_state['values']['process_forms']);
   variable_set("sidora_config_process_form_associations",$form_state['values']['process_form_associations']);
   variable_set("sidora_config_process_admin_settings",$form_state['values']['process_admin_settings']);
+  variable_set("sidora_config_process_xslts",$form_state['values']['process_xslts']);
   $process_forms = $form_state['values']['process_forms'];
   $process_form_associations = $form_state['values']['process_form_associations'];
+  $process_xslts = $form_state['values']['process_xslts'];
   $process_admin_settings = $form_state['values']['process_admin_settings'];
   $ignore_settings = array_map('trim', explode("\n",$form_state['values']['ignore_settings'])); 
   // Explode it and trim any whitespace
@@ -2409,6 +2461,7 @@ function sidora_config_form_submit($form, &$form_state) {
     $_SESSION['sidora_uploaded_json_config']['process_forms'] = $process_forms;
     $_SESSION['sidora_uploaded_json_config']['process_form_associations'] = $process_form_associations;
     $_SESSION['sidora_uploaded_json_config']['process_admin_settings'] = $process_admin_settings;
+    $_SESSION['sidora_uploaded_json_config']['process_xslts'] = $process_xslts;
     sidora_settings_import($object,$_SESSION['sidora_uploaded_json_config'],$dry_run);
 
     if ($dry_run) drupal_set_message('Update the configuration of server with the configuration used in the dry run by clicking this link: <a href="?useLastDryRunAsConfigSource=true">Use the Dry Run config</a>','whitebox');
@@ -2469,10 +2522,20 @@ function sidora_settings_object($ignore_list = array()) {
       $forms[$form_name] = $form_string;
     }
   }
+  $xslt = array();
+  if (db_table_exists('sidora_xsl')) {
+    $get_xsl_records = db_query("select form_name, form_definition from sidora_xsl");
+    foreach ($get_xsl_records as $xsl_form_record) {
+      if (sidora_endsWith(strtolower($xsl_form_record->form_name), ".xsl")) {
+        $xslt[$xsl_form_record->form_name] = $xsl_form_record->form_definition;
+      }
+    }
+  }
   $full_export = array();
   $full_export['forms'] = $forms;
   $full_export['associations'] = $associations;
   $full_export['admin_settings'] = $settings_holder;
+  $full_export['xslt'] = $xslt;
   return $full_export;
 }
 
@@ -3230,14 +3293,14 @@ if ($one == 'deletexsl') {
     var_dump($result);
     var_dump(curl_error($curl));
     watchdog('SIdora Testing',t("Bulk metadata Curl reponse whole :<br/> %curl_response",
-                array('%curl_response' => $result))
-     );
-    curl_close($curl);
-  }
-  if ($one == 'content_model') {
-    $obj = sidora_obj($two);
-    $models = $obj->models;
-    $file_extensions = array(
+       array('%curl_response' => $result))
+   );
+   curl_close($curl);
+ }
+ if ($one == 'content_model') {
+   $obj = sidora_obj($two);
+   $models = $obj->models;
+   $file_extensions = array(
     'si:imageCModel' => array('jpg', 'png', 'gif', 'tiff', 'tif', 'jp2'),
     'si:generalImageCModel' => array('jpg', 'png', 'gif', 'tiff', 'tif', 'jp2'),
     'si:datasetCModel' => array('csv', 'xml', 'xlsx', 'xls', 'dat', 'med', 'arg', 'slt'),
@@ -3255,6 +3318,44 @@ if ($one == 'deletexsl') {
   }
   //This ends the testing function and should also indicate the end of liberal use of the dsm function
 }
+
+function sidora_flatten_tree($branch, &$rows,$visibility_settings,$path) {
+  //var_dump($branch);
+  if (isset($branch) && sizeof($branch) && !empty($branch)) {
+    $resource_visibility_settings = array('show_name','show_meta','show_preview','allow_download','show_degraded');
+    $concept_visibility_settings = array('show_name','show_meta','future_children_show_name','future_children_show_meta','future_children_show_preview','future_children_allow_download','future_children_show_degraded');
+    foreach ($branch as $child_array) {
+      if (sizeof($child_array)) {
+        //print_r($child_array);
+        $tree_depth = substr_count($path,'/');
+        if ($path == '') {
+          $array_index = $child_array['pid'];
+        }else{  
+          $array_index = $path;
+        } 
+        if ($tree_depth > 0) $array_index = $path.$child_array['pid'];
+	  $rows[$array_index] = array(
+           'pid' => $child_array['pid'],
+           'type' => $child_array['type'],
+	   'label' => $child_array['label'],
+	   'model' => $child_array['model']);
+        foreach ($visibility_settings as $setting => $name) {
+          if (($child_array['type'] == 'Concept') && (in_array($setting,$concept_visibility_settings))) {
+            $visibility_value = (isset($child_array[$setting]))?($child_array[$setting]):'';
+            $rows[$array_index][$setting] = $visibility_value;
+          }
+          if (($child_array['type'] == 'Resource') && (in_array($setting,$resource_visibility_settings))) {
+            $visibility_value = (isset($child_array[$setting]))?($child_array[$setting]):'';
+            $rows[$array_index][$setting] = $visibility_value;
+          }
+        } 
+      } 
+      if ((isset($child_array['children'])) && (sizeof($child_array['children']) > 0)) {
+        sidora_flatten_tree($child_array['children'],$rows,$visibility_settings,$array_index.'/');
+      }
+    }
+  }
+} 
 
 /*
  * Show the form to create a concept
@@ -3653,11 +3754,14 @@ function sidora_create_resource_get_upload_form_html($model, $form_name, $ontolo
   $file_extensions = array(
     'si:imageCModel' => array('jpg', 'png', 'gif', 'tiff', 'tif', 'jp2'),
     'si:generalImageCModel' => array('jpg', 'png', 'gif', 'tiff', 'tif', 'jp2'),
-    'si:datasetCModel' => array('csv', 'xml', 'xlsx', 'xls', 'dat', 'med', 'arg', 'slt'),
+    'si:datasetCModel' => array('csv', 'xlsx', 'xls'),
     'si:fieldbookCModel' => array('pdf'),
     'islandora:sp-audioCModel' => array('mp3','aiff','wav'),
     'islandora:sp_videoCModel' => array('ogg','mp4','mov','qt', 'm4a', 'm4v', 'avi', 'mkv'),
-    '*' => array('*'),
+    'si:rawGeneSequenceCModel' => array('fasta','fa','fas','fsn','fna','faa'),
+    'si:assembledGeneSequenceCModel' => array('fasta','fa','fas','fsn','fna','faa'),
+    'si:genericCModel' => array('*'),
+    '*' => array('*')
   );
   $elements = NULL;
   if (!empty($ontology_location)) {
@@ -3682,8 +3786,8 @@ function sidora_create_resource_get_upload_form_html($model, $form_name, $ontolo
     $to_return .= "<div id='create-resource-upload'>";
     $to_return .= sidora_get_plupload_html($elements, $upload_button_text);
     $to_return .= "<input class=\"form-submit\" id=\"Next\" value=\"Individual Metadata\" onclick=\"jQuery('#create-resource-upload').hide(); location.reload();\"></input>";
-    $to_return .= "<input class=\"form-submit\" id=\"applyBatch\" value=\"Apply Metadata\" onclick=\"jQuery('#create-resource-upload').hide(); if (window.location.href.indexOf('metabulk') == -1) {window.location.href += '//metabulk';}\"></input>";
-                $to_return .= "</div>";
+    if ($elements['#extensions'][0] != '*') $to_return .= "<input class=\"form-submit\" id=\"applyBatch\" value=\"Apply Metadata\" onclick=\"jQuery('#create-resource-upload').hide(); if (window.location.href.indexOf('metabulk') == -1) {window.location.href += '//metabulk';}\"></input>";
+    $to_return .= "</div>";
     if ($clear_file_list) {
       $_SESSION['file_uploads'][$user->uid] = array();
     }
@@ -3939,7 +4043,10 @@ function sidora_create_resource_get_metadata_form_html($parent_pid, $model, $for
         'si:fieldbookCModel' => 'pdf',
         'si:datasetCModel' => 'csv',
         'islandora:sp-audioCModel' => 'audio',
-        'islandora:sp_videoCModel' => 'video'
+        'islandora:sp_videoCModel' => 'video',
+	'si:genericCModel' => 'generic',
+	'si:rawGeneSequenceCModel' => 'rawsequence',
+	'si:assembledGeneSequenceCModel' => 'assembledsequence'
       );
       $form['resource_model'] = array(
       '#name' => 'resource_model',
@@ -4970,12 +5077,12 @@ function sidora_get_xsl_file_config_for_object($pid) {
  */
 function sidora_get_xsl_file_for_object($pid) {
   $curr_check = sidora_get_xsl_exhibition_config_for_object($pid);
-  if ((!empty($curr_check)) && ($curr_check != 'none') && ($curr_check != 'direct') && (file_exists($curr_check))) {
+  if ((!empty($curr_check)) && ($curr_check != 'none') && ($curr_check != 'direct')) {
     return $curr_check;
   }
   $curr_check = sidora_get_xsl_file_config_for_object($pid);
   if (empty($curr_check)) return NULL;
-  return (DRUPAL_ROOT . '/'. drupal_get_path('module','sidora') . '/XSL/' . $curr_check->file);
+  return $curr_check->file;
 }
 /*
  * If an item's ancestry (parent/grandparent/etc) includes an exhibition, then the item is allowed to be shown by exhibition
@@ -5061,14 +5168,27 @@ function sidora_open_access($info_type, $pid) {
       break;
     case 'xsl':
       $file = sidora_get_xsl_file_for_object($pid);
-      // empty string means use default xsl, NULL means there is no file
+			// empty string means use default xsl, NULL means there is no file
       if ($file === '') {
+        header("Content-type: text/xml");
         print sidora_xsl_string($xsl_file);
       }
       else {
-	//$directory_for_xsl = DRUPAL_ROOT.'/'.drupal_get_path('module','sidora').'/XSL';
-        //$full_file = ($directory_for_xsl . '/' . $file);
-        if ($file) $output_info = readfile($file);
+        if ($file) {
+          header("Content-type: text/xml");
+				  if (preg_match('/^.*\/[^\.]*/', $file)) {
+				    $output_info = readfile($file);
+					}
+					else {
+            $xsl_form_definition = db_query("SELECT form_definition FROM {sidora_xsl} WHERE form_name = :form_name", array(':form_name' => $file))->fetchField();
+            if ($xsl_form_definition) {
+						  $definition = new DOMDocument();
+              $definition->loadXML($xsl_form_definition);
+				      $definition->formatOutput = TRUE;
+				      print $definition->saveXML();  
+					  }
+					}
+				}			
       }
       break;
     case 'xsl_config':
@@ -5079,7 +5199,7 @@ function sidora_open_access($info_type, $pid) {
       print json_encode($return_when_encoded);
       break;
     case 'osd':
-      sidora_osd_proxy_version($pid);
+			sidora_osd_proxy_version($pid);
       break;
   }
   drupal_exit();
@@ -5103,20 +5223,21 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
     case 'xsl_upload':
       $return_when_encoded = array();
       $all_uploads = $_SESSION['file_uploads'][$user->uid];
-      $directory_to_list_for_xsl = DRUPAL_ROOT.'/'.drupal_get_path('module','sidora').'/XSL';
       $return_when_encoded['files'] = array();
       if (!empty($all_uploads)) {
         foreach ($all_uploads as $curr_upload) {
           $curr_item = array();
-          $new_name = $directory_to_list_for_xsl.'/'.$curr_upload->filename;
+          $new_name = $curr_upload->filename;
           if (sidora_endsWith(strtolower($new_name),'.xsl')) {
-            if (file_exists($new_name)) {
-              $rename_worked = rename($new_name, $directory_to_list_for_xsl.'/backups/'.'Prior_to_'.date('Ymd_His').'_'.$curr_upload->filename);
-              $curr_item['existing_moved'] = $rename_worked;
-            }
-            $rename_worked = rename($curr_upload->filepath,$new_name);
-            $curr_item['description'] = t('Attempted file write');
-            $curr_item['success'] = $rename_worked;
+	    if (rename($curr_upload->filepath, drupal_realpath('public://') . '/' . $new_name)) {
+	      $rename_worked = sidora_xsl_file_to_db(drupal_realpath('public://') . '/',$new_name);
+              $curr_item['description'] = t('Attempted file write');
+              $curr_item['success'] = $rename_worked;
+	    }
+	    else {
+	      $curr_item['success'] = FALSE;
+              $curr_item['description'] = t('Unable to move the uploaded file');
+	    }		
           }
           else {
             $curr_item['success'] = FALSE;
@@ -5279,14 +5400,17 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
       break;
     case 'resources':
       $resource_types = array(
-        'all' => array('si:imageCModel', 'si:generalImageCModel','si:fieldbookCModel','si:datasetCModel','islandora:sp-audioCModel','islandora:sp_videoCModel'),
+        'all' => array('si:imageCModel', 'si:generalImageCModel','si:fieldbookCModel','si:datasetCModel','islandora:sp-audioCModel','islandora:sp_videoCModel','si:genericCModel','si:rawGeneSequenceCModel','si:assembledGeneSequenceCModel'),
         'images' => array('si:imageCModel', 'si:generalImageCModel'),
         'pdf' => array('si:fieldbookCModel'),
         'csv' => array('si:datasetCModel'),
         'audio' => array('islandora:sp-audioCModel'),
         'video' => array('islandora:sp_videoCModel'),
+	'rawsequence' => array('si:rawGeneSequenceCModel'),
+	'assembledsequence' => array('si:assembledGeneSequenceCModel'),
+	'generic' => array('si:genericCModel'),
         'text' => FALSE
-      );
+				);
       if ($download == 'browser' && $formatted == 'dataTableServerSideProcessing') {
         $jsdt_title_and_type_search_val = filter_var($_GET['search']['value'], FILTER_SANITIZE_STRING);
         // The search value holds both the type of object and the title search, pull those out
@@ -5714,42 +5838,6 @@ function sidora_block_view($delta = '') {
     case 'sidora_concept_info':
       $block['content'] = '<div id="workbench-menu" style="display:none;">' .
                           '</div><div id="sidora_content_concept_info">'.
-/*
-                          '<ul id="menu000">
-  <li class="ui-state-disabled">Aberdeen</li>
-  <li><a href="">Ada</a></li>
-  <li>Adamsville</li>
-  <li>Addyston</li>
-  <li>Delphi
-    <ul>
-      <li class="ui-state-disabled">Ada</li>
-      <li>Saarland</li>
-      <li>Salzburg an der schö Donau</li>
-    </ul>
-  </li>
-  <li>Saarland</li>
-  <li><a href="">Salzburg</a>
-    <ul>
-      <li><a href="">Delphi</a>
-        <ul>
-          <li>Ada</li>
-          <li>Saarland</li>
-          <li>Salzburg</li>
-        </ul>
-      </li>
-      <li>Delphi
-        <ul>
-          <li>Ada</li>
-          <li>Saarland</li>
-          <li>Salzburg</li>
-        </ul>
-      </li>
-      <li>Perch</li>
-    </ul>
-  </li>
-  <li class="ui-state-disabled">Amesville</li>
-</ul>'.
-*/
  '';
         $block['content'] .= '
   <div id="concept_tabs">
@@ -5781,8 +5869,7 @@ function sidora_block_view($delta = '') {
                 <li id="manageConcept"><a href="#" onclick="sidora.concept.Manage(); return false;">Manage&nbsp;Concept</a></li>';
       $block['content'] .='
                 <li id="configureExhibition"><a href="#" onclick="window.open(Drupal.settings.basePath+\'exhibition_config/config/\'+window.sidora.concept.GetPid()); return false;">Configure&nbsp;Exhibition</a></li>
-                <li id="exhibitionPermissions"><a href="#" onclick="window.open(Drupal.settings.basePath+\'exhibition_config/visibility/\'+window.sidora.concept.GetPid()); return false;">Configure&nbsp;Visibility&nbsp;Settings</a></li>
-             </ul>
+              </ul>
            </li>
            <li><a href="#" onclick="return false;">View</a>
              <ul>';
@@ -6242,7 +6329,8 @@ function sidora_ajax_parts($call_type, $param1 = '', $param2 = '', $param3 = '')
     }
   }
  }
- print json_encode(array('status' => 'error', 'message' => 'Batch Status return ' . $ingest_status));
+ $res_count = db_query("select count from sidora_batch_ingest where batch_id = :batchid", array(':batchid' => $batch_id))->fetchField();
+ print json_encode(array('status' => 'error', 'message' => 'Batch Status return ' . $ingest_status, 'parent' => $parent_pid, 'count' => $res_count));
  drupal_exit();
 }
 
@@ -7158,7 +7246,7 @@ function sidora_get_plupload_html($elements, $button_text = 'Browse'){
   $path_for_remove_icon = base_path() . drupal_get_path('module', 'xml_forms') . '/elements/images/';
   $multi_selection = 'true';
   $drag_and_drop = 'true';
-  if (strpos(strtoupper($button_text),"OBJ") !== FALSE){
+  if ((strpos(strtoupper($button_text),"OBJ") !== FALSE) || ($elements['#extensions'][0] == '*')) {
     $multi_selection = 'false';
     $drag_and_drop = 'false';
     $button_text = 'Browse';
@@ -7210,12 +7298,45 @@ function sidora_get_plupload_html($elements, $button_text = 'Browse'){
   if (navigator.userAgent.match(/(Firefox)/i) != null){
     //Firefox gets weird with the flash version between http and https, sometimes http doesnt work
     runtimesBrowserSpecific = "html5,html4";
-  }
-  window.uploader = new plupload.Uploader({
+  }';
+	if ($elements['#extensions'][0] == '*') {
+	  print '
+	    plupload.addFileFilter("excluded_extensions", function(filter, file, cb){
+ 	    var self = this;
+	    var permitted = true;
+            var mimeTypes = this.settings.filters.excluded_extensions[0];
+	    Object.keys(mimeTypes).forEach(function(key){
+	      var exts = mimeTypes[key].split(",");
+              if(exts.length === 1 && exts[0] === "-")
+                 permitted = true;
+              else
+              {
+                for(var i = 0; i < exts.length; i++) {
+                  var fileArray = file.name.split(".");
+                  var extension = fileArray[fileArray.length - 1];
+                  if(exts[i].toUpperCase() === extension.toUpperCase()) {
+                    self.trigger("Error", {
+                      code: plupload.GENERIC_ERROR,
+                      message: file.name + " must be ingested using " + key + " resource type",
+                      file: file
+                    });
+                    permitted = false;
+                    cb(false);
+                    return;
+                  }
+                }
+              }
+            });
+            if(permitted)
+              cb(true);
+          });';
+        }		
+	print '			
+	window.uploader = new plupload.Uploader({
     runtimes : runtimesBrowserSpecific, //No silverlight - gets bad if user does not allow it and it tries to use.
     browse_button : "pickfiles", // you can pass in id...
     container : document.getElementById("container"),'; // ... or DOM Element itself
-    if ($drag_and_drop == 'false') {
+    if (($drag_and_drop == 'false') || ($elements['#extensions'][0] == '*')) {
       print '
 	max_files : "1",';
     }
@@ -7249,6 +7370,7 @@ function sidora_get_plupload_html($elements, $button_text = 'Browse'){
   print 'Moxie.xap",
     
     filters : {
+      excluded_extensions : [{"Basic Image" : "jpg,jpeg,jp2,tiff","PDF Text" : "pdf","Tabular Datasets" : "csv,xls,xlsx","Basic Audio" : "aiff,wav,mp3","Basic Video" : "ogg,mp4,mov,qt,m4a,m4v,avi,mkv","Raw Sequence" : "fasta,fa,fas,fsn,fna,faa","Assembled Sequence" : "fasta,fa,fas,fsn,fna,faa"}],
       max_file_size : "1000mb",
       mime_types: [
         {title : "';
@@ -7292,17 +7414,19 @@ function sidora_get_plupload_html($elements, $button_text = 'Browse'){
       },
       FilesAdded: function(up, files) {
         if (typeof(sidoraUploaderFilesAdded) == "function"){ sidoraUploaderFilesAdded(up,files); }
-        if ((typeof up.settings.max_files !== "undefined") && (up.settings.max_files !== null) && (up.files.length == up.settings.max_files)) {
-          jQuery(up.settings.browse_button).attr("disabled", true).addClass("form-button-disabled");
+        if ((typeof up.settings.max_files !== "undefined") && (up.settings.max_files !== null) && (up.files.length >= up.settings.max_files)) {
+          up.splice(up.settings.max_files);
+	  if (files.length > (up.settings.max_files - up.total.uploaded)) files.splice((up.settings.max_files - up.total.uploaded),(files.length - (up.settings.max_files - up.total.uploaded)));
+	  jQuery(up.settings.browse_button).attr("disabled", true).addClass("form-button-disabled");
         }
         if (jQuery("#Next").length > 0)
           document.getElementById("Next").disabled=true;
         jQuery("#Next").addClass("form-button-disabled");
         if (jQuery("#applyBatch").length > 0)
           document.getElementById("applyBatch").disabled=true;
-        jQuery("#applyBatch").addClass("form-button-disabled");
-        plupload.each(files, function(file) {
-					var item = jQuery("<li class=\"plupload_view_list plupload_file ui-state-default plupload_file_loading plupload_delete\"></li>");
+          jQuery("#applyBatch").addClass("form-button-disabled");
+          plupload.each(files, function(file) {
+	  var item = jQuery("<li class=\"plupload_view_list plupload_file ui-state-default plupload_file_loading plupload_delete\"></li>");
           item.attr("id",file.id);
           item.html("<div class=\"plupload_file_name\">"+file.name + "</div><div class=\"plupload_file_size\" style=\"width:100px;\">" + plupload.formatSize(file.size) + "   <b></b></div>" + "<div class=\"plupload_file_action\"><a class=\'remove-file-btn\' href=\'\'><img src=\'' . $path_for_remove_icon . 'minus_small.png\'/></a></div>");
           jQuery("#create-resource-upload_filelist").append(item);
@@ -7339,7 +7463,7 @@ print  '
         if (err.code == -601) document.getElementById("console").innerHTML += "  Usable extensions are:';
   print implode(",",$elements['#extensions']);
   print '";
-      },
+			},
       UploadComplete: function(up,files){
         if (typeof(sidoraUploadComplete) == "function"){ sidoraUploadComplete(up,files); }
         if (jQuery("#Next").length > 0)
@@ -7938,27 +8062,11 @@ function sidora_fill_concepts_children($query_result, $current_path = array(), $
 function _sidora_get_child_results_cache($child_pid) {
   if (cache_get("sidora:children_results:".$child_pid) === FALSE) {
     $tuque = islandora_get_tuque_connection();
-    $grandchildren_query = wb_si_exhibition_generate_child_concept_query($child_pid);
-    // this is where we exceute the Main list query - part1 of the 3 query approach
-     // $grandchildren_query = wb_si_exhibition_generate_child_concept_query_children_only($child_pid);
+    $grandchildren_query = sidora_generate_child_concept_query($child_pid);
     $ri = $tuque->repository->ri;
     $results = $ri->sparqlQuery($grandchildren_query);
     if (sizeof($results) == 1 && $results[0]['o']['value'] == '') $results = array();
-    /* code change to incorporate the 3 query approach for generating the concept tree */
-    /*
-    foreach ($results as $gc_index=>$gchild) {
-      $grandchild_pid = $gchild['o']['value'];
-      $concept_count_query = wb_si_exhibition_generate_child_concept_query_concepts_count($grandchild_pid);
-      // count of concept children
-      $concept_results = $ri->sparqlQuery($concept_count_query);
-      $results[$gc_index]['k0'] = $concept_results[0]['k0'];
-      $resource_count_query = wb_si_exhibition_generate_child_concept_query_resources_count($grandchild_pid);
-      // count of resource children
-      $resource_results = $ri->sparqlQuery($resource_count_query);
-      $results[$gc_index]['k1'] = $resource_results[0]['k1'];
-     }
-     */
-     cache_set("sidora:children_results:".$child_pid,$results);
+    cache_set("sidora:children_results:".$child_pid,$results);
   }
   else {
     $results = cache_get("sidora:children_results:".$child_pid)->data;
@@ -8008,11 +8116,13 @@ function sidora_xsl_string($xsl_file) {
   if (empty($xsl_file)) {
     return variable_get('sidora_metadata_xsl',sidora_xsl_string_default());
   }
-  $directory_for_xsl = DRUPAL_ROOT.'/'.drupal_get_path('module','sidora').'/XSL';
-  $file = $directory_for_xsl.'/'.$xsl_file;
-  $content = file_get_contents($file);
-  return $content;
-
+  $xsl_form_definition = db_query("SELECT form_definition FROM {sidora_xsl} WHERE form_name = :form_name", array(':form_name' => $xsl_file))->fetchField();
+  if ($xsl_form_definition) {
+    $definition = new DOMDocument();
+    $definition->loadXML($xsl_form_definition);
+    $definition->formatOutput = TRUE;
+    return $definition->saveXML();  
+  }
 }
 
 /*
@@ -8701,13 +8811,6 @@ function sidora_generate_child_resource_sparql_query($pid, array $resource_types
   return $query;
 }
 
-// All functions below this line are direct copies from exhibition.  If you change them, rename it and move above this line
-// ***********************************************************
-// ***********************************************************
-// ***********************************************************
-// ***********************************************************
-// ***********************************************************
-// ***********************************************************
 /**
  * Query for fetching the Child Resources given what type of data they disseminate.
  *
@@ -8725,33 +8828,7 @@ function sidora_generate_child_resource_sparql_query($pid, array $resource_types
  * @return string
  *   An itql query string
  */
-function wb_si_exhibition_generate_child_resource_query($pid, array $resource_types, $sort = 'asc', $limit = NULL, $offset = NULL) {
-  $limit_types = '';
-  if (!empty($resource_types)) {
-    $limit_type_expression = function($o) {
-      return "\$m <mulgara:is> <info:fedora/$o>";
-    };
-    $limit_types = array_map($limit_type_expression, $resource_types);
-    $limit_types = implode(' or ', $limit_types);
-    $limit_types = "({$limit_types}) and";
-  }
-  $limit = isset($limit) ? "limit $limit" : '';
-  $offset = isset($offset) ? "offset $offset" : '';
-  return 'select $o $t $m from <#ri> where
-    $o <fedora-model:state> <fedora-model:Active> and
-    $o <fedora-model:label> $t and
-    <info:fedora/' . $pid . '> <fedora-rels-ext:hasResource> $o and
-    ' . $limit_types . '
-    $o <fedora-model:hasModel> $m
-    minus $m <mulgara:is> <info:fedora/si:resourceCModel>
-    minus $m <mulgara:is> <info:fedora/fedora-system:FedoraObject-3.0>
-    order by $t ' . $sort . '
-    ' . $limit . '
-    ' . $offset;
-}
-
-
-function wb_si_exhibition_generate_child_concept_query($pid) {
+function sidora_generate_child_concept_query($pid) {
   return 'SELECT ?o ?t (COUNT(DISTINCT ?r) AS ?resourcecount) (COUNT(DISTINCT ?c) AS ?conceptcount) ?owner
             FROM <#ri>
             WHERE {
@@ -8772,1009 +8849,6 @@ function wb_si_exhibition_generate_child_concept_query($pid) {
             }
             GROUP BY ?o (STR(?l) AS ?t) ?owner
             ORDER BY ?t';
-}
-
-/* concept tree query split into 3 queries
-function wb_si_exhibition_generate_child_concept_query_children_only($pid) {
-  return 'SELECT ?o ?t
-    FROM <#ri>
-          WHERE {
-              <info:fedora/' . $pid . '> <info:fedora/fedora-system:def/relations-external#hasConcept> ?o .
-              { ?o <info:fedora/fedora-system:def/model#hasModel> <info:fedora/si:conceptCModel> }
-              UNION { ?o <info:fedora/fedora-system:def/model#hasModel> <info:fedora/si:collectionCModel> } .
-              ?o <info:fedora/fedora-system:def/model#state> <info:fedora/fedora-system:def/model#Active> .
-              ?o <info:fedora/fedora-system:def/model#label> ?l .
-            }
-          GROUP BY ?o (STR(?l) AS ?t)
-          ORDER BY ?t';
-}
-
-function wb_si_exhibition_generate_child_concept_query_concepts_count($pid) {
-return 'select (count(?c) as ?k0)
-        FROM <#ri>
-        where {
-         <info:fedora/' . $pid . '> <info:fedora/fedora-system:def/relations-external#hasConcept> ?c .
-         ?c <info:fedora/fedora-system:def/model#state> <info:fedora/fedora-system:def/model#Active>
-       }';
-}
-
-function wb_si_exhibition_generate_child_concept_query_resources_count($pid) {
-return 'select (count(?r) as ?k1)
-        FROM <#ri>
-  where {
-         <info:fedora/' . $pid . '> <info:fedora/fedora-system:def/relations-external#hasResource> ?r .
-         ?r <info:fedora/fedora-system:def/model#state> <info:fedora/fedora-system:def/model#Active>
-   }';
-}
-
-*/
-function wb_si_exhibition_xsl_string_default() {
-  return '<?xml version="1.0" encoding="UTF-8"?>
-
-<xsl:stylesheet version="1.0"
-xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
-xmlns:mods="http://www.loc.gov/mods/v3"
-xmlns:fits="http://hul.harvard.edu/ois/xml/ns/fits/fits_output"
-xmlns:cpf="urn:isbn:1-931666-33-4"
->
-
-<xsl:template match="/">
-  <html>
-  <body>
-  <table class="metadata-table">
-      <tbody>
-      <xsl:for-each select="xml_root/debug">
-    <tr>
-      <td>Debug</td>
-      <td><xsl:value-of select="current()"/></td>
-    </tr>
-    </xsl:for-each>
-    <xsl:for-each select="//mods:abstract">
-    <xsl:if test="current()!=\'\'">
-    <tr>
-      <td>Description</td>
-      <td><xsl:value-of select="current()"/></td>
-    </tr>
-    </xsl:if>
-    </xsl:for-each>
- <xsl:for-each select="//mods:subject/mods:topic">
-    <xsl:if test="current()!=\'\'">
-    <tr>
-      <td>Topic</td>
-      <td><xsl:value-of select="current()"/></td>
-    </tr>
-    </xsl:if>
-    </xsl:for-each>
- <xsl:for-each select="//mods:subject/mods:geographic">
-    <xsl:if test="current()!=\'\'">
-    <tr>
-      <td>Geographic</td>
-      <td><xsl:value-of select="current()"/></td>
-    </tr>
-    </xsl:if>
-    </xsl:for-each>
-    <xsl:for-each select="//mods:name">
-      <xsl:for-each select="mods:namePart">
-        <xsl:if test="current()!=\'\'">
-        <tr>
-          <td>Name</td>
-          <td><xsl:value-of select="current()"/></td>
-        </tr>
-        </xsl:if>
-      </xsl:for-each>
-      <xsl:for-each select="mods:role/mods:roleTerm">
-        <xsl:if test="current()!=\'\'">
-        <tr>
-          <td>Role</td>
-          <td><xsl:value-of select="current()"/></td>
-        </tr>
-        </xsl:if>
-      </xsl:for-each>
-    </xsl:for-each>
- <xsl:for-each select="//mods:identifier">
-    <xsl:if test="current()!=\'\'">
-    <tr>
-      <td>Identifier</td>
-      <td><xsl:value-of select="current()"/></td>
-    </tr>
-    </xsl:if>
-    </xsl:for-each>
- <xsl:for-each select="//mods:genre">
-    <xsl:if test="current()!=\'\'">
-    <tr>
-      <td>Genre</td>
-      <td><xsl:value-of select="current()"/></td>
-    </tr>
-    </xsl:if>
-    </xsl:for-each>
- <xsl:for-each select="//mods:note[not(@*)]">
-    <xsl:if test="current()!=\'\'">
-    <tr>
-      <td>Note</td>
-      <td><xsl:value-of select="current()"/></td>
-    </tr>
-    </xsl:if>
-    </xsl:for-each>
- <xsl:for-each select="//mods:originInfo/mods:dateCaptured">
-    <xsl:if test="current()!=\'\'">
-    <tr>
-      <td>Date Captured</td>
-      <td><xsl:value-of select="current()"/></td>
-    </tr>
-    </xsl:if>
-    </xsl:for-each>
- <xsl:for-each select="//mods:physicalLocation">
-    <xsl:if test="current()!=\'\'">
-    <tr>
-      <td>Physical Location</td>
-      <td><xsl:value-of select="current()"/></td>
-    </tr>
-    </xsl:if>
-    </xsl:for-each>
- <xsl:for-each select="//mods:copyInformation/mods:subLocation">
-    <xsl:if test="current()!=\'\'">
-    <tr>
-      <td>Sub Location</td>
-      <td><xsl:value-of select="current()"/></td>
-    </tr>
-    </xsl:if>
-    </xsl:for-each>
-    <xsl:for-each select="//fits:fileinfo/fits:created[@toolname=\'Exiftool\']">
-    <xsl:if test="current()!=\'\'">
-    <tr>
-      <td>Image Capture Date</td>
-      <td><xsl:value-of select="current()"/></td>
-    </tr>
-    </xsl:if>
-    </xsl:for-each>
-    <xsl:for-each select="//citeinfo/title">
-    <xsl:if test="current()!=\'\'">
-    <tr>
-      <td>Camera Site Name</td>
-      <td><xsl:value-of select="current()"/></td>
-    </tr>
-    </xsl:if>
-    </xsl:for-each>
-    <xsl:for-each select="//citeinfo/othercit">
-    <xsl:if test="current()!=\'\'">
-    <tr>
-      <td>Camera Deployment ID</td>
-      <td><xsl:value-of select="current()"/></td>
-    </tr>
-    </xsl:if>
-    </xsl:for-each>
-    <xsl:for-each select="//citeinfo/origin">
-    <xsl:if test="current()!=\'\'">
-    <tr>
-      <td>Originator</td>
-      <td><xsl:value-of select="current()"/></td>
-    </tr>
-    </xsl:if>
-    </xsl:for-each>
-    <xsl:for-each select="//citeinfo/geoform">
-    <xsl:if test="current()!=\'\'">
-    <tr>
-      <td>Format of Geospatial Data</td>
-      <td><xsl:value-of select="current()"/></td>
-    </tr>
-    </xsl:if>
-    </xsl:for-each>
-    <xsl:for-each select="//descript/abstract">
-    <xsl:if test="current()!=\'\'">
-    <tr>
-      <td>Camera Deployment Note</td>
-      <td><xsl:value-of select="current()"/></td>
-    </tr>
-    </xsl:if>
-    </xsl:for-each>
-    <xsl:for-each select="//descript/supplinf">
-    <xsl:if test="current()!=\'\'">
-    <tr>
-      <td>Purposed Lat and Long</td>
-      <td><xsl:value-of select="current()"/></td>
-    </tr>
-    </xsl:if>
-    </xsl:for-each>
-    <xsl:for-each select="//spref/horizsys/geograph/latres">
-    <xsl:if test="current()!=\'\'">
-    <tr>
-      <td>Actual Latitude</td>
-      <td><xsl:value-of select="current()"/></td>
-    </tr>
-    </xsl:if>
-    </xsl:for-each>
-    <xsl:for-each select="//spref/horizsys/geograph/longres">
-    <xsl:if test="current()!=\'\'">
-    <tr>
-      <td>Actual Longitude</td>
-      <td><xsl:value-of select="current()"/></td>
-    </tr>
-    </xsl:if>
-    </xsl:for-each>
-    <xsl:for-each select="//dataqual/lineage/procstep[procdesc=\'Proposed Camera Deployment Begin Date\']/procdate">
-    <xsl:if test="current()!=\'\'">
-    <tr>
-      <td>Proposed Camera Deployment Begin Date</td>
-      <td><xsl:value-of select="current()"/></td>
-    </tr>
-    </xsl:if>
-    </xsl:for-each>
-    <xsl:for-each select="//dataqual/lineage/procstep[procdesc=\'Proposed Camera Deployment End Date\']/procdate">
-    <xsl:if test="current()!=\'\'">
-    <tr>
-      <td>Proposed Camera Deployment End Date</td>
-      <td><xsl:value-of select="current()"/></td>
-    </tr>
-    </xsl:if>
-    </xsl:for-each>
-    <xsl:for-each select="//timeinfo/rngdates/begdate">
-    <xsl:if test="current()!=\'\'">
-    <tr>
-      <td>Camera Deployment Begin Date</td>
-      <td><xsl:value-of select="current()"/></td>
-    </tr>
-    </xsl:if>
-    </xsl:for-each>
-    <xsl:for-each select="//timeinfo/rngdates/enddate">
-    <xsl:if test="current()!=\'\'">
-    <tr>
-      <td>Camera Deployment End Date</td>
-      <td><xsl:value-of select="current()"/></td>
-    </tr>
-    </xsl:if>
-    </xsl:for-each>
-    <xsl:for-each select="//detailed/attr[attrlabl=\'Camera ID\']/attrdomv/edom/edomv">
-    <xsl:if test="current()!=\'\'">
-    <tr>
-      <td>Camera ID</td>
-      <td><xsl:value-of select="current()"/></td>
-    </tr>
-    </xsl:if>
-    </xsl:for-each>
-    <xsl:for-each select="//detailed/attr[attrlabl=\'Image Resolution Setting\']/attrdomv/edom/edomv">
-    <xsl:if test="current()!=\'\'">
-    <tr>
-      <td>Image Resolution Setting</td>
-      <td><xsl:value-of select="current()"/></td>
-    </tr>
-    </xsl:if>
-    </xsl:for-each>
-    <xsl:for-each select="//detailed/attr[attrlabl=\'Detection Distance\']/attrdomv/edom/edomv">
-    <xsl:if test="current()!=\'\'">
-    <tr>
-      <td>Detection Distance</td>
-      <td><xsl:value-of select="current()"/></td>
-    </tr>
-    </xsl:if>
-    </xsl:for-each>
-    <xsl:for-each select="//detailed/attr[attrlabl=\'Sensitivity Setting\']/attrdomv/edom/edomv">
-    <xsl:if test="current()!=\'\'">
-    <tr>
-      <td>Sensitivity Setting</td>
-      <td><xsl:value-of select="current()"/></td>
-    </tr>
-    </xsl:if>
-    </xsl:for-each>
-    <xsl:for-each select="//detailed/attr[attrlabl=\'Quiet Period Setting\']/attrdomv/edom/edomv">
-    <xsl:if test="current()!=\'\'">
-    <tr>
-      <td>Quiet Period Setting</td>
-      <td><xsl:value-of select="current()"/></td>
-    </tr>
-    </xsl:if>
-    </xsl:for-each>
-    <xsl:for-each select="//detailed/attr[attrlabl=\'Camera Height\']/attrdomv/edom/edomv">
-    <xsl:if test="current()!=\'\'">
-    <tr>
-      <td>Camera Height</td>
-      <td><xsl:value-of select="current()"/></td>
-    </tr>
-    </xsl:if>
-    </xsl:for-each>
-    <xsl:for-each select="//detailed/attr[attrlabl=\'Habitat Type\']/attrdomv/edom/edomv">
-    <xsl:if test="current()!=\'\'">
-    <tr>
-      <td>Habitat Type</td>
-      <td><xsl:value-of select="current()"/></td>
-    </tr>
-    </xsl:if>
-    </xsl:for-each>
-    <xsl:for-each select="//theme/themekey">
-    <xsl:if test="current()!=\'\'">
-    <tr>
-      <td>Theme Keyword</td>
-      <td><xsl:value-of select="current()"/></td>
-    </tr>
-    </xsl:if>
-    </xsl:for-each>
-    <xsl:for-each select="//place/placekey">
-    <xsl:if test="current()!=\'\'">
-    <tr>
-      <td>Place Keyword</td>
-      <td><xsl:value-of select="current()"/></td>
-    </tr>
-    </xsl:if>
-    </xsl:for-each>
-    <xsl:for-each select="//keywtax/taxonkey">
-    <xsl:if test="current()!=\'\'">
-    <tr>
-      <td>Taxonomic Keyword</td>
-      <td><xsl:value-of select="current()"/></td>
-    </tr>
-    </xsl:if>
-    </xsl:for-each>
-    <xsl:for-each select="//taxoncl/taxonrn">
-    <xsl:if test="current()!=\'\'">
-    <tr>
-      <td>Taxonomic Rank Name</td>
-      <td><xsl:value-of select="current()"/></td>
-    </tr>
-    </xsl:if>
-    </xsl:for-each>
-    <xsl:for-each select="//taxoncl/taxonrv">
-    <xsl:if test="current()!=\'\'">
-    <tr>
-      <td>Taxonomic Rank Value</td>
-      <td><xsl:value-of select="current()"/></td>
-    </tr>
-    </xsl:if>
-    </xsl:for-each>
-    <xsl:for-each select="//idinfo/accconst">
-    <xsl:if test="current()!=\'\'">
-    <tr>
-      <td>Access Constraints</td>
-      <td><xsl:value-of select="current()"/></td>
-    </tr>
-    </xsl:if>
-    </xsl:for-each>
-    <xsl:for-each select="//idinfo/useconst">
-    <xsl:if test="current()!=\'\'">
-    <tr>
-      <td>Use Constraints</td>
-      <td><xsl:value-of select="current()"/></td>
-    </tr>
-    </xsl:if>
-    </xsl:for-each>
-    <xsl:for-each select="//idinfo/datacred">
-    <xsl:if test="current()!=\'\'">
-    <tr>
-      <td>Data Set Credit</td>
-      <td><xsl:value-of select="current()"/></td>
-    </tr>
-    </xsl:if>
-    </xsl:for-each>
-    <xsl:for-each select="//dataqual/complete">
-    <xsl:if test="current()!=\'\'">
-    <tr>
-      <td>Camera Failure Details</td>
-      <td><xsl:value-of select="current()"/></td>
-    </tr>
-    </xsl:if>
-    </xsl:for-each>
-    <xsl:for-each select="//method[methtype=\'Bait\']/methodid/methkey">
-    <xsl:if test="current()!=\'\'">
-    <tr>
-      <td>Bait Type</td>
-      <td><xsl:value-of select="current()"/></td>
-    </tr>
-    </xsl:if>
-    </xsl:for-each>
-    <xsl:for-each select="//method[methtype=\'Bait\']/methdesc">
-    <xsl:if test="current()!=\'\'">
-    <tr>
-      <td>Bait Methodology</td>
-      <td><xsl:value-of select="current()"/></td>
-    </tr>
-    </xsl:if>
-    </xsl:for-each>
-    <xsl:for-each select="//method[methtype=\'feature\']/methodid/methkey">
-    <xsl:if test="current()!=\'\'">
-    <tr>
-      <td>Feature</td>
-      <td><xsl:value-of select="current()"/></td>
-    </tr>
-    </xsl:if>
-    </xsl:for-each>
-    <xsl:for-each select="//method[methtype=\'feature\']/methodid/methdesc">
-    <xsl:if test="current()!=\'\'">
-    <tr>
-      <td>Feature Description</td>
-      <td><xsl:value-of select="current()"/></td>
-    </tr>
-    </xsl:if>
-    </xsl:for-each>
-    <xsl:for-each select="//spref/horizsys/geograph/latres">
-    <xsl:if test="current()!=\'\'">
-    <tr>
-      <td>Actual Latitude</td>
-      <td><xsl:value-of select="current()"/></td>
-    </tr>
-    </xsl:if>
-    </xsl:for-each>
-    <xsl:for-each select="//spref/horizsys/geograph/longres">
-    <xsl:if test="current()!=\'\'">
-    <tr>
-      <td>Actual Longitude</td>
-      <td><xsl:value-of select="current()"/></td>
-    </tr>
-    </xsl:if>
-    </xsl:for-each>
-    <xsl:for-each select="//spref/horizsys/geograph/geogunit">
-    <xsl:if test="current()!=\'\'">
-    <tr>
-      <td>Geographic Coordinate Units</td>
-      <td><xsl:value-of select="current()"/></td>
-    </tr>
-    </xsl:if>
-    </xsl:for-each>
-    <xsl:for-each select="//spref/vertdef/altsys/altdatum">
-    <xsl:if test="current()!=\'\'">
-    <tr>
-      <td>Altitude Datum Name</td>
-      <td><xsl:value-of select="current()"/></td>
-    </tr>
-    </xsl:if>
-    </xsl:for-each>
-    <xsl:for-each select="//spref/vertdef/altsys/altres">
-    <xsl:if test="current()!=\'\'">
-    <tr>
-      <td>Elevation</td>
-      <td><xsl:value-of select="current()"/></td>
-    </tr>
-    </xsl:if>
-    </xsl:for-each>
-    <xsl:for-each select="//spref/vertdef/altsys/altunits">
-    <xsl:if test="current()!=\'\'">
-    <tr>
-      <td>Altitude Distace Units</td>
-      <td><xsl:value-of select="current()"/></td>
-    </tr>
-    </xsl:if>
-    </xsl:for-each>
-    <xsl:for-each select="//spref/vertdef/altsys/altenc">
-    <xsl:if test="current()!=\'\'">
-    <tr>
-      <td>Altitude Encoding Method</td>
-      <td><xsl:value-of select="current()"/></td>
-    </tr>
-    </xsl:if>
-    </xsl:for-each>
-    <xsl:for-each select="//metainfo/metd">
-    <xsl:if test="current()!=\'\'">
-    <tr>
-      <td>Metadata Date</td>
-      <td><xsl:value-of select="current()"/></td>
-    </tr>
-    </xsl:if>
-    </xsl:for-each>
-    <xsl:for-each select="//metainfo/metrd">
-    <xsl:if test="current()!=\'\'">
-    <tr>
-      <td>Metadata Review Date</td>
-      <td><xsl:value-of select="current()"/></td>
-    </tr>
-    </xsl:if>
-    </xsl:for-each>
-    <xsl:for-each select="//metainfo/metfrd">
-    <xsl:if test="current()!=\'\'">
-    <tr>
-      <td>Metadata Future Review Date</td>
-      <td><xsl:value-of select="current()"/></td>
-    </tr>
-    </xsl:if>
-    </xsl:for-each>
-    <xsl:for-each select="//metainfo/metc/cntinfo/cntperp/cntper">
-    <xsl:if test="current()!=\'\'">
-    <tr>
-      <td>Contact Person</td>
-      <td><xsl:value-of select="current()"/></td>
-    </tr>
-    </xsl:if>
-    </xsl:for-each>
-    <xsl:for-each select="//metainfo/metc/cntinfo/cntperp/cntorg">
-    <xsl:if test="current()!=\'\'">
-    <tr>
-      <td>Organization Name</td>
-      <td><xsl:value-of select="current()"/></td>
-    </tr>
-    </xsl:if>
-    </xsl:for-each>
-    <xsl:for-each select="//metainfo/metc/cntinfo/cntaddr/address">
-    <xsl:if test="current()!=\'\'">
-    <tr>
-      <td>Address</td>
-      <td><xsl:value-of select="current()"/></td>
-    </tr>
-    </xsl:if>
-    </xsl:for-each>
-    <xsl:for-each select="//metainfo/metc/cntinfo/cntaddr/city">
-    <xsl:if test="current()!=\'\'">
-    <tr>
-      <td>City</td>
-      <td><xsl:value-of select="current()"/></td>
-    </tr>
-    </xsl:if>
-    </xsl:for-each>
-    <xsl:for-each select="//metainfo/metc/cntinfo/cntaddr/state">
-    <xsl:if test="current()!=\'\'">
-    <tr>
-      <td>State</td>
-      <td><xsl:value-of select="current()"/></td>
-    </tr>
-    </xsl:if>
-    </xsl:for-each>
-    <xsl:for-each select="//metainfo/metc/cntinfo/cntaddr/postal">
-    <xsl:if test="current()!=\'\'">
-    <tr>
-      <td>Postal Code</td>
-      <td><xsl:value-of select="current()"/></td>
-    </tr>
-    </xsl:if>
-    </xsl:for-each>
-    <xsl:for-each select="//metainfo/metc/cntinfo/cntvoice">
-    <xsl:if test="current()!=\'\'">
-    <tr>
-      <td>Phone</td>
-      <td><xsl:value-of select="current()"/></td>
-    </tr>
-    </xsl:if>
-    </xsl:for-each>
-    <xsl:for-each select="//metainfo/metc/cntinfo/cntemail">
-    <xsl:if test="current()!=\'\'">
-    <tr>
-      <td>Email</td>
-      <td><xsl:value-of select="current()"/></td>
-    </tr>
-    </xsl:if>
-    </xsl:for-each>
-    <xsl:for-each select="//metainfo/metstdn">
-    <xsl:if test="current()!=\'\'">
-    <tr>
-      <td>Metadata Standard Name</td>
-      <td><xsl:value-of select="current()"/></td>
-    </tr>
-    </xsl:if>
-    </xsl:for-each>
-    <xsl:for-each select="//metainfo/metstdv">
-    <xsl:if test="current()!=\'\'">
-    <tr>
-      <td>Metadata Standard Version</td>
-      <td><xsl:value-of select="current()"/></td>
-    </tr>
-    </xsl:if>
-    </xsl:for-each>
-    <xsl:for-each select="//mods:mods/mods:titleInfo[@type=\'\']/mods:title">
-    <xsl:if test="current()!=\'\'">
-    <tr>
-      <td>Title</td>
-      <td><xsl:value-of select="current()"/></td>
-    </tr>
-    </xsl:if>
-    </xsl:for-each>
-    <xsl:for-each select="//mods:mods/mods:titleInfo[@type=\'alternative\']/mods:title">
-    <xsl:if test="current()!=\'\'">
-    <tr>
-      <td>Alternative Title</td>
-      <td><xsl:value-of select="current()"/></td>
-    </tr>
-    </xsl:if>
-    </xsl:for-each>
-    <xsl:for-each select="//mods:mods/mods:titleInfo[@type=\'uniform\']/mods:title">
-    <xsl:if test="current()!=\'\'">
-    <tr>
-      <td>Uniform Title</td>
-      <td><xsl:value-of select="current()"/></td>
-    </tr>
-    </xsl:if>
-    </xsl:for-each>
-    <xsl:for-each select="//mods:mods/mods:titleInfo[@type=\'translated\']/mods:title">
-    <xsl:if test="current()!=\'\'">
-    <tr>
-      <td>Translated Title</td>
-      <td><xsl:value-of select="current()"/></td>
-    </tr>
-    </xsl:if>
-    </xsl:for-each>
-    <xsl:for-each select="//mods:mods/mods:titleInfo[@type=\'abbreviated\']/mods:title">
-    <xsl:if test="current()!=\'\'">
-    <tr>
-      <td>Abbreviated Title</td>
-      <td><xsl:value-of select="current()"/></td>
-    </tr>
-    </xsl:if>
-    </xsl:for-each>
-    <xsl:for-each select="//mods:mods/mods:identifier[not(@type)]">
-    <xsl:if test="current()!=\'\'">
-    <tr>
-      <td>Item ID</td>
-      <td><xsl:value-of select="current()"/></td>
-    </tr>
-    </xsl:if>
-    </xsl:for-each>
-    <xsl:for-each select="//mods:mods/mods:identifier[@type=\'accessionNumber\']">
-    <xsl:if test="current()!=\'\'">
-    <tr>
-      <td>Accession / RU</td>
-      <td><xsl:value-of select="current()"/></td>
-    </tr>
-    </xsl:if>
-    </xsl:for-each>
-    <xsl:for-each select="//mods:role[mods:roleTerm = \'Creator\']/../../mods:name/mods:namePart">
-    <xsl:if test="current()!=\'\'">
-    <tr>
-      <td>Creator</td>
-      <td><xsl:value-of select="current()"/></td>
-    </tr>
-    </xsl:if>
-    </xsl:for-each>
-    <xsl:for-each select="//mods:role[mods:roleTerm = \'Contributor\']/../../mods:name/mods:namePart">
-    <xsl:if test="current()!=\'\'">
-    <tr>
-      <td>Contributor</td>
-      <td><xsl:value-of select="current()"/></td>
-    </tr>
-    </xsl:if>
-    </xsl:for-each>
-    <xsl:for-each select="//mods:typeOfResource">
-    <xsl:if test="current()!=\'\'">
-    <tr>
-      <td>Type of Resource</td>
-      <td><xsl:value-of select="current()"/></td>
-    </tr>
-    </xsl:if>
-    </xsl:for-each>
-    <xsl:for-each select="//mods:genre">
-    <xsl:if test="current()!=\'\'">
-    <tr>
-      <td>Genre</td>
-      <td><xsl:value-of select="current()"/></td>
-    </tr>
-    </xsl:if>
-    </xsl:for-each>
-    <xsl:for-each select="//mods:mods/mods:abstract">
-    <xsl:if test="current()!=\'\'">
-    <tr>
-      <td>Description</td>
-      <td><xsl:value-of select="current()"/></td>
-    </tr>
-    </xsl:if>
-    </xsl:for-each>
-    <xsl:for-each select="//mods:dateOther[@type=\'range\' and not(@point)]">
-    <xsl:if test="current()!=\'\'">
-    <tr>
-      <td>Date Range</td>
-      <td><xsl:value-of select="current()"/></td>
-    </tr>
-    </xsl:if>
-    </xsl:for-each>
-    <xsl:for-each select="//mods:dateOther[@point=\'start\']">
-    <xsl:if test="current()!=\'\'">
-    <tr>
-      <td>Start Date</td>
-      <td><xsl:value-of select="current()"/></td>
-    </tr>
-    </xsl:if>
-    </xsl:for-each>
-    <xsl:for-each select="//mods:dateOther[@point=\'end\']">
-    <xsl:if test="current()!=\'\'">
-    <tr>
-      <td>End Date</td>
-      <td><xsl:value-of select="current()"/></td>
-    </tr>
-    </xsl:if>
-    </xsl:for-each>
-    <xsl:for-each select="//mods:dateOther/@qualifier">
-    <xsl:if test="current()!=\'\'">
-    <tr>
-      <td>Date Qualifier</td>
-      <td><xsl:value-of select="current()"/></td>
-    </tr>
-    </xsl:if>
-    </xsl:for-each>
-    <xsl:for-each select="//mods:location/mods:physicalLocation">
-    <xsl:if test="current()!=\'\'">
-    <tr>
-      <td>Location</td>
-      <td><xsl:value-of select="current()"/></td>
-    </tr>
-    </xsl:if>
-    </xsl:for-each>
-    <xsl:for-each select="//mods:shelfLocator">
-    <xsl:if test="current()!=\'\'">
-    <tr>
-      <td>Shelf Locator</td>
-      <td><xsl:value-of select="current()"/></td>
-    </tr>
-    </xsl:if>
-    </xsl:for-each>
-    <xsl:for-each select="//mods:url">
-    <xsl:if test="current()!=\'\'">
-    <tr>
-      <td>URL</td>
-      <td><xsl:value-of select="current()"/></td>
-    </tr>
-    </xsl:if>
-    </xsl:for-each>
-    <xsl:for-each select="//mods:subLocation">
-    <xsl:if test="current()!=\'\'">
-    <tr>
-      <td>Sub Location</td>
-      <td><xsl:value-of select="current()"/></td>
-    </tr>
-    </xsl:if>
-    </xsl:for-each>
-    <xsl:for-each select="//mods:physicalDescription/mods:form">
-    <xsl:if test="current()!=\'\'">
-    <tr>
-      <td>Physical Description</td>
-      <td><xsl:value-of select="current()"/></td>
-    </tr>
-    </xsl:if>
-    </xsl:for-each>
-    <xsl:for-each select="//mods:recordInfo/mods:recordOrigin">
-    <xsl:if test="current()!=\'\'">
-    <tr>
-      <td>Record Creator</td>
-      <td><xsl:value-of select="current()"/></td>
-    </tr>
-    </xsl:if>
-    </xsl:for-each>
-    <xsl:for-each select="//mods:recordInfo/mods:recordContentSource">
-    <xsl:if test="current()!=\'\'">
-    <tr>
-      <td>Institute Creator</td>
-      <td><xsl:value-of select="current()"/></td>
-    </tr>
-    </xsl:if>
-    </xsl:for-each>
-    <xsl:for-each select="//mods:recordInfo/mods:recordCreationDate">
-    <xsl:if test="current()!=\'\'">
-    <tr>
-      <td>Creation Date</td>
-      <td><xsl:value-of select="current()"/></td>
-    </tr>
-    </xsl:if>
-    </xsl:for-each>
-    <xsl:for-each select="//mods:recordInfo/mods:recordChangeDate">
-    <xsl:if test="current()!=\'\'">
-    <tr>
-      <td>Change Date</td>
-      <td><xsl:value-of select="current()"/></td>
-    </tr>
-    </xsl:if>
-    </xsl:for-each>
-    <xsl:for-each select="//mods:accessCondition">
-    <xsl:if test="current()!=\'\'">
-    <tr>
-      <td>Access Condition</td>
-      <td><xsl:value-of select="current()"/></td>
-    </tr>
-    </xsl:if>
-    </xsl:for-each>
-    <xsl:for-each select="//mods:note">
-    <xsl:if test="current()!=\'\'">
-    <tr>
-      <td>Note</td>
-      <td><xsl:value-of select="current()"/></td>
-    </tr>
-    </xsl:if>
-    </xsl:for-each>
-    <xsl:for-each select="//mods:subject/mods:topic">
-    <xsl:if test="current()!=\'\'">
-    <tr>
-      <td>Topic</td>
-      <td><xsl:value-of select="current()"/></td>
-    </tr>
-    </xsl:if>
-    </xsl:for-each>
-    <xsl:for-each select="//mods:subject/mods:geographic">
-    <xsl:if test="current()!=\'\'">
-    <tr>
-      <td>Geographic Subject</td>
-      <td><xsl:value-of select="current()"/></td>
-    </tr>
-    </xsl:if>
-    </xsl:for-each>
-    <xsl:for-each select="//mods:subject/mods:hierarchicalGeographic/mods:continent">
-    <xsl:if test="current()!=\'\'">
-    <tr>
-      <td>Continent</td>
-      <td><xsl:value-of select="current()"/></td>
-    </tr>
-    </xsl:if>
-    </xsl:for-each>
-    <xsl:for-each select="//mods:subject/mods:hierarchicalGeographic/mods:country">
-    <xsl:if test="current()!=\'\'">
-    <tr>
-      <td>Country</td>
-      <td><xsl:value-of select="current()"/></td>
-    </tr>
-    </xsl:if>
-    </xsl:for-each>
-    <xsl:for-each select="//mods:subject/mods:hierarchicalGeographic/mods:province">
-    <xsl:if test="current()!=\'\'">
-    <tr>
-      <td>State</td>
-      <td><xsl:value-of select="current()"/></td>
-    </tr>
-    </xsl:if>
-    </xsl:for-each>
-    <xsl:for-each select="//mods:subject/mods:hierarchicalGeographic/mods:region">
-    <xsl:if test="current()!=\'\'">
-    <tr>
-      <td>Region</td>
-      <td><xsl:value-of select="current()"/></td>
-    </tr>
-    </xsl:if>
-    </xsl:for-each>
-    <xsl:for-each select="//mods:subject/mods:hierarchicalGeographic/mods:county">
-    <xsl:if test="current()!=\'\'">
-    <tr>
-      <td>County</td>
-      <td><xsl:value-of select="current()"/></td>
-    </tr>
-    </xsl:if>
-    </xsl:for-each>
-    <xsl:for-each select="//mods:subject/mods:hierarchicalGeographic/mods:city">
-    <xsl:if test="current()!=\'\'">
-    <tr>
-      <td>City</td>
-      <td><xsl:value-of select="current()"/></td>
-    </tr>
-    </xsl:if>
-    </xsl:for-each>
-    <xsl:for-each select="//mods:subject/mods:hierarchicalGeographic/mods:citySection">
-    <xsl:if test="current()!=\'\'">
-    <tr>
-      <td>City Section</td>
-      <td><xsl:value-of select="current()"/></td>
-    </tr>
-    </xsl:if>
-    </xsl:for-each>
-    <xsl:for-each select="//mods:subject/mods:cartographics/mods:coordinates">
-    <xsl:if test="current()!=\'\'">
-    <tr>
-      <td>Coordinates</td>
-      <td><xsl:value-of select="current()"/></td>
-    </tr>
-    </xsl:if>
-    </xsl:for-each>
-    <xsl:for-each select="//mods:subject/mods:name[@type=\'conference\']/mods:namePart">
-    <xsl:if test="current()!=\'\'">
-    <tr>
-      <td>Expedition Name</td>
-      <td><xsl:value-of select="current()"/></td>
-    </tr>
-    </xsl:if>
-    </xsl:for-each>
-    <xsl:for-each select="//mods:subject/mods:name[@type=\'corporate\' and @displayLabel=\'Vessel\']/mods:namePart">
-    <xsl:if test="current()!=\'\'">
-    <tr>
-      <td>Vessel Name</td>
-      <td><xsl:value-of select="current()"/></td>
-    </tr>
-    </xsl:if>
-    </xsl:for-each>
-    <xsl:for-each select="//mods:subject/mods:name[@type=\'corporate\' and @displayLabel=\'Organization\']/mods:namePart">
-    <xsl:if test="current()!=\'\'">
-    <tr>
-      <td>Organization Name</td>
-      <td><xsl:value-of select="current()"/></td>
-    </tr>
-    </xsl:if>
-    </xsl:for-each>
-    <xsl:for-each select="//mods:subject/mods:name[@type=\'personal\']/mods:namePart">
-    <xsl:if test="current()!=\'\'">
-    <tr>
-      <td>Person Name</td>
-      <td><xsl:value-of select="current()"/></td>
-    </tr>
-    </xsl:if>
-    </xsl:for-each>
-    <xsl:for-each select="//mods:relatedItem/mods:titleInfo/mods:title">
-    <xsl:if test="current()!=\'\'">
-    <tr>
-      <td>Related Collection Name</td>
-      <td><xsl:value-of select="current()"/></td>
-    </tr>
-    </xsl:if>
-    </xsl:for-each>
-    <xsl:for-each select="//mods:relatedItem/mods:identifier">
-    <xsl:if test="current()!=\'\'">
-    <tr>
-      <td>Related Collection ID</td>
-      <td><xsl:value-of select="current()"/></td>
-    </tr>
-    </xsl:if>
-    </xsl:for-each>
-    <xsl:for-each select="//mods:language/mods:languageTerm[@type=\'text\']">
-    <xsl:if test="current()!=\'\'">
-    <tr>
-      <td>Language</td>
-      <td><xsl:value-of select="current()"/></td>
-    </tr>
-    </xsl:if>
-    </xsl:for-each>
-    <xsl:for-each select="//mods:language/mods:scriptTerm[@type=\'text\']">
-    <xsl:if test="current()!=\'\'">
-    <tr>
-      <td>Script</td>
-      <td><xsl:value-of select="current()"/></td>
-    </tr>
-    </xsl:if>
-    </xsl:for-each>
-    <xsl:for-each select="//cpf:nameEntry[@localType=\'primary\']/cpf:part">
-    <xsl:if test="current()!=\'\'">
-    <tr>
-      <td>Project Name (Full)</td>
-      <td><xsl:value-of select="current()"/></td>
-    </tr>
-    </xsl:if>
-    </xsl:for-each>
-    <xsl:for-each select="//cpf:nameEntry[@localType=\'abbreviation\']/cpf:part">
-    <xsl:if test="current()!=\'\'">
-    <tr>
-      <td>Project Name (Abbreviation)</td>
-      <td><xsl:value-of select="current()"/></td>
-    </tr>
-    </xsl:if>
-    </xsl:for-each>
-    <xsl:for-each select="//cpf:function/cpf:descriptiveNote/cpf:p">
-    <xsl:if test="current()!=\'\'">
-    <tr>
-      <td>Project Data Access and Use Constraints</td>
-      <td><xsl:value-of select="current()"/></td>
-    </tr>
-    </xsl:if>
-    </xsl:for-each>
-    <xsl:for-each select="//cpf:existDates/cpf:dateRange/cpf:fromDate">
-    <xsl:if test="current()!=\'\'">
-    <tr>
-      <td>Begin Date</td>
-      <td><xsl:value-of select="current()"/></td>
-    </tr>
-    </xsl:if>
-    </xsl:for-each>
-    <xsl:for-each select="//cpf:existDates/cpf:dateRange/cpf:toDate">
-    <xsl:if test="current()!=\'\'">
-    <tr>
-      <td>End Date</td>
-      <td><xsl:value-of select="current()"/></td>
-    </tr>
-    </xsl:if>
-    </xsl:for-each>
-    <xsl:for-each select="//cpf:place/cpf:placeEntry[@localType=\'address\']">
-    <xsl:if test="current()!=\'\'">
-    <tr>
-      <td>Project Location</td>
-      <td><xsl:value-of select="current()"/></td>
-    </tr>
-    </xsl:if>
-    </xsl:for-each>
-    <xsl:for-each select="//cpf:place/cpf:placeEntry[@localType=\'region\']">
-    <xsl:if test="current()!=\'\'">
-    <tr>
-      <td>Region</td>
-      <td><xsl:value-of select="current()"/></td>
-    </tr>
-    </xsl:if>
-    </xsl:for-each>
-
-
-
-
-
-
-
-
-   </tbody>
-  </table>
-  </body>
-  </html>
-</xsl:template>
-
-</xsl:stylesheet>
-';
 }
 
 /*
@@ -9877,17 +8951,19 @@ function sidora_pretty_json($json) {
 function sidora_remove_xsl($param1, $param2, $param3) {
     $curr_item = array();
     if (sidora_endsWith(strtolower($param1),'.xsl')) {
-      $directory_to_list_for_xsl = DRUPAL_ROOT.'/'.drupal_get_path('module','sidora').'/XSL/';
-      if (file_exists($directory_to_list_for_xsl.$param1)) {
-        $rename_worked = rename(DRUPAL_ROOT.'/'.drupal_get_path('module','sidora').'/XSL/'.$param1,$directory_to_list_for_xsl.'backups/'.'Deleted_on_'.date('Ymd_His').'_'.$param1);
-        $curr_item['existing_moved'] = $rename_worked;
-        $curr_item['description'] = t('Attempted file write');
-        $curr_item['success'] = $rename_worked;
-     }
-     else {
-       $curr_item['success'] = FALSE;
-       $curr_item['description'] = t('XSL File not found');
-    }
+      $exists = db_query('SELECT 1 FROM {sidora_xsl} WHERE form_name = :form_name', array(':form_name' => $param1))->fetchField();
+      if ($exists) {
+         $rename_worked = db_delete('sidora_xsl')
+            ->condition('form_name', $param1)
+            ->execute();
+         $curr_item['existing_moved'] = $rename_worked;
+         $curr_item['description'] = t('Attempted file write');
+         $curr_item['success'] = $rename_worked;
+      }
+      else {
+        $curr_item['success'] = FALSE;
+        $curr_item['description'] = t('XSL File not found');
+      }
     }
     else {
        $curr_item['success'] = FALSE;
@@ -10609,16 +9685,28 @@ function sidora_osd_proxy_version($pid, $datastream='OBJ', $version='0') {
   $datastream_content = $ds[$version];
   $qs = $_SERVER['QUERY_STRING'];
   $qs = str_replace(
-          urlencode("{replacer}"),
-          urlencode(variable_get('osd_proxy_pid_prefix', '')).
-          urlencode($pid).
-          urlencode(variable_get('osd_proxy_pid_postfix', '')).
-          '?asOfDateTime=' .
-          urlencode($datastream_content->createdDate),
-          $qs
+    urlencode("{replacer}"),
+    urlencode(variable_get('osd_proxy_pid_prefix', '')).
+    urlencode($pid).
+    urlencode(variable_get('osd_proxy_pid_postfix', '')).
+    '?asOfDateTime=' .
+    urlencode($datastream_content->createdDate),
+    $qs
   );
+  if (strpos($qs,'degraded') !== false) {
+    $qs = preg_replace('/svc.region'.'=[^&]+(&|$)/', '', $qs);
+  }		
   $url = variable_get('osd_proxy_resolver_url', '').'?'.$qs;
-  print file_get_contents($url);
+  if (strpos($qs,'degraded') !== false) {
+    $im = imagecreatefromstring(file_get_contents($url));
+    ob_start();
+    imagejpeg($im);
+    $img = ob_get_clean();
+    print "data:image/jpeg;base64," . base64_encode($img);
+  }
+  else { 
+    print file_get_contents($url);
+  } 
   drupal_exit();
 }
 
@@ -10853,7 +9941,6 @@ function sidora_debug_string_backtrace() {
   // Remove first item from backtrace as it's this function which
   // is redundant.
   $trace = preg_replace ('/^#0\s+' . __FUNCTION__ . "[^\n]*\n/", '', $trace, 1);
-
   return $trace;
 }
 
@@ -11265,4 +10352,122 @@ function sidora_get_xsl_exhibition_config_for_object($pid) {
      }
    }
    return $exhibition_config_xsl_file;
+}
+function sidora_update_xsl() {
+  if (!db_table_exists('sidora_xsl')) {
+    $schema['sidora_xsl'] = array(
+     'description' => t('Stores SIdora XSLs'),
+     'fields' => array(
+       'form_id' => array(
+         'type' => 'serial',
+         'unsigned' => TRUE,
+         'not null' => TRUE,
+       ), 
+       'form_name' => array(
+         'type' => 'varchar',
+         'length' => '256',
+         'not null' => TRUE,
+         'default' => '',
+       ),
+       'form_definition' => array(
+	 'type' => 'text',
+	 'size' => 'big',
+       ),
+       'updated' => array(
+         'type' => 'datetime',
+         'mysql_type' => 'datetime',
+       ),
+     ),
+     'primary key' => array('form_id'),
+   );
+   db_create_table('sidora_xsl', $schema['sidora_xsl']);
+   }
+  $directory_to_list_for_xsl = DRUPAL_ROOT.'/'.drupal_get_path('module','sidora').'/XSL';
+  $xsl_filenames = array_diff(scandir($directory_to_list_for_xsl), array('..', '.', '.htaccess'));
+  $xsl_names_dd = array();
+  foreach($xsl_filenames as $name){ 
+    if (sidora_endsWith(strtolower($name), ".xsl")){
+      $xsl_names_dd[$name] = $name; 
+    }
+  }
+  foreach($xsl_names_dd as $xsl_to_write) {
+    sidora_xsl_file_to_db($directory_to_list_for_xsl,$xsl_to_write);
+  }
+  drupal_set_message("All SIdora XSL's sucessfully added to the database");
+  drupal_goto('admin/sidora/configure');
+}	  
+function sidora_download_xsl() {
+  global $base_url;
+  if (db_table_exists('sidora_xsl')) {
+    $get_xsl_records = db_query("select form_name, form_definition from sidora_xsl");
+    $xsl_zip = new ZipArchive();
+    $download_filename = 'sidora_xsl_from_';
+    $alpha_base_url = preg_replace('/[^a-zA-z0-9]/', '-', $base_url);
+    $alpha_base_url = preg_replace('/-+/', '-', $alpha_base_url);
+    $download_filename .= $alpha_base_url . '.zip';
+    if ($xsl_zip->open(drupal_realpath('public://').'/'.$download_filename, ZipArchive::CREATE | ZipArchive::OVERWRITE)) { 
+      foreach ($get_xsl_records as $xsl_form_record) {
+        $definition = new DOMDocument();
+        $definition->loadXML($xsl_form_record->form_definition);
+	$definition->formatOutput = TRUE;
+	$xsl_zip->addFromString($xsl_form_record->form_name, $definition->saveXML());
+      }
+      $xsl_zip->close();
+      header("Content-type: application/zip"); 
+      header("Content-Disposition: attachment; filename=$download_filename");
+      header('Content-Length: '.filesize(drupal_realpath('public://').'/'.$download_filename)); 
+      header("Pragma: no-cache"); 
+      header("Expires: 0"); 
+      readfile(drupal_realpath('public://').'/'.$download_filename);
+      unlink(drupal_realpath('public://').'/'.$download_filename);		
+    }
+    else {
+      drupal_set_message("Unable to create a zip file");
+    }
+  }
+  else {
+    drupal_set_message("No sidora xsl's found in the database");
+  }
+  drupal_exit();
+}			
+function sidora_xsl_file_to_db($directory_to_list_for_xsl = '',$xsl_to_write = '') {
+  if ((!empty($directory_to_list_for_xsl)) && (!empty($xsl_to_write))) {
+   $definition = new DOMDocument();
+   $definition->load($directory_to_list_for_xsl . '/' . $xsl_to_write);
+   $exists = db_query('SELECT 1 FROM {sidora_xsl} WHERE form_name = :form_name', array(':form_name' => $xsl_to_write))->fetchField();
+   if ($exists) {
+     $xsl_query = db_update('sidora_xsl')
+      ->fields(array(
+       'form_definition' => $definition->saveXML(),
+       'updated' => date('Y-m-d H:i:s'),
+      ))
+      ->condition('form_name', $xsl_to_write, '=');
+     $num_updated = $xsl_query->execute();
+     $new_entry = NULL;
+   }
+   else {
+     $insert_query = db_insert('sidora_xsl')->fields(array('form_name','form_definition','updated'));
+     $insert_row = array(
+       'form_name' => $xsl_to_write,
+       'form_definition' => $definition->saveXML(),
+       'updated' => date('Y-m-d H:i:s'),
+      );	
+      $insert_query->values($insert_row);	
+      $new_entry = $insert_query->execute();
+   }
+    return TRUE;
+  }
+  return FALSE;
+}
+function sidora_get_all_xsl_names() {
+  $xsl_filenames = array();
+  if (db_table_exists('sidora_xsl')) {
+    $get_xsl_records = db_query("select form_name from sidora_xsl");
+    foreach ($get_xsl_records as $xsl_form_record) {
+      if (sidora_endsWith(strtolower($xsl_form_record->form_name), ".xsl")) {
+        $xsl_filenames[$xsl_form_record->form_name] = $xsl_form_record->form_name;
+      }
+    }
+  }
+  return $xsl_filenames;
 }

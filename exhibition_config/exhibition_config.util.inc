@@ -151,7 +151,7 @@ function si_exhibition_get_children_info(FedoraObject $object) {
   $repo = si_exhibition_get_repo();
   $query = si_exhibition_generate_children_query($object->id);
   $results = $repo->ri->sparqlQuery($query);
-	$children = array_map("si_exhibition_map_children", $results);
+  $children = array_map("si_exhibition_map_children", $results);
   usort($children, function($a, $b){
     if ($a['type'] == $b['type']){
       return strcmp($a['title'],$b['title']);
@@ -159,7 +159,7 @@ function si_exhibition_get_children_info(FedoraObject $object) {
       return strcmp($b['type'],$a['type']);
     }
   });
-	return $children;
+  return $children;
 }	 
 /**
  * Query for generating the children tree for the new exhibition visibility

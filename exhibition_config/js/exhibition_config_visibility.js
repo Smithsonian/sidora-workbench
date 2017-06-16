@@ -132,7 +132,7 @@ jQuery(function(){
   jQuery("#open-advanced").after(jQuery("#edit-save"));
   jQuery(window).resize(resizeConceptTreePage);
   jQuery("input:checkbox").click(function(){
-    if (jQuery(this).is(":checked")){
+  if (jQuery(this).is(":checked")){
       var invisibleParents = [];
       var message = "";
       message += "<ul>";
@@ -213,14 +213,14 @@ jQuery(function(){
   }); //Ends jQuery("input:checkbox").click
   jQuery("#change_all").click(changeAllWindow);
   jQuery("#open-advanced").click(openAdvancedWindow);
-	jQuery("input[type='submit']").click(function(event) {
-		if (jQuery("[name$='\\[allow_download\\]']:not(:checked)").length > 0) {
+  jQuery("input[type='submit']").click(function(event) {
+    if (jQuery("[name$='\\[allow_download\\]']:not(:checked)").length > 0) {
       event.preventDefault();
       return previewWithoutDownloadCheck();
-		}
-		else{
-		  return true;
-		}		
+    }
+    else{
+      return true;
+    }		
   });
 }); //Ends openAdvanced click
 /*
@@ -260,6 +260,10 @@ changeSelected = function(visibilitySettings) {
         jQuery("[name='visibility["+jQuery(this).attr("depth")+"][show_preview]']").prop("checked",visibilitySettings.showPreview=="checked");
       if (visibilitySettings.allowDownload != 'indeterminate')
         jQuery("[name='visibility["+jQuery(this).attr("depth")+"][allow_download]']").prop("checked",visibilitySettings.allowDownload=="checked");
+      if (visibilitySettings.showDegraded != 'indeterminate'){
+	if ((jQuery("[name='visibility["+jQuery(this).attr("depth")+"][show_name]']").attr("model")).toLowerCase().indexOf("image") !== -1)
+         jQuery("[name='visibility["+jQuery(this).attr("depth")+"][show_degraded]']").prop("checked",visibilitySettings.showDegraded=="checked");
+      }
     }
   });
   fillInSidebar();
@@ -267,7 +271,7 @@ changeSelected = function(visibilitySettings) {
 changeAdvanced = function(visibilitySettings) {
   for (ctr=0;ctr<visibilitySettings.length;ctr++){
     var settingName = 'visibility[' + visibilitySettings[ctr].name + '][future_children_' + visibilitySettings[ctr].setting + ']';
-		jQuery("[name='" + settingName + "']").prop("checked",visibilitySettings[ctr].value);
+    jQuery("[name='" + settingName + "']").prop("checked",visibilitySettings[ctr].value);
   }
 }   
 setToChecked = function(namesOfCheckboxes) {
@@ -305,9 +309,9 @@ changeParentConfirm = function(title, questionText, onConfirmation, onCancel, co
 }
 openAdvancedWindow = function(){
   var conceptsInTree = jQuery("li.visibility-row").filter(function(){return jQuery(this).children("div")[1].innerHTML == 'Concept';})
-	if (conceptsInTree.length >0){
+  if (conceptsInTree.length >0){
     jQuery('#changeAdvanced').remove();
-    var visibilitySettings = ['show_name','show_meta','show_preview','allow_download'];
+    var visibilitySettings = ['show_name','show_meta','show_preview','show_degraded','allow_download'];
     var checkboxesHtml = "<div class='dialog_concept_tree'>";
     checkboxesHtml += "<ul class='visibility-list-table'>";
     checkboxesHtml += "<li id='dialog-header' class='nomarginnopad'>";
@@ -317,6 +321,7 @@ openAdvancedWindow = function(){
     checkboxesHtml += "<div class='visibility-setting nomarginnopad'><br/>Future Children Show Name</div>";
     checkboxesHtml += "<div class='visibility-setting nomarginnopad'><br/>Future Children Show Metadata</div>";
     checkboxesHtml += "<div class='visibility-setting nomarginnopad'>Future Resource Children Show Preview</div>";
+    checkboxesHtml += "<div class='visibility-setting nomarginnopad'>Future Resource Children Show Degraded</div>";
     checkboxesHtml += "<div class='visibility-setting nomarginnopad'>Future Resource Children Allow Download</div>";
     checkboxesHtml += "</li>";
     checkboxesHtml += "</ul>";//<div>Note: Future Concept children cannot have previews or downloads</div>";
@@ -326,14 +331,14 @@ openAdvancedWindow = function(){
       checkboxesHtml += "<li class='dialog-visibility-row' path='" + jQuery(conceptsInTree[ctr]).attr('depth') +"'><div class='visibility-name'>"+jQuery(conceptsInTree[ctr]).attr('name')+"</div>";
       checkboxesHtml += "<div class='visibility-type'>"+jQuery(conceptsInTree[ctr]).children("div")[1].innerHTML+"</div>";
       checkboxesHtml += "<div class='visibility-path'>"+jQuery(conceptsInTree[ctr]).children("div")[2].innerHTML+"</div>";
-			for (var visibilityCtr = 0;visibilityCtr < visibilitySettings.length;visibilityCtr++) {
+      for (var visibilityCtr = 0;visibilityCtr < visibilitySettings.length;visibilityCtr++) {
         var checkboxFilter = jQuery("[name*='future_children_" + visibilitySettings[visibilityCtr] + "']");
-			  var checkboxSelector = jQuery(conceptsInTree[ctr]).find(checkboxFilter);
-		    var checked = jQuery(checkboxSelector).is(":checked")?' checked':'';
-			  checkboxesHtml += "<div class='visibility-setting'><input type='checkbox' name='future[" + jQuery(conceptsInTree[ctr]).attr('depth')+ "][" + visibilitySettings[visibilityCtr] + "]' value='" + jQuery(checkboxSelector).attr("value") + "'" + checked + "></div>";
-			}
-			checkboxesHtml += "</li>";
-		}
+	var checkboxSelector = jQuery(conceptsInTree[ctr]).find(checkboxFilter);
+	var checked = jQuery(checkboxSelector).is(":checked")?' checked':'';
+	checkboxesHtml += "<div class='visibility-setting'><input type='checkbox' name='future[" + jQuery(conceptsInTree[ctr]).attr('depth')+ "][" + visibilitySettings[visibilityCtr] + "]' value='" + jQuery(checkboxSelector).attr("value") + "'" + checked + "></div>";
+      }
+      checkboxesHtml += "</li>";
+    }
     checkboxesHtml += "</ul></div>";  
     jQuery("body").append("<div id='changeAdvanced' style='display:none;' title='Visibility for future children of concepts:'><div>"+checkboxesHtml+"</div></div>");
     var dialogConfig = {
@@ -349,96 +354,96 @@ openAdvancedWindow = function(){
     };
     dialogConfig.buttons['Save'] = function() {
       var futureVisibility = [];
-			var visibilitySettings = ['show_name','show_meta','show_preview','allow_download'];
-			for (var viCtr=0;viCtr < visibilitySettings.length;viCtr++) {
+      var visibilitySettings = ['show_name','show_meta','show_preview','show_degraded','allow_download'];
+      for (var viCtr=0;viCtr < visibilitySettings.length;viCtr++) {
         var futureArray = jQuery("[name^='future'][name$='\\[" + visibilitySettings[viCtr] + "\\]']");
         for (var ctr=0;ctr<futureArray.length;ctr++){
-			    futureVisibility.push({
-				    name:jQuery(futureArray[ctr]).closest("li").attr("path"),
-					  setting:visibilitySettings[viCtr],
-					  value:futureArray[ctr].checked
-				  });
-			  } 
-			}	     
-			var futurePreviewEnabled = [],
-			previewEnabled = [],
-			previewMessage = '';
-			// result holds array of concepts which have future_children_allow_download disabled
-			var result = jQuery.grep(futureVisibility, function(e){return e.setting === 'allow_download' && e.value === false});
-			if (result.length > 0) {
+          futureVisibility.push({
+	    name:jQuery(futureArray[ctr]).closest("li").attr("path"),
+	    setting:visibilitySettings[viCtr],
+	    value:futureArray[ctr].checked
+	  });
+	} 
+      }	     
+      var futurePreviewEnabled = [],
+	previewEnabled = [],
+	previewMessage = '';
+     // result holds array of concepts which have future_children_allow_download disabled
+	var result = jQuery.grep(futureVisibility, function(e){return e.setting === 'allow_download' && e.value === false});
+	if (result.length > 0) {
          // filter out the result array from above to concepts that have future_children_show_preview enabled
-				 jQuery.map(result, function (downloadSetting, i) { if (jQuery.grep(futureVisibility, function (e) { return e.name === downloadSetting.name && e.setting === 'show_preview' && e.value === true}).length > 0) { futurePreviewEnabled.push(downloadSetting.name); }})
-			}
-			if (futurePreviewEnabled.length > 0){
-			  previewMessage = '<div class="dialog_concept_tree">Future Resource children for:';
-		    jQuery.map(futurePreviewEnabled, function(obj, i) { 
-			    previewMessage += '<div>' + jQuery("li[path='"+obj+"']").children("div")[2].innerHTML + '</div>';
-		    });
-			  previewMessage += '</div>';
-			}	
-		  // get all resources from the main visibility form where preview is enabled and download disabled
-			jQuery("[name$='\\[show_preview\\]']:checked").not("[name^='future[']").map(function() { 
-		     var fieldName = 'visibility['+jQuery(this).attr('path')+'][allow_download]'; 
-		     if (!(jQuery("[name=\'"+fieldName+"\']").is(':checked'))) { 
-			     previewEnabled.push(jQuery(this).closest("li").children()[2].innerHTML);
-		     }
-		  });
-		 if (previewEnabled.length > 0){
-		    previewMessage += '<div style="padding-top:5px;"></div><div class="dialog_concept_tree">';
-         for (ctr=0;ctr<previewEnabled.length;ctr++){
-           previewMessage += "<div>"+previewEnabled[ctr]+"</div>";
-         }
-				 previewMessage += '<div>';
-			}
-			if ((previewEnabled.length > 0) || (futurePreviewEnabled.length > 0)) { 
-				jQuery.ajax({
-         url: Drupal.settings.basePath+"exhibition_config/preview_warning",
-         success: function(msg){
-			    previewMessage = '<div>' + msg + '</div>' + previewMessage;
-          jQuery("#changeAdvanced").append("<div id='previewWarning' style='display:none;' title='Preview without download'><div>"+previewMessage+"</div></div>");
-          var dialogPreview = {
-            resizable: true,
-            height:450,
-            width: 600,
-            modal: true,
-            buttons: {},
-            close: function(){
-						  jQuery( this ).dialog( "destroy" ).remove();
-            }
-          };
-          dialogPreview.buttons['Continue'] = function() {
-           changeAdvanced(futureVisibility);
-			     jQuery("#exhibition-permission-form").submit();
-					 jQuery(this).dialog("destroy").remove();
-          };
+	  jQuery.map(result, function (downloadSetting, i) { if (jQuery.grep(futureVisibility, function (e) { return e.name === downloadSetting.name && e.setting === 'show_preview' && e.value === true}).length > 0) { futurePreviewEnabled.push(downloadSetting.name); }})
+       }
+       if (futurePreviewEnabled.length > 0){
+	  previewMessage = '<div class="dialog_concept_tree">Future Resource children for:';
+          jQuery.map(futurePreviewEnabled, function(obj, i) { 
+	    previewMessage += '<div>' + jQuery("li[path='"+obj+"']").children("div")[2].innerHTML + '</div>';
+	  });
+	  previewMessage += '</div>';
+	}	
+	// get all resources from the main visibility form where preview is enabled and download disabled
+	jQuery("[name$='\\[show_preview\\]']:checked").not("[name^='future[']").map(function() { 
+	var fieldName = 'visibility['+jQuery(this).attr('path')+'][allow_download]'; 
+	if (!(jQuery("[name=\'"+fieldName+"\']").is(':checked'))) { 
+	  previewEnabled.push(jQuery(this).closest("li").children()[2].innerHTML);
+	}
+	});
+	if (previewEnabled.length > 0){
+	  previewMessage += '<div style="padding-top:5px;"></div><div class="dialog_concept_tree">';
+          for (ctr=0;ctr<previewEnabled.length;ctr++){
+            previewMessage += "<div>"+previewEnabled[ctr]+"</div>";
+          }
+	   previewMessage += '<div>';
+	}
+	if ((previewEnabled.length > 0) || (futurePreviewEnabled.length > 0)) { 
+	  jQuery.ajax({
+            url: Drupal.settings.basePath+"exhibition_config/preview_warning",
+            success: function(msg){
+	    previewMessage = '<div>' + msg + '</div>' + previewMessage;
+            jQuery("#changeAdvanced").append("<div id='previewWarning' style='display:none;' title='Preview without download'><div>"+previewMessage+"</div></div>");
+            var dialogPreview = {
+              resizable: true,
+              height:450,
+              width: 600,
+              modal: true,
+              buttons: {},
+              close: function(){
+	        jQuery( this ).dialog( "destroy" ).remove();
+              }
+            };
+            dialogPreview.buttons['Continue'] = function() {
+             changeAdvanced(futureVisibility);
+	     jQuery("#exhibition-permission-form").submit();
+	     jQuery(this).dialog("destroy").remove();
+            };
           dialogPreview.buttons['Cancel'] = function() {
-					 jQuery(this).dialog("destroy").remove();
+	   jQuery(this).dialog("destroy").remove();
           }
           jQuery("#previewWarning").dialog(dialogPreview);
           jQuery("#previewWarning .dialog_concept_tree div:odd").addClass("light-background");
-				 }
-				});
-				}
-			else{
-				changeAdvanced(futureVisibility);
-			  jQuery("#exhibition-permission-form").submit();
-			  jQuery( this ).dialog( "destroy" ).remove();
-      }
+	}
+      });
     }
-    dialogConfig.buttons['Cancel'] = function() {
-			jQuery( this ).dialog( "destroy" ).remove();
-    }
-    jQuery("#changeAdvanced").dialog(dialogConfig);
-    jQuery("#changeAdvanced .visibility-list-table li:odd").addClass("light-background");
+    else{
+      changeAdvanced(futureVisibility);
+      jQuery("#exhibition-permission-form").submit();
+      jQuery( this ).dialog( "destroy" ).remove();
+   }
+  }
+  dialogConfig.buttons['Cancel'] = function() {
+    jQuery( this ).dialog( "destroy" ).remove();
+  }
+  jQuery("#changeAdvanced").dialog(dialogConfig);
+  jQuery("#changeAdvanced .visibility-list-table li:odd").addClass("light-background");
   }
 }
 changeAllWindow = function(){
   var selectedArray = [];
   jQuery("li.ui-selected").each(function() {
     selectedArray.push({
-            path: jQuery(this).attr("depth"), 
-            name:  jQuery(this).children("div")[2].innerHTML
-        }); 
+      path: jQuery(this).attr("depth"), 
+      name:  jQuery(this).children("div")[2].innerHTML
+    }); 
   });
   if (selectedArray.length >0){
     jQuery('#changeAll').remove();
@@ -446,18 +451,22 @@ changeAllWindow = function(){
     checkboxesHtml += "<li class='visibility-row'>";
     checkboxesHtml +=   "<div class='visibility-setting'>Show Name</div>";
     checkboxesHtml +=   "<div class='visibility-setting'>Show Meta</div>";
-    checkboxesHtml +=   "<div class='visibility-setting'>Show Preview</div>";
+    checkboxesHtml +=   "<div class='visibility-setting' style='width:6%;'>Show Preview</div>";
+    checkboxesHtml +=   "<div class='visibility-setting' style='width:10%;'>Show Degraded</div>";
     checkboxesHtml +=   "<div class='visibility-setting'>Allow Download</div>";
     checkboxesHtml += "</li>";
     checkboxesHtml += "<li class='visibility-row'>";
     checkboxesHtml +=   "<div class='visibility-setting'><input type='checkbox' id='future-children-show-name' value='1'></div>";
     checkboxesHtml +=   "<div class='visibility-setting'><input type='checkbox' id='future-children-show-meta' value='1'></div>";
     checkboxesHtml +=   "<div class='visibility-setting'><input type='checkbox' id='future-children-show-preview' value='1'></div>";
+    checkboxesHtml +=   "<div class='visibility-setting' style='width:10%;'><input type='checkbox' id='future-children-show-degraded' value='1'></div>";
     checkboxesHtml +=   "<div class='visibility-setting'><input type='checkbox' id='future-children-allow-download' value='1'></div>";
     checkboxesHtml += "</li>";
     checkboxesHtml += "</ul>";
     checkboxesHtml += "<div>&bull; Concepts cannot have previews or downloads.</div>";
-    checkboxesHtml += "<div>&bull; If 'Show Meta', 'Show Preview', or 'Allow Download' are selected to be turned on, 'Show Name' will also become checked for the selected objects including concepts.</div>";
+    checkboxesHtml += "<div>&bull; If 'Show Meta', 'Show Preview', 'Show Degraded' or 'Allow Download' are selected to be turned on, 'Show Name' will also become checked for the selected objects including concepts.</div>";
+    checkboxesHtml += "<div>&bull; Non Image resources cannot have degraded image previews.</div>";
+    checkboxesHtml += "<div>&bull; If 'Show Degraded' is selected to be turned on for an image resource, 'Show Preview' must also be checked for the selected object.</div>";
     checkboxesHtml += "<div>&bull; Apply visibility changes to the following:</div>";
     checkboxesHtml += "<div class='dialog_concept_tree'>";
     for (ctr=0;ctr<selectedArray.length;ctr++){
@@ -481,14 +490,14 @@ changeAllWindow = function(){
       visibilitySettings = {
         showMeta: jQuery("#future-children-show-meta").is(":checked")?"checked":(jQuery("#future-children-show-meta").prop("indeterminate")?"indeterminate":"off"),
         showPreview: jQuery("#future-children-show-preview").is(":checked")?"checked":(jQuery("#future-children-show-preview").prop("indeterminate")?"indeterminate":"off"),
+        showDegraded: jQuery("#future-children-show-degraded").is(":checked")?"checked":(jQuery("#future-children-show-degraded").prop("indeterminate")?"indeterminate":"off"),
         allowDownload: jQuery("#future-children-allow-download").is(":checked")?"checked":(jQuery("#future-children-allow-download").prop("indeterminate")?"indeterminate":"off")
       };
       visibilitySettings.showName = (
         visibilitySettings.showMeta=="checked" ||
         visibilitySettings.showPreview=="checked" ||
-        visibilitySettings.allowDownload =="checked" ||
+	visibilitySettings.allowDownload =="checked" ||
         showNameDirect=="checked") ? "checked" : showNameDirect;
-        
       changeSelected(visibilitySettings);
       jQuery( this ).dialog( "close" );
     };
@@ -501,52 +510,52 @@ changeAllWindow = function(){
   }//Ends selectedArray.length>0
 }
 previewWithoutDownloadCheck = function() {
-	var previewEnabled = [];
-	jQuery("[name$='\\[show_preview\\]']:checked").map(function() { 
-		var fieldName = 'visibility['+jQuery(this).attr('path')+'][allow_download]'; 
-		if (!(jQuery("[name=\'"+fieldName+"\']").is(':checked'))) { 
-			previewEnabled.push(jQuery(this).closest("li").children()[2].innerHTML);
-		}
-	});
-	if (previewEnabled.length > 0) {
-	  var previewMessage = '';
-	  var msg = '';
+  var previewEnabled = [];
+  jQuery("[name$='\\[show_preview\\]']:checked").map(function() { 
+  var fieldName = 'visibility['+jQuery(this).attr('path')+'][allow_download]'; 
+  if (!(jQuery("[name=\'"+fieldName+"\']").is(':checked'))) { 
+    previewEnabled.push(jQuery(this).closest("li").children()[2].innerHTML);
+  }
+  });
+  if (previewEnabled.length > 0) {
+    var previewMessage = '';
+    var msg = '';
     jQuery.ajax({
     url: Drupal.settings.basePath+"exhibition_config/preview_warning",
     success: function(msg){
-			previewMessage = msg;
-			  jQuery('#previewWarning').remove();
-        var message = '<div>' + previewMessage + '</div>';
-        message += "<div class='dialog_concept_tree'>";
-        for (ctr=0;ctr<previewEnabled.length;ctr++){
-          message += "<div>"+previewEnabled[ctr]+"</div>";
+      previewMessage = msg;
+      jQuery('#previewWarning').remove();
+      var message = '<div>' + previewMessage + '</div>';
+      message += "<div class='dialog_concept_tree'>";
+      for (ctr=0;ctr<previewEnabled.length;ctr++){
+        message += "<div>"+previewEnabled[ctr]+"</div>";
+      }
+      message += "</div>"; 
+      jQuery("body").append("<div id='previewWarning' style='display:none;' title='Preview without download'><div>"+message+"</div></div>");
+      var dialogConfig = {
+        resizable: true,
+        height:450,
+        width: 600,
+        modal: true,
+        buttons: {},
+        close: function(){
+          jQuery( this ).dialog( "destroy" ).remove();
         }
-        message += "</div>"; 
-        jQuery("body").append("<div id='previewWarning' style='display:none;' title='Preview without download'><div>"+message+"</div></div>");
-        var dialogConfig = {
-          resizable: true,
-          height:450,
-          width: 600,
-          modal: true,
-          buttons: {},
-          close: function(){
-            jQuery( this ).dialog( "destroy" ).remove();
-          }
-        };
-        dialogConfig.buttons['Continue'] = function() {
-          jQuery("#exhibition-permission-form").submit();
-					jQuery(this).dialog("destroy").remove();
-        };
-        dialogConfig.buttons['Cancel'] = function() {
-					jQuery(this).dialog("destroy").remove();
-        }
-        jQuery("#previewWarning").dialog(dialogConfig);
-        jQuery("#previewWarning .dialog_concept_tree div:odd").addClass("light-background");
-				return false;
-	  }
-	  });
-	}
-	else{
-	  jQuery("#exhibition-permission-form").submit();
-	}	
+      };
+      dialogConfig.buttons['Continue'] = function() {
+       jQuery("#exhibition-permission-form").submit();
+       jQuery(this).dialog("destroy").remove();
+      };
+      dialogConfig.buttons['Cancel'] = function() {
+	jQuery(this).dialog("destroy").remove();
+      }
+      jQuery("#previewWarning").dialog(dialogConfig);
+      jQuery("#previewWarning .dialog_concept_tree div:odd").addClass("light-background");
+      return false;
+     }
+    });
+  }
+  else{
+    jQuery("#exhibition-permission-form").submit();
+  }	
 }

@@ -292,8 +292,41 @@ SidoraQueue.prototype.Done = function(completedItem, ajaxReturn){
 	        sidora.queue.NotificationWindow.Show("Status for batch request started at " + timestamp + " : " + "<br>" + batchStatus.message,true);
 	        setTimeout(function() {poll(requestID,batch_id,timestamp)}, 2000);
 	      }else{
-	        sidora.queue.NotificationWindow.Show("Status for batch request started at " + timestamp + " returned an error : " + "<br>" + batchStatus.message,true);
-	        console.log(batchStatus.message);
+	       // Even when the batch status returned an unexpected response, it might still be running in the backend 
+	        parentPid = batchStatus.parent;
+	        batchCount = batchStatus.count;
+                var uiChildResourcesCount = jQuery("[pid='" + parentPid + "']").attr("resourcechildren");
+                var startTime = (new Date()).getTime();				
+		(function poll_concept_for_resource_count(parentPid,ajaxChildResourcesCount) {
+                  setTimeout(function(){
+		    if (((new Date()).getTime() - startTime) < 600000){
+		      jQuery.ajax({
+                        url: Drupal.settings.basePath+'sidora/ajax_parts/get_num_resource_children/'+parentPid,
+                      }).done(function(num_children){
+                         if (num_children > uiChildResourcesCount){
+	                   sidora.queue.NotificationWindow.Show("Status for batch request started at " + timestamp + " : " + "<br>" + (num_children - uiChildResourcesCount) + " resources ingested",true);
+                           if ((num_children - uiChildResourcesCount) < batchCount){
+			     setTimeout(function() {poll_concept_for_resource_count(parentPid,num_children)}, 15000);
+			   }else{
+	                     if (sidora.concept.GetPid() == parentPid){
+		               setTimeout(function(){
+	 	                 sidora.concept.LoadContent();
+		                 sidora.util.refreshConceptChildrenNumber(parentPid);
+                               },5000);
+			     }
+			   }
+			 }else{
+			   setTimeout(function() {poll_concept_for_resource_count(parentPid,num_children)}, 15000);
+			 }
+		       });
+		     }else{
+		       if (ajaxChildResourcesCount == uiChildResourcesCount){
+			 sidora.queue.NotificationWindow.Show("Status for batch request started at " + timestamp + " returned an error : " + "<br>" + batchStatus.message,true);
+	                 console.log(batchStatus.message);
+		       }
+		     }
+		   },15000); 
+		})(parentPid,uiChildResourcesCount);
 	      }	 
 	    }
 	  }			

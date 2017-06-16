@@ -166,17 +166,12 @@ jQuery("#edit-sidora-resource-ontology-json").on(\'change keyup paste\', functio
   $model_names_dd .= '<option value="sidora_all">All models that are not specifically called out</option>';
   foreach($model_names as $model => $name){ $model_names_dd .= '<option value="'.$model.'">'.$name.'</option>'; }
   $model_names_dd .= '</select>';
-  
-  $directory_to_list_for_xsl = DRUPAL_ROOT.'/'.drupal_get_path('module','sidora').'/XSL';
-  $xsl_filenames = array_diff(scandir($directory_to_list_for_xsl), array('..', '.', '.htaccess'));
-
   $xsl_names_dd = '<select class="xsl-names-dd form-select">';
   $xsl_names_dd .= '<option value="">None - Direct metadata to browser</option>';
-  foreach($xsl_filenames as $name){ 
-    if (sidora_endsWith(strtolower($name), ".xsl")){
-      $xsl_names_dd .= '<option value="'.$name.'">'.$name.'</option>'; 
-    }
-  }
+  $get_xsl_records = sidora_get_all_xsl_names();
+  foreach ($get_xsl_records as $xsl_form_record) {
+    $xsl_names_dd .= '<option value="' . $xsl_form_record . '">' . $xsl_form_record . '</option>'; 
+  }	
   $xsl_names_dd .= '</select>';
   /* example 
   $existing_json_sidora_form_config = '
@@ -228,10 +223,7 @@ jQuery(document).ready(function(){
   jQuery("#anf-button").click(function(){
   var myWin = window.open(Drupal.settings.basePath+"sidora/info/xsl_Upload/upload2","XSL_UPLOAD","width=550,height=250,0,status=0,");
   });
- /* Delete XSL button - Lets user delete XSL files - Functionality added by ***REMOVED*** on 3/18/15 */
-  // add jquery to the delete xsl button
   jQuery("#dxsl-button").click(function(){
- //   var delete_xslWin = window.open(Drupal.settings.basePath+"sidora/delete_xsl","XSL_DELETE","width=\'100%\',height=\'100%\',0,status=0,");
     Shadowbox.open({
       content:    Drupal.settings.basePath+"sidora/delete_xsl",
       player:     "iframe",
@@ -586,7 +578,7 @@ tr.removed.odd {
     '#description' => t('Usually pids have locks to eliminate multiple users attempting to access it at one.  Checking this box turns off that feature.'),
     '#default_value' => variable_get('sidora_disable_locking_by_pid', ''),
   );
-	$form['batch_url'] = array(
+  $form['batch_url'] = array(
      'fieldset' => array(
       '#type' => 'fieldset',
       '#title' => 'Batch Ingest URL',
@@ -607,6 +599,21 @@ tr.removed.odd {
      ),	
     ),
   );
+  $form['fuseki_url'] = array(
+     'fieldset' => array(
+      '#type' => 'fieldset',
+      '#title' => 'Fuseki URL',
+      '#description' => t(''),
+      '#collapsible' => TRUE,
+      '#collapsed' => TRUE,
+      'sidora_fuseki_url' => array(
+        '#type' => 'textfield',
+        '#title' => t('Fuseki url'),
+        '#default_value' => variable_get('sidora_fuseki_url', ''),
+        '#description' => t('The location of Fuseki endpoint. Valid entry looks like this: http://&lt;server&gt;:&lt;port&gt;/fuseki/dataset.html'),
+      ),	
+    ),
+  );
   $form['#attributes'] = array('OnSubmit' => 'formPreSubmit();');
   $form['sidora_links'] = array(
     '#markup' => '<ul id="sidora-admin-links"><h2>Administrative Links</h2>
@@ -614,6 +621,8 @@ tr.removed.odd {
 <li><a href="fedora_object_issues">' . t('Fedora Object Issues') . '</a>' . t(' Check object issues have been found by the workbench (Malformed objects list)') . '</li>
 <li><a href="fedora_sync">Choose when to set concept objects to resync with Fedora</a></li>
 <li><a href="check_user_projects">' . t('Check User Projects') . '</a>' . t(' Check if the children of si:user-projects is out of sync with the Drupal users') . '</li>
+<li><a href="update_xsl_db">' . t('Update Sidora XSLs in database') . '</a>' . t(' Update the Sidora XSLs in database (XSL file location - path_to_sidora/workbench/XSL/)') . '</li>
+<li><a href="download_xsl">' . t('Download Sidora XSLs') . '</a>' . t(' Download all the SIdora XSLs from the database as an archive') . '</li> 
 </ul>
 <script>
 
