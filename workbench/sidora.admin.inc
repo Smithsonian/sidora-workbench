@@ -168,6 +168,7 @@ jQuery("#edit-sidora-resource-ontology-json").on(\'change keyup paste\', functio
   $model_names_dd .= '</select>';
   $xsl_names_dd = '<select class="xsl-names-dd form-select">';
   $xsl_names_dd .= '<option value="">None - Direct metadata to browser</option>';
+  module_load_include('inc', 'sidora', 'includes/xsl_handling');
   $get_xsl_records = sidora_get_all_xsl_names();
   foreach ($get_xsl_records as $xsl_form_record) {
     $xsl_names_dd .= '<option value="' . $xsl_form_record . '">' . $xsl_form_record . '</option>'; 
