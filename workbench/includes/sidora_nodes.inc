@@ -799,12 +799,18 @@ function sidora_get_update_or_create_concept_node($pid, $info = NULL, $set_fedor
   $node_id = sidora_get_concept_node_id($pid);
   if (empty($node_id)){
     $object = sidora_obj($pid);
-    $is_concept = sidora_is_concept($object);
-    if ($is_concept) {
-      watchdog('sidora', "Create:<pre>" . sidora_debug_string_backtrace()."</pre>info:".json_encode($info));
-      return sidora_create_concept_node($pid, $info, $set_fedora_sync);
+    if (!empty($object)){
+      $is_concept = sidora_is_concept($object);
+      if ($is_concept) {
+        watchdog('sidora', "Create:<pre>" . sidora_debug_string_backtrace()."</pre>info:".json_encode($info));
+        return sidora_create_concept_node($pid, $info, $set_fedora_sync);
+      }
+      else {
+        return NULL;
+      }
     }
     else {
+      watchdog('sidora', "Passed a pid:" . $pid . " that did not have a Fedora object with the intent of creating a concept node:<pre>" . sidora_debug_string_backtrace()."</pre>info:".json_encode($info));
       return NULL;
     }
   }

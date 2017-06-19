@@ -850,6 +850,8 @@ function sidora_process_object_with_build_id($form_build_id) {
         $ps_object = sidora_obj($pids[0]);
         if (empty($creation_info['added_to_parent'])) {
           $ps_object->relationships->add(FEDORA_RELS_EXT_URI, 'managesCodebook', $object->id);
+          $object->relationships->registerNamespace("sidora", SI_RELS_EXT_URI);
+          $object->relationships->add(SI_RELS_EXT_URI, 'isAdministeredBy', $ps_object->id);
         }
         sidora_object_creation_info($form_build_id,'added_to_parent',TRUE);
         // set the user's recent codebook to this new codebook
@@ -2543,6 +2545,11 @@ function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $ex
     return t("You must be an administrator or have an administrator set sidora_allow_all_to_debug in order to access this information");
   }
   if (!sidora_is_admin()) print t("Remember that nonadmins will NOT see output from dsm!");
+  if ($one == 'convert_user_projects') {
+    module_load_include('inc', 'sidora', 'includes/ps_migration');
+    sidora_project_space_convert_all_under_siuserprojects();
+    exit();
+  }
   if ($one == 'convert_concept') {
     module_load_include('inc', 'sidora', 'includes/ps_migration');
     sidora_project_space_convert_concept($two);

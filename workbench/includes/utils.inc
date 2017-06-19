@@ -571,6 +571,27 @@ function sidora_is_concept(AbstractObject $object) {
 }
 
 /**
+ * Checks if the given object is a person object.
+ *
+ * @param AbstractObject $object
+ *   The object to get the content model from.
+ *
+ * @return bool
+ *   TRUE if the given object is a concept, FALSE otherwise.
+ */
+function sidora_is_person(AbstractObject $object) {
+  $concept_models = array(
+      'si:peopleCModel',
+  );
+
+  if (empty($GLOBALS['sidora_object_models_'.$object])){
+    $GLOBALS['sidora_object_models_'.$object] = $object->models;
+  }
+  $curr_models = $GLOBALS['sidora_object_models_'.$object];
+  return array_intersect($concept_models, $curr_models);
+}
+
+/**
  * Create/Update a datastream with the given parameters.
  *
  * @param AbstractObject $object

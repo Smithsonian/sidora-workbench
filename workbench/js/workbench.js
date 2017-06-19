@@ -621,6 +621,7 @@ sidora.util.loadTreeSectionsIfNeeded = function(data){
   }
   var jst = jQuery("#forjstree").jstree(true);
   var openingPid = node.a_attr.pid;
+  if (typeof openingPid == 'undefined') return;
   var currentChildrenPids = sidora.util.childrenPidsListedInUIByNode(node);
   var childPidsCsv = currentChildrenPids.join();
   if (childPidsCsv.length > 0) {

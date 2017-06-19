@@ -405,7 +405,7 @@ function sidora_incoming_links_list_parents($pids) {
  * Creates a new project space and copies information from the concept to the new project space.
  * Within the project space there will be the original concept, renamed "Metadata for <name>"
  */
-function sidora_project_space_convert_concept($original_pid) {
+function sidora_project_space_convert_concept($original_pid, $pattern = '/(.+)/', $replacement = 'Metadata for $1', $unmatched_replacement = 'Metadata for $1') {
   module_load_include('inc', 'sidora', 'includes/project_spaces');
   $original = sidora_obj($original_pid);
   if (!empty($original)) {
@@ -418,7 +418,7 @@ function sidora_project_space_convert_concept($original_pid) {
 
     $ps_node = sidora_create_personal_project_space(
       $owner->name,
-      array("label"=>$original->label,"description"=>"Project Space from converted concept")
+      array("label"=>$original->label,"description"=>"Project Space conversion from legacy object")
     );
     $ps_pid = '';
     if (!empty($ps_node->field_fedora_pid) && array_key_exists($ps_node->language, $ps_node->field_fedora_pid)) {
@@ -434,7 +434,8 @@ function sidora_project_space_convert_concept($original_pid) {
     }
     // add the original to the project space
     sidora_copy($ps_pid, $original_pid, FALSE);
-
+    /*
+    as of 2017-06-19 Dan said not to put resources on project spaces. Remove this code in future commit, keeping temporarily as comment
     // just the resources
     $resource_rels = $original->relationships->get(FEDORA_RELS_EXT_URI, 'hasResource');
     foreach($resource_rels as $resource_rel) {
@@ -442,9 +443,33 @@ function sidora_project_space_convert_concept($original_pid) {
       sidora_copy($ps_pid, $resource_pid, FALSE);
       sidora_unassociate($original_pid, $resource_pid, FALSE);
     }
-    
+    */
   }
-  $original->label = "Metadata for " . $original->label;
+  $new_label = preg_replace($pattern, $replacement, $original->label, 1);
+  if (empty($new_label) || $new_label == $original->label) {
+    $new_label = preg_replace('/(.+)/', $unmatched_replacement, $original->label, 1);
+  }
+  $original->label = $new_label;
   $original->relationships->registerNamespace("sidora", SI_RELS_EXT_URI);
   $original->relationships->add(SI_RELS_EXT_URI, 'isAdministeredBy', $ps_pid);
+}
+
+function sidora_project_space_convert_all_under_siuserprojects(){
+  $pattern = '/(.*) Projects/i';
+  $replacement = '$1 Personal Information';
+  // Load si:user-projects children
+  $cr = _sidora_get_child_results_cache('si:user-projects');
+  foreach ($cr as $child) {
+    $pid = $child['o']['value'];
+    $obj = sidora_obj($pid);
+    print 'pid:'. $pid. '<hr>';
+    if (!empty($obj) && sidora_is_person($obj)) {
+      //print 'next!'; exit();
+      sidora_project_space_convert_concept($pid, $pattern, $replacement);
+      sidora_unassociate('si:user-projects',$pid,FALSE,TRUE);
+      print 'doneBBB';
+      exit();
+    }
+  }
+
 }
