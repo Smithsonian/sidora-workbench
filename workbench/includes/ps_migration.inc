@@ -454,22 +454,28 @@ function sidora_project_space_convert_concept($original_pid, $pattern = '/(.+)/'
   $original->relationships->add(SI_RELS_EXT_URI, 'isAdministeredBy', $ps_pid);
 }
 
-function sidora_project_space_convert_all_under_siuserprojects(){
+function sidora_project_space_convert_all_under_siuserprojects($num_conversions_string = "1"){
+  $num_conversions = intval($num_conversions_string);
   $pattern = '/(.*) Projects/i';
   $replacement = '$1 Personal Information';
   // Load si:user-projects children
   $cr = _sidora_get_child_results_cache('si:user-projects');
+  $num_so_far = 0;
   foreach ($cr as $child) {
     $pid = $child['o']['value'];
     $obj = sidora_obj($pid);
-    print 'pid:'. $pid. '<hr>';
-    if (!empty($obj) && sidora_is_person($obj)) {
+    print 'pid:'. $pid;
+    if (!empty($obj) && sidora_is_person($obj) && $num_conversions > $num_so_far) {
       //print 'next!'; exit();
       sidora_project_space_convert_concept($pid, $pattern, $replacement);
       sidora_unassociate('si:user-projects',$pid,FALSE,TRUE);
-      print 'doneBBB';
+      $num_so_far++;
+      print ' converted';
+    }
+    print '<hr>';
+    if ($num_so_far >= $num_conversions) {
+      print 'COMPLETE';
       exit();
     }
   }
-
 }

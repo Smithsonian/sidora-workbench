@@ -2547,7 +2547,7 @@ function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $ex
   if (!sidora_is_admin()) print t("Remember that nonadmins will NOT see output from dsm!");
   if ($one == 'convert_user_projects') {
     module_load_include('inc', 'sidora', 'includes/ps_migration');
-    sidora_project_space_convert_all_under_siuserprojects();
+    sidora_project_space_convert_all_under_siuserprojects($two);
     exit();
   }
   if ($one == 'convert_concept') {
