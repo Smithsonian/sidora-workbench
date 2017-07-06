@@ -3365,8 +3365,53 @@ if ($one == 'get_pid_tree') {
     //  print_r($pid_tree);
 			echo "</pre>";
 } 
+if ($one == 'download_3D') {
+error_reporting(E_ALL);
+ini_set("display_errors", 1);
+@set_time_limit(300);
+if (isset($two) && (!empty($two))) {
+  //$token = get_token();
+	$token = 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpZCI6IjE3MzQzNDgzIiwiaWF0IjoxNDk4MzM4Mjg3LCJleHAiOjE0OTk0NTQ4NjguNTkzfQ.3NumtyWeQx7CTjT1XAOgcY8syiUz_HH40fxvPWv8Jbc';
+	echo "token : " . $token;
+	if (!empty($token) && ($token !== NULL)) {
+	  //download_static_box($two,$token);
+		test_curl_request();
+	}	
+}
+}
 	//This ends the testing function and should also indicate the end of liberal use of the dsm function
 }
+function test_curl_request() {
+set_time_limit(0);
+echo ('public://');
+$curl = curl_init();
+$fp = fopen ('public://' . '/localfile.tmp', 'w+');
+curl_setopt_array($curl, array(
+  CURLOPT_URL => "https://play.autodesk.com/api/publication/zip/620072",
+  CURLOPT_RETURNTRANSFER => true,
+  CURLOPT_ENCODING => "",
+  CURLOPT_MAXREDIRS => 10,
+  CURLOPT_TIMEOUT => 300,
+  CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+  CURLOPT_CUSTOMREQUEST => "GET",
+  CURLOPT_HTTPHEADER => array(
+    "Accept: application/json",
+    "Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpZCI6IjE3MzQzNDgzIiwiaWF0IjoxNDk3NzkzMTc0LCJleHAiOjE0OTg5NDMwNTkuMDgyfQ.QkN5hfgVxVbD9RJS0N3b7MVJN7NyvN6ud0z8IT4SvkM"
+  ),
+	CURLOPT_FILE => $fp,
+));
+
+curl_exec($curl);
+$err = curl_error($curl);
+
+curl_close($curl);
+fclose($fp);
+if ($err) {
+  echo "cURL Error #:" . $err;
+} else {
+  echo "done";
+}
+}	  
 
 function sidora_flatten_tree($branch, &$rows,$visibility_settings,$path) {
   //var_dump($branch);

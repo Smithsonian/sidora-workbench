@@ -30,7 +30,7 @@ jQuery(function() {
   jQuery("body").css("padding-top","0px");
     var prev = -1;
     jQuery( "#selectable>ul" ).selectable({
-    filter: "ul>li",
+    filter: "li.visibility-row",
     selecting: function(e, ui) {
         var curr = jQuery(ui.selecting.tagName, e.target).index(ui.selecting);
         if(e.shiftKey && prev > -1) {
@@ -131,14 +131,22 @@ jQuery(function(){
   jQuery("#concept_tree li:even").addClass("light-background");
   jQuery("#open-advanced").after(jQuery("#edit-save"));
   jQuery(window).resize(resizeConceptTreePage);
-  jQuery("input:checkbox").click(function(){
+  jQuery("#selectable").on("click","input:checkbox",function(){
   if (jQuery(this).is(":checked")){
+      jQuery('body').append('<div id="fsOverlay" style="position:fixed;top:200px;left:200px;width:30%;height:30%;background-color:#ddd;z-index:10000;"><div style="width:20px;margin:10px auto;height:100px;font-size:20px;">Processing...</div></div>');
+      var parentsToCheck = [];
       var invisibleParents = [];
       var message = "";
       message += "<ul>";
       var pidPath = jQuery(this).attr("path");
       var path = pidPath.split("/");
+      var rootPid = jQuery("[name='pid']").val();
       pid = "";
+      var resetCheckboxID = jQuery(this).attr("id");
+      var selectedCheckbox = this;
+      jQuery('body').css("cursor", "progress"); 
+      visibilitySettings = {};
+      visibilitySettings['show_name'] = '';
       for (ctr=0;ctr<path.length;ctr++){
         if (pid == "") {
           message = "In order to display this object and its information, the object and a path through the exhibition needs to be displayed. If you confirm, the following items will be shown."+message;
@@ -146,82 +154,521 @@ jQuery(function(){
         }else{
           pid = pid+"/"+path[ctr];
         }
-        visibilityToCheck = "visibility["+pid+"][show_name]";
-        if (!(jQuery("[name=\'"+visibilityToCheck+"\']").is(":checked"))) {      
-          invisibleParents.push(visibilityToCheck);
-          message += "<li>" + jQuery("[name=\'"+visibilityToCheck+"\']").attr("label")+"</li>";
-        }
+        parentsToCheck.push(pid);
       }
-      message += "</ul>";
-      if (invisibleParents.length > 0){
-        var resetCheckboxID = jQuery(this).attr("id");
-        var selectedCheckbox = this;
-        changeParentConfirm("Visibility Settings Change", message, 
-          function(){ 
-            setToChecked(invisibleParents);
-            //store and restore the current settings for this object
-            var changeBack = jQuery(selectedCheckbox).closest("li").find("input").filter(
-              function(){
-                if (jQuery(this) == jQuery(selectedCheckbox)) return false;
-                if (jQuery(this).attr("name").indexOf("[show_name]") != -1) return false;
-                return true;
-              }
-            );
-            var objSettings = changeBack.map(function(){return jQuery(this).prop("checked");});
-            changedShowName(pidPath, true);
-            for (ctr=0;ctr<changeBack.length;ctr++) {
-              jQuery(changeBack[ctr]).prop("checked",objSettings[ctr]);
-            }
-          },
-          function(){ jQuery("#"+resetCheckboxID).prop("checked",false); }
-        ); 
-      }
-      else {
-        if (jQuery(this).attr("name").indexOf("[show_name]") != -1) {
-          changedShowName(pidPath, true);
-        }
-      }
-    }
-    else {
-      if (jQuery(this).attr("name").indexOf("[show_name]") != -1) {
-        var pidPath = jQuery(this).attr("path");
-        var linesToBeHidden = getUL(pidPath).find("li").filter(
-          function(){
-            return jQuery(this).find("input:checked").length > 0;
-          }
-        );
-        var message = "When hiding this concept, all children and child trees will be hidden. If you confirm, the concept and the following items will be hidden.";
-        message += "<ul>";
-        for (ctr=0;ctr<linesToBeHidden.length;ctr++){
-          message += "<li>"+ jQuery(linesToBeHidden[ctr]).attr("name") + "</li>";
-        }
-        message += "</ul>";
-        if (linesToBeHidden.length > 0){ //This is a concept with children that will be changed
-          var resetCheckboxID = jQuery(this).attr("id");
-          var pidPath = jQuery(this).attr("path");
+	parentsToCheck.pop();
+    jQuery.ajax({
+        dataType: "json",
+        method:"post",
+        url: Drupal.settings.basePath+'exhibition_config/ajax_parts/check_visibility/'+rootPid,
+        data: {"csv_pids":parentsToCheck.join(),
+       "visibility":JSON.stringify(visibilitySettings),
+        "condition":""},
+		    success: function(visibility){
+          console.log(visibility);
+          for (ctr=0;ctr<visibility.length;ctr++){
+            if (visibility[ctr].status == "true") {
+						invisibleParents.push(visibility[ctr].pid);
+            message += "<li>" + visibility[ctr].label+"</li>";
+						}
+		      }	 
+          message += "</ul>";
+			   if (invisibleParents.length > 0) {
+          jQuery('#fsOverlay').detach();
           changeParentConfirm("Visibility Settings Change", message, 
-            function(){ changedShowName(pidPath, false); },
-            function(){ jQuery("#"+resetCheckboxID).prop("checked",true); }
+            function(){ 
+      jQuery('body').append('<div id="fsOverlay" style="position:fixed;top:200px;left:200px;width:30%;height:30%;background-color:#ddd;z-index:10000;"><div style="width:20px;margin:10px auto;height:100px;font-size:20px;">Processing...</div></div>');
+	            visibilitySettings = {};
+			        visibilitySettings['show_name'] = '1';
+							jQuery.ajax({
+                dataType: "json",
+                method:"post",
+		            url: Drupal.settings.basePath+'exhibition_config/ajax_parts/set_visibility/'+rootPid,
+                data: {"csv_pids":invisibleParents.join(),
+				       "visibility":JSON.stringify(visibilitySettings)},
+		           success: function(visibility){
+     	           if (jQuery("#"+resetCheckboxID).attr("name").indexOf("[show_name]") == -1) {
+				           var parsedName = jQuery("#"+resetCheckboxID).attr("name").split("[");
+				           var settingName = parsedName[parsedName.length-1].slice(0,-1);
+	                 visibilitySettings = {};
+			             visibilitySettings[settingName] = '1';
+									 visibilitySettings['show_name'] = '1';
+									 jQuery.ajax({
+                    dataType: "json",
+                    method:"post",
+		                url: Drupal.settings.basePath+'exhibition_config/ajax_parts/set_visibility/'+rootPid,
+                    data: {"csv_pids":pidPath,
+				       "visibility":JSON.stringify(visibilitySettings)},
+					          success: function(data){
+		                 if (jQuery("#"+resetCheckboxID).closest("li").children("div .visibility-type").html().toLowerCase() == 'concept') {
+		                   visibilitySettings = {};
+			                 visibilitySettings['all'] = '1';
+											 jQuery.ajax({
+		                     dataType: "json",
+		                     method:"post",
+			                   url: Drupal.settings.basePath+'exhibition_config/ajax_parts/set_children_visibility/' + rootPid,
+		                     data: {"parent_pid_path":pidPath,
+				       "visibility":JSON.stringify(visibilitySettings)},
+			                   success: function(visibility){
+                           jQuery.ajax({
+                            dataType:'html',
+		                        url: Drupal.settings.basePath+'exhibition_config/ajax_parts/paging/' + rootPid + '/' + parseInt(jQuery("[name='objectsPerPage']").val()) + '/' + parseInt(jQuery('#sidora-resources-page-number').val()),
+                            success: function(data){
+		                         if (jQuery.trim(data)){
+		                           jQuery('.visibility-row').detach();
+			                         jQuery('.visibility-list-table>#header').after(data);
+			                         fillInSidebar();
+                               resizeConceptTreePage();
+                               jQuery('#concept_tree li:even').addClass('light-background');
+                               jQuery('#open-advanced').after(jQuery('#edit-save'));
+                               jQuery(window).resize(resizeConceptTreePage);
+			                         jQuery('#sidora-resources-page-number').val(parseInt(jQuery('#sidora-resources-page-number').val()));
+                               jQuery('#fsOverlay').detach();
+		                         }	 
+                            }
+                           });
+		                     }
+		                   });
+		                 }
+		                 else {
+		                   jQuery.ajax({
+                         dataType:'html',
+		                     url: Drupal.settings.basePath+'exhibition_config/ajax_parts/paging/' + rootPid + '/' + parseInt(jQuery("[name='objectsPerPage']").val()) + '/' + parseInt(jQuery('#sidora-resources-page-number').val()),
+                         success: function(data){
+		                       if (jQuery.trim(data)){
+		                         jQuery('.visibility-row').detach();
+			                       jQuery('.visibility-list-table>#header').after(data);
+			                       fillInSidebar();
+                             resizeConceptTreePage();
+                             jQuery('#concept_tree li:even').addClass('light-background');
+                             jQuery('#open-advanced').after(jQuery('#edit-save'));
+                             jQuery(window).resize(resizeConceptTreePage);
+			                       jQuery('#sidora-resources-page-number').val(parseInt(jQuery('#sidora-resources-page-number').val()));
+		                         jQuery('#fsOverlay').detach();
+													 }	 
+                         }
+                       });
+                     }
+	                  }
+			             });
+		             }
+                 else {
+		               if (jQuery("#"+resetCheckboxID).closest("li").children("div .visibility-type").html().toLowerCase() == 'concept') {
+		                 visibilitySettings = {};
+			               visibilitySettings['all'] = '1';
+										 jQuery.ajax({
+		                   dataType: "json",
+		                   method:"post",
+			                 url: Drupal.settings.basePath+'exhibition_config/ajax_parts/set_children_visibility/' + rootPid,
+		                   data: {"parent_pid_path":pidPath,
+				       "visibility":JSON.stringify(visibilitySettings)},
+			                 success: function(visibility){
+                         jQuery.ajax({
+                           dataType:'html',
+		                       url: Drupal.settings.basePath+'exhibition_config/ajax_parts/paging/' + rootPid + '/' + parseInt(jQuery("[name='objectsPerPage']").val()) + '/' + parseInt(jQuery('#sidora-resources-page-number').val()),
+                           success: function(data){
+		                         if (jQuery.trim(data)){
+		                           jQuery('.visibility-row').detach();
+			                         jQuery('.visibility-list-table>#header').after(data);
+			                         fillInSidebar();
+                               resizeConceptTreePage();
+                               jQuery('#concept_tree li:even').addClass('light-background');
+                               jQuery('#open-advanced').after(jQuery('#edit-save'));
+                               jQuery(window).resize(resizeConceptTreePage);
+			                         jQuery('#sidora-resources-page-number').val(parseInt(jQuery('#sidora-resources-page-number').val()));
+															 jQuery('#fsOverlay').detach();
+		                         }	 
+                           }
+                         });
+		                   }
+		                 });
+		               }
+		               else {
+		                 jQuery.ajax({
+                       dataType:'html',
+		                   url: Drupal.settings.basePath+'exhibition_config/ajax_parts/paging/' + rootPid + '/' + parseInt(jQuery("[name='objectsPerPage']").val()) + '/' + parseInt(jQuery('#sidora-resources-page-number').val()),
+                       success: function(data){
+		                     if (jQuery.trim(data)){
+		                       jQuery('.visibility-row').detach();
+			                     jQuery('.visibility-list-table>#header').after(data);
+			                     fillInSidebar();
+                           resizeConceptTreePage();
+                           jQuery('#concept_tree li:even').addClass('light-background');
+                           jQuery('#open-advanced').after(jQuery('#edit-save'));
+                           jQuery(window).resize(resizeConceptTreePage);
+			                     jQuery('#sidora-resources-page-number').val(parseInt(jQuery('#sidora-resources-page-number').val()));
+		                       jQuery('#fsOverlay').detach();
+												 }	 
+                       }
+                     });
+                   }
+		             }
+	             }
+		          });
+					  },
+            function(){ jQuery("#"+resetCheckboxID).prop("checked",false); }
           ); 
-        }
-        else {  //This is a resource of concept with no children that change, just hide it
-          changedShowName(pidPath, false);
-        }
-      }
-    }
+         }
+         else {
+				   jQuery('body').css("cursor", "progress");
+      //jQuery('body').append('<div id="fsOverlay" style="position:fixed;top:200px;left:200px;width:30%;height:30%;background-color:#ddd;z-index:10000;"><div style="width:20px;margin:10px auto;height:100px;font-size:20px;">Processing...</div></div>');
+	 if (jQuery("#"+resetCheckboxID).attr("name").indexOf("[show_name]") != -1) {
+				     // set_visibility for all/true for this pid
+	           visibilitySettings = {};
+			       visibilitySettings['all'] = '1';
+						 jQuery.ajax({
+               dataType: "json",
+               method:"post",
+		           url: Drupal.settings.basePath+'exhibition_config/ajax_parts/set_visibility/'+rootPid,
+               data: {"csv_pids":pidPath,
+				       "visibility":JSON.stringify(visibilitySettings)},
+		           success: function(visibility){
+		             if (jQuery("#"+resetCheckboxID).closest("li").children("div .visibility-type").html().toLowerCase() == 'concept') {
+	           visibilitySettings = {};
+			       visibilitySettings['all'] = '1';
+		               jQuery.ajax({
+		                 dataType: "json",
+		                 method:"post",
+			               url: Drupal.settings.basePath+'exhibition_config/ajax_parts/set_children_visibility/' + rootPid,
+		                 data: {"parent_pid_path":pidPath,
+				       "visibility":JSON.stringify(visibilitySettings)},
+			               success: function(visibility){
+                       jQuery.ajax({
+                         dataType:'html',
+		                     url: Drupal.settings.basePath+'exhibition_config/ajax_parts/paging/' + rootPid + '/' + parseInt(jQuery("[name='objectsPerPage']").val()) + '/' + parseInt(jQuery('#sidora-resources-page-number').val()),
+                         success: function(data){
+		                       if (jQuery.trim(data)){
+		                         jQuery('.visibility-row').detach();
+			                       jQuery('.visibility-list-table>#header').after(data);
+			                       fillInSidebar();
+                             resizeConceptTreePage();
+                             jQuery('#concept_tree li:even').addClass('light-background');
+                             jQuery('#open-advanced').after(jQuery('#edit-save'));
+                             jQuery(window).resize(resizeConceptTreePage);
+			                       jQuery('#sidora-resources-page-number').val(parseInt(jQuery('#sidora-resources-page-number').val()));
+		                         jQuery('body').css("cursor", "default");
+													   jQuery('#fsOverlay').detach();
+													 }	 
+                         }
+                       });
+		                 }
+		               });
+		             }
+		             else {
+		               jQuery.ajax({
+                     dataType:'html',
+		                 url: Drupal.settings.basePath+'exhibition_config/ajax_parts/paging/' + rootPid + '/' + parseInt(jQuery("[name='objectsPerPage']").val()) + '/' + parseInt(jQuery('#sidora-resources-page-number').val()),
+                     success: function(data){
+		                   if (jQuery.trim(data)){
+		                    jQuery('.visibility-row').detach();
+			                  jQuery('.visibility-list-table>#header').after(data);
+			                  fillInSidebar();
+                        resizeConceptTreePage();
+                        jQuery('#concept_tree li:even').addClass('light-background');
+                        jQuery('#open-advanced').after(jQuery('#edit-save'));
+                        jQuery(window).resize(resizeConceptTreePage);
+			                  jQuery('#sidora-resources-page-number').val(parseInt(jQuery('#sidora-resources-page-number').val()));
+		                   jQuery('body').css("cursor", "default");
+											 jQuery('#fsOverlay').detach();
+											 }	 
+                     }
+                   });
+                 }
+               }
+				     });
+				   }
+				   else{
+				     var parsedName = jQuery("#"+resetCheckboxID).attr("name").split("[");
+				     var settingName = parsedName[parsedName.length-1].slice(0,-1);
+	           visibilitySettings = {};
+			       visibilitySettings[settingName] = '1';
+						 visibilitySettings['show_name'] = '1';
+						 jQuery('body').css("cursor", "progress");
+						 jQuery.ajax({
+               dataType: "json",
+               method:"post",
+		           url: Drupal.settings.basePath+'exhibition_config/ajax_parts/set_visibility/'+rootPid,
+               data: {"csv_pids":pidPath,
+				       "visibility":JSON.stringify(visibilitySettings)},
+					     success: function(data){
+				               /*  if (jQuery("#"+resetCheckboxID).closest("li").children("div .visibility-type").html().toLowerCase() == 'concept') {
+		                   visibilitySettings = {};
+			                 visibilitySettings['all'] = '1';
+											 jQuery.ajax({
+		                     dataType: "json",
+		                     method:"post",
+			                   url: Drupal.settings.basePath+'exhibition_config/ajax_parts/set_children_visibility/' + rootPid,
+		                     data: {"parent_pid_path":pidPath,
+				       "visibility":JSON.stringify(visibilitySettings)},
+			                   success: function(visibility){
+		             jQuery.ajax({
+                   dataType:'html',
+		               url: Drupal.settings.basePath+'exhibition_config/ajax_parts/paging/' + rootPid + '/' + parseInt(jQuery("[name='objectsPerPage']").val()) + '/' + parseInt(jQuery('#sidora-resources-page-number').val()),
+                   success: function(data){
+		                 if (jQuery.trim(data)){
+		                   jQuery('.visibility-row').detach();
+			                 jQuery('.visibility-list-table>#header').after(data);
+			                 fillInSidebar();
+                       resizeConceptTreePage();
+                       jQuery('#concept_tree li:even').addClass('light-background');
+                       jQuery('#open-advanced').after(jQuery('#edit-save'));
+                       jQuery(window).resize(resizeConceptTreePage);
+			                 jQuery('#sidora-resources-page-number').val(parseInt(jQuery('#sidora-resources-page-number').val()));
+		                   jQuery('#fsOverlay').detach();
+										 }	 
+                   }
+                 });
+								 }
+								 });
+								 }
+								 else {*/
+		             jQuery.ajax({
+                   dataType:'html',
+		               url: Drupal.settings.basePath+'exhibition_config/ajax_parts/paging/' + rootPid + '/' + parseInt(jQuery("[name='objectsPerPage']").val()) + '/' + parseInt(jQuery('#sidora-resources-page-number').val()),
+                   success: function(data){
+		                 if (jQuery.trim(data)){
+		                   jQuery('.visibility-row').detach();
+			                 jQuery('.visibility-list-table>#header').after(data);
+			                 fillInSidebar();
+                       resizeConceptTreePage();
+                       jQuery('#concept_tree li:even').addClass('light-background');
+                       jQuery('#open-advanced').after(jQuery('#edit-save'));
+                       jQuery(window).resize(resizeConceptTreePage);
+			                 jQuery('#sidora-resources-page-number').val(parseInt(jQuery('#sidora-resources-page-number').val()));
+		                   jQuery('#fsOverlay').detach();
+										 }	 
+                   }
+                 });
+								 //}
+				       }
+				     });
+				   } 
+         }
+			   jQuery('body').css("cursor", "default");
+			 }
+     });
+  }
+  else {
+      jQuery('body').append('<div id="fsOverlay" style="position:fixed;top:200px;left:200px;width:30%;height:30%;background-color:#ddd;z-index:10000;"><div style="width:20px;margin:10px auto;height:100px;font-size:20px;">Processing...</div></div>');
+ 	 jQuery('body').css("cursor", "progress"); 
+   var pidPath = jQuery(this).attr("path");
+		var rootPid = jQuery("[name='pid']").val();
+		var resetCheckboxID = jQuery(this).attr("id");
+    var selectedCheckbox = this;
+    if (jQuery(this).attr("name").indexOf("[show_name]") != -1) {
+      var linesToBeHidden = [];
+		  if (jQuery("#"+resetCheckboxID).closest("li").children("div .visibility-type").html().toLowerCase() == 'concept') {
+		    visibilitySettings = {};
+			  visibilitySettings['all'] = '1';
+				jQuery.ajax({
+		      dataType: "json",
+		      method:"post",
+			    url: Drupal.settings.basePath+'exhibition_config/ajax_parts/get_children_visibility/' + rootPid,
+		      data: {"parent_pid_path":pidPath,
+				       "visibility":JSON.stringify(visibilitySettings),
+							 "condition":"or"},
+			    success: function(visibility){
+					  for (ctr=0;ctr<visibility.length;ctr++){
+              linesToBeHidden.push(visibility[ctr]);
+		        }	 
+            var message = "When hiding this concept, all children and child trees will be hidden. If you confirm, the concept and the following items will be hidden.";
+            message += "<ul>";
+            for (ctr=0;ctr<linesToBeHidden.length;ctr++){
+              message += "<li>"+ linesToBeHidden[ctr].label + "</li>";
+            }
+            message += "</ul>";
+            if (linesToBeHidden.length > 0){ //This is a concept with children that will be changed
+              jQuery('#fsOverlay').detach();
+              changeParentConfirm("Visibility Settings Change", message, 
+                function(){ 
+      jQuery('body').append('<div id="fsOverlay" style="position:fixed;top:200px;left:200px;width:30%;height:30%;background-color:#ddd;z-index:10000;"><div style="width:20px;margin:10px auto;height:100px;font-size:20px;">Processing...</div></div>');
+							    visibilitySettings = {};
+			            visibilitySettings['all'] = '';
+									jQuery.ajax({
+                    dataType: "json",
+                    method:"post",
+		                url: Drupal.settings.basePath+'exhibition_config/ajax_parts/set_visibility/'+rootPid,
+                    data: {"csv_pids":pidPath,
+				       "visibility":JSON.stringify(visibilitySettings)},
+		                success: function(visibility){
+							    visibilitySettings = {};
+			            visibilitySettings['all'] = '';
+		                  jQuery.ajax({
+		                    dataType: "json",
+		                    method:"post",
+			                  url: Drupal.settings.basePath+'exhibition_config/ajax_parts/set_children_visibility/' + rootPid,
+		                    data: {"parent_pid_path":pidPath,
+				       "visibility":JSON.stringify(visibilitySettings)},
+			                  success: function(visibility){
+                          jQuery.ajax({
+                            dataType:'html',
+		                        url: Drupal.settings.basePath+'exhibition_config/ajax_parts/paging/' + rootPid + '/' + parseInt(jQuery("[name='objectsPerPage']").val()) + '/' + parseInt(jQuery('#sidora-resources-page-number').val()),
+                            success: function(data){
+		                          if (jQuery.trim(data)){
+		                            jQuery('.visibility-row').detach();
+			                          jQuery('.visibility-list-table>#header').after(data);
+			                          fillInSidebar();
+                                resizeConceptTreePage();
+                                jQuery('#concept_tree li:even').addClass('light-background');
+                                jQuery('#open-advanced').after(jQuery('#edit-save'));
+                                jQuery(window).resize(resizeConceptTreePage);
+			                          jQuery('#sidora-resources-page-number').val(parseInt(jQuery('#sidora-resources-page-number').val()));
+		                            jQuery('#fsOverlay').detach();
+															}	 
+                            }
+                          });
+		                    }
+		                  });
+                    }
+		              });
+						    },
+                function(){ jQuery("#"+resetCheckboxID).prop("checked",true); }
+              ); 
+            }
+            else {  //This is a resource of concept with no children that change, just hide it
+							visibilitySettings = {};
+			        visibilitySettings['all'] = '';
+						  jQuery.ajax({
+                dataType: "json",
+                method:"post",
+		            url: Drupal.settings.basePath+'exhibition_config/ajax_parts/set_visibility/'+rootPid,
+                data: {"csv_pids":pidPath,
+				       "visibility":JSON.stringify(visibilitySettings)},
+		            success: function(visibility){
+                  jQuery.ajax({
+                    dataType:'html',
+		                url: Drupal.settings.basePath+'exhibition_config/ajax_parts/paging/' + rootPid + '/' + parseInt(jQuery("[name='objectsPerPage']").val()) + '/' + parseInt(jQuery('#sidora-resources-page-number').val()),
+                    success: function(data){
+		                 if (jQuery.trim(data)){
+		                   jQuery('.visibility-row').detach();
+			                 jQuery('.visibility-list-table>#header').after(data);
+			                 fillInSidebar();
+                       resizeConceptTreePage();
+                       jQuery('#concept_tree li:even').addClass('light-background');
+                       jQuery('#open-advanced').after(jQuery('#edit-save'));
+                       jQuery(window).resize(resizeConceptTreePage);
+			                 jQuery('#sidora-resources-page-number').val(parseInt(jQuery('#sidora-resources-page-number').val()));
+		                   jQuery('#fsOverlay').detach();
+										 }	 
+                    }
+                  });
+		            }
+		          });
+            } // endif linestobehidden
+          }
+			  });
+			}
+			else {
+			  visibilitySettings = {};
+			  visibilitySettings['all'] = '';
+				jQuery.ajax({
+          dataType: "json",
+          method:"post",
+		      url: Drupal.settings.basePath+'exhibition_config/ajax_parts/set_visibility/'+rootPid,
+          data: {"csv_pids":pidPath,
+				       "visibility":JSON.stringify(visibilitySettings)},
+		      success: function(visibility){
+            jQuery.ajax({
+              dataType:'html',
+		          url: Drupal.settings.basePath+'exhibition_config/ajax_parts/paging/' + rootPid + '/' + parseInt(jQuery("[name='objectsPerPage']").val()) + '/' + parseInt(jQuery('#sidora-resources-page-number').val()),
+              success: function(data){
+		            if (jQuery.trim(data)){
+		              jQuery('.visibility-row').detach();
+			            jQuery('.visibility-list-table>#header').after(data);
+			            fillInSidebar();
+                  resizeConceptTreePage();
+                  jQuery('#concept_tree li:even').addClass('light-background');
+                  jQuery('#open-advanced').after(jQuery('#edit-save'));
+                  jQuery(window).resize(resizeConceptTreePage);
+			            jQuery('#sidora-resources-page-number').val(parseInt(jQuery('#sidora-resources-page-number').val()));
+		              jQuery('#fsOverlay').detach();
+								}	 
+              }
+            });
+		      }
+		    });
+			}
+		}
+		else {
+			var parsedName = jQuery("#"+resetCheckboxID).attr("name").split("[");
+			var settingName = parsedName[parsedName.length-1].slice(0,-1);
+	    							    visibilitySettings = {};
+			            visibilitySettings[settingName] = '';
+jQuery.ajax({
+        dataType: "json",
+        method:"post",
+		    url: Drupal.settings.basePath+'exhibition_config/ajax_parts/set_visibility/'+rootPid,
+        data: {"csv_pids":pidPath,
+				       "visibility":JSON.stringify(visibilitySettings)},
+				success: function(data){
+		      jQuery.ajax({
+            dataType:'html',
+		        url: Drupal.settings.basePath+'exhibition_config/ajax_parts/paging/' + rootPid + '/' + parseInt(jQuery("[name='objectsPerPage']").val()) + '/' + parseInt(jQuery('#sidora-resources-page-number').val()),
+            success: function(data){
+		          if (jQuery.trim(data)){
+		            jQuery('.visibility-row').detach();
+			          jQuery('.visibility-list-table>#header').after(data);
+			          fillInSidebar();
+                resizeConceptTreePage();
+                jQuery('#concept_tree li:even').addClass('light-background');
+                jQuery('#open-advanced').after(jQuery('#edit-save'));
+                jQuery(window).resize(resizeConceptTreePage);
+			          jQuery('#sidora-resources-page-number').val(parseInt(jQuery('#sidora-resources-page-number').val()));
+		          	jQuery('body').css("cursor", "default");
+								jQuery('#fsOverlay').detach();
+							}	 
+            }
+          });
+				}
+			});
+		}	
+  }
     fillInSidebar();
+  jQuery('body').css("cursor", "default"); 
   }); //Ends jQuery("input:checkbox").click
   jQuery("#change_all").click(changeAllWindow);
   jQuery("#open-advanced").click(openAdvancedWindow);
   jQuery("input[type='submit']").click(function(event) {
-    if (jQuery("[name$='\\[allow_download\\]']:not(:checked)").length > 0) {
-      event.preventDefault();
-      return previewWithoutDownloadCheck();
-    }
+    //if (jQuery("[name$='\\[allow_download\\]']:not(:checked)").length > 0) {
+    event.preventDefault();
+    previewWithoutDownloadCheck();
+    /*}
     else{
       return true;
-    }		
+    }*/		
   });
+	  jQuery("#cancel-button").click(function(event) {
+       var rootPid = jQuery("[name='pid']").val();
+      jQuery('body').append('<div id="fsOverlay" style="position:fixed;top:200px;left:200px;width:30%;height:30%;background-color:#ddd;z-index:10000;"><div style="width:20px;margin:10px auto;height:100px;font-size:20px;">Processing...</div></div>');
+jQuery.ajax({
+        dataType: "json",
+        method:"get",
+		    url: Drupal.settings.basePath+'exhibition_config/ajax_parts/clear_session/'+rootPid,
+				success: function(data){
+		      location.reload();
+					/*jQuery.ajax({
+            dataType:'html',
+		        url: Drupal.settings.basePath+'exhibition_config/ajax_parts/paging/' + rootPid + '/' + parseInt(jQuery("[name='objectsPerPage']").val()) + '/' + parseInt(jQuery('#sidora-resources-page-number').val()),
+            success: function(data){
+		          if (jQuery.trim(data)){
+		            jQuery('.visibility-row').detach();
+			          jQuery('.visibility-list-table>#header').after(data);
+			          fillInSidebar();
+                resizeConceptTreePage();
+                jQuery('#concept_tree li:even').addClass('light-background');
+                jQuery('#open-advanced').after(jQuery('#edit-save'));
+                jQuery(window).resize(resizeConceptTreePage);
+			          jQuery('#sidora-resources-page-number').val(parseInt(jQuery('#sidora-resources-page-number').val()));
+		          	jQuery('body').css("cursor", "default");
+								jQuery('#fsOverlay').detach();
+							}	 
+            }
+          });*/
+				}
+			});
+      
+  });
+
 }); //Ends openAdvanced click
 /*
  * When turning on show name, also show everything about the concept or resource automatically
@@ -248,7 +695,6 @@ getUL = function(pidPath){
   }
   return jQuery(docElementForUL);
 }
-
 changeSelected = function(visibilitySettings) {
   jQuery("li.ui-selected").each(function() {
     if (visibilitySettings.showName != 'indeterminate')
@@ -269,10 +715,33 @@ changeSelected = function(visibilitySettings) {
   fillInSidebar();
 }
 changeAdvanced = function(visibilitySettings) {
-  for (ctr=0;ctr<visibilitySettings.length;ctr++){
-    var settingName = 'visibility[' + visibilitySettings[ctr].name + '][future_children_' + visibilitySettings[ctr].setting + ']';
-    jQuery("[name='" + settingName + "']").prop("checked",visibilitySettings[ctr].value);
-  }
+ // ajax request to set_visibility with list of pid paths and visibility settings
+var rootPid = jQuery("[name='pid']").val();
+	 jQuery.ajax({
+    dataType: "json",
+    method:"post",
+		url: Drupal.settings.basePath+'exhibition_config/ajax_parts/set_visibility_multiple/'+rootPid,
+    data: {"visibility":JSON.stringify(visibilitySettings)},
+		success: function(visibility){
+		      /*jQuery.ajax({
+            dataType:'html',
+		        url: Drupal.settings.basePath+'exhibition_config/ajax_parts/paging/' + rootPid + '/' + parseInt(jQuery("[name='objectsPerPage']").val()) + '/' + parseInt(jQuery('#sidora-resources-page-number').val()),
+            success: function(data){
+		          if (jQuery.trim(data)){
+		            jQuery('.visibility-row').detach();
+			          jQuery('.visibility-list-table>#header').after(data);
+			          fillInSidebar();
+                resizeConceptTreePage();
+                jQuery('#concept_tree li:even').addClass('light-background');
+                jQuery('#open-advanced').after(jQuery('#edit-save'));
+                jQuery(window).resize(resizeConceptTreePage);
+			          jQuery('#sidora-resources-page-number').val(parseInt(jQuery('#sidora-resources-page-number').val()));
+		          }	 
+            }
+          });*/
+					jQuery("#exhibition-permission-form").submit();
+				}
+			});
 }   
 setToChecked = function(namesOfCheckboxes) {
   for (ctr=0;ctr<namesOfCheckboxes.length;ctr++){
@@ -308,6 +777,7 @@ changeParentConfirm = function(title, questionText, onConfirmation, onCancel, co
   jQuery("#userConfirm").dialog(dialogConfig);
 }
 openAdvancedWindow = function(){
+  var rootPid = jQuery("[name='pid']").val();
   var conceptsInTree = jQuery("li.visibility-row").filter(function(){return jQuery(this).children("div")[1].innerHTML == 'Concept';})
   if (conceptsInTree.length >0){
     jQuery('#changeAdvanced').remove();
@@ -327,11 +797,13 @@ openAdvancedWindow = function(){
     checkboxesHtml += "</ul>";//<div>Note: Future Concept children cannot have previews or downloads</div>";
     //checkboxesHtml += "<div>Saving will apply visibility changes to the following:</div>";
     checkboxesHtml += "<ul class='visibility-list-table'>";
-    for (ctr=0;ctr<conceptsInTree.length;ctr++){
+    conceptPidsInTree = [];
+		for (ctr=0;ctr<conceptsInTree.length;ctr++){
       checkboxesHtml += "<li class='dialog-visibility-row' path='" + jQuery(conceptsInTree[ctr]).attr('depth') +"'><div class='visibility-name'>"+jQuery(conceptsInTree[ctr]).attr('name')+"</div>";
       checkboxesHtml += "<div class='visibility-type'>"+jQuery(conceptsInTree[ctr]).children("div")[1].innerHTML+"</div>";
       checkboxesHtml += "<div class='visibility-path'>"+jQuery(conceptsInTree[ctr]).children("div")[2].innerHTML+"</div>";
-      for (var visibilityCtr = 0;visibilityCtr < visibilitySettings.length;visibilityCtr++) {
+      conceptPidsInTree.push(jQuery(conceptsInTree[ctr]).attr('depth'));
+			for (var visibilityCtr = 0;visibilityCtr < visibilitySettings.length;visibilityCtr++) {
         var checkboxFilter = jQuery("[name*='future_children_" + visibilitySettings[visibilityCtr] + "']");
 	var checkboxSelector = jQuery(conceptsInTree[ctr]).find(checkboxFilter);
 	var checked = jQuery(checkboxSelector).is(":checked")?' checked':'';
@@ -354,7 +826,8 @@ openAdvancedWindow = function(){
     };
     dialogConfig.buttons['Save'] = function() {
       var futureVisibility = [];
-      var visibilitySettings = ['show_name','show_meta','show_preview','show_degraded','allow_download'];
+      var advancedVisibility = {};
+			var visibilitySettings = ['show_name','show_meta','show_preview','show_degraded','allow_download'];
       for (var viCtr=0;viCtr < visibilitySettings.length;viCtr++) {
         var futureArray = jQuery("[name^='future'][name$='\\[" + visibilitySettings[viCtr] + "\\]']");
         for (var ctr=0;ctr<futureArray.length;ctr++){
@@ -363,6 +836,16 @@ openAdvancedWindow = function(){
 	    setting:visibilitySettings[viCtr],
 	    value:futureArray[ctr].checked
 	  });
+		var pidPath = jQuery(futureArray[ctr]).closest("li").attr("path");
+		var settingName = 'future_children_' + visibilitySettings[viCtr];
+		var settingValue = futureArray[ctr].checked ? '1':'';
+		if (advancedVisibility[pidPath] === undefined) {
+		  advancedVisibility[pidPath] = {};
+			advancedVisibility[pidPath][settingName] = settingValue;
+		} 
+		else {
+		  advancedVisibility[pidPath][settingName] = settingValue;
+		}	 	
 	} 
       }	     
       var futurePreviewEnabled = [],
@@ -382,12 +865,29 @@ openAdvancedWindow = function(){
 	  previewMessage += '</div>';
 	}	
 	// get all resources from the main visibility form where preview is enabled and download disabled
-	jQuery("[name$='\\[show_preview\\]']:checked").not("[name^='future[']").map(function() { 
+	/*jQuery("[name$='\\[show_preview\\]']:checked").not("[name^='future[']").map(function() { 
 	var fieldName = 'visibility['+jQuery(this).attr('path')+'][allow_download]'; 
 	if (!(jQuery("[name=\'"+fieldName+"\']").is(':checked'))) { 
 	  previewEnabled.push(jQuery(this).closest("li").children()[2].innerHTML);
 	}
-	});
+	});*/
+	// make an ajax request to get all resources from the current root visibility where show preview is enabled and download is disabled
+	// return an array of resource visibility paths
+	visibilitySettings = {};
+  visibilitySettings['show_preview'] = '1';
+	visibilitySettings['allow_download'] = '';
+		jQuery('body').css("cursor", "progress"); 
+			jQuery.ajax({
+		      dataType: "json",
+		      method:"post",
+			    url: Drupal.settings.basePath+'exhibition_config/ajax_parts/get_children_visibility/' + rootPid,
+		      data: {"parent_pid_path":conceptPidsInTree.join(),
+				       "visibility":JSON.stringify(visibilitySettings),
+							 "condition":"and"},
+			    success: function(visibility){
+					  for (ctr=0;ctr<visibility.length;ctr++){
+              if (visibility[ctr].status == 'true') previewEnabled.push(visibility[ctr].label);
+		        }	 
 	if (previewEnabled.length > 0){
 	  previewMessage += '<div style="padding-top:5px;"></div><div class="dialog_concept_tree">';
           for (ctr=0;ctr<previewEnabled.length;ctr++){
@@ -401,7 +901,8 @@ openAdvancedWindow = function(){
             success: function(msg){
 	    previewMessage = '<div>' + msg + '</div>' + previewMessage;
             jQuery("#changeAdvanced").append("<div id='previewWarning' style='display:none;' title='Preview without download'><div>"+previewMessage+"</div></div>");
-            var dialogPreview = {
+            	jQuery('body').css("cursor", "default"); 
+             var dialogPreview = {
               resizable: true,
               height:450,
               width: 600,
@@ -412,8 +913,7 @@ openAdvancedWindow = function(){
               }
             };
             dialogPreview.buttons['Continue'] = function() {
-             changeAdvanced(futureVisibility);
-	     jQuery("#exhibition-permission-form").submit();
+             changeAdvanced(advancedVisibility);
 	     jQuery(this).dialog("destroy").remove();
             };
           dialogPreview.buttons['Cancel'] = function() {
@@ -425,10 +925,12 @@ openAdvancedWindow = function(){
       });
     }
     else{
-      changeAdvanced(futureVisibility);
-      jQuery("#exhibition-permission-form").submit();
+      changeAdvanced(advancedVisibility);
+      //jQuery("#exhibition-permission-form").submit();
       jQuery( this ).dialog( "destroy" ).remove();
    }
+	 }
+	 });
   }
   dialogConfig.buttons['Cancel'] = function() {
     jQuery( this ).dialog( "destroy" ).remove();
@@ -439,11 +941,14 @@ openAdvancedWindow = function(){
 }
 changeAllWindow = function(){
   var selectedArray = [];
-  jQuery("li.ui-selected").each(function() {
+	var pidsToUpdate = [];
+  var rootPid = jQuery("[name='pid']").val();
+	jQuery("li.ui-selected").each(function() {
     selectedArray.push({
       path: jQuery(this).attr("depth"), 
       name:  jQuery(this).children("div")[2].innerHTML
     }); 
+		pidsToUpdate.push(jQuery(this).attr("depth"));
   });
   if (selectedArray.length >0){
     jQuery('#changeAll').remove();
@@ -485,9 +990,21 @@ changeAllWindow = function(){
      }
     };
     dialogConfig.buttons['Apply'] = function() {
-      var visibilitySettings = [];
-      var showNameDirect = jQuery("#future-children-show-name").is(":checked")?"checked":(jQuery("#future-children-show-name").prop("indeterminate")?"indeterminate":"off");
-      visibilitySettings = {
+      var visibilitySettings = {};
+      var showNameDirect = "";
+			if (!jQuery("#future-children-show-name").prop("indeterminate")) showNameDirect = jQuery("#future-children-show-name").is(":checked")?"1":"";
+			//var showNameDirect = jQuery("#future-children-show-name").is(":checked")?"checked":(jQuery("#future-children-show-name").prop("indeterminate")?"indeterminate":"off");
+      if (!jQuery("#future-children-show-meta").prop("indeterminate")) visibilitySettings['show_meta'] = jQuery("#future-children-show-meta").is(":checked")?"1":"";
+      if (!jQuery("#future-children-show-preview").prop("indeterminate")) visibilitySettings['show_preview'] = jQuery("#future-children-show-preview").is(":checked")?"1":"";
+      if (!jQuery("#future-children-show-degraded").prop("indeterminate")) visibilitySettings['show_degraded'] = jQuery("#future-children-show-degraded").is(":checked")?"1":"";
+      if (!jQuery("#future-children-allow-download").prop("indeterminate")) visibilitySettings['allow_download'] = jQuery("#future-children-allow-download").is(":checked")?"1":"";
+			/*if (!jQuery("#future-children-show-meta").prop("indeterminate")) visibilitySettings.push('showMeta: jQuery("#future-children-show-meta").is(":checked")?"1":""');
+      if (!jQuery("#future-children-show-preview").prop("indeterminate")) visibilitySettings.push('showPreview: jQuery("#future-children-show-preview").is(":checked")?"1":""');
+      if (!jQuery("#future-children-show-degraded").prop("indeterminate")) visibilitySettings.push('showDegraded: jQuery("#future-children-show-degraded").is(":checked")?"1":""');
+      if (!jQuery("#future-children-allow-download").prop("indeterminate")) visibilitySettings.push('allowDownload: jQuery("#future-children-allow-download").is(":checked")?"1":""');
+      
+      
+			visibilitySettings = {
         showMeta: jQuery("#future-children-show-meta").is(":checked")?"checked":(jQuery("#future-children-show-meta").prop("indeterminate")?"indeterminate":"off"),
         showPreview: jQuery("#future-children-show-preview").is(":checked")?"checked":(jQuery("#future-children-show-preview").prop("indeterminate")?"indeterminate":"off"),
         showDegraded: jQuery("#future-children-show-degraded").is(":checked")?"checked":(jQuery("#future-children-show-degraded").prop("indeterminate")?"indeterminate":"off"),
@@ -497,9 +1014,37 @@ changeAllWindow = function(){
         visibilitySettings.showMeta=="checked" ||
         visibilitySettings.showPreview=="checked" ||
 	visibilitySettings.allowDownload =="checked" ||
-        showNameDirect=="checked") ? "checked" : showNameDirect;
-      changeSelected(visibilitySettings);
-      jQuery( this ).dialog( "close" );
+        showNameDirect=="checked") ? "checked" : showNameDirect;*/
+      visibilitySettings['show_name'] = (visibilitySettings["showMeta"]=="1" || visibilitySettings["showPreview"]=="1" || visibilitySettings["allowDownload"] =="1" || showNameDirect=="checked") ? "1" : showNameDirect;
+      //changeSelected(visibilitySettings);
+	     jQuery('body').css("cursor", "progress"); 
+	      jQuery.ajax({
+         dataType: "json",
+         method:"post",
+		     url: Drupal.settings.basePath+'exhibition_config/ajax_parts/set_visibility/'+rootPid,
+         data: {"csv_pids":pidsToUpdate.join(),
+				        "visibility":JSON.stringify(visibilitySettings)},
+		     success: function(visibility){
+		       jQuery.ajax({
+             dataType:'html',
+		         url: Drupal.settings.basePath+'exhibition_config/ajax_parts/paging/' + rootPid + '/' + parseInt(jQuery("[name='objectsPerPage']").val()) + '/' + parseInt(jQuery('#sidora-resources-page-number').val()),
+             success: function(data){
+		           if (jQuery.trim(data)){
+		             jQuery('.visibility-row').detach();
+			           jQuery('.visibility-list-table>#header').after(data);
+			           fillInSidebar();
+                 resizeConceptTreePage();
+                 jQuery('#concept_tree li:even').addClass('light-background');
+                 jQuery('#open-advanced').after(jQuery('#edit-save'));
+                 jQuery(window).resize(resizeConceptTreePage);
+			           jQuery('#sidora-resources-page-number').val(parseInt(jQuery('#sidora-resources-page-number').val()));
+		           	jQuery('body').css("cursor", "default"); 
+							 }	 
+             }
+           });
+				}
+		});			 
+   jQuery( this ).dialog( "close" );
     };
     dialogConfig.buttons['Cancel'] = function() {
       jQuery( this ).dialog( "close" );
@@ -510,13 +1055,32 @@ changeAllWindow = function(){
   }//Ends selectedArray.length>0
 }
 previewWithoutDownloadCheck = function() {
-  var previewEnabled = [];
-  jQuery("[name$='\\[show_preview\\]']:checked").map(function() { 
+  var rootPid = jQuery("[name='pid']").val();
+	var previewEnabled = [];
+	visibilitySettings = {};
+  visibilitySettings['show_preview'] = '1';
+  visibilitySettings['allow_download'] = '';
+	jQuery('body').css("cursor", "progress"); 
+  jQuery.ajax({
+    dataType: "json",
+    method:"post",
+		url: Drupal.settings.basePath+'exhibition_config/ajax_parts/check_visibility/'+rootPid,
+    data: {"csv_pids":"all",
+				   "visibility":JSON.stringify(visibilitySettings),
+					 "condition":"and"},
+		    success: function(visibility){
+          console.log(visibility);
+          for (ctr=0;ctr<visibility.length;ctr++){
+            if (visibility[ctr].status == "true") {
+						  previewEnabled.push(visibility[ctr].label);
+						}
+					}		
+  /*jQuery("[name$='\\[show_preview\\]']:checked").map(function() { 
   var fieldName = 'visibility['+jQuery(this).attr('path')+'][allow_download]'; 
   if (!(jQuery("[name=\'"+fieldName+"\']").is(':checked'))) { 
     previewEnabled.push(jQuery(this).closest("li").children()[2].innerHTML);
   }
-  });
+  });*/
   if (previewEnabled.length > 0) {
     var previewMessage = '';
     var msg = '';
@@ -532,6 +1096,7 @@ previewWithoutDownloadCheck = function() {
       }
       message += "</div>"; 
       jQuery("body").append("<div id='previewWarning' style='display:none;' title='Preview without download'><div>"+message+"</div></div>");
+	    jQuery('body').css("cursor", "default"); 
       var dialogConfig = {
         resizable: true,
         height:450,
@@ -543,6 +1108,7 @@ previewWithoutDownloadCheck = function() {
         }
       };
       dialogConfig.buttons['Continue'] = function() {
+      jQuery('body').append('<div id="fsOverlay" style="position:fixed;top:200px;left:200px;width:30%;height:30%;background-color:#ddd;z-index:10000;"><div style="width:20px;margin:10px auto;height:100px;font-size:20px;">Processing...</div></div>');
        jQuery("#exhibition-permission-form").submit();
        jQuery(this).dialog("destroy").remove();
       };
@@ -556,6 +1122,9 @@ previewWithoutDownloadCheck = function() {
     });
   }
   else{
+      jQuery('body').append('<div id="fsOverlay" style="position:fixed;top:200px;left:200px;width:30%;height:30%;background-color:#ddd;z-index:10000;"><div style="width:20px;margin:10px auto;height:100px;font-size:20px;">Processing...</div></div>');
     jQuery("#exhibition-permission-form").submit();
   }	
+}
+});
 }
