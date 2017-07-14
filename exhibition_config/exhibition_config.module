@@ -748,7 +748,8 @@ function exhibition_config_main_form($pid){
  * $owner_id - null or empty indicates the current logged in user
  */
 function exhibition_config_allowed_to_edit($pid, $user_id = null){
-  // this may be checked many times, don't go to the repo every time
+  // this may be checked hundreds or thosands!! of times during a single request
+  // don't go to the repo every time
   static $ecate = NULL;
   global $user;
   if ($ecate !== NULL) {
@@ -2792,7 +2793,6 @@ function exhibition_permission_form($form, $form_state){
   $current_page = exhibition_config_paginate_visibility($checkbox_rows,$array_offset,$objects_per_session_page);
   $current_page = exhibition_config_update_visibility($current_page,$existing_visibility,$tree_html);
   $ending_page = exhibition_config_get_page($objects_per_session_page-1,$objects_per_page);
-  watchdog("exhibition_config"," in permission form, saving to session : " . "1-" . $ending_page);
   $current_page = array_slice($current_page,0,$objects_per_page);
   $form['visibility'] = $current_page;
   $form['visibility']['#tree'] = 'TRUE';
@@ -3340,9 +3340,8 @@ function exhibition_config_get_page($offset = 0, $objects_per_page) {
 function exhibition_config_get_html_for_visibility($visibility_page) {
 }
 function exhibition_config_get_total_session_pages($array_length,$objects_per_page) {
-    $page_array = array();
+  $page_array = array();
   if (isset($array_length) && ($array_length > 0)) {
-  watchdog("exhibition_config","exhibition_config_get_total_session_pages, checkboxes count : " . $array_length);
     $total_pages = ceil($array_length / $objects_per_page);
     $start_page = 0;
     $end_page = 0;
