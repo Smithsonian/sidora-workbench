@@ -182,21 +182,16 @@ function exhibition_config_ajax_parts($op,$pid,$arg1='',$arg2=''){
     if (isset($pid)) {
       $page_per_session = $objects_per_session_page / $per_page;
       $starting_page = floor($page_number / $page_per_session) * $page_per_session;
-      watchdog("exhibition_config","in ajax page call, starting page : " . $starting_page);
       $ending_page = exhibition_config_get_page($objects_per_session_page-1,$per_page);
-      watchdog("exhibition_config","in ajax page call, ending page : " . $ending_page);
       if ($page_number % $page_per_session == 0) {
         $session_key = ($starting_page - ($ending_page - 1)) . '-' . $starting_page;
       }
       else {
         $session_key = ($starting_page + 1) . '-' . ($starting_page+$ending_page);
       }
-      watchdog("exhibition_config","in ajax page call, looking for session key : " . $session_key);
       if (empty(exhibition_config_get_visibility_page($pid, $session_key))) {
         $page_offset = exhibition_config_get_offset($page_number,1,$per_page);
-        watchdog("exhibition_config","in ajax page call, page offset : " . $page_offset);
         $session_page_offset = floor($page_offset / $objects_per_session_page) * $objects_per_session_page;
-        watchdog("exhibition_config","in ajax page call, session page offset : " . $session_page_offset);
         $checkbox_rows = exhibition_config_get_tree_checkboxes($pid);
         $saved_visibility = exhibition_config_load_visibility_for_configuration($pid);
         $visibility_array = array_slice($checkbox_rows,$session_page_offset,$objects_per_session_page);
@@ -239,7 +234,6 @@ function exhibition_config_ajax_parts($op,$pid,$arg1='',$arg2=''){
     case 'check_visibility' :
     $to_return = array();
     if ((isset($pid)) &&  (isset($_POST['csv_pids']))) {
-      watchdog("exhibition_config","in check visibility : " . $pid);
       exhibition_config_prepare_visibility_for_use($pid);
       $pids_to_check = array();
       if (strtolower($_POST['csv_pids']) != 'all') {
@@ -481,7 +475,6 @@ function exhibition_config_ajax_parts($op,$pid,$arg1='',$arg2=''){
             $visibility_array = exhibition_config_get_visibility_page($pid, $visibility_page_key);
             $visibility_array = json_decode($visibility_array, TRUE);
             if (array_key_exists($pid_visibility, $visibility_array)) {
-              //watchdog("exhibition_config","in ajax page call, saving to session in set visibility,old size : " . strlen(json_encode($visibility_array)));
               $parent_visibility_array = $visibility_array[$pid_visibility];
               if (is_array($parent_visibility_array)) {
                 if (array_key_exists('all', $posted_visibility_settings_array)) {
@@ -501,8 +494,6 @@ function exhibition_config_ajax_parts($op,$pid,$arg1='',$arg2=''){
                 }     
                 array_push($to_return,$pid_visibility);
                 $visibility_array[$pid_visibility] = $parent_visibility_array;
-                watchdog("exhibition_config","in ajax page call, saving to session in set visibility,page : " . $visibility_page_key);
-                //watchdog("exhibition_config","in ajax page call, saving to session in set visibility, new size : " . strlen(json_encode($visibility_array)));
                 exhibition_config_set_visibility_page($pid, $visibility_page_key, json_encode($visibility_array));
                 break;
               }
@@ -529,7 +520,6 @@ function exhibition_config_ajax_parts($op,$pid,$arg1='',$arg2=''){
   }
 } 
 function exhibition_permission_form_submit($form, &$form_state) {
-  watchdog("exhibition_config","save_start");
   $root_pid = $form['pid']['#value'];
   $form_state['redirect'] = false;
   // take all visibility pages from the session for the root pid
@@ -566,7 +556,6 @@ function exhibition_permission_form_submit($form, &$form_state) {
       }
     }
   }
-  watchdog("exhibition_config","save_midway");
   $visibility_settings_array = array();
   foreach($post_array as $key => $value) {
     $visibility_array = array();
@@ -579,10 +568,8 @@ function exhibition_permission_form_submit($form, &$form_state) {
     $visibility_array['visibility'] = $value;
     exhibition_config_save_visibility_optimized($visibility_array); 
   }
-  watchdog("exhibition_config","save_late");
   exhibition_config_clear_exhibition_cache();
   exhibition_config_unload_visibility($root_pid);
-  watchdog("exhibition_config","save_complete");
   $path = current_path();
   drupal_goto($path);
 }
