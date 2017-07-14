@@ -189,7 +189,8 @@ function exhibition_config_ajax_parts($op,$pid,$arg1='',$arg2=''){
       else {
         $session_key = ($starting_page + 1) . '-' . ($starting_page+$ending_page);
       }
-      if (empty(exhibition_config_get_visibility_page($pid, $session_key))) {
+      $ecgvp = exhibition_config_get_visibility_page($pid, $session_key);
+      if (empty($ecgvp)) {
         $page_offset = exhibition_config_get_offset($page_number,1,$per_page);
         $session_page_offset = floor($page_offset / $objects_per_session_page) * $objects_per_session_page;
         $checkbox_rows = exhibition_config_get_tree_checkboxes($pid);
