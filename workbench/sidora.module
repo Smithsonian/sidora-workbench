@@ -194,6 +194,15 @@ function sidora_menu() {
       'access callback' => 'user_is_logged_in',
       'type' => MENU_CALLBACK,
     ),
+    'sidora/ps_migration' => array(
+      'title' => 'Migration utilities',
+      'description' => 'Administrative utilities to turn legacy objects to project space / research space structures and relationships',
+      'page callback' => 'sidora_migration_options',
+      'access callback' => 'user_access',
+      'access arguments' => array('administer site configuration'),
+      'file' => 'includes/ps_migration.inc',
+      'type' => MENU_CALLBACK,
+    ),
    'sidora/codebook/autocomplete' => array(
       'title' => 'Codebook Autocomplete',
       'description' => 'Return codebook information',
@@ -1741,6 +1750,14 @@ function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $ex
     }
     $to_return = sidora_html_tree_for_ajax();
     return "cleared $two".$to_return;
+  }
+  if ($one == 'session') {
+    dsm("use session/clear to clear session");
+    dsm($_SESSION);
+    if ($two == 'clear') {
+      $_SESSION = array();
+    }
+    return 'session';
   }
   //This ends the testing function and should also indicate the end of liberal use of the dsm function
 }

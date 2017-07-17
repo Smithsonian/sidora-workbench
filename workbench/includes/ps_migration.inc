@@ -31,6 +31,61 @@ defined("SIDORA_MULTIPARENT") or define('SIDORA_MULTIPARENT',"This object has mu
 defined("SIDORA_UNPROCESSED") or define('SIDORA_UNPROCESSED',"PID already has isAdministeredBy or does not have exactly 1 parent");
 
 /*
+ * Main function to give user access to run the code below
+ */
+function sidora_migration_options($one = '', $two = '') {
+  if ($one == 'convert_user_projects') {
+    module_load_include('inc', 'sidora', 'includes/ps_migration');
+    sidora_project_space_convert_all_under_siuserprojects($two);
+    exit();
+  }
+  if ($one == 'convert_concept') {
+    print 'converting...';
+    module_load_include('inc', 'sidora', 'includes/ps_migration');
+    $converted = sidora_project_space_convert_concept($two);
+    if ($converted) {
+      print 'Converted';
+    }
+    else {
+      print 'Error or object not found';
+    }
+    exit();
+  }
+  if ($one == 'incoming_links') {
+     module_load_include('inc', 'sidora', 'includes/ps_migration');
+    return drupal_render(sidora_incoming_links_form());
+    drupal_exit();
+  }
+  $to_return =  '<input type="submit" id="cup-submit" name="cup" value="Convert a few" class="form-submit" onclick="convertAFew()"> Convert a limited number of concepts <input id="cup-val" style="border:darkseagreen solid" type="text" name="number" size="2" value="2"/> under si:user-projects<br><br><br>';
+  $to_return .= '<input type="submit" id="cs-submit" name="cs" value="Convert Specific" class="form-submit" onclick="convertSpecific()"> Convert a specific concept <input id="cs-val" style="border:darkseagreen solid" type="text" name="number" size="20" value="si:1234567"/> to a project space<br><br><br>';
+  $to_return .= '<a href="incoming_links">Incoming links table</a> Show a table of objects and how many hasConcept / hasResource links come to them<br>';
+  $to_return .= '
+<script>
+stopAdditionalCalls = false;
+convertSpecific = function(){
+  if (stopAdditionalCalls) return;
+  var goTo = window.location.href;
+  // a hack to append but good enough for our admins
+  if (goTo.slice(-1) != "/") goTo += "/";
+  goTo += "convert_concept/" + jQuery("#cs-val").val();
+  jQuery("input").attr("disabled","disabled");
+  stopAdditionalCalls = true;
+  window.location = goTo;
+}
+convertAFew = function(){
+  if (stopAdditionalCalls) return;
+  var goTo = window.location.href;
+  // a hack to append but good enough for our admins
+  if (goTo.slice(-1) != "/") goTo += "/";
+  goTo += "convert_user_projects/" + jQuery("#cup-val").val();
+  jQuery("input").attr("disabled","disabled");
+  stopAdditionalCalls = true;
+  window.location = goTo;
+}
+</script>';
+  return $to_return;
+}
+/*
  * Give the form to show the incoming link information
  */
 function sidora_incoming_links_form($form = array(), &$form_state = NULL) {
@@ -444,14 +499,18 @@ function sidora_project_space_convert_concept($original_pid, $pattern = '/(.+)/'
       sidora_unassociate($original_pid, $resource_pid, FALSE);
     }
     */
+    $new_label = preg_replace($pattern, $replacement, $original->label, 1);
+    if (empty($new_label) || $new_label == $original->label) {
+      $new_label = preg_replace('/(.+)/', $unmatched_replacement, $original->label, 1);
+    }
+    $original->label = $new_label;
+    $original->relationships->registerNamespace("sidora", SI_RELS_EXT_URI);
+    $original->relationships->add(SI_RELS_EXT_URI, 'isAdministeredBy', $ps_pid);
+    return TRUE;
   }
-  $new_label = preg_replace($pattern, $replacement, $original->label, 1);
-  if (empty($new_label) || $new_label == $original->label) {
-    $new_label = preg_replace('/(.+)/', $unmatched_replacement, $original->label, 1);
+  else {
+    return FALSE;
   }
-  $original->label = $new_label;
-  $original->relationships->registerNamespace("sidora", SI_RELS_EXT_URI);
-  $original->relationships->add(SI_RELS_EXT_URI, 'isAdministeredBy', $ps_pid);
 }
 
 function sidora_project_space_convert_all_under_siuserprojects($num_conversions_string = "1"){
