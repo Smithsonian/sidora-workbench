@@ -52,13 +52,14 @@ function sidora_migration_options($one = '', $two = '') {
     exit();
   }
   if ($one == 'incoming_links') {
-     module_load_include('inc', 'sidora', 'includes/ps_migration');
-    return drupal_render(sidora_incoming_links_form());
+    module_load_include('inc', 'sidora', 'includes/ps_migration');
+    $silf = sidora_incoming_links_form();
+    return drupal_render($silf);
     drupal_exit();
   }
   $to_return =  '<input type="submit" id="cup-submit" name="cup" value="Convert a few" class="form-submit" onclick="convertAFew()"> Convert a limited number of concepts <input id="cup-val" style="border:darkseagreen solid" type="text" name="number" size="2" value="2"/> under si:user-projects<br><br><br>';
   $to_return .= '<input type="submit" id="cs-submit" name="cs" value="Convert Specific" class="form-submit" onclick="convertSpecific()"> Convert a specific concept <input id="cs-val" style="border:darkseagreen solid" type="text" name="number" size="20" value="si:1234567"/> to a project space<br><br><br>';
-  $to_return .= '<a href="incoming_links">Incoming links table</a> Show a table of objects and how many hasConcept / hasResource links come to them<br>';
+  $to_return .= '<a href=""'.base_path().'sidora/ps_migration/incoming_links">Incoming links table</a> Show a table of objects and how many hasConcept / hasResource links come to them<br>';
   $to_return .= '
 <script>
 stopAdditionalCalls = false;
