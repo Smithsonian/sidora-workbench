@@ -15,7 +15,7 @@ function sidora_drush_command() {
    'description' => 'Adds a single isAdministeredBy relationship, use: drush sidora-administer-child parent_pid child_pid',
    'options' => array(
      'dry-run' => 'Perform a check and tell the user what would happen, but make no changes in Fedora',
-     'recursive' => 'Remove all existing isAdministeredBy relationships and add the one input by the user',
+     'recursive' => 'Continue down the tree in a recursive fashion',
      'force' => 'Put the isAdministeredBy relationship on the child even if the parent does not exist and even if it already has an isAdministeredBy relationship, possibly giving it multiple isAdministeredBy relationships',
      'concepts-exclude' => 'Do not attempt to relationships to concepts, will still recurse if set',
      'resources-exclude' => 'Do not attempt to add relationships to resources',
