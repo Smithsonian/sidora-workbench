@@ -34,12 +34,14 @@ var resetMenu = function(menuId){
     var toCheckSet = ulOfInterest.children("li");
     if ((prefWidth == '0') && (toCheckSet.length > 0)){
       prefWidth = toCheckSet[0].scrollWidth;
-    }	
+    }
+    /*
     for(var i = 0; i < toCheckSet.length; i++){
       var liOfInterest = jQuery(toCheckSet[i]);
       if (liOfInterest.css("width") == "0px" || liOfInterest.width() < 1) 
         ulOfInterest.children("li").css("width",prefWidth+"px");
-    }  
+    } 
+    */ 
     jQuery(this).parent().css("height",myHeight+"px");
     jQuery(this).parent().css("width",myWidth+"px");
     event.stopPropagation();

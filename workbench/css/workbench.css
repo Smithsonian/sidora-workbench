@@ -54,11 +54,37 @@ li a.not-owned {
   border-left: solid 6px #66d
   */
 }
+#concept-options-and-name {
+  width: 100%;
+}
+#concept_tabs .ui-tabs-panel#concept-resource-list, 
+#concept_tabs .ui-tabs-panel#concept-meta, 
+#concept_tabs .ui-tabs-panel#concept-relationships {
+  border-top: 2px solid gray;
+}
+#concept_tabs .ui-tabs-panel {
+  margin: 0 5px;
+  border: 1px solid gray;
+  border-top: 0;
+}
+#concept_tabs > ul {
+  border-bottom: 0;
+  margin: 0 5px;
+  padding: 0;
+}
+#concept_tabs > ul > li.ui-state-active {
+  background: white;
+  border-bottom: 0px;
+  top: 2px;
+}
 #concept_tabs > ul > li {
   border:none;
   padding: 0;
   margin: 0;
-  background: transparent;
+  background: #E8E9EA;
+  border: 2px solid gray;
+  margin: 1px 1px 0px 1px;
+  border-bottom: 0px;
 }
 .jstree-default .jstree-node, .jstree-default .jstree-icon {
   /* 
@@ -291,6 +317,8 @@ button.ui-button-text-only .ui-button-text {
   border:none;
   padding: 0;
   margin: 0;
+  border-top-left-radius: 0px;
+  border-top-right-radius: 0px;
 }
 #resourceInformationPane {
   min-width: 400px;
@@ -373,29 +401,73 @@ Table paging
   cursor:pointer;
   opacity:1.0
 }
+#concept-menu {
+  position: absolute;
+  right: 30px;
+  top: 0;
+}
+#concept-name-holder {
+  padding-left: 11px;
+}
+.sidoraMenu i.material-icons {
+  font-size: 18px;
+  position: absolute;
+  top: calc( 50% - 9px );
+  left: 9px;
+  color: black;
+}
 .sidoraMenu{display:table;margin:0;padding:0;list-style:none;}
-.sidoraMenu li{display:table-cell;background-color:#322f32;margin:0;list-style:none}
+.sidoraMenu li{display:table-cell;background-color:transparent;margin:0;list-style:none}
 .sidoraMenu li a{
   padding: 6px 15px 7px 15px;
   display:block;
   background-color:transparent;
-  color:#fff;
-  text-transform:uppercase;
+  color:blue;
   cursor:pointer;
   font-size:12px
+  margin: 0px 0px 0px 30px;
 }
-.sidoraMenu li a:hover{background-color:#3a3a3a}
-.sidoraMenu li:hover>a{background-color:#3a3a3a}
+#concept-menu>li>a>i.material-icons{
+  position:relative;
+  left: -2px;
+  top: 4px;
+}
 .sidoraMenu li ul{
   display:none;position:absolute;z-index:9999;padding:0;margin:0;list-style:none
   z-index:90;
 }
-.sidoraMenu li ul li{background-color:#322f32;display:block;border-bottom:1px solid #484548;padding:0;list-style:none;position:relative}
-.sidoraMenu li ul li a{font-size:11px;text-transform:none;display:block;padding:7px;border-top:1px solid transparent;border-bottom:1px solid transparent}
-.sidoraMenu li ul li a.isParent{background-color:#3a3a3a}
-.sidoraMenu li ul li a:hover{background-color:#514c52;border-top:1px solid #322f32;border-bottom:1px solid #322f32}
+.sidoraMenu li ul li{
+  background-color:#f9f9fb;
+  display:block;
+  border:1px solid lightgray;
+  padding:0;
+  list-style:none;
+  position:relative;
+  box-shadow: 2px 2px lightgray;
+  width: 200px;
+  border-bottom:2px solid black;
+}
+.sidoraMenu li ul li:last-child{
+  border-bottom:none;
+}
+.sidoraMenu a:hover{
+  text-decoration:none;
+}
+.sidoraMenu li ul li a{
+  font-size:11px;
+  text-transform:none;
+  color:black;
+  display:block;
+  padding:7px;
+  border-top:1px solid transparent;
+}
+.sidoraMenu li ul li a.isParent{
+  background-color:#f9f9fb
+}
+.sidoraMenu li ul li:hover{background-color:#eff;}
 .sidoraMenu li ul li a {
-  padding: 2px 2px 2px 6px;
+  padding: 5px 2px 3px 6px;
+  margin: 0px 0px 0px 30px;
 }
 .sidora-resources-icon {
   background-image: url('../images/assorted_glass%20buttons.png');
@@ -453,18 +525,29 @@ Table paging
   text-decoration: none;
 }
 .sidora-thin-button {
-  background-color: rgb(240, 240, 250); 
-  border: 1px solid rgb(100, 100, 100); 
-  border-radius: 12px; 
+  background-color: #0C72C6;
+  border: 1px solid #4693D3;
+  border-radius: 7px; 
   font-size: 12px; 
   font-weight: bold; 
   font-family: Arial; 
-  color: rgb(89, 89, 89); 
+  color: #F2FDF9;
   line-height: 14px; 
   margin: 10px; 
-  padding: 1px 13px;
+  padding: 3px 13px 2px 13px;
   text-decoration: none;
   cursor: pointer;
+}
+.sidora-ui-link {
+  font-weight: normal;
+  font-size: 14px;
+  color: blue;
+}
+#concept_tabs ul.ui-tabs-nav {
+  background: transparent;
+}
+.ui-state-active .sidora-ui-link {
+  color: rgb(89,89,89);
 }
 #conceptResizable {
   background-color: rgb(245,245,245);

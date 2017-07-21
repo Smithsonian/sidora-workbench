@@ -4208,58 +4208,58 @@ function sidora_block_view($delta = '') {
       break;
     case 'sidora_concept_info':
       $block['content'] = '<div id="workbench-menu" style="display:none;">' .
-                          '</div><div id="sidora_content_concept_info">'.
- '';
-        $block['content'] .= '
+                          '</div><div id="sidora_content_concept_info">';
+      $block['content'] .= '  <div id="sidora-concept-commands-and-name" style="
+    height: 60px;
+    border-bottom: 2px solid gray;
+    margin-bottom: 10px;
+"><div class="branding-project-spaces" style=""> <a id="proj-space-button" href="#" onclick="return false;" class="sidora-thin-button" style="
+    margin: 12px;
+    padding-left: 21px;
+    border: none;
+    background-color: forestgreen;
+"><span style="
+    top: 3px;
+    position: absolute;
+    left: 16px;
+"><span class="" style="
+    font-size: 20px;
+    font-weight: bold;
+    ">+</span></span>Add New Concept</a></div>
+    <div id="concept-name-holder"></div>
+
+
+          <ul id="concept-menu">
+           <li><a href="#" onclick="return false;"><i class="material-icons">edit</i> Edit&nbsp;Concept <i class="material-icons">arrow_drop_down</i></a>
+             <ul>
+                <li id="editMetadataConcept"><a href="#" onclick="return false;" id="edit-concept-metadata-menu"><i class="material-icons">edit</i>Edit&nbsp;Metadata</a></li>
+                <li id="add-resources"><a href="#" onclick="return false;" id="add-resources-concept-metadata-menu"><i class="material-icons">add_box</i>Add&nbsp;Resource(s)</a></li>
+                <li id="copy-to-another-space"><a href="#" onclick="return false;" id="copy-to-another-space-menu"><i class="material-icons">content_copy</i>Copy&nbsp;concept&nbsp;to&nbsp;another research&nbsp;space</a></li>
+                <li id="move-to-another-space"><a href="#" onclick="return false;" id="move-to-another-space-menu"><i class="material-icons">call_made</i>Move&nbsp;concept&nbsp;to&nbsp;another research&nbsp;space</a></li>
+                <li id="link-to-another-concept"><a href="#" onclick="return false;" id="link-to-another-concept-menu"><i class="material-icons">swap_horiz</i>Link&nbsp;concept&nbsp;to&nbsp;another concept</a></li>
+                <li id="deleteConcept"><a href="#" onclick="sidora.concept.DeleteConcept(); return false;"><i class="material-icons">delete</i>Delete</a></li>
+';
+      if (sidora_is_admin()) $block['content'] .= '
+                <li id="manageConcept"><a href="#" onclick="sidora.concept.Manage(); return false;">Manage&nbsp;Concept</a></li>';
+      $block['content'] .='
+              </ul>
+           </li>
+           <li id="configureExhibition">
+             <a href="#" onclick="window.open(Drupal.settings.basePath+\'exhibition_config/config/\'+window.sidora.concept.GetPid()); return false;"><i class="material-icons">desktop_windows</i> Create&nbsp;Exhibition</a>
+          </li>
+        </ul>
+</div>';
+      $block['content'] .= '
   <div id="concept_tabs">
-    <ul style="background:white;border:solid 2px gray;margin:0;padding:0;">
-      <li><a href="#concept-meta"><i class="material-icons">list</i><div class="sidora-ui-text sidora-thin-button" style="float:right;margin: 3px 0 0 4px;">Attributes</div></a></li>
-      <li><a href="#concept-resource-list"><i class="material-icons">panorama</i><div class="sidora-ui-text sidora-thin-button" style="float:right;margin: 3px 0 0 4px;">Resources</div></a></li>
-      <li><a href="#concept-relationships"><i class="material-icons">transform</i><div class="sidora-ui-text sidora-thin-button" style="float:right;margin: 3px 0 0 4px;">Links</div></a></li>
-      <a href="#" id="share-project-space-button" onclick="return false;" style="display:none";>
-        <div class="sidora-ui-text sidora-thin-button" style="margin: 10px 3px 0px 0px; margin-right:20px;float:right;">Share</div>
-        <i class="material-icons" style="padding-top:7px;float:right">share</i>
-      </a>
+    <ul>
+      <li><a href="#concept-meta"><i class="material-icons">info</i><div class="sidora-ui-text sidora-ui-link" style="float:right;margin: 3px 0 0 4px;">Details</div></a></li>
+      <li><a href="#concept-resource-list"><i class="material-icons">panorama</i><div class="sidora-ui-text sidora-ui-link" style="float:right;margin: 3px 0 0 4px;">Resources</div></a></li>
+      <li><a href="#concept-relationships"><i class="material-icons">compare_arrows</i><div class="sidora-ui-text sidora-ui-link" style="float:right;margin: 3px 0 0 4px;">Links</div></a></li>
     </ul>
     <div id="concept-meta">
       <div id="concept-meta-menu" class="sidora-menu">
         <div class="workbench-nav">
-          <ul id="concept-menu">
-            <li><a href="#" onclick="return false;">Concepts</a>
-              <ul id="concept-file-menu">
-';
-      $block['content'] .= '
-                <li id="deleteConcept"><a href="#" onclick="sidora.concept.DeleteConcept(); return false;">Delete</a></li>
-              </ul>
-           </li>
-           <li><a href="#" onclick="return false;">Edit</a>
-             <ul>
-                <li id="editMetadataConcept"><a href="#" onclick="return false;" id="edit-concept-metadata-menu">Edit&nbsp;Metadata</a></li>
-                <li id="editPermissionsConcept"><a href="#" onclick="return false;sidora.concept.ShowPermissions(); return false;">Edit&nbsp;Permissions</a></li>';
-      if (sidora_is_admin()) $block['content'] .= '
-                <li id="manageConcept"><a href="#" onclick="sidora.concept.Manage(); return false;">Manage&nbsp;Concept</a></li>';
-      $block['content'] .='
-                <li id="configureExhibition"><a href="#" onclick="window.open(Drupal.settings.basePath+\'exhibition_config/config/\'+window.sidora.concept.GetPid()); return false;">Configure&nbsp;Exhibition</a></li>
-              </ul>
-           </li>
-           <li><a href="#" onclick="return false;">View</a>
-             <ul>';
-
-      // Only show exhibition link if someone has administratively set a location for where exhibition exists
-      if (variable_get('si_exhibition_website_location', '') != '') {
-    /*   $block['content'] .= '
-                <li id="exhibitConcept"><a href="#" onclick="return false;window.open(\''.
-          variable_get('si_exhibition_website_location', '').
-          '\'+window.sidora.concept.GetPid()); return false;">Exhibit</a></li>';
-          */
-        $block['content'] .= '
-                <li id="exhibitConcept"><a href="#";>Exhibit</a></li>';
-      }
-      $block['content'] .= '
-             </ul>
-           </li>
-         </ul>
-       </div>
+        </div>
       </div>
     </div>
     <div id="concept-relationships">
