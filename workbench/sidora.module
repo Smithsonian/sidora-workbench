@@ -355,9 +355,9 @@ function sidora_menu() {
       'file' => 'includes/project_spaces.inc',
     ),
     'sidora/project_space_create' => array(
-      'title' => 'Project Space Creation',
+      'title' => 'Research Space Creation',
       'page callback' => 'drupal_get_form',
-      'page arguments' => array('sidora_project_space_creation_form'),
+      'page arguments' => array('sidora_project_space_creation_form', 2),
       'access callback' => 'user_is_logged_in',
       'file' => 'includes/project_spaces.inc',
     ),
@@ -4230,7 +4230,9 @@ function sidora_block_view($delta = '') {
 
 
           <ul id="concept-menu">
-           <li><a href="#" onclick="return false;"><i class="material-icons">edit</i> Edit&nbsp;Concept <i class="material-icons">arrow_drop_down</i></a>
+           <li id="concept-menu-edit-space" style="display:none;"><a href="#" onclick="return false;"><i class="material-icons">edit</i> Edit&nbsp;Research&nbsp;Space <i class="material-icons">arrow_drop_down</i></a>
+           </li>
+           <li id="concept-menu-edit-concept"><a href="#" onclick="return false;"><i class="material-icons">edit</i> Edit&nbsp;Concept <i class="material-icons">arrow_drop_down</i></a>
              <ul>
                 <li id="editMetadataConcept"><a href="#" onclick="return false;" id="edit-concept-metadata-menu"><i class="material-icons">edit</i>Edit&nbsp;Metadata</a></li>
                 <li id="add-resources"><a href="#" onclick="return false;" id="add-resources-concept-metadata-menu"><i class="material-icons">add_box</i>Add&nbsp;Resource(s)</a></li>
@@ -6157,6 +6159,9 @@ function sidora_html_tree_from_query_results_tree($query_result_tree, $input_pat
       $class_for_default_project_space = '';
       if ($pid == $default_ps) {
         $class_for_default_project_space = ' default-project-space';
+      }
+      if (sidora_is_project_space($pid)) {
+        $class_for_default_project_space .= ' is-project-space';
       }
       if (!empty($permissions) && $included_in_output) {
         $to_return .= '<li>';

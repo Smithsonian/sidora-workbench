@@ -514,7 +514,7 @@ sidora.concept.LoadContentHelp.FullTableReload = function(conceptOfInterest){
 sidora.concept.loadedContentPid = null;
 sidora.concept.forceRefreshOnNextLoadContent = false;
 sidora.concept.LoadContent = function(leaveContentIfAlreadyLoaded){
-  jQuery("#concept-name-holder").html("<h1>"+sidora.concept.GetName()+"</h1>");
+  jQuery("#concept-name-holder").html("<h1 class='page-title'>"+sidora.concept.GetName()+"</h1>");
   if (typeof(leaveContentIfAlreadyLoaded) == 'undefined') leaveContentIfAlreadyLoaded = false;
   if (this.forceRefreshOnNextLoadContent) {
     leaveContentIfAlreadyLoaded = false; 

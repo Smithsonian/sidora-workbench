@@ -54,6 +54,9 @@ li a.not-owned {
   border-left: solid 6px #66d
   */
 }
+.page-title {
+  font-family: Verdana;
+}
 #concept-options-and-name {
   width: 100%;
 }

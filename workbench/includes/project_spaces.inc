@@ -245,6 +245,26 @@ function sidora_get_project_space_pids_for_pid($pid){
   return $to_return;
 }
 /**
+ * Returns if the object is a project space or not
+ */
+function sidora_is_project_space($pid_or_fedora_obj_or_nid_or_node) {
+  $sidora_obj_info = sidora_get_info($pid_or_fedora_obj_or_nid_or_node, FALSE);
+  if (empty($sidora_obj_info)) {
+    return FALSE;
+  }
+  $node = $sidora_obj_info['node'];
+  $nid = $sidora_obj_info['nid'];
+  if (empty($node) || empty($nid)) {
+    return FALSE;
+  }
+  $pid = $sidora_obj_info['pid'];
+  $proj_spaces_for_current = sidora_get_project_space_pids_for_pid($pid);
+  if (in_array($pid, $proj_spaces_for_current)) {
+    return TRUE;
+  }
+  return FALSE;
+}
+/**
  * Returns the group node ids for the project spaces that this pid is in
  */
 function sidora_get_project_space_nodes_for_pid($pid){
@@ -489,10 +509,30 @@ function sidora_get_project_spaces_by_member($uid = NULL){
   }
   return $to_return;
 }
-function sidora_project_space_creation_form($form = array(), &$form_state) {
+function sidora_project_space_creation_form($form = array(), &$form_state, $existing_pid = '') {
   drupal_add_css(drupal_get_path('module','sidora').'/css/workbench_basic_screen.css',array('weight' => '1000000', 'group' => CSS_THEME));
   drupal_add_css(drupal_get_path('module','sidora').'/css/workbench_util.css',array('weight' => '1000000', 'group' => CSS_THEME));
   global $user;
+  $init_info = array('name'=>'','desc'=>'','file'=>'');
+  if (!empty($existing_pid)) {
+    if (!sidora_is_project_space($existing_pid) || !sidora_allow($user, $existing_pid, 'update')) {
+      $form['info'] = array(
+        '#markup' => t('Unable to load the Research Space for editing. This error has been entered into the log so site administrators can view the issue. Contact the site administrator if you would like immediate assistance.'),
+      );
+      watchdog('sidora_spaces',t('Could not load this item for project space editing by the logged in user: %t', array('%t' => $existing_pid)));
+      return $form;
+    }
+    else {
+      $obj = sidora_obj($existing_pid);
+      $init_info['name'] = $obj->label;
+      drupal_set_title('Research Space Edit');
+      $info = sidora_get_info($existing_pid);
+      $node = $info['node'];
+      $init_info['file'] = (empty($node->field_thumbnail['und'][0]))?'':$node->field_thumbnail['und'][0]['uri'];
+    }
+  }
+  $form_state['existing_pid'] = $existing_pid;
+  
   $form['info'] = array(
     '#markup' => t('After the project space is created, you can choose who should be part of the project space.')
   );
@@ -500,15 +540,23 @@ function sidora_project_space_creation_form($form = array(), &$form_state) {
     '#type' => 'textfield',
     '#size' => 128,
     '#title' => t('Enter the new project space name'),
+    '#default_value' => $init_info['name'],
   );
   $form["ps_desc"] = array(
     '#type' => 'textarea',
     '#cols' => 80,
     '#title' => t('Enter the new project space description'),
   );
+  if (!empty($init_info['file'])) {
+    $form['remove_icon'] = array(
+      '#type' => 'checkbox',
+      '#title' => 'Remove existing icon: <img src="' . file_create_url($init_info['file']) . '">',
+    );
+    
+  } 
   $form["file"] = array(
       '#type' => 'managed_file',
-      '#title' => t('Icon'),
+      '#title' => empty($init_info['file'])?t('Icon'):t('Overwrite Existing Icon'),
       '#description' => t('This file will be resized fit in a 24 x 24 space. Allowed extensions: gif png jpg jpeg'),
       '#upload_validators' => array(
         'file_validate_extensions' => array('gif png jpg jpeg'),
@@ -550,20 +598,42 @@ function sidora_project_space_creation_form_validate($form, &$form_state) {
   }
 }
 function sidora_project_space_creation_form_submit($form, &$form_state) {
-  global $user;
-  module_load_include('inc', 'islandora', 'includes/utilities');
-  try
-  {
-    $tuque = islandora_get_tuque_connection();
-    $project_space_obj = $tuque->repository->constructObject(islandora_get_namespace('si:root'));
-   }catch(Exception $e) {
-     return t('The Fedora repository server is currently unavailable. Please contact the site administrator %email',
-       array('%email' => (variable_get('site_admin_email_to', '') != ''?' at ' . variable_get('site_admin_email_to'):''))
-    );
+  $created_node = NULL;
+  if (!empty($form_state['existing_pid'])) {
+    $pid = $form_state['existing_pid'];
+    $ps_info = sidora_get_info($pid);
+    $obj = $ps_info['obj'];
+    $old_label = $obj->label;
+    $new_label = $form_state['values']['ps_name'];
+    if ($old_label != $new_label) {
+      $obj->label = $new_label;
+    }
+    $info =  array("label"=>$form_state['values']['ps_name'],"description"=>$form_state['values']['ps_desc']);
+    $created_node = sidora_get_update_or_create_concept_node($pid, $info);
+    if ($form['values']['remove_icon']) {
+      $created_node->field_thumbnail['und'][0] = array();
+      node_save($created_node);
+    }
+    return;
   }
-  $created_node = sidora_create_personal_project_space($user, array("label"=>$form_state['values']['ps_name'],"description"=>$form_state['values']['ps_desc']));
-  if (!empty($created_node)) {
-    drupal_set_message("New Project Space Created");
+  else {
+    global $user;
+    module_load_include('inc', 'islandora', 'includes/utilities');
+    try
+    {
+      $tuque = islandora_get_tuque_connection();
+      $project_space_obj = $tuque->repository->constructObject(islandora_get_namespace('si:root'));
+     }catch(Exception $e) {
+       return t('The Fedora repository server is currently unavailable. Please contact the site administrator %email',
+         array('%email' => (variable_get('site_admin_email_to', '') != ''?' at ' . variable_get('site_admin_email_to'):''))
+      );
+    }
+    $created_node = sidora_create_personal_project_space($user, array("label"=>$form_state['values']['ps_name'],"description"=>$form_state['values']['ps_desc']));
+    if (!empty($created_node)) {
+      drupal_set_message("New Project Space Created");
+    }
+  }
+  if (!empty($created_node)){
     $file = file_load($form_state['values']['file']);
     $file->status = FILE_STATUS_PERMANENT;
     $file_after = file_save($file);
@@ -585,7 +655,7 @@ function sidora_project_space_creation_form_submit($form, &$form_state) {
     drupal_goto(substr(current_path(), 0, strrpos(current_path(), '/')).'/project_spaces');
   }
   else {
-    drupal_set_message("New Project Space Creation Failed", "warning");
+    drupal_set_message("Research Space Editing Failed", "warning");
   }
 }
 /**
