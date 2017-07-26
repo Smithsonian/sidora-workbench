@@ -57,6 +57,13 @@ li a.not-owned {
 .page-title {
   font-family: Verdana;
 }
+.ps-detail {
+  width: 600px;
+}
+.ps-detail td {
+  border: 1px solid gray;
+  width: 300px;
+}
 #concept-options-and-name {
   width: 100%;
 }
@@ -74,6 +81,9 @@ li a.not-owned {
   border-bottom: 0;
   margin: 0 5px;
   padding: 0;
+}
+#concept_tabs > ul > li > a {
+  outline-color: transparent;
 }
 #concept_tabs > ul > li.ui-state-active {
   background: white;

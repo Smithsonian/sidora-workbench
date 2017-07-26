@@ -28,7 +28,15 @@
  */
 
 /*
- * Put the item into the project spaces that are associated with the selected project space
+ * When this was originally coded, research spaces were being called project spaces, and 
+ * the code reflects that. The term moving forward should always be research space.
+ * Do not put "project space" anywhere that the end user would be able to see it, and
+ * preferrably for the administrators as well. This includes urls, like 
+ * .../sidora/project_space_create, etc.
+ */
+
+/*
+ * Put the item into the research spaces that are associated with the selected research space
  */
 function sidora_put_into_project_spaces($item_identifier, $project_space_identifier) {
   $obj_info = sidora_get_info($item_identifier, FALSE);
@@ -50,15 +58,15 @@ function sidora_put_into_project_spaces($item_identifier, $project_space_identif
 
 /**
  * Assume that the passed in item has a node if it should, and put that node into the 
- * project spaces
- * of the best parent if not already in a project space of a parent
+ * research spaces
+ * of the best parent if not already in a research space of a parent
  *
- * To be "IN" the same project space as the parent, that means the node has the same 
+ * To be "IN" the same research space as the parent, that means the node has the same 
  * organic group memberships that the parent does.
  * 
- * Return TRUE if things went into proper project space --
- *             this includes if there was NO proper project spaces to place it
- *        FALSE if it was something that shouldn't go into a project space or
+ * Return TRUE if things went into proper research space --
+ *             this includes if there was NO proper research spaces to place it
+ *        FALSE if it was something that shouldn't go into a research space or
  *              requires more set up (not a concept, or no node created yet for the concept)
  * 
  */
@@ -77,7 +85,7 @@ function sidora_put_into_proper_project_space($pid_or_fedora_obj_or_nid_or_node)
     return FALSE;
   }
   // Parent choice decision priorities:
-  // If it IS the project space, put it into the right groups. Do not remove existing groups.
+  // If it IS the research space, put it into the right groups. Do not remove existing groups.
   $project_space_groups = sidora_get_groups_for_project_space($pid, TRUE);
   $check_legacy_parents = TRUE;
   if (!empty($project_space_groups)) {
@@ -87,7 +95,7 @@ function sidora_put_into_proper_project_space($pid_or_fedora_obj_or_nid_or_node)
     $check_legacy_parents = FALSE;
   }
   else {
-    // If already in a project space of one of its parents, then nothing needs to happen
+    // If already in a research space of one of its parents, then nothing needs to happen
     module_load_include('inc', 'sidora', 'includes/utils');
     $owning_pid = sidora_get_owning_parent_concept_pid_by_administered_pid($pid);
     if (empty($owning_pid)) {
@@ -107,7 +115,7 @@ function sidora_put_into_proper_project_space($pid_or_fedora_obj_or_nid_or_node)
     $parent_infos = sidora_get_parent_concepts_by_pid($pid);
     $is_in_a_parents_project_space = FALSE;
     $current_gids = sidora_get_group_nids_membership($nid);
-    // Parent communal is used for checking if all the parents have the same project spaces
+    // Parent communal is used for checking if all the parents have the same research spaces
     $parent_communal_gids = array();
     $parents_are_communal = TRUE;
     // Even if it doesn't have groups itself, go thru to see if parents have communal groups
@@ -133,7 +141,7 @@ function sidora_put_into_proper_project_space($pid_or_fedora_obj_or_nid_or_node)
     }
     if (!$is_in_a_parents_project_space){
       // If there is only one parent, put it in there (communal will be true)
-      // If all parents have the same project spaces, put it there
+      // If all parents have the same research spaces, put it there
       if ($parents_are_communal) {
         $parent_groups = node_load_multiple($parent_communal_gids);
         foreach($parent_groups as $parent_group) {
@@ -143,7 +151,7 @@ function sidora_put_into_proper_project_space($pid_or_fedora_obj_or_nid_or_node)
       else {
         // TODO TBD These will be more for legacy data than new objects
         // If still a child of the original_parent from the SIDORA datastream,
-        //     put into that parent's project space
+        //     put into that parent's research space
         // Choose the parent that has the oldest node modification date
       }
     }
@@ -151,7 +159,7 @@ function sidora_put_into_proper_project_space($pid_or_fedora_obj_or_nid_or_node)
   return TRUE;
 }
 /**
- * Remove the node from project spaces that its parent does not belong
+ * Remove the node from research spaces that its parent does not belong
  */
 function sidora_remove_from_incorrect_project_spaces($pid_or_fedora_obj_or_nid_or_node) {
   
@@ -173,7 +181,7 @@ function sidora_remove_from_incorrect_project_spaces($pid_or_fedora_obj_or_nid_o
   // proper_groups is going to be a list of groups that we think it should be a part of
   // So, if there are more groups that are not part of proper_groups remove it from those groups
 
-  // If it IS the project space, do not remove it from those groups
+  // If it IS the research space, do not remove it from those groups
   $proper_group_ids = sidora_get_groups_for_project_space($pid, TRUE, TRUE);
 
   module_load_include('inc', 'sidora', 'includes/utils');
@@ -231,7 +239,7 @@ function sidora_get_group_nids_membership($nid) {
 }
 
 /**
- * Returns the PIDs for the project spaces that this pid is in
+ * Returns the PIDs for the research spaces that this pid is in
  */
 function sidora_get_project_space_pids_for_pid($pid){
   $to_return = array();
@@ -245,9 +253,10 @@ function sidora_get_project_space_pids_for_pid($pid){
   return $to_return;
 }
 /**
- * Returns if the object is a project space or not
+ * Returns if the object is a research space or not
  */
 function sidora_is_project_space($pid_or_fedora_obj_or_nid_or_node) {
+  module_load_include('inc', 'sidora', 'includes/sidora_nodes');
   $sidora_obj_info = sidora_get_info($pid_or_fedora_obj_or_nid_or_node, FALSE);
   if (empty($sidora_obj_info)) {
     return FALSE;
@@ -265,7 +274,7 @@ function sidora_is_project_space($pid_or_fedora_obj_or_nid_or_node) {
   return FALSE;
 }
 /**
- * Returns the group node ids for the project spaces that this pid is in
+ * Returns the group node ids for the research spaces that this pid is in
  */
 function sidora_get_project_space_nodes_for_pid($pid){
   module_load_include('inc', 'sidora', 'includes/utils');
@@ -279,7 +288,7 @@ function sidora_get_project_space_nodes_for_pid($pid){
     $owner_pid = sidora_get_owning_parent_concept_pid_by_administered_pid($pid);
     if (!empty($owner_pid)) {
       $parent_nid = sidora_quick_pid_to_node_id($owner_pid);
-      // We could call this function again to get the project space pids but I
+      // We could call this function again to get the research space pids but I
       // don't want to worry about garbage data putting us in an infinite loop and
       // unneeded complexity to the base cases. So ONLY check the listed parents
       // and if they don't have the information return nothing.
@@ -292,7 +301,7 @@ function sidora_get_project_space_nodes_for_pid($pid){
       foreach($parent_pid_info as $curr_parent_info) {
         $parent_pid = $curr_parent_info['pid'];
         $parent_nid = sidora_quick_pid_to_node_id($parent_pid);
-        // We could call this function again to get the project space pids but I
+        // We could call this function again to get the research space pids but I
         // don't want to worry about garbage data putting us in an infinite loop and
         // unneeded complexity to the base cases. So ONLY check the listed parents
         // and if they don't have the information return nothing.
@@ -309,7 +318,7 @@ function sidora_get_project_space_nodes_for_pid($pid){
 }
 
 /**
- * Assumes owners of the project spaces should also own the organic groups
+ * Assumes owners of the research spaces should also own the organic groups
  * Uses logged in user if none specified
  * Special 'all' for load all users data
  */
@@ -336,7 +345,7 @@ function sidora_get_owned_project_spaces($user_of_interest = NULL) {
 }
 
 /**
- * Returns the concept pids for fedora objects that represent the project spaces for a set of permission groups nodes
+ * Returns the concept pids for fedora objects that represent the research spaces for a set of permission groups nodes
  */
 function sidora_get_project_space_pids_from_og_groups($group_nodes, $user, $only_return_groups_that_owner_can_change = TRUE) {
   $pids = array();
@@ -356,7 +365,7 @@ function sidora_get_project_space_pids_from_og_groups($group_nodes, $user, $only
   return $pids; 
 }
 /**
- * Returns the concept nodes that represent the project spaces for a set of permission groups nodes
+ * Returns the concept nodes that represent the research spaces for a set of permission groups nodes
  */
 function sidora_get_project_spaces_from_og_groups($group_nodes, $user, $only_return_groups_that_owner_can_change = TRUE) {
   $pids = array();
@@ -412,7 +421,7 @@ function sidora_get_groups_for_project_space($pid, $administrative_bookkeeping =
   return $to_return;
 }
 /**
- * Returns a tree based on the project spaces the user has access to, defaults to 4 levels total
+ * Returns a tree based on the research spaces the user has access to, defaults to 4 levels total
  */
 function sidora_project_spaces_tree($root_label = 'Project Spaces where you can create:', $include_href = FALSE, $permissions = array("create"), $start_open = TRUE, $num_levels = 3){
   $ignore_pid = filter_input(INPUT_GET, 'ignore_pid', FILTER_SANITIZE_STRING);
@@ -492,7 +501,7 @@ function sidora_sharing_put_all_owned_concepts_into_owned_groups($for_uid = NULL
 }
 
 /*
- * Returns the nodes of the project spaces of the specified user id (or current user on NULL)
+ * Returns the nodes of the research spaces of the specified user id (or current user on NULL)
  */
 function sidora_get_project_spaces_by_member($uid = NULL){
   global $user;
@@ -519,7 +528,7 @@ function sidora_project_space_creation_form($form = array(), &$form_state, $exis
       $form['info'] = array(
         '#markup' => t('Unable to load the Research Space for editing. This error has been entered into the log so site administrators can view the issue. Contact the site administrator if you would like immediate assistance.'),
       );
-      watchdog('sidora_spaces',t('Could not load this item for project space editing by the logged in user: %t', array('%t' => $existing_pid)));
+      watchdog('sidora_spaces',t('Could not load this item for research space editing by the logged in user: %t', array('%t' => $existing_pid)));
       return $form;
     }
     else {
@@ -529,23 +538,26 @@ function sidora_project_space_creation_form($form = array(), &$form_state, $exis
       $info = sidora_get_info($existing_pid);
       $node = $info['node'];
       $init_info['file'] = (empty($node->field_thumbnail['und'][0]))?'':$node->field_thumbnail['und'][0]['uri'];
+      $init_info['desc'] = empty($node->body)?'':$node->body['und'][0]['value'];
     }
   }
   $form_state['existing_pid'] = $existing_pid;
-  
-  $form['info'] = array(
-    '#markup' => t('After the project space is created, you can choose who should be part of the project space.')
-  );
+  if (empty($existing_pid)) { 
+    $form['info'] = array(
+      '#markup' => t('After the research space is created, you can choose who should be part of the research space.')
+    );
+  }
   $form["ps_name"] = array(
     '#type' => 'textfield',
     '#size' => 128,
-    '#title' => t('Enter the new project space name'),
+    '#title' => t('Enter the new research space name'),
     '#default_value' => $init_info['name'],
   );
   $form["ps_desc"] = array(
     '#type' => 'textarea',
     '#cols' => 80,
-    '#title' => t('Enter the new project space description'),
+    '#title' => t('Enter the new research space description'),
+    '#default_value' => $init_info['desc'],
   );
   if (!empty($init_info['file'])) {
     $form['remove_icon'] = array(
@@ -594,13 +606,14 @@ function sidora_project_space_creation_form($form = array(), &$form_state, $exis
 
 function sidora_project_space_creation_form_validate($form, &$form_state) {
   if (empty($form_state['values']['ps_name'])){ 
-    form_set_error('ps_name', 'Enter a name for the project space.');
+    form_set_error('ps_name', 'Enter a name for the research space.');
   }
 }
 function sidora_project_space_creation_form_submit($form, &$form_state) {
   $created_node = NULL;
   if (!empty($form_state['existing_pid'])) {
     $pid = $form_state['existing_pid'];
+    module_load_include('inc', 'sidora', 'includes/sidora_nodes');
     $ps_info = sidora_get_info($pid);
     $obj = $ps_info['obj'];
     $old_label = $obj->label;
@@ -610,10 +623,11 @@ function sidora_project_space_creation_form_submit($form, &$form_state) {
     }
     $info =  array("label"=>$form_state['values']['ps_name'],"description"=>$form_state['values']['ps_desc']);
     $created_node = sidora_get_update_or_create_concept_node($pid, $info);
-    if ($form['values']['remove_icon']) {
+    if (array_key_exists('remove_icon',$form_state['values']) && $form_state['values']['remove_icon']) {
       $created_node->field_thumbnail['und'][0] = array();
       node_save($created_node);
     }
+    drupal_set_message("Research Space Edits Saved");
     return;
   }
   else {
@@ -630,51 +644,53 @@ function sidora_project_space_creation_form_submit($form, &$form_state) {
     }
     $created_node = sidora_create_personal_project_space($user, array("label"=>$form_state['values']['ps_name'],"description"=>$form_state['values']['ps_desc']));
     if (!empty($created_node)) {
-      drupal_set_message("New Project Space Created");
+      drupal_set_message("New Research Space Created");
     }
   }
   if (!empty($created_node)){
     $file = file_load($form_state['values']['file']);
-    $file->status = FILE_STATUS_PERMANENT;
-    $file_after = file_save($file);
-    // Note: It was INCREDIBLY DIFFICULT to figure out how to save thumbnail, so I imagine
-    // that most people do not perform uploads the way this is set up.
-    // It looks generally obvious now, but look around and you'll see nobody does it this way 
-    // That may indicate this is not how Drupal expects you to do it.
-    // This does create an entry in the file_usage table, so we are not in a situation where
-    // it creates orphan managed files.
-    // It was designed to do file resizing on the upload, so that's where the validators are.
-    // Most have the validators on the form_validate step, but we wanted a resize and preview
-    // before the form was submitted.
-    $created_node->field_thumbnail['und'][0] = array(
-      'fid' => $file->fid,
-      'alt' => '',
-      'title' => '',
-    );
+    if (!empty($file)) {
+      $file->status = FILE_STATUS_PERMANENT;
+      $file_after = file_save($file);
+      // Note: It was INCREDIBLY DIFFICULT to figure out how to save thumbnail, so I imagine
+      // that most people do not perform uploads the way this is set up.
+      // It looks generally obvious now, but look around and you'll see nobody does it this way 
+      // That may indicate this is not how Drupal expects you to do it.
+      // This does create an entry in the file_usage table, so we are not in a situation where
+      // it creates orphan managed files.
+      // It was designed to do file resizing on the upload, so that's where the validators are.
+      // Most have the validators on the form_validate step, but we wanted a resize and preview
+      // before the form was submitted.
+      $created_node->field_thumbnail['und'][0] = array(
+        'fid' => $file->fid,
+        'alt' => '',
+        'title' => '',
+      );
+    }
     node_save($created_node);
-    drupal_goto(substr(current_path(), 0, strrpos(current_path(), '/')).'/project_spaces');
+    drupal_goto('sidora/research_spaces');
   }
   else {
     drupal_set_message("Research Space Editing Failed", "warning");
   }
 }
 /**
- * Removes a link to codebooks if the resource was unassociated from the project space
+ * Removes a link to codebooks if the resource was unassociated from the research space
  */
 function sidora_remove_old_codebook_associations_after_unassociating_resource_from_project_space($resource_pid){
   // Find out if it has codebooks, if not, do nothing
   $codebook_pids = sidora_get_codebook_pids($resource_pid);
   if (!empty($codebook_pids)){
-    // Find out the project spaces of the resource
+    // Find out the research spaces of the resource
     $resource_ps_pids = sidora_get_project_space_pids_for_pid($resource_pid);
     // For each codebook
     foreach($codebook_pids as $codebook_pid){
-      // Find out the project space it's owned by
+      // Find out the research space it's owned by
       $curr_codebook_ps_pids = sidora_get_project_space_pids_for_pid($codebook_pid);
-      // Simplifying assumption that this codebook is managed by a single project space
+      // Simplifying assumption that this codebook is managed by a single research space
       $curr_codebook_ps_pid = array_pop($curr_codebook_ps_pids);
-      // If the current codebook is not controlled by a project space, do not remove the link
-      // If this resource is in the codebook's project space then do not remove the link
+      // If the current codebook is not controlled by a research space, do not remove the link
+      // If this resource is in the codebook's research space then do not remove the link
       if (!empty($curr_codebook_ps_pid) && !in_array($curr_codebook_ps_pid, $resource_ps_pids)){
         $object = sidora_obj($resource_pid);
         $object->relationships->remove(FEDORA_RELS_EXT_URI, 'hasCodebook', $codebook_pid);
@@ -683,31 +699,31 @@ function sidora_remove_old_codebook_associations_after_unassociating_resource_fr
   }
 }
 /**
- * Ensures that linking a resource to a different project space will have a codebook in the new project space
+ * Ensures that linking a resource to a different research space will have a codebook in the new research space
  */
 function sidora_maintain_codebooks_when_linking_resource_to_new_project_space($resource_pid, $destination_pid){
   $new_ps_pids = sidora_get_project_space_pids_for_pid($destination_pid);
   if (!empty($new_ps_pids)){
-    // Simplifying assumption that the place we are copying it to has a single project space
+    // Simplifying assumption that the place we are copying it to has a single research space
     // if above line not true then change "if (!empty" line to "foreach($new_ps_pids as $new_ps_pid){"
     $new_ps_pid = $new_ps_pids[0];
     $codebook_pids = sidora_get_codebook_pids($resource_pid);
     if (!empty($codebook_pids)){
       foreach($codebook_pids as $codebook_pid){
-        // if the same project space then no need to do anything
+        // if the same research space then no need to do anything
         $curr_codebook_ps_pids = sidora_get_project_space_pids_for_pid($codebook_pid);
-        // Simplifying assumption that this codebook is managed by a single project space
+        // Simplifying assumption that this codebook is managed by a single research space
         $curr_codebook_ps_pid = array_pop($curr_codebook_ps_pids);
         if ($curr_codebook_ps_pid != $new_ps_pid) {
           // Do not remove the new object's refrences to the old codebook (done by unassociate)
           // Create a new set of codebooks and add in references on the new object
           $new_codebook = sidora_exact_duplicate($codebook_pid);
-          // Manager of the new codebook is the project space the tabular data got copied into
+          // Manager of the new codebook is the research space the tabular data got copied into
           $ps_obj = sidora_obj($new_ps_pid);
           $ps_obj->relationships->add(FEDORA_RELS_EXT_URI, 'managesCodebook', $new_codebook->id);
           // Add the relationship of the duplicated codebook to the copied ("linked") object
           // So this means this object will point to DOUBLE the original number of codebooks if
-          // the target project space doesn't already own the codebooks. Copying ("linking")
+          // the target research space doesn't already own the codebooks. Copying ("linking")
           // back and forth will continue duplicating codebooks on each link.
           // Use unassociate to remove unneeded linkages before copying ("linking") back and forth
           $object = sidora_obj($resource_pid);
@@ -723,8 +739,15 @@ function sidora_project_space_transfer_form($form = array(), &$form_state, $pid 
   $node = sidora_get_concept_node($pid);
   if (empty($node) || ($node->uid != $user->uid && !sidora_is_admin())) {
     $form['info'] = array(
-      '#markup' => t('You no longer have access to change the owner of this project space.')
+      '#markup' => t('You no longer have access to change the owner of this research space.')
     );
+    return $form;
+  }
+  if (empty( $node->field_fedora_label[$node->language][0]["safe_value"])){
+    $form['info'] = array(
+      '#markup' => t('This Research Space is corrupted. A message has been logged for the administrators. Contact the site administrator for immediate assistance.')
+    );
+    watchdog('sidora',t('User tried to transfer a research space, but it does not have the right node structure, entered pid: %t',array("%t"=>empty($pid)?"no pid entered":$pid)));
     return $form;
   }
   $label = $node->field_fedora_label[$node->language][0]["safe_value"];
@@ -737,7 +760,7 @@ function sidora_project_space_transfer_form($form = array(), &$form_state, $pid 
     );
   }
   $form['pid_info_2'] = array(
-    '#markup' => t('Transfer this project space to a new owner.'),
+    '#markup' => t('Transfer this research space to a new owner.'),
   );
   if (empty($to_username)) {
     $form["username_new"] = array(
@@ -752,9 +775,9 @@ function sidora_project_space_transfer_form($form = array(), &$form_state, $pid 
   else {
     if (empty($form_state['input'])) {
       if ($node->uid == $user->uid && !sidora_is_admin()) {
-        drupal_set_message(t("After you transfer ownership you will no longer be able to change permissions or transfer ownership on the project space."),"warning");
+        drupal_set_message(t("After you transfer ownership you will no longer be able to change permissions or transfer ownership on the research space."),"warning");
       }
-      drupal_set_message(t("Are you sure you want to transfer this project space to the user listed below?"),"warning");
+      drupal_set_message(t("Are you sure you want to transfer this research space to the user listed below?"),"warning");
     }
     $to_user = user_load_by_name($to_username);
     if (!empty($to_user)) {
@@ -774,7 +797,7 @@ function sidora_project_space_transfer_form($form = array(), &$form_state, $pid 
   return $form;
 }
 /*
- * Validation for the project space transfer form
+ * Validation for the research space transfer form
  */
 function sidora_project_space_transfer_form_validate($form, &$form_state) {
   $uid = '';
@@ -856,19 +879,23 @@ function sidora_project_spaces_form($form = array(), &$form_state, $uid = NULL) 
     }
     else {
       $pid = $owned_group->field_fedora_pid[$owned_group->language][0]["safe_value"];
+      $name_markup = '<span class="rs-listing-rs-name">';
+      $name_markup .= (empty($owned_group->field_fedora_label[$owned_group->language]))?"(none)":$owned_group->field_fedora_label[$owned_group->language][0]["safe_value"];
+      $name_markup .= '</span>';
+      $name_markup .= '<br>';
+      $name_markup .= '<span class="rs-listing-rs-desc">';
+      $name_markup .= (empty($owned_group->body[$owned_group->language]))?"":$owned_group->body[$owned_group->language][0]["value"];
+      $name_markup .= '</span>';
       $row = array(
         "name_$i" => array('data' => array(
-          '#markup' => (empty($owned_group->field_fedora_label[$owned_group->language]))?"(none)":$owned_group->field_fedora_label[$owned_group->language][0]["safe_value"],
-        )),
-        "desc_$i" => array('data' => array(
-          '#markup' => (empty($owned_group->body[$owned_group->language]))?"":$owned_group->body[$owned_group->language][0]["value"],
+          '#markup' => $name_markup,
         )),
         "owner_$i" => array('data' => array(
           '#markup' => sidora_get_username_from_uid($owned_group->uid),
         )),
       );
       if (empty($uid) || $uid == $user->uid){
-        $form['table']['#header'] = array(t('Name'), t('Description'), t('Owner'), t('Is Default'));
+        $form['table']['#header'] = array(t('Name'), t('Owner'), t('Is Default'));
         $row["is_default_$i"] = array('data' => array(
           "check_default_$i" => array(
             '#type' =>'radio',
@@ -883,8 +910,13 @@ function sidora_project_spaces_form($form = array(), &$form_state, $uid = NULL) 
         }
       }
       if (sidora_allow($user, $pid, 'permissions')) {
+        $operations_markup = l(t('Edit'),'/sidora/research_space_create/' . $pid);
+        $operations_markup .= ' | ';
+        $operations_markup .= l(t('Permissions'),'/sidora/sharing_permissions/' . $pid);
+        $operations_markup .= ' | ';
+        $operations_markup .= l(t('Change Owner'),'/sidora/research_space_transfer/' . $pid);
         $row["edit_$i"] = array('data' => array(
-          '#markup' => l(t('Permissions'),'/sidora/sharing_permissions/' . $pid),
+          '#markup' => $operations_markup,
         ));
         $can_change_permission = TRUE;
       }
@@ -897,7 +929,7 @@ function sidora_project_spaces_form($form = array(), &$form_state, $uid = NULL) 
     }
   }
   if ($can_change_permission) {
-    $form['table']['#header'][] = t('Permissions');
+    $form['table']['#header'][] = t('Operations');
   }
   $form['table']['#rows'] = $rows;
   $form['default_ps'] = array('#type'=>'radio', '#attributes' => array('style' => 'display:none;'));
@@ -1200,7 +1232,7 @@ function sidora_transfer_project_space($ps_node, $new_owner) {
     $ps_node = node_load($ps_node);
   }
   if (is_string($ps_node)) {
-    watchdog("sidora", t("Passed project space could not be determined. Did not pass in a node or node id. Function does not take pids."));
+    watchdog("sidora", t("Passed research space could not be determined. Did not pass in a node or node id. Function does not take pids."));
     return FALSE;
   }
   if (is_numeric($new_owner)) {
@@ -1216,7 +1248,7 @@ function sidora_transfer_project_space($ps_node, $new_owner) {
     if (!empty($ps_node)) {
       $info .= "|ps_node uid:" . $ps_node->uid;
     }
-    watchdog("sidora", t("Invalid attempt to change a project space to a new owner, new owner or project space is invalid. Info:".$info));
+    watchdog("sidora", t("Invalid attempt to change a research space to a new owner, new owner or research space is invalid. Info:".$info));
     return FALSE;
   }
   // The one requesting the transfer must be an admin or the owner
@@ -1224,7 +1256,7 @@ function sidora_transfer_project_space($ps_node, $new_owner) {
     watchdog(
       "sidora",
       t(
-        "Invalid user attempted to change a project space to a new owner id: %name from owner id: %currentowner",
+        "Invalid user attempted to change a research space to a new owner id: %name from owner id: %currentowner",
         array("%name" => $new_owner->uid, "%currentowner" => $ps_node->uid)
       )
     );
@@ -1238,7 +1270,7 @@ function sidora_transfer_project_space($ps_node, $new_owner) {
     watchdog(
       "sidora",
       t(
-        "Invalid attempt to change a project space to a new owner id: %name from owner id: %currentowner",
+        "Invalid attempt to change a research space to a new owner id: %name from owner id: %currentowner",
         array("%name" => $new_owner->id, "%currentowner" => $ps_node->uid)
       )
     );

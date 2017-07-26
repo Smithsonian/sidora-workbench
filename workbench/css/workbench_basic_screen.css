@@ -1,3 +1,6 @@
 .breadcrumb {
   display: none;
 }
+.rs-listing-rs-desc {
+  font-style: italic;
+}

@@ -340,21 +340,21 @@ function sidora_menu() {
       'access callback' => 'user_is_logged_in',
       'file' => 'includes/project_spaces.inc',
     ),
-    'sidora/project_spaces' => array(
+    'sidora/research_spaces' => array(
       'title' => 'Project Spaces',
       'page callback' => 'drupal_get_form',
       'page arguments' => array('sidora_project_spaces_form', 2),
       'access callback' => 'user_is_logged_in',
       'file' => 'includes/project_spaces.inc',
     ),
-    'sidora/project_space_transfer' => array(
+    'sidora/research_space_transfer' => array(
       'title' => 'Project Space Transfer',
       'page callback' => 'drupal_get_form',
       'page arguments' => array('sidora_project_space_transfer_form', 2, 3),
       'access callback' => 'user_is_logged_in',
       'file' => 'includes/project_spaces.inc',
     ),
-    'sidora/project_space_create' => array(
+    'sidora/research_space_create' => array(
       'title' => 'Research Space Creation',
       'page callback' => 'drupal_get_form',
       'page arguments' => array('sidora_project_space_creation_form', 2),
@@ -3100,6 +3100,7 @@ function sidora_allow($user_pid_or_drupal_user, $pid_or_fedora_object, $type_of_
   else {
     $pid = $object->id;
   }
+  module_load_include('inc', 'sidora', 'includes/sidora_nodes');
   $node = sidora_get_update_or_create_concept_node($pid);
   // if the node doesn't exist, check to see if it's a Fedora Object to see if it needs to be created
   if ($node == NULL && is_string($pid_or_fedora_object)) {
@@ -3694,6 +3695,29 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
         drupal_exit();
       }
       var_dump($object);
+      break;
+    case 'ps_detail':
+      print '<span class="metadata-table">';
+      module_load_include('inc', 'sidora', 'includes/sidora_nodes');
+      module_load_include('inc', 'sidora', 'includes/project_spaces');
+      $info = sidora_get_info($pid);
+      print '<span>Research Space Information</span>';
+      print '<table class="ps-detail"><tr><td>Owner</td><td>' . $info['obj']->owner . '</td></tr></table>';
+      $groups = sidora_get_groups_for_project_space($pid);
+      print '<table class="ps-detail"><tr><td>Editors</td><td>';
+      foreach($groups as $group) {
+        if (sidora_get_sidora_group_type($group) == 'edit') {
+          $members_to_group = sidora_get_member_to_group_association(array($group));
+          foreach($members_to_group as $uid => $group) {
+            $member = user_load($uid);
+            print $member->name;
+            print '<br>';
+          }
+        }
+      }
+      print '</td></tr></table>';
+      print '</span>';
+      //var_dump($mem_to_group);
       break;
     case 'meta':
       module_load_include('inc', 'sidora', 'includes/utils');
@@ -4480,7 +4504,7 @@ function sidora_ajax_parts($call_type, $param1 = '', $param2 = '', $param3 = '')
   if ($call_type == 'duplicate'){
     return sidora_duplicate($param1, $param2);
   }
-  if ($call_type == 'project_spaces_tree') {
+  if ($call_type == 'research_spaces_tree') {
     module_load_include('inc', 'sidora', 'includes/project_spaces');
     if (!empty($param1)) {
       print sidora_project_spaces_tree("",TRUE, array("view"), TRUE, $param1);
@@ -5497,6 +5521,7 @@ function sidora_block_content_navigation() {
   $root_children_pids = array();
   $filled = sidora_fill_concepts_children($results, array(), $root_children_pids); 
   */
+  module_load_include('inc', 'sidora', 'includes/sidora_nodes');
   $filled = sidora_build_tree_from_nodes_by_pid($root_pid);
   if (!empty($filled[0])) {
     $filled = $filled[0]['children'];

@@ -397,12 +397,18 @@ sidora.concept.LoadContentHelp.Relationships = function(conceptOfInterest, place
     sidora.recentAjaxFailure(meta_html);
   });
 }
+sidora.concept.IsResearchSpace = function() {
+  
+}
 /*
  * Loads the metadata screen for the concept
  */
 sidora.concept.LoadContentHelp.Metadata = function(conceptOfInterest){
+  var detailsUrl = Drupal.settings.basePath+'sidora/info/'+conceptOfInterest+'/meta/sidora_xsl_config_variable/browser/html';
+  var isProjectSpace = jQuery('#' + sidora.util.getNodeIdByHref() + " > a.is-project-space").length;
+  if (isProjectSpace) detailsUrl = Drupal.settings.basePath+'sidora/info/'+conceptOfInterest+'/ps_detail';
   jQuery.ajax({
-    url: Drupal.settings.basePath+'sidora/info/'+conceptOfInterest+'/meta/sidora_xsl_config_variable/browser/html',
+    url: detailsUrl,
   }).done(function(meta_html){
     //if the data is direct text, put it into a error message
     if (!sidora.util.hasElement(meta_html)){
@@ -532,6 +538,11 @@ sidora.concept.LoadContent = function(leaveContentIfAlreadyLoaded){
   jQuery("#sidora_content_concept_info").show();
   jQuery('#concept-meta .error-message').remove();
 
+  // Show the correct menu for space vs normal concept
+  var isPS = (sidora.ProjectSpaces.isProjectSpace(sidora.concept.GetPid()));
+  jQuery("#concept-menu-edit-concept").toggle(!isPS);
+  jQuery("#concept-menu-edit-space").toggle(isPS);
+
   sidora.concept.LoadContentHelp.Permissions(conceptOfInterest);
   sidora.concept.LoadContentHelp.Exhibition_view(conceptOfInterest);
   sidora.concept.LoadContentHelp.Metadata(conceptOfInterest);
@@ -566,6 +577,9 @@ sidora.util.getParentHref = function(existingHref) {
  * Get the node id that has a specified href path (does NOT need to be a DOM object), null if not found
  */
 sidora.util.getNodeIdByHref = function(currentUrl) {
+  if (typeof(currentUrl) == 'undefined' || currentUrl == null) {
+   currentUrl = window.location.pathname + window.location.search + window.location.hash;
+  }
   var jstreeIdSelected = null;
   var jst = jQuery("#forjstree").jstree();
   var existingTreeNodes = jst.get_json('#', {flat:true});
@@ -844,7 +858,7 @@ sidora.ProjectSpaces.ShowWhereToForm = function(selectionIntro, pids, onSubmit){
         onFinish:  function(){
           jQuery.ajax({
             // Do not include the current project space as a place to duplicate the tree
-            "url":Drupal.settings.basePath+"sidora/ajax_parts/project_spaces_tree?ignore_pid=" + jQuery("#" + jQuery("#psdd-select").val()).children("a").attr("pid"),
+            "url":Drupal.settings.basePath+"sidora/ajax_parts/research_spaces_tree?ignore_pid=" + jQuery("#" + jQuery("#psdd-select").val()).children("a").attr("pid"),
             "success":function(data){
               jQuery("#destination-tree").html(data);
               jQuery("#destination-tree").jstree({
@@ -1478,7 +1492,11 @@ sidora.stopResizeTree = function (e, ui)
 {
   jQuery("#iframeTreeOverlay").hide(); //Allow the cursor into the iframe
 };
-
+sidora.ResizeMaxWidth = function(){
+  var baseMax = jQuery(window).width();
+  // Maximum width set to 2000px
+  if (baseMax > 2000) baseMax = 2000;
+}
 sidora.ResizeToBrowser = function(){
   var leftSideHeight = jQuery(window).height();
   leftSideHeight -= (jQuery("#branding").outerHeight()+jQuery("#branding").offset().top+6);
@@ -1489,9 +1507,9 @@ sidora.ResizeToBrowser = function(){
   jQuery("#fjt-holder").css("height",(leftSideHeight-40)+"px").css("top","40px");
   var tabsHeight = leftSideHeight-50;
   jQuery("#concept_tabs").css("height",tabsHeight+"px");
-  var concept_tabsWidth = parseInt(jQuery(window).width()-jQuery('#conceptResizable').outerWidth()-8);
-  //if (concept
-  jQuery("#concept_tabs").css("width",parseInt(jQuery(window).width()-jQuery('#conceptResizable').outerWidth()-8)+"px");
+  var baseMax = sidora.ResizeMaxWidth();
+  var concept_tabsWidth = parseInt(baseMax-jQuery('#conceptResizable').outerWidth()-8);
+  jQuery("#concept_tabs").css("width",parseInt(baseMax-jQuery('#conceptResizable').outerWidth()-8)+"px");
   var tabContentHeight = tabsHeight - jQuery(".ui-tabs-nav").height();
   jQuery("#concept-resource-list").css("height",tabContentHeight);
   jQuery("#resourceResizable").css("height",'99%');
@@ -1625,7 +1643,7 @@ sidora.InitiatePage = function(){
           Shadowbox.close();
           setTimeout(function(){
           Shadowbox.open({
-            content:    Drupal.settings.basePath+"sidora/project_spaces",
+            content:    Drupal.settings.basePath+"sidora/research_spaces",
             player:     "iframe",
             title:      "Project Spaces",
             options:  {
@@ -1950,7 +1968,7 @@ sidora.ontology._createSubmenu = function(ontologyChildren){
  *  Got tired of CSS fiddling, resizing the main div programmatically based on assumed navigation size
  */
 sidora.ResizeOnWindowResize = function(){
-  var bodywidth = jQuery(window).width();
+  var bodywidth = sidora.ResizeMaxWidth();
   // Cannot use a fixed width for the tree on the left since its resizable now.
   //var menuwidth = 360;
   var menuwidth = jQuery("#fjt-holder").width() + 10;
@@ -2654,7 +2672,7 @@ sidora.util.refreshConceptTreeUIDirect = function(pid, tree_html){
  */
 sidora.ProjectSpaces.refreshOptions = function(){
   jQuery.ajax({
-    url: Drupal.settings.basePath+'sidora/ajax_parts/project_spaces_tree/1',
+    url: Drupal.settings.basePath+'sidora/ajax_parts/research_spaces_tree/1',
   }).done(function(returnedHtml){
     var jst = jQuery("#forjstree").jstree();
     var mainNode = jst.get_node("j1_1");
@@ -3359,7 +3377,11 @@ jQuery(function () {
 });
 
 jQuery(window).resize(function() {
-  if ((parseInt(jQuery(window).width()) < (parseInt(jQuery("#conceptResizable").css("min-width"))+parseInt(jQuery("#sidora_content_concept_info").css("min-width")))) || (parseInt(jQuery("#concept_tabs").width()) < parseInt(jQuery("#sidora_content_concept_info").css("min-width")))){
+  var maxWidth = sidora.ResizeMaxWidth();
+  if (
+       (maxWidth < (parseInt(jQuery("#conceptResizable").css("min-width"))+parseInt(jQuery("#sidora_content_concept_info").css("min-width")))) || 
+       (parseInt(jQuery("#concept_tabs").width()) < parseInt(jQuery("#sidora_content_concept_info").css("min-width")))
+    ){
     jQuery("#conceptResizable").css("width",parseInt(jQuery("#conceptResizable").css("min-width")));
     sidora.ResizeTree(null,{element:jQuery("#conceptResizable")});
     sidora.stopResizeTree(null,{element:jQuery("#conceptResizable")});

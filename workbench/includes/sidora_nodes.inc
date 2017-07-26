@@ -895,6 +895,12 @@ function sidora_update_concept_node($node, $info, $set_fedora_sync = FALSE) {
   if (array_key_exists('resource_children',$info)) {
     $node_wrapper->field_sidora_resource_child_coun->set($info['resource_children']);
   }
+  if (array_key_exists('description',$info)) {
+    $node_wrapper->body->set(array('value' => $info['description']));
+  }
+  if (array_key_exists('resource_children',$info)) {
+    $node_wrapper->field_sidora_resource_child_coun->set($info['resource_children']);
+  }
   if ($set_fedora_sync) {
     $node_wrapper->field_sidora_fedora_sync->set(strtotime("now"));
   }
