@@ -1612,11 +1612,50 @@ sidora.doubleCheckUser = function(){
         sidora.continueInit(); 
       }, function(){
         jQuery("#remove-me").remove();
-        recreateUser(); 
+        sidora.recreateUser(); 
       }
     );
   },5000);
 }
+sidora.recreateUser = function() {
+  jQuery("#page").after('<div id="recreateUser" class="" style="max-width: 300px;margin: 0 auto;"><p>' + sidora.display.REQUIRE_FEDORA_USER_SETUP + '</p> <div style="margin: 0 20px;"><input id="setupnow" class="form-submit" value="Set Up Now"><p></p><input id="logout" class="form-submit" value="Log Out"></div></div>');
+  jQuery("#setupnow").click(function(){
+    var overlay = jQuery('<div class="full-screen-overlay"><div id="countdown" style="color:white;margin:30px auto;width:200px;">30' + sidora.display.SECONDS_ESTIMATED_REMAINING + '</div></div>');
+    overlay.appendTo(document.body);
+    jQuery("#countdown").countdown(function(){
+      jQuery("#countdown").css("width","500px");
+      jQuery("#countdown").html(sidora.display.REASSURE_WORKING_NOT_HUNG_DO_NOT_RELOAD);
+      setTimeout(function(){window.location.reload();},5000);
+    }, 30, sidora.display.SECONDS_ESTIMATED_REMAINING);
+
+    jQuery.ajax(
+      {
+        "dataType":"json",
+        "url":Drupal.settings.basePath+"sidora/ajax_parts/create_and_set_new_user_object",
+        "success":function(data){
+          console.log(data);
+          window.location.reload();
+        },
+        "error":function(){
+          //OCIO message will also end up here since not json
+          console.log(sidora.display.CONSOLE_OUTPUT_BAD_BASIC_USER_REDIRECT);
+        }
+      }
+    );
+  });
+  jQuery("#logout").click(function(){
+    window.location = Drupal.settings.basePath+"user/logout";
+  });
+}
+/*
+ * Returns the sunburst image with "SIdora Workbench" as text in the div
+ */
+sidora.getSmithsonianBrandingHtml = function() {
+    return '<div style="float: left;"><img src="data:image/png;base64,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" height="20" width="20" style="padding-right: 10px;"><span style="font-size: 17px;font-weight: bold;font-family:Arial;color:#595959;text-decoration:none;"><span style="text-decoration: none; line-height: 20.5px;">SIdora Workbench</span></span></div>';
+}
+/**
+ * Called to start loading the page, after something like a document ready
+ */
 sidora.InitiatePage = function(){
   jQuery("#page").hide();
   sidora.InitiateConfirmAccess();
@@ -1635,8 +1674,8 @@ sidora.InitiatePage = function(){
       { position: { my: "left-7 bottom", at: "right center" } }
     );
     jQuery("h1").remove();
-    // Below is the starburst image
-    jQuery("#branding").append('<div style="float: left;"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAYAAABXAvmHAAAABHNCSVQICAgIfAhkiAAAAAlwSFlzAAAQnAAAEHUBqXFykQAACIxJREFUaIHtmXtQVOcZxn/ngLugXHcXsF5BRmNqQqox9R4rhopEx0qmTTux7Wg7TaeXMbbpJO1MG+2kjU10JunU2KaTVEtVpk40ponGONEGA4ggsIBoVIgI4SasuMjtYzmnf5yzl7PsInf/aN4ZZnfP+c57nud7n+993+8DvrAv7P/bpHsNwN+6hEvUdwmu3xFU3OrmWnsv7a4+bncJXKrKJFMoZlMIU8NCeSAy7N4ScLlcwtnbx7HaNrKr2zhZ1wZNd6CjB3pdoEogqYAM9EHCeWhcbPARei9AN3S6ePliE6H7i+GzVujp1W4qsgZYUjXwblOAyBa+m/ghWQ1LND4Aqjq+BA5Ut4jJ2eW0ON4DHFC7GlTVK2RZ8Q6WVOP32EoybYVkyYo3MpKXy5hZV68Qr1Y0Cv6cK576Wx5zpGe5ufK30D4DbWoHZ6m2YpZEAaGdBnJjFgGXS4is6tuE7y2EGw4A7p+3j7MpH/HvFqAtWRvoO9MD2GqrHdsEwFoODUs80RoTApdbO0TcoQpuldeDogMMa+WDlCMAFLbPHJpDSSXT4kCSIMVWTlnTIs+tUSfw/Pk6MfcvedDe7dEpQGLiCWaYNNEkmDqG5nRSI0lhgApplouUebLTKK4BR1ePmHzQLnYetsOdrn7SWBdXpn2R4AlbC5juDN65rYgJkvZshqUKJO/aGRUCeQ1OYXm9gMbiG0CfMQXqNsV8GUUCWYXkMFgxd3/AcQZTJVAlNsbbkfWhy6MBnwiOmMBbV1vE0jcKoN7pvRhgYbb3TgVA0YG8k3ISpuYM6h2plgJAIx8KYCv13BsRgdcuNost+wp99B48o+S0zfOAALDIUL/yFaxJx7QL+mwboiJJENLL2hgtFygSyBKstJV5xg6bwK7yRrH16AcghP6ygdNh7vV07rjwLGoF+JIJmle8yS9XPAMRDXqB8iGgqhBRS1IYHgmhwtdsxZ4hwyKw58pN8Wx2CYg+fv3oMxBdbZzBQNp2JrP5ymJtJlWNiDvDvjyrmqp1P4LEExpotw9JZXJ8kRes/lxadDOE9A6PQG59m/jpv4qhxwVdVo40L6QmYysPzXtLyw7BFqYic+TCr3ilzoqsg5F1SchAYhh0rtxD8pxD3igoMqm2UnAHV7+8IAIIbxo6gVpnp1iWVQJdPfoVmU8vb+LIrRCKFx7l7+kbIPaKdqufnlXoM/F8zl7eadMk5P7TxoNZgpLFB2HaGc8z62PL+4E0y4ClcugEpr9dCS0dPm2uAkhsy99NvYAtCdCY8QuWPPhXT4gNBCQVxEQ25v6BNsW7oMEbjUgZzj6yG0IEmDpYGu3NXL72eLx9aAR+cLZaUFkfuP9yzmJj+QZQIcEEnyx4n/1rMsFaiSf+7mjICtx8iB9fSwkITFFhaRTMnpMNUVVMM3ldeEyF1NhCkNTBEShqdoo3T37qBeCfcVSJootb+Eezd2FuioeWjOdI/cprILv0gbJGRFY4XP4zmkTwGXwu8TBzE0oCt8wSZFi7QHYNjsDCY5eg2xV8gKSlhx+e241D8aa82BA4lXKat9dmQlyplmHc1j6FXXWz+wVU1qv1Ezb4VkIBshog6CrMNAERNYTcDfwf7Q3iozPXdKBBBql6o9JjIRcHmydXIUtevF+eCNuSz1BhquVK80JQtR4yXzGzIynf6FcvWGYJZoc7iQ7Rb0vG14VK0GqqH8Se+E9nBM0dxt1SMFO1ypmdnsmTccZb7tx/6hakF+yApvkgu3A+lUnkQDpQCThxCnoqHgjP0znXBS3tukQGsfGQVOibwLfP7eR2nzH07ty/JhY617zAN7/6IoR2835rcHfu9iGQhNyRGjgCe7IE3Veg8ZG7g/ezjPm7+M+DOd4WwBcYGpkPnaAqGqnhWtAIbC/+XCyKOMS22QeCtwcD2HH7Vo4HKlg+L30sCtJGAN7XVz/bnl/DgqhadiRWQ1zJoPeugEbWZWb9ue209wGBtOrTRozEAj6f3+wU1DgQqkykBAWrfge2Eg2JfyTc0ZF7tV3WhA6tCssKND3M9y4tCyij0bKAe+IdxQ3QBzmOuSiSnYXh0Jb+Ai/WJPNG3aM42+/XFtKkatZaK/lGfA7zJ6LtW4Fr3XDmto29tem8W/ETTk3PJS16bAgEnpvdOYLGNjC3Urtxs1bOfdpfGT9NS2hZwe83ElzogJduLOXA3DxtX8voHkb185Xf3C646dSO+XrieLJyjQbMp/316FfyVl0C/FZUmD8RDt6Xh6S/bLRP0vr5O3DNAe5GUlXJq3iaHbVTtMZLj4BvC8wAJcJNJlTStRqoLRih9SOwr6rV2/rqhen3H+9hfcVybitGAIrfZ8AXSH6RG030BFoDL50WODq9sHyzTtQNliW9x6KYUmJCu7kv7BYpkTDLDKZ7dFBveG2ds1tM23naeDbvJhDse0gPxFSxeMrHbJ91nLQYH68qY5pC+xE49JlDfOf1T4buRZF1bSgw7TT7U15lk02/NMYEDJKsdHQOuWXQvOiLQ5WgdjXfP3GUBUWZ1PXe9ckRm4FAqaNreF480lLA3A7xRZjlHoqGeIY7HDNU4uZO4e15fPXu+9ttkqq1D5aLPGArY5XNTqrlKmnRMEnCcw461mYgcDPYtlGRwdQNETVMjytltc3O6tgy1logRoYQn0Xr1vx46B/8CHQKPXXKvRDejGQrZUN8BY9Zcvl6DMzU06V7d2UoYHqRGvP/WfmZsZmT+oid8V9+M/uf/HxqC2bf/sdnNn3bBe+z4w/eHwKTs4pFo/1zbTFO6ASbneVxdlKtJaTFNPJwBITLfo2cTxTculfGkYyBwJzsMnHlwvUgI/tgYiNYLvG4zc4q63nWxnaRFKYf9YGncI2nlAwElr1bKXJzrvodcUvGquz7Kbsg8gax1nJW2eystxayLhZspnFCD/wP7U9ib8jYfs0AAAAASUVORK5CYII=" height="20" width="20" style="padding-right: 10px;"><span style="font-size: 17px;font-weight: bold;font-family:Arial;color:#595959;text-decoration:none;"><span style="text-decoration: none; line-height: 20.5px;">SIdora Workbench</span></span></div>');
+    // Next line is the starburst image
+    jQuery("#branding").append(sidora.getSmithsonianBrandingHtml());
     jQuery("#branding").append("<div class='branding-user-info' style='float:right'> <a href='"+Drupal.settings.basePath+"user' class='sidora-thin-button'>Profile</a> <a href='"+Drupal.settings.basePath+"user/logout' class='sidora-thin-button'>Logout</a></div>");
     jQuery("#branding").append("<div class='branding-project-spaces' style='float:right'> <a id='proj-space-button' href='#' onclick='return false;' class='sidora-thin-button'>Research Spaces</a></div>");
     jQuery("#proj-space-button").click(function(){
@@ -1654,37 +1693,8 @@ sidora.InitiatePage = function(){
             }
           });},100);
     });
-  }
-  recreateUser = function() {
-    jQuery("#page").after('<div id="recreateUser" class="" style="max-width: 300px;margin: 0 auto;"><p>' + sidora.display.REQUIRE_FEDORA_USER_SETUP + '</p> <div style="margin: 0 20px;"><input id="setupnow" class="form-submit" value="Set Up Now"><p></p><input id="logout" class="form-submit" value="Log Out"></div></div>');
-    jQuery("#setupnow").click(function(){
-      var overlay = jQuery('<div class="full-screen-overlay"><div id="countdown" style="color:white;margin:30px auto;width:200px;">30' + sidora.display.SECONDS_ESTIMATED_REMAINING + '</div></div>');
-      overlay.appendTo(document.body);
-      
-      jQuery("#countdown").countdown(function(){
-        jQuery("#countdown").css("width","500px");
-        jQuery("#countdown").html(sidora.display.REASSURE_WORKING_NOT_HUNG_DO_NOT_RELOAD);
-        setTimeout(function(){window.location.reload();},5000);
-      }, 30, sidora.display.SECONDS_ESTIMATED_REMAINING);
-
-      jQuery.ajax(
-        {
-          "dataType":"json",
-          "url":Drupal.settings.basePath+"sidora/ajax_parts/create_and_set_new_user_object",
-          "success":function(data){
-            console.log(data);
-            window.location.reload();
-          },
-          "error":function(){
-            //OCIO message will also end up here since not json
-            console.log(sidora.display.CONSOLE_OUTPUT_BAD_BASIC_USER_REDIRECT);
-          }
-        }
-      );
-    });
-    jQuery("#logout").click(function(){
-      window.location = Drupal.settings.basePath+"user/logout";
-    });
+    // Add the close button to the top of the Shadowboxes, and remove the tooltip from them
+    jQuery("#sb-nav-close").attr("title","").clone().addClass("sb-nav-close-clone").appendTo(jQuery("#sb-title"));
   }
   sidora.IsUserSetUp(sidora.continueInit, sidora.doubleCheckUser);
 };

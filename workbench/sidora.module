@@ -341,7 +341,7 @@ function sidora_menu() {
       'file' => 'includes/project_spaces.inc',
     ),
     'sidora/research_spaces' => array(
-      'title' => 'Project Spaces',
+      'title' => 'Research Spaces',
       'page callback' => 'drupal_get_form',
       'page arguments' => array('sidora_project_spaces_form', 2),
       'access callback' => 'user_is_logged_in',
@@ -3878,17 +3878,17 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
                 }
               }
             }
-            $omdText = '<div class="original_metadata" />';
+            $status_text = '<div class="status-details"><div class="original_metadata"></div><div class="status-details-text">Details Incomplete</div></div>';
             if (array_key_exists('original_metadata',$element) && $element['original_metadata']==='FALSE') {
-              $omdText = '<div class="not_original_metadata" />';
+              $status_text = '<div class="status-details"><div class="not_original_metadata"></div><div class="status-details-text">Details Complete</div></div>';
             }
             $jsdt_data[] = array(
               "DT_RowId"=>$element['object']['value'],
               /*$element['o']['value'],*/
               0=>'<div class="sidora-info-holder" administered-by-pid="'.$element['administeredBy']['value'].'" num-links="'.$element['incomingLinks']['value'].'"></div><div class="resource-list-tn">'.$tn.'</div>',
-              1=>$omdText,
               /*$element['m']['value'],*/
-              2=>'<div class="resource-list-label">'.$element['title']['value'].'</div>',
+              1=>'<div class="resource-list-label">'.$element['title']['value'].'</div>',
+              2=>$status_text,
             );
           }
         }
@@ -6185,6 +6185,7 @@ function sidora_html_tree_from_query_results_tree($query_result_tree, $input_pat
       if ($pid == $default_ps) {
         $class_for_default_project_space = ' default-project-space';
       }
+      $the_return = module_load_include('inc', 'sidora', 'includes/project_spaces');
       if (sidora_is_project_space($pid)) {
         $class_for_default_project_space .= ' is-project-space';
       }
