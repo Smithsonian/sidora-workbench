@@ -181,12 +181,14 @@ sidora.concept.LoadContentHelp.Resources.TableLoad = function(conceptOfInterest)
         sidora.resources.individualPanel.resourceOfInterest = null;
       }
       jQuery(this).removeClass('selected');
+      jQuery(this).find(".sidora-bulk-action-check i").text("");
     } else {
       if (!e.ctrlKey && !e.metaKey){
         table.$('tr.selected').removeClass('selected');
         sidora.resources.individualPanel.resourceOfInterest = null;
       }
       jQuery(this).addClass('selected');
+      jQuery(this).find(".sidora-bulk-action-check i").text("check");
     }
     //if we only have 1 left, make the resource of interest into the one that is left
     var pids = sidora.resources.getHighlighted();

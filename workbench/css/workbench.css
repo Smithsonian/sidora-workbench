@@ -198,11 +198,39 @@ li a input {
   border-top: 1px solid #aaa;
   z-index: 1;
 }
+.sidora-bulk-action-check {
+  padding-left: 10px;
+}
+.sidora-bulk-action-check i.material-icons {
+  border: 1px solid #444444;
+  border-radius: 2px;
+  font-size: 15px;
+  width: 15px;
+  height: 15px;
+  top: 1px;
+  position: relative;
+}
+.sidora-bulk-action-check input {
+  position: absolute;
+  top: -99999px;
+  left: -99999px;
+}
+input[type=checkbox]:checked ~ div {
+  background: red;
+}
+.sidora-bulk-action-check>div {
+  background: green;
+  width: 400px;
+  height: 100px;
+  line-height: 100px;
+  color: white;
+  text-align: center; 
+}
 #res_table td {
   text-align: right;
-  padding: 3px;
+  padding: 10px 3px 10px 0px;
 }
-#res_table td:nth-child(2){
+#res_table td:nth-child(3){
   width: 99%;
 }
 .resource-list-tn {
@@ -263,6 +291,7 @@ li a input {
 }
 .status-details {
   width: 100px;
+  margin-left: 30px;
 }
 .status-details-text {
   width: 80px;

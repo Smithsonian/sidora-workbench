@@ -3602,7 +3602,25 @@ function sidora_open_access($info_type, $pid) {
   }
   drupal_exit();
 }
-
+/**
+ * Return the users way to describe the models. Returns FALSE if there wasn't a specific way to express that model to the user
+ */
+function sidora_model_to_user_language($model) {
+  $model_to_type_text = array(
+    'si:imageCModel' => t('Image'),
+    'si:generalImageCModel' => t('Image'),
+    'si:fieldbookCModel' => t('Digitized Text'),
+    'si:datasetCModel' => t('Tabular Dataset'),
+    'islandora:sp-audioCModel' => t('Audio'),
+    'islandora:sp_videoCModel' => t('Video'),
+    'si:rawGeneSequenceCModel' => t('Gene Sequence'),
+    'si:assembledGeneSequenceCModel' => t('Gene Sequence'),
+  );
+  if (empty($model_to_type_text[$model])) {
+    return FALSE;
+  }
+  return $model_to_type_text[$model];
+}
 /*
  * A catch all for many of the ajax calls
  * TODO: split the various cases into separate functions
@@ -3830,11 +3848,11 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
         'csv' => array('si:datasetCModel'),
         'audio' => array('islandora:sp-audioCModel'),
         'video' => array('islandora:sp_videoCModel'),
-	'rawsequence' => array('si:rawGeneSequenceCModel'),
-	'assembledsequence' => array('si:assembledGeneSequenceCModel'),
-	'generic' => array('si:genericCModel'),
+        'rawsequence' => array('si:rawGeneSequenceCModel'),
+        'assembledsequence' => array('si:assembledGeneSequenceCModel'),
+        'generic' => array('si:genericCModel'),
         'text' => FALSE
-				);
+      );
       if ($download == 'browser' && $formatted == 'dataTableServerSideProcessing') {
         $jsdt_title_and_type_search_val = filter_var($_GET['search']['value'], FILTER_SANITIZE_STRING);
         // The search value holds both the type of object and the title search, pull those out
@@ -3853,7 +3871,12 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
         $offset = $jsdt_start;
         $resources_count = sidora_concept_resource_listing_count($pid,$resource_types);
         $filtered_resources_count = sidora_concept_resource_listing_count($pid,$resource_types, $jsdt_search_val, $jsdt_title_search_val);
-        $resources = sidora_concept_resource_listing($pid,$resource_types,$limit,$offset, $jsdt_search_val, $jsdt_title_search_val, $jsdt_order_on, $jsdt_order_by);
+        if ($filtered_resources_count == NULL) {
+          $resources = array();
+        }
+        else {
+          $resources = sidora_concept_resource_listing($pid,$resource_types,$limit,$offset, $jsdt_search_val, $jsdt_title_search_val, $jsdt_order_on, $jsdt_order_by);
+        }
         $jsdt_response = array();
         $jsdt_response['draw'] = $jsdt_draw;
         $jsdt_response['recordsTotal'] = $resources_count;
@@ -3882,13 +3905,25 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
             if (array_key_exists('original_metadata',$element) && $element['original_metadata']==='FALSE') {
               $status_text = '<div class="status-details"><div class="not_original_metadata"></div><div class="status-details-text">Details Complete</div></div>';
             }
+            $checkbox_id = 'checkbox_' . $element['object']['value'];
+            $type = sidora_model_to_user_language($element['model']['value']);
             $jsdt_data[] = array(
               "DT_RowId"=>$element['object']['value'],
+              0=>'<div class="sidora-bulk-action-check">
+<i class="material-icons"></i></div>',
+/*
+<label for="'. $checkbox_id . '">GO</label>
+<input type="checkbox" id="' . $checkbox_id . '"/>
+<div>Control</div>
+</div>',
+*/
               /*$element['o']['value'],*/
-              0=>'<div class="sidora-info-holder" administered-by-pid="'.$element['administeredBy']['value'].'" num-links="'.$element['incomingLinks']['value'].'"></div><div class="resource-list-tn">'.$tn.'</div>',
+              1=>'<div class="sidora-info-holder" administered-by-pid="'.$element['administeredBy']['value'].'" num-links="'.$element['incomingLinks']['value'].'"></div><div class="resource-list-tn">'.$tn.'</div>',
               /*$element['m']['value'],*/
-              1=>'<div class="resource-list-label">'.$element['title']['value'].'</div>',
-              2=>$status_text,
+              2=>'<div class="resource-list-label">'.$element['title']['value'].'</div>',
+              3=>'<div class="">' . $type . '</div>',
+              4=>$status_text,
+              5=>'<div class="">'.$element['created']['value'].'</div>',
             );
           }
         }
@@ -3902,6 +3937,9 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
           $to_output .= '<th>Meta</th>';
           $to_output .= '<th>Preview</th>';
           $to_output .= '<th>Object Name</th>';
+          $to_output .= '<th>details</th>';
+          $to_output .= '<th>dletails2</th>';
+          $to_output .= '<th>dletails3</th>';
           $to_output .= '</tr></thead>';
           $to_output .= '<tbody>';
           $to_output .= '</tbody></table>';
@@ -4095,6 +4133,9 @@ function sidora_concept_resource_listing_count($pid, $resource_types_list, $reso
     $query = sidora_generate_child_resource_sparql_query($concept_pid, $resource_types_list[$resource_type], $title_search);
     $ri = $tuque->repository->ri;
     $results = $ri->sparqlQuery($query);
+    if (empty($results[0]['object']['value'])) {
+      return 0;
+    }
     $to_return = sizeof($results);
     return $to_return;
   }
@@ -4120,14 +4161,7 @@ function sidora_concept_resource_listing($pid, $resource_types, $limit, $offset,
     $results = $ri->sparqlQuery($query);
     foreach ($results as $resindex=>$result) {
       $tobj = sidora_obj($result['object']['value']);
-      if (empty($tobj)) {
-        $description = 'Relationship to invalid object';
-        $dsid = 'RELS-EXT';
-        $predicate_pid = $result['object']['value'];
-        sidora_add_fedora_assumption_problem_relationship($pid, $description, $dsid, $predicate_pid);
-      }
-      else {
-        // $results[$resindex]['object'] = $tobj;
+      if (!empty($tobj)) {
         $original_metadata = 'FALSE';
         foreach ($tobj as $dsid=>$datastream) {
           if ($dsid == 'TN') {
@@ -6478,6 +6512,9 @@ function _sidora_get_child_results_cache($child_pid) {
 }
 
 /**
+ * WARNING: THIS WILL RETURN A SINGLE ROW of null, null, null, null, 0 
+ *  IF NOTHING IS FOUND, BE SURE TO CHECK
+ *
  * Query for fetching the Child Resources given what type of data they disseminate.
  *
  * @param string $pid
