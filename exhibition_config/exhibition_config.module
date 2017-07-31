@@ -2826,7 +2826,7 @@ jQuery(\"#sidora-resources-button-last\").click(function(){
   }
   });
 jQuery(\"#sidora-resources-button-next\").click(function(){ 
-  if (parseInt(jQuery('#sidora-resources-page-number').val()) < parseInt(jQuery('#sidora-resources-page-count').html())){
+  if (parseInt(jQuery('#sidora-resources-page-number').val()) <= parseInt(jQuery('#sidora-resources-page-count').html())){
    jQuery('body').append('<div id=\"fsOverlay\" style=\"position:fixed;top:0;left:0;width:100%;height:100%;background-color:#ddd;z-index:10000;\"><div style=\"width:170px;margin:200px auto;height:100px;font-size:48px;\">Loading...</div>');
   jQuery.ajax({
     dataType:'html',
@@ -2876,7 +2876,7 @@ jQuery(\"#sidora-resources-button-next\").click(function(){
         jQuery('#sidora-resources-page-number').val(jQuery('#sidora-resources-page-number').val().replace(/[^\d]/g, '')); // don't even allow anything but digits
         return;
       }
-  if (parseInt(jQuery('#sidora-resources-page-number').val()) < parseInt(jQuery('#sidora-resources-page-count').html())){
+  if (parseInt(jQuery('#sidora-resources-page-number').val()) <= parseInt(jQuery('#sidora-resources-page-count').html())){
    jQuery('body').append('<div id=\"fsOverlay\" style=\"position:fixed;top:0;left:0;width:100%;height:100%;background-color:#ddd;z-index:10000;\"><div style=\"width:170px;margin:200px auto;height:100px;font-size:48px;\">Loading...</div>');
   jQuery.ajax({
     dataType:'html',
