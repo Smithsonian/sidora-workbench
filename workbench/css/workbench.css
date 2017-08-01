@@ -11,6 +11,9 @@
     font-family: Mouser;
     src: url('Mouser.ttf')  format('truetype');
 }
+body {
+  -webkit-font-smoothing: antialiased !important;
+}
 #branding {
   background: white;
   padding: 8px 20px 3px 20px;
@@ -136,10 +139,6 @@ li a.not-owned {
 .sidora-info-holder {
   display: none;
 }
-.resource-list-tn {
-  max-height:90px;
-  max-width:150px;
-}
 a.has-thumbnail > div {
   float: left;
 }
@@ -236,6 +235,8 @@ input[type=checkbox]:checked ~ div {
 .resource-list-tn {
   width: 100px;
   min-width: 150px;
+  max-width:150px;
+  text-align: center;
 }
 .resource-list-label {
   text-align: left;
@@ -289,9 +290,30 @@ input[type=checkbox]:checked ~ div {
   width: 16px;
   float: left;
 }
+.resource-actions {
+  width: 120px;
+  text-align: left;
+  margin-left: 15px;
+}
+.resource-actions .sidora-ui-link {
+  font-size: 11px;
+  margin-right: 8px;
+}
+.resource-operations {
+  width: 200px;
+  text-align: left;
+  margin-left: 35px;
+}
+.resource-operations .sidora-ui-link {
+  font-size: 11px;
+  margin-right: 8px;
+}
 .status-details {
   width: 100px;
   margin-left: 30px;
+}
+tr.selected i.holder {
+  content: "check";
 }
 .status-details-text {
   width: 80px;
@@ -499,7 +521,8 @@ Table paging
   padding: 6px 15px 7px 15px;
   display:block;
   background-color:transparent;
-  color:blue;
+  color: #20afdf;
+  text-shadow: 1px 1px 1px rgba(16, 88, 112, 0.2);
   cursor:pointer;
   font-size:12px
   margin: 0px 0px 0px 30px;
@@ -545,6 +568,7 @@ Table paging
 .sidoraMenu li ul li a {
   padding: 5px 2px 3px 6px;
   margin: 0px 0px 0px 30px;
+  text-shadow: none;
 }
 .sidora-resources-icon {
   background-image: url('../images/assorted_glass%20buttons.png');
@@ -570,7 +594,8 @@ Table paging
   font-size: 12px;
   font-weight: bold;
   font-family: Arial;
-  color: rgb(89,89,89);
+  color: #20afdf;
+  text-shadow: 1px 1px 1px rgba(63, 186, 255, 0.3);
 }
 .project-space-drop-down {
    overflow: hidden;
@@ -615,16 +640,17 @@ Table paging
   text-decoration: none;
   cursor: pointer;
 }
-.sidora-ui-link {
+a.sidora-ui-link, .sidora-ui-link {
   font-weight: normal;
   font-size: 14px;
-  color: blue;
+  color: #0084d6;
 }
 #concept_tabs ul.ui-tabs-nav {
   background: transparent;
 }
 .ui-state-active .sidora-ui-link {
   color: rgb(89,89,89);
+  text-shadow: 1px 1px 1px rgba(0,0,0,0.2);
 }
 #conceptResizable {
   background-color: rgb(245,245,245);

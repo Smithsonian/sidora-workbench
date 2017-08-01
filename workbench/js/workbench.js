@@ -1673,7 +1673,7 @@ sidora.InitiatePage = function(){
     sidora.ontology.CreateConceptMenu();
     sidora.ResizeOnWindowResize();
     jQuery(document).tooltip(
-      { position: { my: "left-7 bottom", at: "right center" } }
+      /*{ position: { my: "left-7 bottom", at: "right center" } }*/
     );
     jQuery("h1").remove();
     // Next line is the starburst image
