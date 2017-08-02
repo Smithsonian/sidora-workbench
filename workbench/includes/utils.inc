@@ -526,7 +526,20 @@ function sidora_is_concept(AbstractObject $object) {
   return in_array('si:conceptCModel', $curr_models)  ||
     array_intersect($concept_models, $curr_models);
 }
-
+/**
+ * Put in file extension to mime types that are not covered by MimeDetect or 
+ * just to override what MimeDetect would return
+ */
+function sidora_mimetype_from_file_extension_override($filename) {
+  $extension = pathinfo(strtolower($filename), PATHINFO_EXTENSION);
+  $override_mapping = array(
+    'nef' => 'image/x-nikon-nef',
+  );
+  if (array_key_exists($extension, $override_mapping)) {
+    return $override_mapping[$extension];
+  }
+  return NULL;
+}
 /**
  * Create/Update a datastream with the given parameters.
  *
@@ -548,17 +561,23 @@ function sidora_is_concept(AbstractObject $object) {
  *   TRUE if successful, FALSE otherwise.
  */
 function sidora_update_datastream(AbstractObject $object, $file, $dsid, $label = NULL, $mimetype = NULL, $control_group = 'M', $copy = TRUE) {
-  $mime_detector = new MimeDetect();
   $ds = isset($object[$dsid]) ? $object[$dsid] : $object->constructDatastream($dsid, $control_group);
   $is_file = file_exists($file);
   $ds->label = isset($label) ? $label : $dsid;
   if (isset($mimetype)){
-	  $ds->mimetype = $mimetype;
-	}elseif ($is_file){
-	  $ds->mimetype = $mime_detector->getMimeType($file);
-	}else{
-	  $ds->mimetype = 'text/xml';
-	}			
+    $ds->mimetype = $mimetype;
+  }elseif ($is_file){
+    $override_mimetype = sidora_mimetype_from_file_extension_override($file);
+    if (empty($override_mimetype)) {
+      $mime_detector = new MimeDetect();
+      $ds->mimetype = $mime_detector->getMimeType($file);
+    }
+    else {
+      $ds->mimetype = $override_mimetype;
+    }
+  }else{
+    $ds->mimetype = 'text/xml';
+  }			
   if ($is_file) {
     $ds->setContentFromFile($file, $copy);
   }
@@ -1181,6 +1200,8 @@ function sidora_get_file_extension_from_mime($file_mime_type, $get_mime = FALSE)
 				'application/vnd.ms-excel.sheet.binary.macroEnabled.12' => '.xlsb',
 				'image/png' => '.png',
         'audio/make.my.funk' => '.pfunk',
+        'image/x-nikon-nef' => '.nef',
+        'image/x-raw' => '.raw',
         'image/x-portable-graymap' => '.pgm',
         'image/x-portable-greymap' => '.pgm',
         'image/x-portable-pixmap' => '.ppm',

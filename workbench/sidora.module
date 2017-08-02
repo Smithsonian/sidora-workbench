@@ -3105,8 +3105,8 @@ if ($one == 'deletexsl') {
    $obj = sidora_obj($two);
    $models = $obj->models;
    $file_extensions = array(
-    'si:imageCModel' => array('jpg', 'png', 'gif', 'tiff', 'tif', 'jp2'),
-    'si:generalImageCModel' => array('jpg', 'png', 'gif', 'tiff', 'tif', 'jp2'),
+    'si:imageCModel' => array('jpg', 'png', 'gif', 'tiff', 'tif', 'jp2', 'raw', 'nef'),
+    'si:generalImageCModel' => array('jpg', 'png', 'gif', 'tiff', 'tif', 'jp2', 'raw', 'nef'),
     'si:datasetCModel' => array('csv', 'xml', 'xlsx', 'xls', 'dat', 'med', 'arg', 'slt'),
     'si:fieldbookCModel' => array('pdf'),
     'islandora:sp-audioCModel' => array('mp3','aiff','wav'),
@@ -3784,8 +3784,8 @@ function sidora_create_resource_get_upload_form_html($model, $form_name, $ontolo
   global $user;
   $to_return = '';
   $file_extensions = array(
-    'si:imageCModel' => array('jpg', 'png', 'gif', 'tiff', 'tif', 'jp2'),
-    'si:generalImageCModel' => array('jpg', 'png', 'gif', 'tiff', 'tif', 'jp2'),
+    'si:imageCModel' => array('jpg', 'png', 'gif', 'tiff', 'tif', 'jp2', 'raw', 'nef'),
+    'si:generalImageCModel' => array('jpg', 'png', 'gif', 'tiff', 'tif', 'jp2', 'raw', 'nef'),
     'si:datasetCModel' => array('csv', 'xlsx', 'xls'),
     'si:fieldbookCModel' => array('pdf'),
     'islandora:sp-audioCModel' => array('mp3','aiff','wav'),
@@ -6909,8 +6909,7 @@ function sidora_get_plupload_html($elements, $button_text = 'Browse'){
     
     filters : {
       excluded_extensions : [{
-      excluded_extensions : [{
-        "Basic Image" : "jpg,jpeg,jp2,tiff",
+        "Basic Image" : "jpg,jpeg,jp2,tiff,raw,nef",
         "PDF Text" : "pdf",
         "Tabular Datasets" : "csv,xls,xlsx",
         "Basic Audio" : "aiff,wav,mp3",
