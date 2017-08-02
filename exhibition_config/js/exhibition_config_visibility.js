@@ -812,18 +812,7 @@ previewWithoutDownloadCheck = function() {
               }
             };
             dialogConfig.buttons['Continue'] = function() {
-              var numPages = parseInt(jQuery("#sidora-resources-page-count").text());
-              // Estimating 2 seconds per page
-              var estimatedSecondsPerPage = 1.5;
-              var estimatedFinish = new Date(Date.now()+numPages*estimatedSecondsPerPage*1000);
-              var hour = estimatedFinish.getHours();
-              var am_pm = (hour > 11) ? "PM" : "AM";
-              var hourText  = (hour > 12) ? ""+(hour - 12): ""+hour;
-              var minuteText = (estimatedFinish.getMinutes() > 9) ? ""+estimatedFinish.getMinutes() : "0"+estimatedFinish.getMinutes();
-              showOverlay(
-                "Processing...<br>Estimated completion time:<br>"+hourText+":"+minuteText+" "+am_pm,
-                "width: 650px;margin:200px auto;height: 400px;font-size:48px;line-height: 1em;text-align: center;"
-              );
+              showProcessingSaveTime();
               jQuery("#exhibition-permission-form").submit();
               jQuery(this).dialog("destroy").remove();
             };
@@ -837,10 +826,25 @@ previewWithoutDownloadCheck = function() {
         });
       }
       else{
-        showOverlay("Processing...");
+        showProcessingSaveTime();
         jQuery("#exhibition-permission-form").submit();
       } 
     }
   });
+}
+
+showProcessingSaveTime = function() {
+      var numPages = parseInt(jQuery("#sidora-resources-page-count").text());
+      // Estimating 2 seconds per page
+      var estimatedSecondsPerPage = 1.5;
+      var estimatedFinish = new Date(Date.now()+numPages*estimatedSecondsPerPage*1000);
+      var hour = estimatedFinish.getHours();
+      var am_pm = (hour > 11) ? "PM" : "AM";
+      var hourText  = (hour > 12) ? ""+(hour - 12): ""+hour;
+      var minuteText = (estimatedFinish.getMinutes() > 9) ? ""+estimatedFinish.getMinutes() : "0"+estimatedFinish.getMinutes();
+      showOverlay(
+        "Processing...<br>Estimated completion time:<br>"+hourText+":"+minuteText+" "+am_pm,
+        "width: 650px;margin:200px auto;height: 400px;font-size:48px;line-height: 1em;text-align: center;"
+      );
 }
 
