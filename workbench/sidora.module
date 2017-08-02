@@ -4309,9 +4309,11 @@ function sidora_block_view($delta = '') {
              <ul>
                 <li id="editMetadataConcept"><a href="#" onclick="return false;" id="edit-concept-metadata-menu"><i class="material-icons">edit</i>Edit&nbsp;Metadata</a></li>
                 <li id="add-resources"><a href="#" onclick="return false;" id="add-resources-concept-metadata-menu"><i class="material-icons">add_box</i>Add&nbsp;Resource(s)</a></li>
-                <li id="copy-to-another-space"><a href="#" onclick="return false;" id="copy-to-another-space-menu"><i class="material-icons">content_copy</i>Copy&nbsp;concept&nbsp;to&nbsp;another research&nbsp;space</a></li>
-                <li id="move-to-another-space"><a href="#" onclick="return false;" id="move-to-another-space-menu"><i class="material-icons">call_made</i>Move&nbsp;concept&nbsp;to&nbsp;another research&nbsp;space</a></li>
+                <li id="copy-to-another-space"><a href="#" onclick="sidora.ProjectSpaces.DuplicateOrTransfer(\'duplicate\',\'concept\'); return false;" id="copy-to-another-space-menu"><i class="material-icons">content_copy</i>Copy&nbsp;concept&nbsp;to&nbsp;another research&nbsp;space</a></li>
+                <li id="move-to-another-space"><a href="#" onclick="sidora.ProjectSpaces.DuplicateOrTransfer(\'transfer\',\'concept\'); return false;" id="move-to-another-space-menu"><i class="material-icons">call_made</i>Move&nbsp;concept&nbsp;to&nbsp;another research&nbsp;space</a></li>
+                <!-- Future implementation, only doing L&F now
                 <li id="link-to-another-concept"><a href="#" onclick="return false;" id="link-to-another-concept-menu"><i class="material-icons">swap_horiz</i>Link&nbsp;concept&nbsp;to&nbsp;another concept</a></li>
+                -->
                 <li id="deleteConcept"><a href="#" onclick="sidora.concept.DeleteConcept(); return false;"><i class="material-icons">delete</i>Delete</a></li>
 ';
       if (sidora_is_admin()) $block['content'] .= '
@@ -4342,7 +4344,7 @@ function sidora_block_view($delta = '') {
     </div>
     <div id="concept-resource-list" class="sidora-menu">
       <div id="concept-resource-list-internal"/>
-        <div class="workbench-nav resource-menu-holder">
+        <div class="workbench-nav resource-menu-holder" style="display:none">
           <ul id="resource-menu">
             <li><a href="#" onclick="return false;">Resources</a>
               <ul id="resource-files-menu">

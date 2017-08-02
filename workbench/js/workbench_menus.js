@@ -1,6 +1,5 @@
 jQuery(document).ready(function(){
   resetMenu("concept-menu");
-  resetMenu("resource-menu");
 });
 var resetMenu = function(menuId){
   jQuery("#"+menuId).addClass("sidoraMenu");
