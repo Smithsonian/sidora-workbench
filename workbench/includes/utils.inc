@@ -534,6 +534,7 @@ function sidora_mimetype_from_file_extension_override($filename) {
   $extension = pathinfo(strtolower($filename), PATHINFO_EXTENSION);
   $override_mapping = array(
     'nef' => 'image/x-nikon-nef',
+    'dng' => 'image/x-nikon-dng',
   );
   if (array_key_exists($extension, $override_mapping)) {
     return $override_mapping[$extension];
@@ -1200,6 +1201,7 @@ function sidora_get_file_extension_from_mime($file_mime_type, $get_mime = FALSE)
 				'application/vnd.ms-excel.sheet.binary.macroEnabled.12' => '.xlsb',
 				'image/png' => '.png',
         'audio/make.my.funk' => '.pfunk',
+        'image/x-adobe-dng' => '.dng',
         'image/x-nikon-nef' => '.nef',
         'image/x-raw' => '.raw',
         'image/x-portable-graymap' => '.pgm',
