@@ -1784,25 +1784,6 @@ function sidora_xsl_information($pid, $return_file_content = FALSE) {
 }
 
 /*
- * Performs the calls to the fedora server to get information for the resolver for OpenSeaDragon calls,
- * basic proxy with information set in Sidora admin with Sidora security
- */
-function sidora_osd_proxy($pid) {
-  global $user;
-  if (!sidora_allow($user,$pid,'view')) drupal_not_found();
-  $qs = $_SERVER['QUERY_STRING'];
-  $qs = str_replace(
-          urlencode("{replacer}"),
-          urlencode(variable_get('osd_proxy_pid_prefix', '')).
-          urlencode($pid).
-          urlencode(variable_get('osd_proxy_pid_postfix', '')),
-        $qs);
-  $url = variable_get('osd_proxy_resolver_url', '').'?'.$qs;
-  print file_get_contents($url);
-  drupal_exit();
-}
-
-/*
  * Creates a codebook in the Fedora repo and returns the Fedora object
  */
 function sidora_create_codebook_from_url($url, $codebook_label, $header_amount = 0) {
@@ -2615,9 +2596,6 @@ function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $ex
     islandora_video_add_datastream($object, 'MP4', $out_file, 'Display MP4.');
     file_unmanaged_delete($out_file);
 
-  }
-  if ($one == 'osd_proxy') {
-    sidora_osd_proxy($two);
   }
   if ($one == 'view_tabular') {
     return sidora_tabular_view_phpexcelreader($two,'OBJ');
@@ -10059,6 +10037,14 @@ function sidora_resource_version_viewer_display($pid, $dsid, $viewer, $version =
         sidora_view_ids_iframe($pid, $dsid);
         break;
       case 'OpenSeaDragon':
+        if ($dsid == 'OBJ') {
+          // override to show DISPLAY instead of OBJ on .nef files
+          $obj = sidora_obj($pid);
+          $name = $obj['OBJ']->label;
+          if (sidora_endsWith(strtolower($name), ".nef")){
+            $dsid = 'DISPLAY';
+          }
+        }
         sidora_view_openseadragon($pid, $dsid, $version);
         break;
       case 'PHPExcel':
@@ -10136,11 +10122,20 @@ function sidora_osd_proxy_version($pid, $datastream='OBJ', $version='0') {
   $ds = $obj[$datastream];
   $datastream_content = $ds[$version];
   $qs = $_SERVER['QUERY_STRING'];
+  $postfix = variable_get('osd_proxy_pid_postfix', '');
+  if ($datastream == 'DISPLAY' && strpos($postfix, '/OBJ/') !== FALSE) {
+      // override to show DISPLAY instead of OBJ on .nef files
+      $obj = sidora_obj($pid);
+      $name = $obj['OBJ']->label;
+      if (sidora_endsWith(strtolower($name), ".nef")){
+        $postfix = str_replace('/OBJ/','/DISPLAY/', $postfix);
+      }
+  }
   $qs = str_replace(
     urlencode("{replacer}"),
     urlencode(variable_get('osd_proxy_pid_prefix', '')).
     urlencode($pid).
-    urlencode(variable_get('osd_proxy_pid_postfix', '')).
+    urlencode($postfix).
     '?asOfDateTime=' .
     urlencode($datastream_content->createdDate),
     $qs
