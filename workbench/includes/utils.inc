@@ -534,7 +534,7 @@ function sidora_mimetype_from_file_extension_override($filename) {
   $extension = pathinfo(strtolower($filename), PATHINFO_EXTENSION);
   $override_mapping = array(
     'nef' => 'image/x-nikon-nef',
-    'dng' => 'image/x-nikon-dng',
+    'dng' => 'image/x-adobe-dng',
   );
   if (array_key_exists($extension, $override_mapping)) {
     return $override_mapping[$extension];
