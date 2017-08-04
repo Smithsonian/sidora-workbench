@@ -710,7 +710,7 @@ sidora.util.FirstVisibleNodeWithPid = function(pid) {
     if (jQuery("#"+a.id).length > 0) return a; else return null;
   })[0];
 }
-sidora.ProjectSpaces.DuplicateOrTransfer = function(type, conceptsOrResources) {
+sidora.ProjectSpaces.DuplicateOrTransfer = function(type, conceptsOrResources, specificPids) {
   var pids = [];
   var parentPid = null;
   if (conceptsOrResources == 'resources') {
@@ -724,6 +724,14 @@ sidora.ProjectSpaces.DuplicateOrTransfer = function(type, conceptsOrResources) {
     // parent SHOULD BE VISIBLE in order to see the current concept
     // project spaces have no parent pids, but they should not be transferrable or duplicatable
   }
+  // overwrite
+  if (typeof(specificPids) == 'string') {
+    pids = [specificPids]; 
+  }
+  if (typeof(specificPids) == 'object') {
+    pids = specificPids;
+  }
+
   var intro = sidora.ProjectSpaces.DuplicateOrTransferIntro(type, pids);
   intro += "<p>Choose a destination below:</p>";
   var onSubmit = function(){};
@@ -1398,7 +1406,7 @@ sidora.ResizeTree = function (e, ui)
   }
   divTwoWidth = (divTwoWidthPixels) / parent.width() * 100 + '%';
   divTwo.width(divTwoWidthPixels + 'px');
-  jQuery('#concept_tabs').css('width',divTwoWidthPixels-8+'px');
+  //jQuery('#concept_tabs').css('width',divTwoWidthPixels-8+'px'); //BBB TODO
   var treeWidth = parseInt(ui.element.outerWidth())+"px";
   divTwo.css("left",treeWidth);
   if (jQuery('#resourceInformationPane').is(':visible')) {
@@ -1442,7 +1450,7 @@ sidora.ResizeToBrowser = function(){
   jQuery("#concept_tabs").css("height",tabsHeight+"px");
   var baseMax = sidora.ResizeMaxWidth();
   var concept_tabsWidth = parseInt(baseMax-jQuery('#conceptResizable').outerWidth()-8);
-  jQuery("#concept_tabs").css("width",parseInt(baseMax-jQuery('#conceptResizable').outerWidth()-8)+"px");
+  //jQuery("#concept_tabs").css("width",parseInt(baseMax-jQuery('#conceptResizable').outerWidth()-8)+"px"); //BBB
   var tabContentHeight = tabsHeight - jQuery(".ui-tabs-nav").height();
   jQuery("#concept-resource-list").css("height",tabContentHeight);
   jQuery("#resourceResizable").css("height",'99%');
@@ -1705,8 +1713,14 @@ sidora.resources.getHighlighted = function(){
 /*
  * Open in a new viewer window
  */
-sidora.resources.openInNewWindow = function(){
+sidora.resources.openInNewWindow = function(downloadPids){
   var pids = sidora.resources.getHighlighted();
+  if (typeof(downloadPids) == 'string') {
+    pids = [downloadPids]; 
+  }
+  if (typeof(downloadPids) == 'object') {
+    pids = downloadPids;
+  }
   for(var i = 0; i < pids.length; i++){
    window.open(sidora.resources.createViewerUrl(pids[i]));
   }
@@ -1756,8 +1770,14 @@ sidora.performDuplicate = function(toLocationPid, pids, onSuccess) {
 /*
  * Direct download of the resource.  ASSUMES OBJ AS DSID
  */
-sidora.resources.download = function(){
+sidora.resources.download = function(downloadPids){
   var pids = sidora.resources.getHighlighted();
+  if (typeof(downloadPids) == 'string') {
+    pids = [downloadPids]; 
+  }
+  if (typeof(downloadPids) == 'object') {
+    pids = downloadPids;
+  }
   for(var i = 0; i < pids.length; i++){
     window.open(Drupal.settings.basePath+"sidora/info/"+pids[i]+"/meta/OBJ/download");
   }
@@ -2767,8 +2787,14 @@ sidora.resources.UserFriendlyListing = function(pids) {
 /*
  * Confirm with the user that they want the resource unassociated / deleted and performs the unassociate/delete
  */
-sidora.resources.DeleteResource = function(){
+sidora.resources.DeleteResource = function(pid){
   var allPids = sidora.resources.getHighlighted();
+  if (typeof(pid) == 'string') {
+    allPids = [pid];
+  }
+  if (typeof(pid) == 'object') {
+    allPids = pid;
+  }
   var sendOutPids = [];
   var removeLinksPids = [];
   var deletePids = [];
@@ -2894,42 +2920,43 @@ sidora.resources.individualPanel.Create = function() {
     var resourceName = sidora.resources.individualPanel.resourceOfInterest.name;
     sidora.manage.Open(resourcePid, resourceName, "Manage Resource", "Update resource information");
   });
-  jQuery('#edit-resource-metadata-menu, #view-resource-metadata').unbind('click');
-  jQuery('#edit-resource-metadata-menu, #view-resource-metadata').click(function(){
-  var pids = sidora.resources.getHighlighted();
+}
+sidora.resources.EditDetails = function(editPids){
   var pids_array = sidora.resources.getHighlighted();
+  if (typeof(editPids) == 'string') {
+    pids_array = [editPids]; 
+  }
+  if (typeof(editPids) == 'object') {
+    pids_array = editPids;
+  }
   pids = pids_array.join("&");
-    Shadowbox.open({
-      content:    Drupal.settings.basePath+"sidora/edit_metadata/"+pids+"",
-      player:     "iframe",
-      title:      "Resource Metadata",
-      options: {
-        onFinish:  function(){
-          //Allow the frame to go fullscreen if needed
-          jQuery("#sb-player").attr("allowfullscreen","true");
-          jQuery("#sb-player").attr("webkitallowfullscreen","true");
-          jQuery("#sb-player").attr("mozallowfullscreen","true");
-          jQuery("#sb-player").attr("msallowfullscreen","true");
-          jQuery("#sb-player").attr("oallowfullscreen","true");
-        }
+  Shadowbox.open({
+    content:    Drupal.settings.basePath+"sidora/edit_metadata/"+pids+"",
+    player:     "iframe",
+    title:      "Resource Metadata",
+    options: {
+      onFinish:  function(){
+        //Allow the frame to go fullscreen if needed
+        jQuery("#sb-player").attr("allowfullscreen","true");
+        jQuery("#sb-player").attr("webkitallowfullscreen","true");
+        jQuery("#sb-player").attr("mozallowfullscreen","true");
+        jQuery("#sb-player").attr("msallowfullscreen","true");
+        jQuery("#sb-player").attr("oallowfullscreen","true");
       }
-    });
+    }
   });
-  jQuery('#edit-resource-datastream-menu').unbind('click');
-  jQuery("#edit-resource-datastream-menu").click(function(){
-    var resourcePid = sidora.resources.individualPanel.resourceOfInterest.pid;
-    var resourceName = sidora.resources.individualPanel.resourceOfInterest.name;
-    jQuery('#addDatastreamDialog').remove();
-    jQuery("body").append("<div id='addDatastreamDialog' style='display:none;' title='Update Content'><iframe height='1000%' width='100%' style='height:100%;width:100%' src='"+Drupal.settings.basePath+"sidora/manage/"+resourcePid+"/upload_content' frameborder='0' marginwidth='0' marginheight='0' allowfullscreen></iframe></div>");
-    jQuery("#addDatastreamDialog").dialog({
+}
+sidora.resources.UpdateContent = function(resourcePid){
+  jQuery("body").append("<div id='addDatastreamDialog' style='display:none;' title='Update Content'><iframe height='1000%' width='100%' style='height:100%;width:100%' src='"+Drupal.settings.basePath+"sidora/manage/"+resourcePid+"/upload_content' frameborder='0' marginwidth='0' marginheight='0' allowfullscreen></iframe></div>");
+  jQuery("#addDatastreamDialog").dialog({
      resizable: true,
      height:600,
      width: 600,
      modal: true,
-    });
-    jQuery("#addDatastreamDialog").css("overflow", "hidden");
   });
-
+  jQuery("#addDatastreamDialog").css("overflow", "hidden");
+}
+sidora.resources.Vestigial = function(){
   //The overlay is needed to protect the cursor from being lost to the iframe
   //For example, here's what would happen during a drag toward the iframe:
   //Drag looks like it is going fine, once cursor jumps "inside" the iframe, the drag ends.  Mouse up is not captured by the dragged element, so
@@ -3320,6 +3347,7 @@ jQuery(function () {
 });
 
 jQuery(window).resize(function() {
+  return; //Temp disable BBB TODO
   var maxWidth = sidora.ResizeMaxWidth();
   if (
        (maxWidth < (parseInt(jQuery("#conceptResizable").css("min-width"))+parseInt(jQuery("#sidora_content_concept_info").css("min-width")))) || 

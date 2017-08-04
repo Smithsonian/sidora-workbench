@@ -3888,6 +3888,7 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
         $jsdt_data = array();
         foreach ($resources as $element) {
           if (array_key_exists('object',$element)) {
+            $element_pid = $element['object']['value'];
             $tn = '<img src="'.$GLOBALS['base_url'].'/'.drupal_get_path('module','sidora').'/images/mime/default.png" height="30" width="30"/>';
             if (array_key_exists('thumbnail_exists',$element) && $element['thumbnail_exists']) {
               $tn = '<img style="max-height:90px;max-width:150px;" src="../info/'.$element['object']['value'].'/meta/TN/browser" />';
@@ -3908,27 +3909,19 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
             $checkbox_id = 'checkbox_' . $element['object']['value'];
             $type = sidora_model_to_user_language($element['model']['value']);
             $creation_date = date_parse($element['created']['value']);
-            $operations = '<a href="" class="sidora-ui-link">Details</a> ';
-            $operations .= '<a href="" class="sidora-ui-link">Edit</a> ';
-            $operations .= '<a href="" class="sidora-ui-link">Update Content</a>';
+            $operations = '<a href="" onclick="sidora.resources.EditDetails(\'' . $element_pid . '\'); return false;" class="sidora-ui-link">Edit Details</a> ';
+            $operations .= '<a href="" onclick="sidora.resources.UpdateContent(\'' . $element_pid . '\'); return false;" class="sidora-ui-link">Update Content</a>';
             $operations .= '<br/>';
-            $operations .= '<a href="" class="sidora-ui-link">Link</a> ';
-            $operations .= '<a href="" class="sidora-ui-link">Duplicate</a> ';
-            $operations .= '<a href="" class="sidora-ui-link">Move</a>';
-            $resource_actions = '<a href="" class="sidora-ui-link" title="Open in New Window"><i class="material-icons">filter</i></a> ';
-            $resource_actions .= '<a href="" class="sidora-ui-link" title="Download"><i class="material-icons">file_download</i></a> ';
-            $resource_actions .= '<a href="" class="sidora-ui-link" title="Delete"><i class="material-icons">delete</i></a>';
+            $operations .= '<a href="" onclick="return false;" class="sidora-ui-link">Link</a> ';
+            $operations .= '<a href="" onclick="sidora.ProjectSpaces.DuplicateOrTransfer(\'duplicate\',\'resources\',\'' . $element_pid . '\'); return false;" class="sidora-ui-link">Duplicate</a> ';
+            $operations .= '<a href="" onclick="sidora.ProjectSpaces.DuplicateOrTransfer(\'transfer\',\'resources\',\'' . $element_pid . '\'); return false;" class="sidora-ui-link">Move</a>';
+            $resource_actions = '<a href="" onclick="sidora.resources.openInNewWindow(\'' . $element_pid . '\'); return false;" class="sidora-ui-link" title="Open in New Window"><i class="material-icons">filter</i></a> ';
+            $resource_actions .= '<a href="" onclick="sidora.resources.download(\'' . $element_pid . '\'); return false;" class="sidora-ui-link" title="Download"><i class="material-icons">file_download</i></a> ';
+            $resource_actions .= '<a href="" onclick="sidora.resources.DeleteResource(\'' . $element_pid . '\'); return false;" class="sidora-ui-link" title="Delete"><i class="material-icons">delete</i></a>';
             $jsdt_data[] = array(
               "DT_RowId"=>$element['object']['value'],
               0=>'<div class="sidora-bulk-action-check">
 <i class="material-icons"><div class="holder"></div></i></div>',
-/*
-<label for="'. $checkbox_id . '">GO</label>
-<input type="checkbox" id="' . $checkbox_id . '"/>
-<div>Control</div>
-</div>',
-*/
-              /*$element['o']['value'],*/
               1=>'<div class="sidora-info-holder" administered-by-pid="'.$element['administeredBy']['value'].'" num-links="'.$element['incomingLinks']['value'].'"></div><div class="resource-list-tn">'.$tn.'</div>',
               /*$element['m']['value'],*/
               2=>'<div class="resource-list-label">'.$element['title']['value'].'</div>',
