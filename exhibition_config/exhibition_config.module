@@ -1712,7 +1712,7 @@ function resizableEnd(){
 openVisibility = function() {
   var rootPid = \''.$pid.'\';
   Shadowbox.open({
-    content:    Drupal.settings.basePath+"/exhibition_config/visibility/"+rootPid,
+    content:    Drupal.settings.basePath+"exhibition_config/visibility/"+rootPid,
     player:     "iframe",
     title:      "Visibility",
     options: {
@@ -1763,7 +1763,10 @@ for(var i=0, len=els.length; i<len; ++i){
       $customUrl .= '<a class="exhibition-link-unavailable" onclick="return false;">'.$savedUrlFullPath.'</a>';
     }else{
       $savedUrlFullPath = variable_get('si_exhibition_website_location', '').$pid;
-      $customUrl = 'Current Url: <div id="highlight-to-copy-exhibition-url"><a target="_blank" href="'.$savedUrlFullPath.'">'.$savedUrlFullPath.'</a></div>';
+      $customUrl = 'Current Url: <div id="highlight-to-copy-exhibition-url">';
+      $customUrl .= '<a class="exhibition-link-available" target="_blank" href="'.$savedUrlFullPath.'">'.$savedUrlFullPath.'</a>';
+      $customUrl .= '<a class="exhibition-link-unavailable" href="#" onclick="return false;">'.$savedUrlFullPath.'</a>';
+      $customUrl .= '</div>';
     }
   }
   $form['custom_url'] = array(
