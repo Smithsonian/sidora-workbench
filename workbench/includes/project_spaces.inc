@@ -425,6 +425,10 @@ function sidora_get_groups_for_project_space($pid, $administrative_bookkeeping =
  */
 function sidora_project_spaces_tree($root_label = 'Project Spaces where you can create:', $include_href = FALSE, $permissions = array("create"), $start_open = TRUE, $num_levels = 3){
   $ignore_pid = filter_input(INPUT_GET, 'ignore_pid', FILTER_SANITIZE_STRING);
+  $specify_pids = filter_input(INPUT_GET, 'specify_pids', FILTER_SANITIZE_STRING);
+  if (!empty($specify_pids)) {
+    $specify_pids = explode(',', $specify_pids);
+  }
   $always_ignore_pids = array('si:root','si:user-projects');
   global $user;
   $nodes = sidora_get_project_spaces_by_member();
@@ -438,7 +442,11 @@ function sidora_project_spaces_tree($root_label = 'Project Spaces where you can 
   $to_return .= $root_label;
   foreach($nodes as $node) {
     $pid = $node->field_fedora_pid[$node->language][0]["safe_value"];
-    if ($ignore_pid != $pid && !in_array($pid, $always_ignore_pids)) {
+    if (
+      $ignore_pid != $pid && 
+      !in_array($pid, $always_ignore_pids) && 
+      (sizeof($specify_pids) == 0 || in_array($pid, $specify_pids))
+    ) {
       $continue_output = FALSE;
       if (empty($permissions)) {
         $continue_output = TRUE;

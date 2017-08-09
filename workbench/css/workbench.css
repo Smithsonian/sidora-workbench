@@ -201,6 +201,7 @@ li a input {
   padding-left: 10px;
 }
 .sidora-bulk-action-check i.material-icons {
+  cursor: pointer;
   border: 1px solid #444444;
   border-radius: 2px;
   font-size: 15px;
@@ -330,6 +331,48 @@ tr.selected i.holder {
 .dataTables_wrapper{
   width:50%;
 }
+tr.selected .sidora-bulk-action-check {
+  top: -1px;
+  position: relative;
+}
+table.resources-table thead th {
+  padding: 0px 1px 0px 0px;
+}
+table.resource-table {
+    font-family: Verdana,Arial,sans-serif;
+}
+
+table.resources-table th {
+    font-family: Verdana,Arial,sans-serif;
+    font-size: 7px;
+    font-weight: normal;
+    text-align: center;
+}
+
+table.resources-table th:nth-child(1) {
+    width: 27px;
+}
+table.resources-table th:nth-child(2) {
+    width: 150px;
+}
+table.resources-table th:nth-child(2) {
+    width: 150px;
+}
+table.resources-table th:nth-child(4) {
+    width: 43px;
+}
+table.resources-table th:nth-child(5) {
+    width: 130px;
+}
+table.resources-table th:nth-child(6) {
+    width: 54px;
+}
+table.resources-table th:nth-child(7) {
+    width: 235px;
+}
+table.resources-table th:nth-child(8) {
+    width: 135px;
+}
 .ui-resizable-w{
   width:20px;
 }
@@ -365,7 +408,7 @@ div.metadata-table {
   position: absolute;
 }
 #res_table {
-  width: 96%;
+  width: 100%;
 }
 #res_table_wrapper {
   width: 97%;

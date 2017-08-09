@@ -3819,7 +3819,14 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
           }
           header("Content-Disposition: attachment; filename=\"$filename\"");
         }
-        if ($formatted == 'html') {
+        if ($formatted == 'html_stylized') {
+          $converted = sidora_html_convert_entities($datastream_content);
+          // convert all the html entites to xml
+          module_load_include('inc', 'sidora', 'includes/xsl_handling');
+          print '<style>body { background: aliceblue; } </style>';
+          print '<div class="metadata-table" style="margin:20px;">'.sidora_metadata_to_html_table_transform($converted, $xsl_file).'</div>';
+        }
+        elseif ($formatted == 'html') {
           $converted = sidora_html_convert_entities($datastream_content);
           // convert all the html entites to xml
           module_load_include('inc', 'sidora', 'includes/xsl_handling');
@@ -3909,7 +3916,8 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
             $checkbox_id = 'checkbox_' . $element['object']['value'];
             $type = sidora_model_to_user_language($element['model']['value']);
             $creation_date = date_parse($element['created']['value']);
-            $operations = '<a href="" onclick="sidora.resources.EditDetails(\'' . $element_pid . '\'); return false;" class="sidora-ui-link">Edit Details</a> ';
+            $operations = '<a href="" onclick="sidora.resources.ShowDetails(\'' . $element_pid . '\'); return false;" class="sidora-ui-link">Details</a> ';
+            $operations .= '<a href="" onclick="sidora.resources.EditDetails(\'' . $element_pid . '\'); return false;" class="sidora-ui-link">Edit</a> ';
             $operations .= '<a href="" onclick="sidora.resources.UpdateContent(\'' . $element_pid . '\'); return false;" class="sidora-ui-link">Update Content</a>';
             $operations .= '<br/>';
             $operations .= '<a href="" onclick="return false;" class="sidora-ui-link">Link</a> ';
@@ -3939,8 +3947,8 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
       }
       if ($download == 'browser' && $formatted == 'html_placeholder') {
           $to_output = '<table id="res_table" class="display resources-table">';
-          $to_output .= '<thead style="display:none"><tr>';
-          $to_output .= '<th>Checkbox</th>';
+          $to_output .= '<thead><tr>';
+          $to_output .= '<th class="sidora-bulk-action-check"><i class="material-icons">&nbsp;</i></th>';
           $to_output .= '<th>Preview</th>';
           $to_output .= '<th>Name</th>';
           $to_output .= '<th>Type</th>';

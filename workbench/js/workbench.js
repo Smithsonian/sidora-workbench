@@ -131,7 +131,7 @@ window.sidora.display = {
   "CONSOLE_OUTPUT_TOO_MANY_TREE_FAILURES_SO_QUITTING" : Drupal.t("Too many tree failures without a success. Stopping retries."),
   "CONSOLE_OUTPUT_UNKNOWN_TREE_ISSUE" : Drupal.t("Unknown tree issue. Error code:surt1"),
 
-  "SIDORA_VERSION" : "0.5.2"
+  "SIDORA_VERSION" : "0.5.4"
 };
 /*
  * Retrieves the concept pid from the url
@@ -169,23 +169,69 @@ sidora.concept.LoadContentHelp.Resources.TableLoad = function(conceptOfInterest)
   });
   var table = jQuery('#res_table').DataTable();
   jQuery('#res_table').DataTable().clearPipeline().draw();
-  jQuery('#res_table tbody').on( 'click', 'tr', function (e) {
-    //If the mousedown is on something that is in the middle of a move process, ignore the mousedown
-    if (jQuery(this).hasClass("is-being-moved")){
-      console.log("Item is being moved, ignoring click");
-      return;
-    }
-    if ( jQuery(this).hasClass('selected') ) {
-      jQuery(this).removeClass('selected');
-      jQuery(this).find(".sidora-bulk-action-check i").text("");
+  // Check and uncheck the checkboxes on the left side
+  jQuery("table th.sidora-bulk-action-check").on( 'click', function (e) {
+    if (jQuery("tr.selected").length == 0) {
+      jQuery("#res_table tbody tr").addClass("selected");
+      jQuery("#res_table tbody tr .sidora-bulk-action-check i").text("check");
     } else {
-      jQuery(this).addClass('selected');
-      jQuery(this).find(".sidora-bulk-action-check i").text("check");
+      jQuery("#res_table tbody tr").removeClass("selected");
+      jQuery("#res_table tbody tr .sidora-bulk-action-check i").text("");
     }
-  }); //End onclick
-  table.on( 'length', function ( e, settings, len ) {
-    sidora_util.writeCookie('Drupal.pageLength',parseInt(len),'30')
+    sidora.resources.bulkActionSelectAction();
+    document.getSelection().removeAllRanges();
   });
+  setTimeout(function(){
+    jQuery("#res_table td:nth-child(1), #res_table td:nth-child(3), #res_table td:nth-child(4), #res_table td:nth-child(5), #res_table td:nth-child(6)").click(
+      function (e) {
+        var row = jQuery(this).parent();
+        // Use these columns only for the selections
+        //If the mousedown is on something that is in the middle of a move process, ignore the mousedown
+        if (jQuery(row).hasClass("is-being-moved")){
+          console.log("Item is being moved, ignoring click");
+          return;
+        }
+        if ( jQuery(row).hasClass('selected') ) {
+          jQuery(row).removeClass('selected');
+          jQuery(row).find(".sidora-bulk-action-check i").text("");
+        } else {
+          jQuery(row).addClass('selected');
+          jQuery(row).find(".sidora-bulk-action-check i").text("check");
+        }
+        sidora.resources.bulkActionSelectAction();
+      }
+    ); //End onclick
+    // Add the overlay for the resource viewer
+    jQuery("#res_table td:nth-child(2)").click(function(){
+      var pid = jQuery(this).parent().attr("id");
+      var url = Drupal.settings.basePath+"sidora/resource_viewer/"+pid;
+      Shadowbox.close();
+      setTimeout(function(){
+        Shadowbox.open({
+          content:    url,
+          player:     "iframe",
+          title:      Drupal.t('Resource Viewer'),
+          options: {
+            onFinish:  function(){}
+          }
+        });
+      },100);
+    });
+  },4000);
+}
+sidora.resources.bulkActionSelectAction = function(){
+  if (jQuery("tr.selected").length == 0) {
+    jQuery("th>i").html("&nbsp;");
+    jQuery("th>i").removeAttr("title","");
+  }
+  if (jQuery("tr.selected").length > 0) {
+    jQuery("th>i").text("indeterminate_check_box");
+    jQuery("th>i").attr("title","Unselect All");
+  }
+  if (jQuery("tr.selected").length == jQuery("#res_table tbody tr").length) {
+    jQuery("th>i").text("check");
+    jQuery("th>i").removeAttr("title","");
+  }
 }
 /*
  * Prepares the resource table to respond to user inputs: dragging, changing filters, entering search parameters
@@ -696,6 +742,9 @@ sidora.ProjectSpaces.DuplicateOrTransferIntro = function(type, pids) {
   if (type == "transfer") {
     intro = "You selected the following to be transferred:";
   }
+  if (type == "link") {
+    intro = "You selected for links to be created to the following:";
+  }
   intro += "</p><ul>";
   for(var pidIndex = 0; pidIndex < pids.length; pidIndex++) {
     intro += '<li>';
@@ -731,6 +780,14 @@ sidora.ProjectSpaces.DuplicateOrTransfer = function(type, conceptsOrResources, s
   if (typeof(specificPids) == 'object') {
     pids = specificPids;
   }
+  // Only allow things to get duplicated and moved outside of the current research space
+  var ignoredDestination = jQuery("#" + jQuery("#psdd-select").val()).children("a").attr("pid");
+  var specificDestination = '';
+  if (type == 'link') {
+    // Only allow links within the current research space
+    specificDestination = ignoredDestination;
+    ignoredDestination = '';
+  }
 
   var intro = sidora.ProjectSpaces.DuplicateOrTransferIntro(type, pids);
   intro += "<p>Choose a destination below:</p>";
@@ -747,11 +804,24 @@ sidora.ProjectSpaces.DuplicateOrTransfer = function(type, conceptsOrResources, s
       );
     }
   }
+  var title = '';
+  var description = '';
+  var operation = '';
   if (type == 'transfer') {
+    title = ("Transfer Object");
+    description = "transfer";
+    operation = 'move';
+  }
+  if (type == 'link') {
+    title = ("Link Object");
+    description = "link"
+    operation = 'copy';
+  }
+  if (type == 'transfer' || type == 'link') {
     onSubmit = function(destPid){
       sidora.util.Confirm(
-        Drupal.t("Transfer Object"),
-        Drupal.t("Confirm to transfer objects to %friendlyname", {"%friendlyname":sidora.util.FriendlyNameDirect(destPid)}),
+        Drupal.t(title),
+        Drupal.t("Confirm to " + description + " objects to %friendlyname", {"%friendlyname":sidora.util.FriendlyNameDirect(destPid)}),
         function(){
           var nodeMoveFrom = sidora.util.FirstVisibleNodeWithPid(parentPid);
           var nodeMoveTo = sidora.util.FirstVisibleNodeWithPid(destPid);
@@ -760,10 +830,10 @@ sidora.ProjectSpaces.DuplicateOrTransfer = function(type, conceptsOrResources, s
           }
           var nodeThatIsMoving = sidora.util.FirstVisibleNodeWithPid(pids[0]);
           if (nodeThatIsMoving == undefined) {
-            sidora.resources.performCopyOrMove('move', nodeMoveTo.id, pids);
+            sidora.resources.performCopyOrMove(operation, nodeMoveTo.id, pids);
             sidora.util.loadTreeSection(destPid);
           }
-          else {
+          else if (type == 'transfer') {
             var data = {};
             data.node = nodeThatIsMoving;
             data.parent = nodeMoveTo.id;
@@ -773,12 +843,14 @@ sidora.ProjectSpaces.DuplicateOrTransfer = function(type, conceptsOrResources, s
             sidora.concept.MoveNode(data);
             sidora.util.loadTreeSection(destPid);
           }
+          else if (type == 'link') {
+          }
           Shadowbox.close();
         }
       );
     }
   }
-  sidora.ProjectSpaces.ShowWhereToForm(intro, pids, onSubmit);
+  sidora.ProjectSpaces.ShowWhereToForm(intro, pids, ignoredDestination, specificDestination, onSubmit);
 }
 sidora.ProjectSpaces.DuplicateOrTransferHtml = function(selectionIntroHtml){
   var toReturn = "<div style='height:100%'>";
@@ -787,7 +859,19 @@ sidora.ProjectSpaces.DuplicateOrTransferHtml = function(selectionIntroHtml){
   toReturn += '<div id="destination-chosen" class="sidora-ui-text sidora-thin-button" style="float:right">Submit</div>';
   return toReturn;
 }
-sidora.ProjectSpaces.ShowWhereToForm = function(selectionIntro, pids, onSubmit){
+sidora.ProjectSpaces.ShowWhereToForm = function(selectionIntro, pids, ignorePid, specifyPids, onSubmit){
+  var params = {
+  };
+  if (typeof(ignorePid) == 'string' && ignorePid != '') {
+    params['ignore_pid'] = ignorePid;
+  }
+  if (typeof(specifyPids) == 'string' && specifyPids != '') {
+    params['specify_pids'] = specifyPids;
+  }
+  var query = jQuery.param(params);
+  if (query != '') {
+    query = '?' + query;
+  }
   setTimeout(function(){
     Shadowbox.open({
       content:    "<div style='height:100%;background:floralwhite;'><div style='padding:10px;height:calc(100% - 20px);'>"+sidora.ProjectSpaces.DuplicateOrTransferHtml(selectionIntro, onSubmit)+"</div></div>",
@@ -799,7 +883,7 @@ sidora.ProjectSpaces.ShowWhereToForm = function(selectionIntro, pids, onSubmit){
         onFinish:  function(){
           jQuery.ajax({
             // Do not include the current project space as a place to duplicate the tree
-            "url":Drupal.settings.basePath+"sidora/ajax_parts/research_spaces_tree?ignore_pid=" + jQuery("#" + jQuery("#psdd-select").val()).children("a").attr("pid"),
+            "url":Drupal.settings.basePath+"sidora/ajax_parts/research_spaces_tree" + query,
             "success":function(data){
               jQuery("#destination-tree").html(data);
               jQuery("#destination-tree").jstree({
@@ -2919,6 +3003,23 @@ sidora.resources.individualPanel.Create = function() {
     var resourcePid = sidora.resources.individualPanel.resourceOfInterest.pid;
     var resourceName = sidora.resources.individualPanel.resourceOfInterest.name;
     sidora.manage.Open(resourcePid, resourceName, "Manage Resource", "Update resource information");
+  });
+}
+sidora.resources.ShowDetails = function(showPid){
+  Shadowbox.open({
+    content:    Drupal.settings.basePath+"sidora/info/"+showPid+"/meta/sidora_xsl_config_variable/browser/html_stylized",
+    player:     "iframe",
+    title:      "Resource Metadata",
+    options: {
+      onFinish:  function(){
+        //Allow the frame to go fullscreen if needed
+        jQuery("#sb-player").attr("allowfullscreen","true");
+        jQuery("#sb-player").attr("webkitallowfullscreen","true");
+        jQuery("#sb-player").attr("mozallowfullscreen","true");
+        jQuery("#sb-player").attr("msallowfullscreen","true");
+        jQuery("#sb-player").attr("oallowfullscreen","true");
+      }
+    }
   });
 }
 sidora.resources.EditDetails = function(editPids){
