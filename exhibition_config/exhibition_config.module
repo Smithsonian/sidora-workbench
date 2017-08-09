@@ -63,6 +63,14 @@ function exhibition_config_menu(){
     'description' => t('Allows visibility configuration for the exhibition display for the Fedora Concept'),
     'type' => MENU_CALLBACK,
   );
+  $items['exhibition_config/unpublish'] = array(
+    'title' => t('Exhibition Unpublish'),
+    'page callback' => 'exhibition_config_unpublish',
+    'page arguments' => array(2),
+    'access arguments' => array('access content'),
+    'description' => t('Unpublish a specified exhibition'),
+    'type' => MENU_CALLBACK,
+  );
   $items['exhibition_config/ajax_parts'] = array(
       'title' => 'Ajax Parts',
       'description' => 'Specifically for use with ajax, returning HTML snippets',
@@ -547,6 +555,28 @@ function exhibition_config_form_validate($form, &$form_state){
     }
 }
 /*
+ * Quick unpublish
+ */
+function exhibition_config_unpublish($pid) {
+  if (!exhibition_config_allowed_to_edit($pid)) {
+    drupal_not_found();
+    drupal_exit();
+  }
+  $query = db_update('exhibition_config')
+      ->fields(array(
+        'is_available' => 0,
+        'last_published' => '',
+      ))
+      ->condition('pid', $pid);
+  $output = $query->execute();
+  if ($output == 1 || $output == 0){
+    print 'Success';
+  }
+  else {
+    print 'Unexpected return:' . $output;
+  }
+}
+/*
  * hook_form_submit for exhibition_config
  */
 function exhibition_config_form_submit($form, &$form_state) {
@@ -847,10 +877,13 @@ function exhibition_config_form($form, $form_state){
 <a href="javascript:void(0);" onclick="togglePreviewEditLinks();" title="Turns off the \'Edit\' quick links to get a better view of the sample, or turns them back on to quickly jump to a section to edit">Toggle Placeholder Text and Links</a><br/>';
   if ($row['is_published']) {
     $full .= '
-<a href="javascript:void(0);" onclick="window.open(\''.
+<a class="exhibition-link-available" href="javascript:void(0);" onclick="window.open(\''.
 variable_get('si_exhibition_website_location', '').
 $pid.'\')" title="Opens the current exhibit in a new window">Direct Link to Exhibition</a>';
+  
+   $full .= '<a class="exhibition-link-unavailable" href="javascript:void(0);" onclick="return false;">Direct Link to Exhibition</a>';
   }
+
   $full .= '
 <script>
 window.sidora = {
@@ -1676,6 +1709,18 @@ function resizableMove(e){
 function resizableEnd(){
     this.onmousemove = this.onmouseout = this.onmouseup = null;
 }
+openVisibility = function() {
+  var rootPid = \''.$pid.'\';
+  Shadowbox.open({
+    content:    Drupal.settings.basePath+"/exhibition_config/visibility/"+rootPid,
+    player:     "iframe",
+    title:      "Visibility",
+    options: {
+      onFinish:  function(){}
+    }
+  });
+}
+
 jQuery(document).ready(function(){
 
 var els = document.getElementsByClassName(\'resizable\');
@@ -1706,14 +1751,16 @@ for(var i=0, len=els.length; i<len; ++i){
     '#description' => t('This must be true to push the last edited state to last published state'),
   );
   $form['visibility_link'] = array(
-   '#markup' => t('<p> <a target="_blank" href="'.base_path().'exhibition_config/visibility/'.$pid.'">Configure Visibility</a> (which concepts and resources are shown)</p>'),
+   '#markup' => t('<p> <a href="#" onclick="openVisibility(); return false;">Configure Visibility</a> (which concepts and resources are shown)</p>'),
   );
   $customUrl = '';
   if ($row['is_published']) {
     $customUrl = $row['custom_url'];
     if (!empty($customUrl)){
       $savedUrlFullPath = variable_get('si_exhibition_friendly_website_location','').$customUrl;
-      $customUrl = 'Current Saved Custom Url:<br/> <a target="_blank" href="'.$savedUrlFullPath.'">'.$savedUrlFullPath.'</a>';
+      $customUrl = 'Current Saved Custom Url:<br/> ';
+      $customUrl .= '<a class="exhibition-link-available" target="_blank" href="'.$savedUrlFullPath.'">'.$savedUrlFullPath.'</a>';
+      $customUrl .= '<a class="exhibition-link-unavailable" onclick="return false;">'.$savedUrlFullPath.'</a>';
     }else{
       $savedUrlFullPath = variable_get('si_exhibition_website_location', '').$pid;
       $customUrl = 'Current Url: <div id="highlight-to-copy-exhibition-url"><a target="_blank" href="'.$savedUrlFullPath.'">'.$savedUrlFullPath.'</a></div>';
@@ -2798,7 +2845,7 @@ function exhibition_permission_form($form, $form_state){
   $form['visibility']['#tree'] = 'TRUE';
   $tree_html = '</ul></div>';
   $tree_html .= '<div id="action-bar"><div class="action-button"><a href="javascript:void(0);" class="button" id="change_all">Change All Selected</a></div><div class="action-button"><a href="javascript:void(0);" class="button" id="open-advanced">Advanced</a></div><div class="action-button">';
-  $post_html = '</div><div class="action-button"><a href="javascript:void(0);" class="button" id="cancel-button">Cancel</a></div>';
+  $post_html = '</div>';
   $post_html .= exhibition_config_create_page_links($checkbox_rows,$page_number,$objects_per_page);
   $post_html .= '<div id="advanced_hidden"></div></div></td>'; 
   $post_html .= "<script>

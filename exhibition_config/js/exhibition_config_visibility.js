@@ -114,7 +114,7 @@ fillInSidebar = function(){
   },5000);
 }
 resizeConceptTreePage = function() {
-  jQuery("#concept_tree").parent().height(jQuery(window).innerHeight()-(jQuery("#page").offset().top + 25));
+  jQuery("#concept_tree").parent().height(jQuery(window).innerHeight()-(jQuery("#page").offset().top + 50));
 }
 basicPagingSuccess = function(data){
   if (jQuery.trim(data)){
@@ -405,18 +405,6 @@ jQuery(function(){
   jQuery("input[type='submit']").click(function(event) {
     event.preventDefault();
     previewWithoutDownloadCheck();
-  });
-  jQuery("#cancel-button").click(function(event) {
-    var rootPid = jQuery("[name='pid']").val();
-    showOverlay("Processing"); 
-    jQuery.ajax({
-      dataType: "json",
-      method:"get",
-      url: Drupal.settings.basePath+'exhibition_config/ajax_parts/clear_session/'+rootPid,
-      success: function(data){
-        location.reload();
-      }
-    });
   });
 }); //Ends openAdvanced click
 /**
@@ -813,7 +801,7 @@ previewWithoutDownloadCheck = function() {
             };
             dialogConfig.buttons['Continue'] = function() {
               showProcessingSaveTime();
-              jQuery("#exhibition-permission-form").submit();
+              submitFormViaAjax();
               jQuery(this).dialog("destroy").remove();
             };
             dialogConfig.buttons['Cancel'] = function() {
@@ -827,12 +815,22 @@ previewWithoutDownloadCheck = function() {
       }
       else{
         showProcessingSaveTime();
-        jQuery("#exhibition-permission-form").submit();
+        submitFormViaAjax();
       } 
     }
   });
 }
-
+submitFormViaAjax = function() {
+  unpublish();
+  jQuery.ajax({
+    type: 'POST',
+    url: window.location.href,
+    data: jQuery("#exhibition-permission-form").serialize(),
+    success: function(){
+      jQuery(".save-information").html("Visibility Processing Complete");
+    }
+  });
+}
 showProcessingSaveTime = function() {
       var numPages = parseInt(jQuery("#sidora-resources-page-count").text());
       // Estimating 2 seconds per page
@@ -843,8 +841,25 @@ showProcessingSaveTime = function() {
       var hourText  = (hour > 12) ? ""+(hour - 12): ""+hour;
       var minuteText = (estimatedFinish.getMinutes() > 9) ? ""+estimatedFinish.getMinutes() : "0"+estimatedFinish.getMinutes();
       showOverlay(
-        "Processing...<br>Estimated completion time:<br>"+hourText+":"+minuteText+" "+am_pm,
+        "<div><div class='save-information'>Processing...<br>Estimated completion time:<br>"+hourText+":"+minuteText+" "+am_pm+"<hr></div></div><div style='font-size:15px'><br>On saving the visibility, the exhibition becomes unpublished.<br> Resave the exhibition to publish it.</div>",
         "width: 650px;margin:200px auto;height: 400px;font-size:48px;line-height: 1em;text-align: center;"
       );
+      
 }
 
+unpublish = function() {
+  var rootPid = jQuery("[name='pid']").val();
+  jQuery.ajax({
+    dataType: "text",
+    method:"get",
+    url: Drupal.settings.basePath+'exhibition_config/unpublish/'+rootPid
+  });
+  jQuery(".exhibition-link-available", window.parent.document).hide();
+  jQuery(".exhibition-link-unavailable", window.parent.document).show();
+};
+
+closeVisibility = function() {
+  if (window.parent != window) {
+    window.parent.Shadowbox.close();
+  }
+}

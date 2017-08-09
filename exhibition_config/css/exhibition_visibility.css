@@ -1,3 +1,6 @@
+#toolbar, .breadcrumb {
+  display: none;
+}
 .dialog_concept_tree {
   height: 90%; /* fallback for browsers without calc */
   width: 70%; /* fallback for browsers without calc */
