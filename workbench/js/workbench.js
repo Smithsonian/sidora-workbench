@@ -110,13 +110,13 @@ window.sidora.display = {
 
 
   // Permissions
-  "PROJECT_SPACE_PERMISSION_TITLE" : Drupal.t("Project Space Permission"),
-  "PROJECT_SPACE_CHOICE_CHANGE_PERMISSIONS" : Drupal.t("Change permissions of the current project space"),
-  "PROJECT_SPACE_CHOICE_TRANSFER_PS_TO_NEW_OWNER" : Drupal.t("Transfer this project space to a new owner"),
-  "PROJECT_SPACE_CHOICE_DUPLICATE_CONCEPT" : Drupal.t("Duplicate the selected concept and its children in another project space"),
-  "PROJECT_SPACE_CHOICE_TRANSFER_CONCEPT" : Drupal.t("Transfer the selected concept to another project space"),
-  "PROJECT_SPACE_CHOICE_DUPILCATE_RESOURCE" : Drupal.t("Duplicate the selected resources in another project space"),
-  "PROJECT_SPACE_CHOICE_TRANSFER_RESOURCE" : Drupal.t("Transfer the selected resources to another project space"),
+  "PROJECT_SPACE_PERMISSION_TITLE" : Drupal.t("Research Space Permission"),
+  "PROJECT_SPACE_CHOICE_CHANGE_PERMISSIONS" : Drupal.t("Change permissions of the current research space"),
+  "PROJECT_SPACE_CHOICE_TRANSFER_PS_TO_NEW_OWNER" : Drupal.t("Transfer this research space to a new owner"),
+  "PROJECT_SPACE_CHOICE_DUPLICATE_CONCEPT" : Drupal.t("Duplicate the selected concept and its children in another research space"),
+  "PROJECT_SPACE_CHOICE_TRANSFER_CONCEPT" : Drupal.t("Transfer the selected concept to another research space"),
+  "PROJECT_SPACE_CHOICE_DUPILCATE_RESOURCE" : Drupal.t("Duplicate the selected resources in another research space"),
+  "PROJECT_SPACE_CHOICE_TRANSFER_RESOURCE" : Drupal.t("Transfer the selected resources to another research space"),
 
 
   // Only ever put to console, doesn't actually display on browser screen
@@ -704,9 +704,6 @@ sidora.ProjectSpaces.isProjectSpace = function(pid) {
   }
   return false;
 }
-sidora.ProjectSpaces.isShareAvailable = function() {
-  // TBD check if the share button should be shown 
-}
 sidora.ProjectSpaces.isAbleToTransfer = function() {
   var projectSpaceRep = sidora.util.GetTreeNodesByPid(sidora.ProjectSpaces.currentPid())[0];
   if (typeof(projectSpaceRep) == 'undefined') {
@@ -783,10 +780,12 @@ sidora.ProjectSpaces.DuplicateOrTransfer = function(type, conceptsOrResources, s
   // Only allow things to get duplicated and moved outside of the current research space
   var ignoredDestination = jQuery("#" + jQuery("#psdd-select").val()).children("a").attr("pid");
   var specificDestination = '';
+  var specifiedDepth = null;
   if (type == 'link') {
     // Only allow links within the current research space
     specificDestination = ignoredDestination;
     ignoredDestination = '';
+    specifiedDepth = 10;
   }
 
   var intro = sidora.ProjectSpaces.DuplicateOrTransferIntro(type, pids);
@@ -830,7 +829,13 @@ sidora.ProjectSpaces.DuplicateOrTransfer = function(type, conceptsOrResources, s
           }
           var nodeThatIsMoving = sidora.util.FirstVisibleNodeWithPid(pids[0]);
           if (nodeThatIsMoving == undefined) {
-            sidora.resources.performCopyOrMove(operation, nodeMoveTo.id, pids);
+            if (typeof(nodeMoveTo) == 'undefined') {
+              // The place we're creating a link does not exist in the left tree, just do the actions: no tree update
+              sidora.resources.performCopyOrMoveFedoraActions('copy', parentPid, destPid, pids, function(){});
+            }
+            else {
+              sidora.resources.performCopyOrMove(operation, nodeMoveTo.id, pids);
+            }
             sidora.util.loadTreeSection(destPid);
           }
           else if (type == 'transfer') {
@@ -850,7 +855,7 @@ sidora.ProjectSpaces.DuplicateOrTransfer = function(type, conceptsOrResources, s
       );
     }
   }
-  sidora.ProjectSpaces.ShowWhereToForm(intro, pids, ignoredDestination, specificDestination, onSubmit);
+  sidora.ProjectSpaces.ShowWhereToForm(intro, pids, ignoredDestination, specificDestination, onSubmit, specifiedDepth);
 }
 sidora.ProjectSpaces.DuplicateOrTransferHtml = function(selectionIntroHtml){
   var toReturn = "<div style='height:100%'>";
@@ -859,7 +864,7 @@ sidora.ProjectSpaces.DuplicateOrTransferHtml = function(selectionIntroHtml){
   toReturn += '<div id="destination-chosen" class="sidora-ui-text sidora-thin-button" style="float:right">Submit</div>';
   return toReturn;
 }
-sidora.ProjectSpaces.ShowWhereToForm = function(selectionIntro, pids, ignorePid, specifyPids, onSubmit){
+sidora.ProjectSpaces.ShowWhereToForm = function(selectionIntro, pids, ignorePid, specifyPids, onSubmit, specifiedDepth){
   var params = {
   };
   if (typeof(ignorePid) == 'string' && ignorePid != '') {
@@ -872,6 +877,12 @@ sidora.ProjectSpaces.ShowWhereToForm = function(selectionIntro, pids, ignorePid,
   if (query != '') {
     query = '?' + query;
   }
+  // Specifically for links, allow the user to go down through a large amount of the tree
+  // Could also be expanded for non-link use in the future
+  var appendToUrl = '';
+  if (typeof(specifiedDepth) === 'number' || (typeof(specifiedDepth) == 'string' && specifiedDepth != '')) {
+    appendToUrl = '/' + specifiedDepth;
+  }
   setTimeout(function(){
     Shadowbox.open({
       content:    "<div style='height:100%;background:floralwhite;'><div style='padding:10px;height:calc(100% - 20px);'>"+sidora.ProjectSpaces.DuplicateOrTransferHtml(selectionIntro, onSubmit)+"</div></div>",
@@ -883,7 +894,7 @@ sidora.ProjectSpaces.ShowWhereToForm = function(selectionIntro, pids, ignorePid,
         onFinish:  function(){
           jQuery.ajax({
             // Do not include the current project space as a place to duplicate the tree
-            "url":Drupal.settings.basePath+"sidora/ajax_parts/research_spaces_tree" + query,
+            "url":Drupal.settings.basePath+"sidora/ajax_parts/research_spaces_tree" + appendToUrl + query,
             "success":function(data){
               jQuery("#destination-tree").html(data);
               jQuery("#destination-tree").jstree({
@@ -937,7 +948,7 @@ sidora.ProjectSpaces.ShowProjectSpaceTransferForm = function(pid){
     Shadowbox.open({
       content:    Drupal.settings.basePath+"sidora/project_space_transfer/"+pid,
       player:     "iframe",
-      title:      Drupal.t("Project Space Transfer"),
+      title:      Drupal.t("Research Space Transfer"),
       options: {
         onFinish:  function(){}
       }
@@ -1709,7 +1720,7 @@ sidora.InitiatePage = function(){
           Shadowbox.open({
             content:    Drupal.settings.basePath+"sidora/research_spaces",
             player:     "iframe",
-            title:      "Project Spaces",
+            title:      "Research Spaces",
             options:  {
               onClose: function(){
                 sidora.ProjectSpaces.refreshOptions();
@@ -1903,7 +1914,17 @@ sidora.resources.performCopyOrMove = function(copyOrMove, toLocationId, resource
     var oldParentExistingChildResourceNumber = parseInt(oldParentNode.a_attr.resourcechildren);
     var oldParentNewChildResourceNumber = oldParentExistingChildResourceNumber - 1;
     sidora.util.refreshConceptChildrenNumberDirect(fromParent, oldParentNewChildResourceNumber);
-  }  
+  }
+  var onSuccess = function(){};
+  if (action != 'copy') {
+    onSuccess = onSuccessfulMove;
+  }
+  else {
+    onSuccess = onSuccessfulCopy;
+  }
+  sidora.resources.performCopyOrMoveFedoraActions(action, fromParent, droppedOn, pids, onSuccess);
+}
+sidora.resources.performCopyOrMoveFedoraActions = function(action, fromParent, droppedOn, pids, onSuccess) {
   for(var i=0;i<pids.length;i++){
     droppedPid = pids[i];
     var userFriendlyName = sidora.display.UNKNOWN_ACTION;
@@ -1913,12 +1934,10 @@ sidora.resources.performCopyOrMove = function(copyOrMove, toLocationId, resource
       pidListForRequest = [fromParent,droppedOn,droppedPid];
       jQuery(jq(pids[i])).addClass("is-being-moved");
       userFriendlyName = sidora.display.MOVING;
-      onSuccess = onSuccessfulMove;
       queueAction = 'moveResource';
     }else{
       pidListForRequest = [droppedOn,droppedPid];
       userFriendlyName = sidora.display.COPYING;
-      onSuccess = onSuccessfulCopy;
       queueAction = 'copyResource';
     }
     userFriendlyName += " <em>"+sidora.util.FriendlyNameDirect(droppedPid)+"</em>";

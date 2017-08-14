@@ -3893,6 +3893,7 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
         $jsdt_response['orderOn'] = $jsdt_order_on;
         $jsdt_response['orderBy'] = $jsdt_order_by;
         $jsdt_data = array();
+        $linked_resources = '<div style="height: 0px;width: 100%;text-align: left;"><img style="position: relative;width: 20px;height: 20px;top: 65px;left:20px;" src="' . $GLOBALS['base_url'].'/'.drupal_get_path('module','sidora'). '/images/link.png" title="Linked Resource"></div>';
         foreach ($resources as $element) {
           if (array_key_exists('object',$element)) {
             $element_pid = $element['object']['value'];
@@ -3920,17 +3921,24 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
             $operations .= '<a href="" onclick="sidora.resources.EditDetails(\'' . $element_pid . '\'); return false;" class="sidora-ui-link">Edit</a> ';
             $operations .= '<a href="" onclick="sidora.resources.UpdateContent(\'' . $element_pid . '\'); return false;" class="sidora-ui-link">Update Content</a>';
             $operations .= '<br/>';
-            $operations .= '<a href="" onclick="return false;" class="sidora-ui-link">Link</a> ';
+            $operations .= '<a href="" onclick="sidora.ProjectSpaces.DuplicateOrTransfer(\'link\', \'resources\',\'' . $element_pid . '\'); return false;" class="sidora-ui-link">Link</a> ';
             $operations .= '<a href="" onclick="sidora.ProjectSpaces.DuplicateOrTransfer(\'duplicate\',\'resources\',\'' . $element_pid . '\'); return false;" class="sidora-ui-link">Duplicate</a> ';
             $operations .= '<a href="" onclick="sidora.ProjectSpaces.DuplicateOrTransfer(\'transfer\',\'resources\',\'' . $element_pid . '\'); return false;" class="sidora-ui-link">Move</a>';
             $resource_actions = '<a href="" onclick="sidora.resources.openInNewWindow(\'' . $element_pid . '\'); return false;" class="sidora-ui-link" title="Open in New Window"><i class="material-icons">filter</i></a> ';
             $resource_actions .= '<a href="" onclick="sidora.resources.download(\'' . $element_pid . '\'); return false;" class="sidora-ui-link" title="Download"><i class="material-icons">file_download</i></a> ';
             $resource_actions .= '<a href="" onclick="sidora.resources.DeleteResource(\'' . $element_pid . '\'); return false;" class="sidora-ui-link" title="Delete"><i class="material-icons">delete</i></a>';
+           
+            $thumbnail_html = '<div class="sidora-info-holder" administered-by-pid="'.$element['administeredBy']['value'].'" num-links="'.$element['incomingLinks']['value'].'"></div>';
+            $thumbnail_html .= '<div class="resource-list-tn">';
+            if ($pid != $element['administeredBy']['value']) {
+              $thumbnail_html .= $linked_resources; 
+            }
+            $thumbnail_html .= $tn.'</div>';
             $jsdt_data[] = array(
               "DT_RowId"=>$element['object']['value'],
               0=>'<div class="sidora-bulk-action-check">
 <i class="material-icons"><div class="holder"></div></i></div>',
-              1=>'<div class="sidora-info-holder" administered-by-pid="'.$element['administeredBy']['value'].'" num-links="'.$element['incomingLinks']['value'].'"></div><div class="resource-list-tn">'.$tn.'</div>',
+              1=>$thumbnail_html,
               /*$element['m']['value'],*/
               2=>'<div class="resource-list-label">'.$element['title']['value'].'</div>',
               3=>'<div class="">' . $type . '</div>',
