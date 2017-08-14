@@ -331,6 +331,9 @@ tr.selected i.holder {
 .dataTables_wrapper{
   width:50%;
 }
+.dataTables_info {
+  margin-top: 7px;
+}
 tr.selected .sidora-bulk-action-check {
   top: -1px;
   position: relative;
