@@ -411,7 +411,7 @@ div.metadata-table {
   width: 100%;
   display: inline-block;
   overflow: hidden;
-  margin-top: 42px;
+  padding-top: 42px;
 }
 #res_table td.highlight {
   background-color: whitesmoke !important;
@@ -422,6 +422,34 @@ div.metadata-table {
   width:100%;
   float:right;
   padding: 0;
+}
+#add-resource-button {
+    margin: 7px;
+    padding-left: 21px;
+    border: none;
+    background-color: forestgreen;
+    position: absolute;
+    top: 0;
+    right: 0;
+    color: white;
+}
+#add-resource-button span {
+    top: 3px;
+    position: absolute;
+    left: 4px;
+    font-size: 20px;
+    font-weight: bold;
+}
+#rt {
+  margin-top: 60px;
+}
+.dataTables_length label {
+  display: inline;
+}
+#sidora-resource-bulk-actions {
+  position: absolute;
+  top: 70px;
+  left: 0;
 }
 #iframeOverlay, #iframeTreeOverlay {
   height:100%;
@@ -530,8 +558,11 @@ Table paging
 */
 #sidora-resources-button-row {
   position: absolute;
-  top: 50px;
-  left: 270px;
+  top: 35px;
+  left: 40%;
+}
+#res_table_length {
+  margin-right: 5px;
 }
 .sidora-resources-icon.disabled{
   opacity:0.2;
@@ -611,18 +642,33 @@ Table paging
   text-shadow: none;
 }
 .sidora-resources-icon {
-  background-image: url('../images/assorted_glass%20buttons.png');
-  opacity:0.7;
+  opacity:1.0;
   display:inline-block;
-  height: 36px;
-  width: 36px;
+  width: 28px;
+  position: relative;
+  top: 7px;
+}
+#sidora-resources-button-prev {
+  -moz-transform: scale(-1, 1);
+  -webkit-transform: scale(-1, 1);
+  -o-transform: scale(-1, 1);
+  -ms-transform: scale(-1, 1);
+  transform: scale(-1, 1);
 }
 #sidora-resource-sort{
-  display: inline-block;
+  position: absolute;
+  top: 40px;
+  right: 10px;
+}
+#titleFilter {
+  border: solid 1px lightblue;
+  position: absolute;
+  top: 8px;
+  left: 10px;
 }
 #fjt-holder {
   overflow:auto;
-	height:inherit;
+  height:inherit;
 }
 .ui-widget-overlay, .ui-dialog.ui-widget.ui-widget-content {
   z-index: 1000;

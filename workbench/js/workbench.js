@@ -238,12 +238,26 @@ sidora.resources.bulkActionSelectAction = function(){
  */
 sidora.concept.LoadContentHelp.Resources.TableActionsSetup = function(){
   //Put a more compact pager in place
-  jQuery("#res_table_wrapper").before('<div id="sidora-resources-button-row" style=""><div id="sidora-resources-button-first" class="sidora-resources-icon" style="background-position: -306px -44px;"></div><div id="sidora-resources-button-prev" class="sidora-resources-icon" style="background-position: -231px -4px;"></div><div id="sidora-resources-pager" style="display:inline-block;vertical-align: top;padding-top: 7px;"><div id="sidora-resources-page-text" style="display:inline-block">Page</div><input id="sidora-resources-page-number" type="text" size="2" class="form-text"/><div id="sidora-resources-page-count" style="display:inline-block"></div></div><div id="sidora-resources-button-next" class="sidora-resources-icon" style="background-position: -270px -4px;"></div><div id="sidora-resources-button-last" class="sidora-resources-icon" style="background-position: -346px -44px;"></div></div>');
+  var buttonList = '<div id="sidora-resources-button-row" style="">';
+  buttonList +=   '<div id="sidora-resources-button-first" class="sidora-resources-icon" style=""><i class="material-icons">fast_rewind</i></div>';
+  buttonList +=   '<div id="sidora-resources-button-prev" class="sidora-resources-icon" style=""><i class="material-icons">play_arrow</i></div>';
+  buttonList +=   '<div id="sidora-resources-pager" style="display:inline-block;vertical-align: top;padding-top: 7px;">';
+  buttonList +=     '<div id="sidora-resources-page-text" style="display:inline-block">Page</div>';
+  buttonList +=     '<input id="sidora-resources-page-number" type="text" size="2" class="form-text"/>';
+  buttonList +=     '<div id="sidora-resources-page-count" style="display:inline-block"></div>';
+  buttonList +=   '</div>';
+  buttonList +=   '<div id="sidora-resources-button-next" class="sidora-resources-icon" style=""><i class="material-icons">play_arrow</i></div>';
+  buttonList +=   '<div id="sidora-resources-button-last" class="sidora-resources-icon" style=""><i class="material-icons">fast_forward</i></div>';
+  buttonList += '</div>';
+  jQuery("#res_table_wrapper").append(buttonList);
   jQuery("#sidora-resources-button-first").click(function(){ jQuery(".paginate_button.first").click();  });
   jQuery("#sidora-resources-button-prev").click(function(){ jQuery(".paginate_button.previous").click();  });
   jQuery("#sidora-resources-button-next").click(function(){ jQuery(".paginate_button.next").click();  });
   jQuery("#sidora-resources-button-last").click(function(){ jQuery(".paginate_button.last").click();  });
   jQuery("#res_table_paginate").hide();
+  jQuery("#res_table_wrapper").append('<input type="text" name="titleFilter" id="titleFilter" placeholder="Search Resources" style="border: solid 1px lightblue;">');
+  jQuery("#res_table_wrapper").append('<a id="add-resource-button" href="#" onclick="return false;" class="sidora-thin-button"><span>+</span>Add New Resources</a>');
+  jQuery("#res_table_wrapper").append('<select id="sidora-resource-bulk-actions" class="form-select"><option value="">Bulk Actions</option><option value="duplicate">Duplicate</option><option value="move">Move</option><option value="delete">Delete</option></select>');
   jQuery("#sidora-resources-page-number").change(function(){
     jQuery(".paginate_input").val(jQuery("#sidora-resources-page-number").val()).change();
   }); 
@@ -309,11 +323,11 @@ sidora.concept.LoadContentHelp.Resources.TableActionsSetup = function(){
       '<div id="jstree-dnd" class="jstree-default"><i class="jstree-icon jstree-er"></i>' + jQuery(this).text() + '<span class="fakejstree-copy" style="'+displayPlusToIndicateCopy+'">+</span></div>'
     );
   });
-  jQuery('#res_table_filter').after('<select id=\"sidora-resource-type-dropdown\" class="form-select" name=\"search\"><option value=\"\">'+htmlEntities(sidora.display.RESOURCES_DD_ALL)+'</option><option value=\"images\">'+htmlEntities(sidora.display.RESOURCES_DD_IMAGE) + '</option><option value=\"pdf\">'+htmlEntities(sidora.display.RESOURCES_DD_DIGITIZED_TEXT) +'</option><option value=\"csv\">'+htmlEntities(sidora.display.RESOURCES_DD_TABULAR_DATASET)+'</option><option value=\"audio\">'+htmlEntities(sidora.display.RESOURCES_DD_AUDIO)+'</option><option value=\"video\">'+htmlEntities(sidora.display.RESOURCES_DD_VIDEO)+'</option></select><input type="text" name="titleFilter" id="titleFilter" style="border: solid 1px lightblue;">');
+  jQuery('.dataTables_length').append(' of type <select id=\"sidora-resource-type-dropdown\" class="form-select" name=\"search\"><option value=\"\">'+htmlEntities(sidora.display.RESOURCES_DD_ALL)+'</option><option value=\"images\">'+htmlEntities(sidora.display.RESOURCES_DD_IMAGE) + '</option><option value=\"pdf\">'+htmlEntities(sidora.display.RESOURCES_DD_DIGITIZED_TEXT) +'</option><option value=\"csv\">'+htmlEntities(sidora.display.RESOURCES_DD_TABULAR_DATASET)+'</option><option value=\"audio\">'+htmlEntities(sidora.display.RESOURCES_DD_AUDIO)+'</option><option value=\"video\">'+htmlEntities(sidora.display.RESOURCES_DD_VIDEO)+'</option></select>');
   if (sidora_util.readCookie('Drupal.dtFilter') != ''){
     jQuery("#sidora-resource-type-dropdown").val(sidora_util.readCookie('Drupal.dtFilter'));
   }   
-  jQuery('#titleFilter').after(' <div id="sidora-resource-sort">'+htmlEntities(sidora.display.RESOURCES_DD_SORT_TITLE)+'<select id=\"sidora-resource-sort-dropdown\" class="form-select" name=\"sort\"><option value=\"title\">' + htmlEntities(sidora.display.RESOURCES_DD_TITLE)+'</option><option value=\"model\">'+htmlEntities(sidora.display.RESOURCES_DD_MODEL)+'</option><option value=\"created\" selected=\"selected\">'+htmlEntities(sidora.display.RESOURCES_DD_CREATED) + '</option></select></div>');
+  jQuery('#res_table_processing').before('<div id="sidora-resource-sort">'+htmlEntities(sidora.display.RESOURCES_DD_SORT_TITLE)+'<select id=\"sidora-resource-sort-dropdown\" class="form-select" name=\"sort\"><option value=\"title\">' + htmlEntities(sidora.display.RESOURCES_DD_TITLE)+'</option><option value=\"model\">'+htmlEntities(sidora.display.RESOURCES_DD_MODEL)+'</option><option value=\"created\" selected=\"selected\">'+htmlEntities(sidora.display.RESOURCES_DD_CREATED) + '</option></select></div>');
   jQuery('#sidora-resource-sort-dropdown').after('  <select id=\"sidora-resource-sortorder-dropdown\" class="form-select" name=\"sortorder\"><option value=\"ASC\">'+htmlEntities(sidora.display.ASCENDING) + '</option><option value=\"DESC\" selected=\"selected\">'+htmlEntities(sidora.display.DESCENDING) + '</option></select>');
   if (sidora_util.readCookie('Drupal.sortOn') != ''){
     jQuery('#sidora-resource-sort-dropdown').val(sidora_util.readCookie('Drupal.sortOn'));
@@ -1549,9 +1563,7 @@ sidora.ResizeToBrowser = function(){
   jQuery("#resourceResizable").css("height",'99%');
   jQuery("#resourceInformationPane").css("height",tabContentHeight+'px')
   jQuery("#resourceInformationPane").css("padding-right",'15px');
-  jQuery("#concept-resource-list-internal").css("height",'100%');
   var conceptMetaHeight = tabContentHeight - (56);
-  jQuery("#concept-meta div.metadata-table").height(conceptMetaHeight+"px");
   jQuery("#concept-meta div.metadata-table").css("overflow","auto");
   var resourceTabContentHeight = tabContentHeight - jQuery(".ui-tabs-nav").height() - 5; //5 for padding and border
   jQuery("#resourceIframeHolder").css("width",'99%');
@@ -3472,6 +3484,10 @@ jQuery(window).resize(function() {
   jQuery("#res_table").css("width","100%");
   jQuery("#conceptResizable").height(jQuery(window).height() - 110);
   jQuery("#concept_tabs").height(jQuery(window).height() - 180);
+  jQuery("#concept-meta").height(jQuery(window).height() - 270);
+  jQuery("#rt").height(jQuery(window).height() - 370);
+  jQuery("#concept-resource-list").height(jQuery(window).height() - 250);
+  jQuery("#concept-meta div.metadata-table").height(jQuery(window).height() - 270);
   return;
 //  return; //Temp disable BBB TODO
   var maxWidth = sidora.ResizeMaxWidth();
