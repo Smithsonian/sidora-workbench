@@ -1419,7 +1419,7 @@ sidora.InitiateJSTree = function(){
 sidora.ReformatPage = function(){
   jQuery(".breadcrumb").hide();
   jQuery("#page").css("padding","0");
-  jQuery("#concept_tabs").css("position","fixed");
+  jQuery("#concept_tabs").css("position","relative");
   jQuery("#concept-resource-list").css("padding","0");
   jQuery("#concept-resource-list").css("height","100%");
 }
@@ -1501,7 +1501,6 @@ sidora.ResizeTree = function (e, ui)
   }
   divTwoWidth = (divTwoWidthPixels) / parent.width() * 100 + '%';
   divTwo.width(divTwoWidthPixels + 'px');
-  //jQuery('#concept_tabs').css('width',divTwoWidthPixels-8+'px'); //BBB TODO
   var treeWidth = parseInt(ui.element.outerWidth())+"px";
   divTwo.css("left",treeWidth);
   if (jQuery('#resourceInformationPane').is(':visible')) {
@@ -1545,7 +1544,6 @@ sidora.ResizeToBrowser = function(){
   jQuery("#concept_tabs").css("height",tabsHeight+"px");
   var baseMax = sidora.ResizeMaxWidth();
   var concept_tabsWidth = parseInt(baseMax-jQuery('#conceptResizable').outerWidth()-8);
-  //jQuery("#concept_tabs").css("width",parseInt(baseMax-jQuery('#conceptResizable').outerWidth()-8)+"px"); //BBB
   var tabContentHeight = tabsHeight - jQuery(".ui-tabs-nav").height();
   jQuery("#concept-resource-list").css("height",tabContentHeight);
   jQuery("#resourceResizable").css("height",'99%');
@@ -3026,7 +3024,7 @@ sidora.resources.individualPanel.Create = function() {
 }
 sidora.resources.ShowDetails = function(showPid){
   Shadowbox.open({
-    content:    Drupal.settings.basePath+"sidora/info/"+showPid+"/meta/sidora_xsl_config_variable/browser/html_stylized",
+    content:    Drupal.settings.basePath+"sidora/ajax_parts/details/"+showPid,
     player:     "iframe",
     title:      "Resource Metadata",
     options: {
@@ -3467,7 +3465,15 @@ jQuery(function () {
 });
 
 jQuery(window).resize(function() {
-  return; //Temp disable BBB TODO
+  var spaceOnRight = jQuery(window).width() - jQuery("html").width() - jQuery("#conceptResizable").width();
+  // Set our minimum size of the concept information to be 1000 pixels
+  var setWidthTo = Math.max(jQuery("html").width() - jQuery("#conceptResizable").width(), 900);
+  jQuery("#sidora_content_concept_info").width(setWidthTo);
+  jQuery("#res_table").css("width","100%");
+  jQuery("#conceptResizable").height(jQuery(window).height() - 110);
+  jQuery("#concept_tabs").height(jQuery(window).height() - 180);
+  return;
+//  return; //Temp disable BBB TODO
   var maxWidth = sidora.ResizeMaxWidth();
   if (
        (maxWidth < (parseInt(jQuery("#conceptResizable").css("min-width"))+parseInt(jQuery("#sidora_content_concept_info").css("min-width")))) || 
@@ -3482,7 +3488,7 @@ jQuery(window).resize(function() {
   else{ 
     if (parseInt(jQuery("#sidora_content_concept_info").width()) > 1000){
       jQuery("#concept-meta,#concept-relationships,#concept-resource-list").css("min-width","");
-      jQuery("#concept_tabs").css("position","fixed");
+      jQuery("#concept_tabs").css("position","relative");
     } 
   } 
   sidora.ResizeOnWindowResize();

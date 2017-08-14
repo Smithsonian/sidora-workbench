@@ -385,9 +385,6 @@ table.resources-table th:nth-child(8) {
   display:inline-block;
   width:40%;
 }
-#concept-resource-list, #concept-meta , #res_table_wrapper{
-  min-height: 600px;
-}
 #concept-meta , #res_table_wrapper{
   min-width: 270px;
 }

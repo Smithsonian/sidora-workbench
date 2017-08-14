@@ -3819,14 +3819,7 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
           }
           header("Content-Disposition: attachment; filename=\"$filename\"");
         }
-        if ($formatted == 'html_stylized') {
-          $converted = sidora_html_convert_entities($datastream_content);
-          // convert all the html entites to xml
-          module_load_include('inc', 'sidora', 'includes/xsl_handling');
-          print '<style>body { background: aliceblue; } </style>';
-          print '<div class="metadata-table" style="margin:20px;">'.sidora_metadata_to_html_table_transform($converted, $xsl_file).'</div>';
-        }
-        elseif ($formatted == 'html') {
+        if ($formatted == 'html') {
           $converted = sidora_html_convert_entities($datastream_content);
           // convert all the html entites to xml
           module_load_include('inc', 'sidora', 'includes/xsl_handling');
@@ -4706,6 +4699,40 @@ function sidora_ajax_parts($call_type, $param1 = '', $param2 = '', $param3 = '')
       print '{ "root_is_valid":true }';
     }
     drupal_exit();
+  }
+  if ($call_type == 'details') {
+    $pid = $param1;
+    $obj = sidora_obj($pid);
+    if (empty($obj)) return 'not found';
+    // Sidora specific
+    drupal_add_css(drupal_get_path('module','sidora') . '/css/workbench.css', array('weight' => 10000, 'group' => CSS_THEME));
+    drupal_add_css(drupal_get_path('module','sidora') . '/css/iconfont/material-icons.css', array('weight' => 10000, 'group' => CSS_THEME));
+    drupal_add_library('system','ui.tabs');
+    $to_return = "<script>jQuery(document).ready(function(){
+      jQuery('#branding, #toolbar').hide();
+      jQuery('body').css('padding-top','0px');
+      jQuery('#concept_tabs .choosable-tab').height(jQuery(window).height()-140);
+      jQuery('#concept_tabs .choosable-tab').css('border-top','2px solid gray');
+      jQuery('#concept_tabs').tabs();
+      jQuery('#page').show();
+    });</script>";
+    $to_return .= '
+  <div id="concept_tabs">
+    <ul>
+      <li><a href="#details-tab"><i class="material-icons">info</i><div class="sidora-ui-text sidora-ui-link" style="float:right;margin: 3px 0 0 4px;">Details</div></a></li>
+      <li><a href="#links-tab"><i class="material-icons">panorama</i><div class="sidora-ui-text sidora-ui-link" style="float:right;margin: 3px 0 0 4px;">Links</div></a></li>
+    </ul>
+    <div id="details-tab" class="choosable-tab">
+      <iframe src="'.base_path().'sidora/info/'.$pid.'/meta/sidora_xsl_config_variable/browser/html"></iframe>
+    </div>
+    <div id="links-tab" class="choosable-tab">';
+    $to_return .= sidora_get_parent_table($pid);
+    $to_return .= sidora_get_related_codebook_table($pid);
+    $to_return .= '
+    </div>
+  </div>
+    ';
+    return $to_return; 
   }
   if ($call_type == 'check_batch_status') {
     $request_id = $param1;
