@@ -197,7 +197,6 @@ function exhibition_config_ajax_parts($op,$pid,$arg1='',$arg2=''){
         $saved_visibility = exhibition_config_load_visibility_for_configuration($pid);
         $visibility_array = array_slice($checkbox_rows,$session_page_offset,$objects_per_session_page);
         $session_starting_page = exhibition_config_get_page($session_page_offset,$per_page);
-        //$session_ending_page = exhibition_config_get_page($session_page_offset+$per_page-1,$per_page);
         $tree_html = '';
         $visibility_array = exhibition_config_update_visibility($visibility_array,$saved_visibility,$tree_html);
         exhibition_config_set_visibility_page($pid,$session_key,json_encode($visibility_array));
@@ -210,7 +209,6 @@ function exhibition_config_ajax_parts($op,$pid,$arg1='',$arg2=''){
       $visibility_array = array_slice($visibility_array,$current_page_offset,$per_page);
       $current_page = $visibility_array;
       $to_return = '';
-      //if ($page_number > 1) $to_return = '<ul class="visibility-list-table paged">';
       foreach ($current_page as $visibility_path => $visibility_row) {
         if ((is_array($visibility_row)) && (array_key_exists('show_name',$visibility_row))) {
           foreach($visibility_row as $visibility_key => $visibility_value) {

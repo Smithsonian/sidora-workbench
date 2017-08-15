@@ -77,6 +77,7 @@ function exhibition_config_menu(){
       'page callback' => 'exhibition_config_ajax_parts',
       'access callback' => 'user_is_logged_in',
       'type' => MENU_CALLBACK,
+      'file' => 'exhibition_config.session_storage.inc',
   );
   $items['exhibition_config/view_session_visibility'] = array(
       'title' => 'Ajax Parts',
@@ -1751,7 +1752,7 @@ for(var i=0, len=els.length; i<len; ++i){
     '#description' => t('This must be true to push the last edited state to last published state'),
   );
   $form['visibility_link'] = array(
-   '#markup' => t('<p> <a href="#" onclick="openVisibility(); return false;">Configure Visibility</a> (which concepts and resources are shown)</p>'),
+   '#markup' => t('<p> <a href="' . $GLOBALS['base_url'] . '/exhibition_config/visibility/' . $pid . '" onclick="openVisibility(); return false;">Configure Visibility</a> (which concepts and resources are shown)</p>'),
   );
   $customUrl = '';
   if ($row['is_published']) {
