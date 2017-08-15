@@ -2333,7 +2333,8 @@ function exhibition_config_generate_checkboxes($branch,&$rows,$visibility_settin
         'prefix' => $html,
         'suffix' => '</li>',
         //'suffix' => '</tr>',
-        'checkboxes' => $checkboxes_array);
+        'checkboxes' => $checkboxes_array
+      );
       if ((isset($child_array['children'])) && (sizeof($child_array['children']) > 0)) {
         $rows[$array_index]['suffix'] .= '<ul class="visibility-list-table" id="' . $array_index . '">';
         //$rows[$array_index]['suffix'] .= '<table class="visibility-list-table" id="' . $array_index . '">';

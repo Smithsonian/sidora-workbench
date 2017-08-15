@@ -216,7 +216,18 @@ function exhibition_config_ajax_parts($op,$pid,$arg1='',$arg2=''){
               $to_return .= $visibility_value['#prefix'];
               if ($visibility_value['#type'] == 'checkbox') {
                 $to_return .= '<div class="form-item form-type-checkbox form-item-visibility-' . $visibility_path . '-' . $visibility_key . '">';
-                $to_return .= '<input label="' . (isset($visibility_value['#attributes']['label'])?$visibility_value['#attributes']['label']:'') . '" pid="' . (isset($visibility_value['#attributes']['pid'])?$visibility_value['#attributes']['pid']:'') . '" path="' . (isset($visibility_value['#attributes']['path'])?$visibility_value['#attributes']['path']:'') . '" model="' . (isset($visibility_value['#attributes']['model'])?$visibility_value['#attributes']['model']:'') . '" type="checkbox" class="' . $visibility_key . ' form-checkbox"  name="visibility[' . $visibility_path . '][' . $visibility_key . ']" id="edit-visibility-' . str_replace('_','-',$visibility_key) . '" value="1"' . ($visibility_value['#default_value']=="1"?' checked="checked"':'') . '>';
+                $to_return .= '<input ';
+                $to_return .= 'label="' . (isset($visibility_value['#attributes']['label'])?$visibility_value['#attributes']['label']:'') . '" ';
+                $to_return .= 'pid="' . (isset($visibility_value['#attributes']['pid'])?$visibility_value['#attributes']['pid']:'') . '" ';
+                $to_return .= 'path="' . (isset($visibility_value['#attributes']['path'])?$visibility_value['#attributes']['path']:'') . '" ';
+                $to_return .= 'model="' . (isset($visibility_value['#attributes']['model'])?$visibility_value['#attributes']['model']:'') . '" ';
+                $to_return .= 'type="checkbox" ';
+                $to_return .= 'class="' . $visibility_key . ' form-checkbox" ';
+                $to_return .= 'name="visibility[' . $visibility_path . '][' . $visibility_key . ']" ';
+                $to_return .= 'id="edit-visibility-' . str_replace(array(':','/'), '', str_replace('_','-',$visibility_path . '-' . $visibility_key)) . '" ';
+                $to_return .= 'value="1" ';
+                $to_return .= ($visibility_value['#default_value']=="1"?' checked="checked"':'');
+                $to_return .= '>';
                 $to_return .= '</div>';
               }
               $to_return .= $visibility_value['#suffix'];

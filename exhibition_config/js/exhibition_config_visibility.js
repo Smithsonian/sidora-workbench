@@ -223,12 +223,19 @@ jQuery(function(){
                 showOverlay("Processing...");
                 visibilitySettings = {};
                 visibilitySettings['show_name'] = '1';
+                var multivisibility = {};
+                for (var parentIndex = 0; parentIndex < invisibleParents.length; parentIndex++) {
+                  multivisibility[invisibleParents[parentIndex]] = visibilitySettings;
+                }
+                multivisibility[pidPath] = {
+                  'show_name' : '1', 'show_meta' : '1','show_preview' : '1', 'show_degraded' : '1','allow_download' : '1'
+                } 
                 jQuery.ajax({
                   dataType: "json",
                   method:"post",
-                  url: Drupal.settings.basePath+'exhibition_config/ajax_parts/set_visibility/'+rootPid,
-                  data: {"csv_pids":invisibleParents.join(),
-                         "visibility":JSON.stringify(visibilitySettings)},
+                  url: Drupal.settings.basePath+'exhibition_config/ajax_parts/set_visibility_multiple/'+rootPid,
+                  data: {
+                  "visibility":JSON.stringify(multivisibility)},
                   success: function(visibility){
                     if (jQuery("#"+resetCheckboxID).attr("name").indexOf("[show_name]") == -1) {
                       var parsedName = jQuery("#"+resetCheckboxID).attr("name").split("[");
