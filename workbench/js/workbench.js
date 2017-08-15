@@ -1530,7 +1530,6 @@ sidora.ResizeTree = function (e, ui)
     jQuery("#res_table_wrapper").css("margin-top","83px");
     jQuery("#sidora-resources-button-row").css("top","90px").css("left","20px");
   }else{
-    jQuery("#res_table_wrapper").css("margin-top","50px");
     jQuery("#sidora-resources-button-row").css("top","").css("left","");
   }
 };
@@ -3336,7 +3335,6 @@ sidora.resources.individualPanel.ResizeIt = function (e, ui)
     jQuery("#res_table_wrapper").css("margin-top","83px");
     jQuery("#sidora-resources-button-row").css("top","90px").css("left","20px");
   }else{
-    jQuery("#res_table_wrapper").css("margin-top","50px");
     jQuery("#sidora-resources-button-row").css("top","").css("left","");
   }
   
