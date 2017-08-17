@@ -4235,7 +4235,7 @@ function sidora_main_non_block_content() {
 function sidora_xml_form_builder_get_self_transforms() {
   // calls an include file to do the actual commands
   // The choice to not use hook_hook_info is to future-protect and not have a mechanic that can go wrong in unexpected ways
-  module_load_include('inc', 'sidora', 'includes/sidora_admin_only.inc');
+  module_load_include('inc', 'sidora', 'includes/sidora_admin_only');
   return sidora_hook_xml_form_builder_get_self_transforms();
 }
 
@@ -4246,7 +4246,7 @@ function sidora_xml_form_builder_get_self_transforms() {
 function sidora_xml_form_builder_get_transforms() {
   // calls an include file to do the actual commands
   // The choice to not use hook_hook_info is to future-protect and not have a mechanic that can go wrong in unexpected ways
-  module_load_include('inc', 'sidora', 'includes/sidora_admin_only.inc');
+  module_load_include('inc', 'sidora', 'includes/sidora_admin_only');
   return sidora_hook_xml_form_builder_get_self_transforms();
 }
 
@@ -4288,7 +4288,7 @@ function sidora_block_view($delta = '') {
     height: 60px;
     border-bottom: 2px solid gray;
     margin-bottom: 10px;
-"><div class="branding-project-spaces" style=""> <a id="proj-space-button" href="#" onclick="return false;" class="sidora-thin-button" style="
+"><div class="branding-project-spaces" style=""> <a id="add-concept-button" href="#" onclick="sidora.AddConcept();return false;" class="sidora-thin-button" style="
     margin: 12px;
     padding-left: 21px;
     border: none;
@@ -4723,7 +4723,7 @@ function sidora_ajax_parts($call_type, $param1 = '', $param2 = '', $param3 = '')
       <li><a href="#links-tab"><i class="material-icons">panorama</i><div class="sidora-ui-text sidora-ui-link" style="float:right;margin: 3px 0 0 4px;">Links</div></a></li>
     </ul>
     <div id="details-tab" class="choosable-tab">
-      <iframe src="'.base_path().'sidora/info/'.$pid.'/meta/sidora_xsl_config_variable/browser/html"></iframe>
+      <iframe style="width:100%;height:100%" src="'.base_path().'sidora/info/'.$pid.'/meta/sidora_xsl_config_variable/browser/html"></iframe>
     </div>
     <div id="links-tab" class="choosable-tab">';
     $to_return .= sidora_get_parent_table($pid);
@@ -4733,6 +4733,42 @@ function sidora_ajax_parts($call_type, $param1 = '', $param2 = '', $param3 = '')
   </div>
     ';
     return $to_return; 
+  }
+  if ($call_type == 'create_concept' || $call_type == 'create_resource') {
+    $cr_type = 'concept';
+    $cr_json = variable_get('sidora_ontology_json','');
+    if ($call_type == 'create_resource') {
+      $cr_type = 'resource';
+      $cr_json = variable_get('sidora_resource_ontology_json','');
+    }
+    drupal_add_library('system','ui.tooltip');
+    drupal_add_css(drupal_get_path('module','sidora').'/css/sidora_create.css', array('weight' => 9000, 'group' => CSS_THEME));
+    $pid = $param1;
+    if (empty($pid)) {
+      return t("New objects must have a parent, no parent found");
+    }
+    $to_return = 'Select type of ' . $cr_type . ':';
+    $to_return .= sidora_create_html_list_from_json($cr_json, $pid, $cr_type);
+    $to_return .= '
+<script>
+jQuery(document).ready(function(){
+  jQuery("body").css("padding-top", "0");
+  var accordionsMenu = jQuery(\'.cd-accordion-menu\');
+  if( accordionsMenu.length > 0 ) {
+    accordionsMenu.each(function(){
+      var accordion = jQuery(this);
+      //detect change in the input[type="checkbox"] value
+      accordion.on(\'change\', \'input[type="checkbox"]\', function(){
+        var checkbox = jQuery(this);
+        ( checkbox.prop(\'checked\') ) ? checkbox.siblings(\'ul\').attr(\'style\', \'display:none;\').slideDown(300) : checkbox.siblings(\'ul\').attr(\'style\', \'display:block;\').slideUp(300);
+      });
+    });
+  }
+  jQuery(document).tooltip();
+});
+</script>
+';
+    return $to_return;
   }
   if ($call_type == 'check_batch_status') {
     $request_id = $param1;
@@ -4822,6 +4858,45 @@ function sidora_ajax_parts($call_type, $param1 = '', $param2 = '', $param3 = '')
 drupal_not_found();
 }
 
+function sidora_create_html_list_from_json($json, $parent_pid, $resource_or_concept) {
+  $obj = json_decode($json, TRUE);
+  $to_return = '<ul class="cd-accordion-menu animated">';
+  foreach($obj as $name => $val) {
+    $to_return .= sidora_create_html_li_from_obj($name, $val, $parent_pid, $resource_or_concept);
+  }
+  $to_return .= '</ul>';
+  return $to_return;
+}
+function sidora_create_html_li_from_obj($name, $obj, $parent_pid, $resource_or_concept) {
+  $li_classes = '';
+  $inner_content = '';
+  if (array_key_exists('children',$obj) && !empty($obj['children'])) {
+    $li_classes = 'has-children';
+    $inner_content = '<input type="checkbox" name="' . $name . '" id="' . $name . '">';
+    $inner_content .= '<label for="' . $name . '">' . $name . '</label>';
+    $inner_content .= '<ul>';
+    foreach($obj['children'] as $child_name => $child_val) {
+      $inner_content .= sidora_create_html_li_from_obj($child_name, $child_val, $parent_pid, $resource_or_concept); 
+    }
+    $inner_content .= '</ul>';
+    
+  }
+  else {
+    if (!empty($obj['disabled']) && $obj['disabled']) {
+      $li_classes = 'future-item';
+      $inner_content = "<a>" . $name . "</a>";
+    }
+    else {
+      $li_classes = 'current-item';
+      $ontology =  array_key_exists('ontology-id',$obj)?$obj['ontology-id']:'no-ontology-id-set';
+      $inner_content = "<a href='" . $GLOBALS['base_url'] . "/sidora/create_$resource_or_concept/$parent_pid/" . $obj['model'] . '/' . $obj['form'] . '/' . $ontology . "'>" . $name . "</a>";
+    }
+  }
+  $to_return = '<li class="' . $li_classes . '" title="' . $obj['description'] . '">';
+  $to_return .= $inner_content;
+  $to_return .= '</li>';
+  return $to_return;
+}
 /*
  * Determine if this batch of pids is valid or invalid for a specified permission for the specified user
  * Returns an array of the following information:

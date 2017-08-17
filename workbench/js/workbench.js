@@ -233,6 +233,28 @@ sidora.resources.bulkActionSelectAction = function(){
     jQuery("th>i").removeAttr("title","");
   }
 }
+sidora.AddConcept = function() {
+  Shadowbox.open({
+    content:    Drupal.settings.basePath+"sidora/ajax_parts/create_concept/"+window.sidora.concept.GetPid()+"",
+    player:     "iframe",
+    width: 800,
+    title:      sidora.display.CREATE_CONCEPT_TITLE,
+    options: {
+      onFinish:  function(){}
+    }
+  });
+}
+sidora.AddResource = function() {
+  Shadowbox.open({
+    content:    Drupal.settings.basePath+"sidora/ajax_parts/create_resource/"+window.sidora.concept.GetPid()+"",
+    player:     "iframe",
+    width: 800,
+    title:      sidora.display.CREATE_RESOURCE_TITLE,
+    options: {
+      onFinish:  function(){}
+    }
+  });
+}
 /*
  * Prepares the resource table to respond to user inputs: dragging, changing filters, entering search parameters
  */
@@ -256,7 +278,7 @@ sidora.concept.LoadContentHelp.Resources.TableActionsSetup = function(){
   jQuery("#sidora-resources-button-last").click(function(){ jQuery(".paginate_button.last").click();  });
   jQuery("#res_table_paginate").hide();
   jQuery("#res_table_wrapper").append('<input type="text" name="titleFilter" id="titleFilter" placeholder="Search Resources" style="border: solid 1px lightblue;">');
-  jQuery("#res_table_wrapper").append('<a id="add-resource-button" href="#" onclick="return false;" class="sidora-thin-button"><span>+</span>Add New Resources</a>');
+  jQuery("#res_table_wrapper").append('<a id="add-resource-button" href="#" onclick="sidora.AddResource(); return false;" class="sidora-thin-button"><span>+</span>Add New Resources</a>');
   jQuery("#res_table_wrapper").append('<select id="sidora-resource-bulk-actions" class="form-select"><option value="">Bulk Actions</option><option value="duplicate">Duplicate</option><option value="move">Move</option><option value="delete">Delete</option></select>');
   jQuery("#sidora-resources-page-number").change(function(){
     jQuery(".paginate_input").val(jQuery("#sidora-resources-page-number").val()).change();
@@ -1585,6 +1607,7 @@ sidora.ResizeToBrowser = function(){
   }
   jQuery("#rt").css("height",tableHeight+'px');
   jQuery("#rt").css("overflow",'auto');
+  sidora.ResizeOnWindowResize();
 }
 /*
  * Checks to see if a user can communicate with the backend and redirects to user page if problem
@@ -2043,19 +2066,17 @@ sidora.ontology._createSubmenu = function(ontologyChildren){
  *  Got tired of CSS fiddling, resizing the main div programmatically based on assumed navigation size
  */
 sidora.ResizeOnWindowResize = function(){
-  var bodywidth = sidora.ResizeMaxWidth();
-  // Cannot use a fixed width for the tree on the left since its resizable now.
-  //var menuwidth = 360;
-  var menuwidth = jQuery("#fjt-holder").width() + 10;
-  var newwidth = bodywidth-menuwidth;
-  if (newwidth < parseInt(jQuery('#sidora_content_concept_info').css('min-width'))){
-    newwidth = parseInt(jQuery('#sidora_content_concept_info').css('min-width'));
-  } 
-  jQuery("#sidora_content_concept_info").width(newwidth);
-  var newMaxWidth = bodywidth - parseInt(jQuery('#sidora_content_concept_info').css('min-width'));
-  jQuery('#conceptResizable').resizable('option', 'maxWidth', newMaxWidth);
-  //Resize the resource information pane for the resource page 
-  sidora.resources.individualPanel.ResizeAndStop();
+  var spaceOnRight = jQuery(window).width() - jQuery("html").width() - jQuery("#conceptResizable").width();
+  // Set our minimum size of the concept information to be 1000 pixels
+  var setWidthTo = Math.max(jQuery("html").width() - jQuery("#conceptResizable").width(), 900);
+  jQuery("#sidora_content_concept_info").width(setWidthTo);
+  jQuery("#res_table").css("width","100%");
+  jQuery("#conceptResizable").height(jQuery(window).height() - 110);
+  jQuery("#concept_tabs").height(jQuery(window).height() - 180);
+  jQuery("#concept-meta").height(jQuery(window).height() - 270);
+  jQuery("#rt").height(jQuery(window).height() - 370);
+  jQuery("#concept-resource-list").height(jQuery(window).height() - 250);
+  jQuery("#concept-meta div.metadata-table").height(jQuery(window).height() - 270);
 }
 
 /**
@@ -3475,38 +3496,8 @@ jQuery(function () {
 });
 
 jQuery(window).resize(function() {
-  var spaceOnRight = jQuery(window).width() - jQuery("html").width() - jQuery("#conceptResizable").width();
-  // Set our minimum size of the concept information to be 1000 pixels
-  var setWidthTo = Math.max(jQuery("html").width() - jQuery("#conceptResizable").width(), 900);
-  jQuery("#sidora_content_concept_info").width(setWidthTo);
-  jQuery("#res_table").css("width","100%");
-  jQuery("#conceptResizable").height(jQuery(window).height() - 110);
-  jQuery("#concept_tabs").height(jQuery(window).height() - 180);
-  jQuery("#concept-meta").height(jQuery(window).height() - 270);
-  jQuery("#rt").height(jQuery(window).height() - 370);
-  jQuery("#concept-resource-list").height(jQuery(window).height() - 250);
-  jQuery("#concept-meta div.metadata-table").height(jQuery(window).height() - 270);
-  return;
-//  return; //Temp disable BBB TODO
-  var maxWidth = sidora.ResizeMaxWidth();
-  if (
-       (maxWidth < (parseInt(jQuery("#conceptResizable").css("min-width"))+parseInt(jQuery("#sidora_content_concept_info").css("min-width")))) || 
-       (parseInt(jQuery("#concept_tabs").width()) < parseInt(jQuery("#sidora_content_concept_info").css("min-width")))
-    ){
-    jQuery("#conceptResizable").css("width",parseInt(jQuery("#conceptResizable").css("min-width")));
-    sidora.ResizeTree(null,{element:jQuery("#conceptResizable")});
-    sidora.stopResizeTree(null,{element:jQuery("#conceptResizable")});
-    jQuery("#concept-meta,#concept-relationships,#concept-resource-list").css("min-width","100px");
-    jQuery("#concept_tabs").css("position","absolute");
-  }
-  else{ 
-    if (parseInt(jQuery("#sidora_content_concept_info").width()) > 1000){
-      jQuery("#concept-meta,#concept-relationships,#concept-resource-list").css("min-width","");
-      jQuery("#concept_tabs").css("position","relative");
-    } 
-  } 
   sidora.ResizeOnWindowResize();
-  sidora.ResizeToBrowser();
+  return;
 });
 
 /*
