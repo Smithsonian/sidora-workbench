@@ -834,7 +834,7 @@ submitFormViaAjax = function() {
     url: window.location.href,
     data: jQuery("#exhibition-permission-form").serialize(),
     success: function(){
-      jQuery(".save-information").html("Visibility Processing Complete");
+      jQuery(".save-information").html("Visibility Processing Complete<br><br>You can close this pop-up now.");
     }
   });
 }
@@ -849,7 +849,7 @@ showProcessingSaveTime = function() {
       var minuteText = (estimatedFinish.getMinutes() > 9) ? ""+estimatedFinish.getMinutes() : "0"+estimatedFinish.getMinutes();
       showOverlay(
         "<div><div class='save-information'>Processing...<br>Estimated completion time:<br>"+hourText+":"+minuteText+" "+am_pm+"<hr></div></div><div style='font-size:15px'><br>On saving the visibility, the exhibition becomes unpublished.<br> Resave the exhibition to publish it.</div>",
-        "width: 650px;margin:200px auto;height: 400px;font-size:48px;line-height: 1em;text-align: center;"
+        "width: 850px;margin:200px auto;height: 400px;font-size:48px;line-height: 1em;text-align: center;"
       );
       
 }
