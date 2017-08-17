@@ -1955,35 +1955,35 @@ sidora.util.RefreshTreeHelper = function(secondsOfWait, pid, onlyRefreshIfNew) {
     if (parentNode.id == '#') {
       //window.location.reload(); //TBD give proper refresh when adding a concept to their root
     }
-    var parentPid = parentNode.a_attr.pid;
-    setTimeout(function(myPid){
-      jQuery.ajax({
-        url: Drupal.settings.basePath+'sidora/ajax_parts/tree/'+myPid+"/2",
-      }).done(function(tree_html){
-        var suggestedAction = sidora.util.RefreshTreeSuggestAction(tree_html, true);
-        if (suggestedAction.suggestRedirect) { window.location = Drupal.settings.basePath+'user';  }
-        if (suggestedAction.suggestRetry){
-          sidora.util.refreshTreeFailuresInARow++;
-          if (sidora.util.refreshTreeFailuresInARow > 10) {
-            console.log("Too many tree failures without a success. Stopping retries.");
-            return;
-          } else {
-            console.log("Initiated retry:"+sidora.util.refreshTreeFailuresInARow);
-            sidora.util.RefreshTreeHelper(3, myPid, onlyRefreshIfNew);
-            return;
+    if (typeof(parentNode.attr) != 'undefined') {
+      var parentPid = parentNode.a_attr.pid;
+      setTimeout(function(myPid){
+        jQuery.ajax({
+          url: Drupal.settings.basePath+'sidora/ajax_parts/tree/'+myPid+"/2",
+        }).done(function(tree_html){
+          var suggestedAction = sidora.util.RefreshTreeSuggestAction(tree_html, true);
+          if (suggestedAction.suggestRedirect) { window.location = Drupal.settings.basePath+'user';  }
+          if (suggestedAction.suggestRetry){
+            sidora.util.refreshTreeFailuresInARow++;
+            if (sidora.util.refreshTreeFailuresInARow > 10) {
+              console.log("Too many tree failures without a success. Stopping retries.");
+              return;
+            } else {
+              console.log("Initiated retry:"+sidora.util.refreshTreeFailuresInARow);
+              sidora.util.RefreshTreeHelper(3, myPid, onlyRefreshIfNew);
+              return;
+            }
           }
-        }
-        if (suggestedAction.suggestIgnore) { return; }
-        if (!suggestedAction.valid) { console.log("Unknown tree issue. Error code:surt1"); return; }
-        /*
-        */
-        sidora.util.treeAddition(tree_html);//, null, "changes");
-        sidora.util.refreshTreeFailuresInARow = 0;
-      }).fail(function(failure_obj){
-        sidora.recentAjaxFailure(failure_obj);
-      }).always(function(){
-      });
-    },secondsOfWait*1000,parentPid);
+          if (suggestedAction.suggestIgnore) { return; }
+          if (!suggestedAction.valid) { console.log("Unknown tree issue. Error code:surt1"); return; }
+          sidora.util.treeAddition(tree_html);//, null, "changes");
+          sidora.util.refreshTreeFailuresInARow = 0;
+        }).fail(function(failure_obj){
+          sidora.recentAjaxFailure(failure_obj);
+        }).always(function(){
+        });
+      },secondsOfWait*1000,parentPid);
+    }
   }); //ends nodeIds.forEach
 }
 /*
