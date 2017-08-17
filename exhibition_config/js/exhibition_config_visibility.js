@@ -835,6 +835,7 @@ submitFormViaAjax = function() {
     data: jQuery("#exhibition-permission-form").serialize(),
     success: function(){
       jQuery(".save-information").html("Visibility Processing Complete<br><br>You can close this pop-up now.");
+      jQuery('body').css("cursor", "default"); 
     }
   });
 }
