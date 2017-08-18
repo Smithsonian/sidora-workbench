@@ -280,6 +280,17 @@ sidora.concept.LoadContentHelp.Resources.TableActionsSetup = function(){
   jQuery("#res_table_wrapper").append('<input type="text" name="titleFilter" id="titleFilter" placeholder="Search Resources" style="border: solid 1px lightblue;">');
   jQuery("#res_table_wrapper").append('<a id="add-resource-button" href="#" onclick="sidora.AddResource(); return false;" class="sidora-thin-button"><span>+</span>Add New Resources</a>');
   jQuery("#res_table_wrapper").append('<select id="sidora-resource-bulk-actions" class="form-select"><option value="">Bulk Actions</option><option value="duplicate">Duplicate</option><option value="move">Move</option><option value="delete">Delete</option></select>');
+  jQuery("#sidora-resource-bulk-actions").change(function(){
+    if (jQuery("#sidora-resource-bulk-actions").val() != "") {
+      if (sidora.resources.getHighlighted().length == 0) {
+        sidora.util.Confirm("Bulk Action", "Before selecting an action, select resources with the checkboxes on the left of each resource.", null, null, 'Close', 'Close');
+      }
+      else {
+        sidora.resources.performBulkActions();
+      }
+      jQuery("#sidora-resource-bulk-actions").val("");
+    }
+  });
   jQuery("#sidora-resources-page-number").change(function(){
     jQuery(".paginate_input").val(jQuery("#sidora-resources-page-number").val()).change();
   }); 
@@ -781,7 +792,7 @@ sidora.ProjectSpaces.DuplicateOrTransferIntro = function(type, pids) {
   intro += "</p><ul>";
   for(var pidIndex = 0; pidIndex < pids.length; pidIndex++) {
     intro += '<li>';
-    intro += jQuery("[pid='"+pids[pidIndex]+"'], "+jq(pids[pidIndex])).first().text();
+    intro += sidora.util.FriendlyNameDirect(pids[pidIndex]);
     intro += '</li>';
   }
   intro += '</ul>';
@@ -1825,7 +1836,22 @@ sidora.resources.refreshSelectedResourceThumbnail = function(){
       });
   }
 }
-
+sidora.resources.performBulkActions = function(){
+  var action = jQuery("#sidora-resource-bulk-actions").val();
+  var pids = sidora.resources.getHighlighted();
+  if (pids.length == 0) {
+    return;
+  }
+  if (action == 'duplicate') {
+    sidora.ProjectSpaces.DuplicateOrTransfer('duplicate', 'resources', pids);
+  }
+  if (action == 'move') {
+    sidora.ProjectSpaces.DuplicateOrTransfer('transfer', 'resources', pids);
+  }
+  if (action == 'delete') {
+    sidora.resources.DeleteResource(pids);
+  }
+}
 /*
  * Get the pids of the highlighed resources
  */

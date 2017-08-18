@@ -2227,10 +2227,29 @@ function sidora_create_resource_get_upload_form_html($model, $form_name, $ontolo
   }
         if (!empty($elements)) {
     $to_return .= "<div id='create-resource-upload'>";
+    $to_return .= "<div><ul><li>";
+    if ($elements['#extensions'][0] != '*') {
+      $to_return .= 'You can upload one or multiple files at a time';
+      $to_return .= '</li><li>';
+      $to_return .= 'File types allowed: ' . implode($elements['#extensions'],', ');
+    }
+    else {
+      $to_return .= 'Upload a single file of any type';
+    }
+    $to_return .= "</li></ul></div>";
     $to_return .= sidora_get_plupload_html($elements, $upload_button_text);
-    $to_return .= "<input class=\"form-submit\" id=\"Next\" value=\"Individual Metadata\" onclick=\"jQuery('#create-resource-upload').hide(); location.reload();\"></input>";
-    if ($elements['#extensions'][0] != '*') $to_return .= "<input class=\"form-submit\" id=\"applyBatch\" value=\"Apply Metadata\" onclick=\"jQuery('#create-resource-upload').hide(); if (window.location.href.indexOf('metabulk') == -1) {window.location.href += '//metabulk';}\"></input>";
+    $to_return .= '<div style="display:inline-block;position:relative">';
+    $to_return .= "<input class=\"form-submit\" id=\"Next\" value=\"Add Individual Metadata\" onclick=\"jQuery('#create-resource-upload').hide(); location.reload();\" style='top:0px;position:absolute;'></input>";
+    if ($elements['#extensions'][0] != '*') {
+      $to_return .= "<div style='position:absolute;left:230px;width:300px;'>";
+      $to_return .= "<input class=\"form-submit\" id=\"applyBatch\" value=\"Add Same Metadata to All\" onclick=\"jQuery('#create-resource-upload').hide(); if (window.location.href.indexOf('metabulk') == -1) {window.location.href += '//metabulk';}\" style='margin-bottom:0px;width:200px;'></input>";
+      $to_return .= '<div style="font-style: italic;font-size: 9px;font-weight: bold;">Metadata entered here will be applied to all resources listed.</div>';
+      $to_return .= "</div>";
+    }
+    // end button holder
     $to_return .= "</div>";
+    // end create-resource-upload
+    $to_return .= "</div>"; 
     if ($clear_file_list) {
       $_SESSION['file_uploads'][$user->uid] = array();
     }
