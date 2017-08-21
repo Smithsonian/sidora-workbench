@@ -5733,6 +5733,10 @@ function sidora_block_content_navigation() {
   $jstree_loc = variable_get('sidora_js_lib_location_jstree', '');
   drupal_add_css(drupal_get_path('module','sidora') . '/css/jstree_custom/style.min.css', array('weight' => 9000, 'group' => CSS_THEME));
   drupal_add_js($jstree_loc . 'jstree.js');
+  // right-click menu lib
+  drupal_add_js(drupal_get_path('module','sidora') . '/js/dist/jquery.ui.position.min.js');
+  drupal_add_js(drupal_get_path('module','sidora') . '/js/dist/jquery.contextMenu.js');
+  drupal_add_css(drupal_get_path('module','sidora') . '/js/dist/jquery.contextMenu.css');
   // dataTables lib
   $datatables_loc =  variable_get('sidora_dataTables_location','');
   drupal_add_js($datatables_loc . 'js/jquery.dataTables.min.js');

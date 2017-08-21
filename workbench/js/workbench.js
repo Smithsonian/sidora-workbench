@@ -1005,6 +1005,90 @@ sidora.ProjectSpaces.ShowProjectSpaceTransferForm = function(pid){
 }
 
 sidora.queue = new SidoraQueue();
+sidora.contextMenu = {};
+sidora.contextMenu.SetUp = function(){
+  $ = jQuery
+  var cmips = function(key, opt){return jQuery(opt.$trigger).hasClass("is-project-space");};
+  var cmnps = function(key, opt){return !jQuery(opt.$trigger).hasClass("is-project-space");};
+  $(function() {
+        $.contextMenu({
+            selector: '.jstree-anchor',  // Everything that will be on the tree
+            zIndex: 91, //The resizable toolbar is at 90
+            events: {
+                show: function (options) {
+                  sidora.contextMenu.ClickItem = this;
+                }
+            }, 
+            callback: function(key, options) {
+                // Allow function to be changed on the fly
+                sidora.contextMenu.Chooser(key, options);
+            },
+            items: {
+                "editConcept": {name: "Edit Concept", icon: "edit", disabled: cmips},
+                "addResources": {name: "Add Resource(s)", icon: "paste", disabled: cmips},
+                "copyConceptAndChildren": {name: "Copy Concept & Children...", icon: "copy", disabled: cmips},
+                "moveConcept": {name: "Move Concept...", icon: "arrow-right", disabled: cmips},
+                "linkConcept": {name: "Link Concept...", icon: "external-link", disabled: cmips},
+                "sep1": "---------",
+                "editResearchSpace": {name: "Edit Research Space", icon: "edit", disabled: cmnps},
+                "addConcept": {name: "Add New Concept", icon: "paste", disabled: cmnps},
+                "changePermissions": {name: "Change Space Permissions...", icon: "copy", disabled: cmnps},
+                "changeOwner": {name: "Move Space to New Owner...", icon: "arrow-right", disabled: cmnps},
+            }
+        });
+    });
+}
+sidora.contextMenu.Chooser = function(key, options) {
+  var pid = jQuery(sidora.contextMenu.ClickItem).attr("pid");
+  var myUrl = null;
+  var myTitle = null;
+  switch(key) {
+    case "copyConceptAndChildren":
+      sidora.ProjectSpaces.DuplicateOrTransfer('duplicate', 'concept', pid);
+      break;
+    case "moveConcept":
+      sidora.ProjectSpaces.DuplicateOrTransfer('transfer', 'concept', pid);
+      break;
+    case "linkConcept":
+      sidora.ProjectSpaces.DuplicateOrTransfer('link', 'concept',pid);
+      break;
+    case "editConcept":
+      myUrl = Drupal.settings.basePath+"sidora/edit_metadata/"+pid;
+      myTitle = sidora.display.EDIT_METADATA_TITLE;
+      break;
+    case "addResources":
+      myUrl = Drupal.settings.basePath+"sidora/ajax_parts/create_resource/"+pid;
+      myTitle = sidora.display.CREATE_RESOURCE_TITLE;
+      break;
+    case "editResearchSpace":
+      myUrl = Drupal.settings.basePath+"sidora/research_space_create/"+pid;
+      myTitle = Drupal.t("Research Space Edit");
+      break;
+    case "addConcept":
+      myUrl = Drupal.settings.basePath+"sidora/ajax_parts/create_resource/"+pid;
+      myTitle = sidora.display.CREATE_CONCEPT_TITLE;
+      break;
+    case "changePermissions":
+      myUrl = Drupal.settings.basePath+"sidora/sharing_permissions/"+pid;
+      myTitle = Drupal.t("Research Space Permissions");
+      break;
+    case "changeOwner":
+      myUrl = Drupal.settings.basePath+"sidora/research_space_transfer/"+pid;
+      myTitle = Drupal.t("Research Space Transfer");
+      break;
+  }
+  if (myUrl != null) {
+      Shadowbox.open({
+        content:    myUrl,
+        player:     "iframe",
+        title:      myTitle,
+        options: {
+          onFinish:  function(){}
+        }
+      });
+
+  }
+}
 sidora.InitiateJSTree = function(){
   //loaded.jstree will also be called whenever a node is added to the tree programmatically
   jQuery('#forjstree').bind('loaded.jstree', function(e,data){setTimeout(function(){
@@ -1116,6 +1200,7 @@ sidora.InitiateJSTree = function(){
 
 
     jQuery('#forjstree').show();
+    window.sidora.contextMenu.SetUp();
 
     jst.open_node(jst.get_node("j1_1"));
     setTimeout(function(){
@@ -1763,7 +1848,7 @@ sidora.InitiatePage = function(){
           Shadowbox.open({
             content:    Drupal.settings.basePath+"sidora/research_spaces",
             player:     "iframe",
-            title:      "Research Spaces",
+            title:      Drupal.t("Research Spaces"),
             options:  {
               onClose: function(){
                 sidora.ProjectSpaces.refreshOptions();
