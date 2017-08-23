@@ -432,8 +432,8 @@ function exhibition_config_json_data($pid){
       "nav_location":'.json_encode($row['nav_location']).',
       "nav_type":'.json_encode($row['nav_type']).',
       "custom_url":'.json_encode($row['custom_url']).',
-      "xslt":'.json_encode($row['xslt']).',
-      "image_degradation":'.json_encode($row['image_degradation']).',
+      "xslt":'.json_encode(empty($row['xslt'])?'':$row['xslt']).',
+      "image_degradation":'.json_encode(empty($row['image_degradation'])?'':$row['image_degradation']).',
       "links":[';
       for($currLinkNum = 0; $currLinkNum < count($links['names']); $currLinkNum++){
         print '

@@ -4937,7 +4937,8 @@ function sidora_open_access($info_type, $pid) {
         }
       }
       else {
-        watchdog('sidora_workbench','Could not retrieve file extension for PID:'.$pid);
+        // This is normal activity for exhibition to ask this for concepts, expects a empty return
+        print '';
       }
       break;
     case 'xsl':
