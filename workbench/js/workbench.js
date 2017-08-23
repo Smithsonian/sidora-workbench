@@ -234,6 +234,7 @@ sidora.resources.bulkActionSelectAction = function(){
   }
 }
 sidora.AddConcept = function() {
+  if (!sidora.concept.permissions.create) return;
   Shadowbox.open({
     content:    Drupal.settings.basePath+"sidora/ajax_parts/create_concept/"+window.sidora.concept.GetPid()+"",
     player:     "iframe",
@@ -245,6 +246,7 @@ sidora.AddConcept = function() {
   });
 }
 sidora.AddResource = function() {
+  if (!sidora.concept.permissions.create) return;
   Shadowbox.open({
     content:    Drupal.settings.basePath+"sidora/ajax_parts/create_resource/"+window.sidora.concept.GetPid()+"",
     player:     "iframe",
@@ -419,17 +421,26 @@ sidora.concept.LoadContentHelp.Permissions = function(conceptOfInterest){
     url: Drupal.settings.basePath+'sidora/info/'+conceptOfInterest+'/permission',
     success: function(permissions){
       sidora.concept.permissions = permissions;
-      jQuery("#sharing-permissions").toggle(jQuery("#j1_1 >a").attr("pid") == sidora.concept.loadedContentPid);
-      jQuery("#concept-create").toggle(permissions.create);
+      var addButtons = jQuery("#add-concept-button, #add-resource-button");
+      if (permissions.create) {
+        addButtons.css("opacity","1").removeAttr("title");
+      }
+      else {
+        addButtons.css("opacity","0.4").attr("title",Drupal.t("Create permissions haven't been granted to your user."));
+      }
+      jQuery("#add-resources").toggle(permissions.create);
+       
+      //jQuery("#sharing-permissions").toggle(jQuery("#j1_1 >a").attr("pid") == sidora.concept.loadedContentPid);
+      //jQuery("#concept-create").toggle(permissions.create);
       jQuery("#deleteConcept").toggle(permissions.delete);
       jQuery("#editMetadataConcept").toggle(permissions.update); 
-      jQuery("#editPermissionsConcept").toggle(permissions.permission); 
+      //jQuery("#editPermissionsConcept").toggle(permissions.permission); 
       jQuery("#manageConcept").toggle(permissions.manage);
       // Resource permissions currently tied to concept permissions
-      jQuery("#delete-resource").toggle(permissions.delete);
-      jQuery("#edit-resource-metadata-menu").toggle(permissions.update);
+      //jQuery("#delete-resource").toggle(permissions.delete);
+      //jQuery("#edit-resource-metadata-menu").toggle(permissions.update);
       // The "view metadata" is the view-equivalent of edit, don't show both
-      jQuery("#view-resource-metadata").toggle(!permissions.update);
+      //jQuery("#view-resource-metadata").toggle(!permissions.update);
         
     }
   });
@@ -466,15 +477,15 @@ sidora.concept.LoadContentHelp.Relationships = function(conceptOfInterest, place
   });
 }
 sidora.concept.IsResearchSpace = function() {
-  
+  var isSpace = jQuery('#' + sidora.util.getNodeIdByHref() + " > a.is-project-space").length; 
+  return isSpace;
 }
 /*
  * Loads the metadata screen for the concept
  */
 sidora.concept.LoadContentHelp.Metadata = function(conceptOfInterest){
   var detailsUrl = Drupal.settings.basePath+'sidora/info/'+conceptOfInterest+'/meta/sidora_xsl_config_variable/browser/html';
-  var isProjectSpace = jQuery('#' + sidora.util.getNodeIdByHref() + " > a.is-project-space").length;
-  if (isProjectSpace) detailsUrl = Drupal.settings.basePath+'sidora/info/'+conceptOfInterest+'/ps_detail';
+  if (sidora.concept.IsResearchSpace()) detailsUrl = Drupal.settings.basePath+'sidora/info/'+conceptOfInterest+'/ps_detail';
   jQuery.ajax({
     url: detailsUrl,
   }).done(function(meta_html){
@@ -512,54 +523,6 @@ sidora.concept.LoadContentHelp.Metadata = function(conceptOfInterest){
   });
 }
 /*
- * Loads the menu for the add resources menu and replaces the existing one.  This is not necessary at the current time since the menu is
- * unchanging, but for the future they envision that types of resources may be excluded from certain concepts.
- */
-sidora.concept.LoadContentHelp.CreateResourceMenu = function(conceptOfInterest){
-  var ontologyUrl = Drupal.settings.basePath+"sidora/info/"+conceptOfInterest+"/resource_menu_json";
-  jQuery.ajax(
-  {
-    dataType: "json",
-    url: ontologyUrl,
-    error: function(){
-      console.log("error on create resource menu");
-    },
-    success: function (json_obj){
-      var menu_html = window.sidora.ontology._createSubmenu(json_obj);
-      var availableResourcesToCreateForConceptHtml = menu_html;
-      jQuery("#resource-create").remove();
-      if (menu_html.length > 0){
-        jQuery("#resource-files-menu").append('<li id="resource-create"><a id="resource-create-link" href="#" onclick="return false;"><input type="image" src="'+Drupal.settings.basePath+'sites/all/modules/islandora_xml_forms-7.x-1.7/elements/images/add.png" title="'+htmlEntities(sidora.display.CREATE_NEW_RESOURCE_TOOLTIP)+'"> Add&nbsp;resource</a><ul>'+availableResourcesToCreateForConceptHtml+'</ul></li>');
-         jQuery("#resource-create a").attr("onclick","return false;");
-        jQuery("#resource-create a").click(function(){
-          var model = jQuery(this).attr("model");
-          var form = jQuery(this).attr("formname");
-          var ontologyId = jQuery(this).attr("ontology-id");
-          if (typeof(model) != 'undefined' && "" != model){
-            var url = Drupal.settings.basePath+"sidora/create_resource/"+window.sidora.concept.GetPid()+"/"+model+"/";
-            if (typeof(form) != 'undefined') {
-              url += form + "/" + ontologyId + "/fresh";
-            }
-            Shadowbox.close();
-            setTimeout(function(){
-            Shadowbox.open({
-              content:    url,
-              player:     "iframe",
-              title:      sidora.display.CREATE_RESOURCE_TITLE,
-              options: {
-                onFinish:  function(){}
-              }
-            });},1000);
-          }
-        });
-      }
-    },
-    fail: function(failure_obj){
-      sidora.recentAjaxFailure(failure_obj);
-    }
-  });
-}
-/*
  * Loads the Resource List panel with information from the input concept pid
  */
 sidora.concept.LoadContentHelp.FullTableReload = function(conceptOfInterest){
@@ -571,7 +534,6 @@ sidora.concept.LoadContentHelp.FullTableReload = function(conceptOfInterest){
     jQuery('#concept-resource-list-internal').append(myDiv);
     sidora.concept.LoadContentHelp.Resources.TableLoad(conceptOfInterest);
     sidora.concept.LoadContentHelp.Resources.TableActionsSetup();
-    sidora.concept.LoadContentHelp.CreateResourceMenu(conceptOfInterest);
     sidora.concept.LoadContentHelp.Relationships();
     sidora.ResizeToBrowser();
   }).fail(function(failure_obj){
@@ -613,7 +575,15 @@ sidora.concept.LoadContent = function(leaveContentIfAlreadyLoaded){
   sidora.concept.LoadContentHelp.Permissions(conceptOfInterest);
   sidora.concept.LoadContentHelp.Exhibition_view(conceptOfInterest);
   sidora.concept.LoadContentHelp.Metadata(conceptOfInterest);
-  sidora.concept.LoadContentHelp.FullTableReload(conceptOfInterest);
+  var irs = sidora.concept.IsResearchSpace();
+  jQuery("a[href='#concept-resource-list']").parent().toggle(!irs);
+  if (!irs) {
+    sidora.concept.LoadContentHelp.FullTableReload(conceptOfInterest);
+  }
+  else {
+    jQuery("#concept-resource-list").toggle(false);
+    jQuery("#concept-meta-link").click();
+  }
   sidora.concept.loadedContentPid = conceptOfInterest;
   sidora.ReformatPage();
 }
@@ -1012,7 +982,7 @@ sidora.contextMenu.SetUp = function(){
   var cmnps = function(key, opt){return !jQuery(opt.$trigger).hasClass("is-project-space");};
   $(function() {
         $.contextMenu({
-            selector: '.jstree-anchor',  // Everything that will be on the tree
+            selector: '#fjt-holder .jstree-anchor',  // Everything that will be on the tree
             zIndex: 91, //The resizable toolbar is at 90
             events: {
                 show: function (options) {
@@ -1040,6 +1010,9 @@ sidora.contextMenu.SetUp = function(){
 }
 sidora.contextMenu.Chooser = function(key, options) {
   var pid = jQuery(sidora.contextMenu.ClickItem).attr("pid");
+  sidora.menuChoice(key,pid);
+}
+sidora.menuChoice = function(key, pid){
   var myUrl = null;
   var myTitle = null;
   switch(key) {
@@ -1205,6 +1178,12 @@ sidora.InitiateJSTree = function(){
     jst.open_node(jst.get_node("j1_1"));
     setTimeout(function(){
       var mainTreeChildren = jQuery("#j1_1").children("ul").children();
+      var rsMiniLinks = '<div class="rs-mini-links" style="position: absolute;top: 26px;left: 10px;font-size: 10px;">';
+      rsMiniLinks += '<a href="#" onclick="sidora.ProjectSpaces.viewAll(); return false;">View All</a>';
+      rsMiniLinks += '&nbsp;&nbsp;&nbsp;&nbsp;';
+      rsMiniLinks += '<a href="#" onclick="sidora.ProjectSpaces.showCreate(); return false;">Create New</a>';
+      rsMiniLinks += '</div>';
+      jQuery("#conceptResizable").prepend(rsMiniLinks);
       jQuery("#conceptResizable").prepend("<div class='project-space-drop-down'><select id='psdd-select'></select></div>");
       var selectedIndex = 0;
       for(var mtci = 0; mtci < mainTreeChildren.length; mtci++){
@@ -1831,7 +1810,6 @@ sidora.InitiatePage = function(){
     sidora.concept.LoadContent();
     jQuery("#page-title").after(jQuery("#workbench-menu"));
     jQuery("#concept-meta").prepend(jQuery("#concept-meta-menu"));
-    jQuery('#concept-menu ul li').children(':contains("Permissions")').addClass("ui-state-disabled").css("margin",0).css("padding-left","5px").css("border",0);
     sidora.ontology.CreateConceptMenu();
     sidora.ResizeOnWindowResize();
     jQuery(document).tooltip(
@@ -1842,26 +1820,42 @@ sidora.InitiatePage = function(){
     jQuery("#branding").append(sidora.getSmithsonianBrandingHtml());
     jQuery("#branding").append("<div class='branding-user-info' style='float:right'> <a href='"+Drupal.settings.basePath+"user' class='sidora-thin-button'>Profile</a> <a href='"+Drupal.settings.basePath+"user/logout' class='sidora-thin-button'>Logout</a></div>");
     jQuery("#branding").append("<div class='branding-project-spaces' style='float:right'> <a id='proj-space-button' href='#' onclick='return false;' class='sidora-thin-button'>Research Spaces</a></div>");
-    jQuery("#proj-space-button").click(function(){
-          Shadowbox.close();
-          setTimeout(function(){
-          Shadowbox.open({
-            content:    Drupal.settings.basePath+"sidora/research_spaces",
-            player:     "iframe",
-            title:      Drupal.t("Research Spaces"),
-            options:  {
-              onClose: function(){
-                sidora.ProjectSpaces.refreshOptions();
-              },
-              onFinish:  function(){}
-            }
-          });},100);
-    });
+    jQuery("#proj-space-button").click(sidora.ProjectSpaces.viewAll);
     // Add the close button to the top of the Shadowboxes, and remove the tooltip from them
     jQuery("#sb-nav-close").attr("title","").clone().addClass("sb-nav-close-clone").appendTo(jQuery("#sb-title"));
   }
   sidora.IsUserSetUp(sidora.continueInit, sidora.doubleCheckUser);
 };
+sidora.ProjectSpaces.viewAll = function() {
+  Shadowbox.close();
+  setTimeout(function(){
+  Shadowbox.open({
+    content:    Drupal.settings.basePath+"sidora/research_spaces",
+    player:     "iframe",
+    title:      Drupal.t("Research Spaces"),
+    options:  {
+      onClose: function(){
+        sidora.ProjectSpaces.refreshOptions();
+      },
+      onFinish:  function(){}
+    }
+  });},100);
+}
+sidora.ProjectSpaces.showCreate = function() {
+  Shadowbox.close();
+  setTimeout(function(){
+  Shadowbox.open({
+    content:    Drupal.settings.basePath+"sidora/research_space_create",
+    player:     "iframe",
+    title:      Drupal.t("Create Research Space"),
+    options:  {
+      onClose: function(){
+        sidora.ProjectSpaces.refreshOptions();
+      },
+      onFinish:  function(){}
+    }
+  });},100);
+}
 /*
  * Return thumbnail if resource has a unique thumbnail that is showing, otherwise return false
  */
@@ -2106,73 +2100,10 @@ sidora.ontology.CreateConceptMenu = function(){
     },
     success: function (json_obj){
       window.sidora.ontology.tree = json_obj;
-      jQuery("#concept-file-menu").append("<li id='concept-create'><a href='#' onclick='return false;'><input type='image' src='"+Drupal.settings.basePath+"sites/all/modules/islandora_xml_forms-7.x-1.7/elements/images/add.png' title='" + sidora.display.CREATE_A_CONCEPT_AS_CHILD_OF_HIGHLIGHT + "'>" + sidora.display.BUTTON_HTML_ADD_A_NEW_CONCEPT + "</a><ul>"+window.sidora.ontology._createSubmenu(window.sidora.ontology.tree)+"</ul></li>");
       resetMenu("concept-menu");
-      jQuery("#concept-create").find("a").not(".ui-state-disabled").bind("click.createConcept",function(){
-        var model = jQuery(this).attr("model");
-        var form = jQuery(this).attr("formname");
-        var ontologyId = jQuery(this).attr("ontology-id");
-        if (typeof(model) != 'undefined'){
-          var url = Drupal.settings.basePath+"sidora/create_concept/"+window.sidora.concept.GetPid()+"/"+model+"/";
-          if (typeof(form) != 'undefined') url += form;
-          url += "/"+ontologyId;
-          Shadowbox.close();
-          setTimeout(function(){
-          Shadowbox.open({
-            content:    url,
-            player:     "iframe",
-            title:      sidora.display.CREATE_CONCEPT_TITLE,
-            options: {
-              onFinish:  function(){}
-            }
-          });},100);
-        }
-        console.log(this);
-      }).attr("onclick","return false;");
-      jQuery("#sharing-permissions").click(function(){
-        Shadowbox.open({
-          content:    Drupal.settings.basePath+"sidora/sharing_permissions",
-          player:     "iframe",
-          title:      sidora.display.EDIT_SHARING_PERMISSIONS_TITLE,
-          options: {
-            onFinish:  function(){}
-          }
-        });
-      });
     }
   });
 };
-/*
- The recursive part of the submenu creation
-*/
-sidora.ontology._createSubmenu = function(ontologyChildren){
-  var toReturn = "";
-  if (typeof(ontologyChildren) == 'undefined'){ return toReturn; }
-  for (var key in ontologyChildren) {
-    var obj = ontologyChildren[key];
-    if (typeof(obj.description) != 'undefined'){
-      childrenHtml = this._createSubmenu(obj.children);
-      if (childrenHtml.length > 0) childrenHtml = "\n<ul>"+childrenHtml+"</ul>\n";
-      var model = "";
-      var formName = "";
-      var classDisabled = "";//" disabled";
-      var ontologyId = "";
-      var classIcon = " ";
-      if (typeof(obj.model) != 'undefined') model = ' model="'+obj.model+'"';
-      if (typeof(obj.form) != 'undefined') formName = ' formname="'+obj.form+'"';
-      if (typeof(obj['ontology-id']) != 'undefined') ontologyId = ' ontology-id="'+obj['ontology-id']+'"';
-      if (typeof(obj.disabled) != 'undefined' && obj.disabled) classDisabled = " ui-state-disabled";
-      if (childrenHtml.length > 0) {
-       classIcon = ' <input type="image" style="position:absolute; right:0px; padding-right:2px;" src="'+Drupal.settings.pathToTheme+'/images/list-item.png" />';
-      }
-      else {
-       classIcon = '&nbsp;&nbsp;';
-      }  
-      toReturn += ("<li title='"+obj.description+"' class=''><a onclick='return false;' href='#'"+model+formName+ontologyId+" class="+classDisabled+">"+key.replace(/ /g, '&nbsp;')+classIcon+"</a>"+childrenHtml+"</li>\n");
-    }
-  }
-  return toReturn;
-}
 /*
  *  Got tired of CSS fiddling, resizing the main div programmatically based on assumed navigation size
  */

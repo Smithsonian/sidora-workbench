@@ -4325,6 +4325,11 @@ function sidora_block_view($delta = '') {
 
           <ul id="concept-menu">
            <li id="concept-menu-edit-space" style="display:none;"><a href="#" onclick="return false;"><i class="material-icons">edit</i> Edit&nbsp;Research&nbsp;Space <i class="material-icons">arrow_drop_down</i></a>
+             <ul>
+                <li id="edit-RS"><a href="#" onclick="sidora.menuChoice(\'editResearchSpace\',sidora.ProjectSpaces.currentPid());return false;"><i class="material-icons">edit</i>Edit&nbsp;Metadata</a></li>
+                <li id="perm-RS"><a href="#" onclick="sidora.menuChoice(\'changePermissions\',sidora.ProjectSpaces.currentPid());return false;"><i class="material-icons">edit</i>Change&nbsp;Permissions</a></li>
+                <li id="move-RS"><a href="#" onclick="sidora.menuChoice(\'changeOwner\',      sidora.ProjectSpaces.currentPid());return false;"><i class="material-icons">edit</i>Move&nbsp;Space&nbsp;To&nbsp;Owner</a></li>
+             </ul>
            </li>
            <li id="concept-menu-edit-concept"><a href="#" onclick="return false;"><i class="material-icons">edit</i> Edit&nbsp;Concept <i class="material-icons">arrow_drop_down</i></a>
              <ul>
@@ -4332,9 +4337,7 @@ function sidora_block_view($delta = '') {
                 <li id="add-resources"><a href="#" onclick="return false;" id="add-resources-concept-metadata-menu"><i class="material-icons">add_box</i>Add&nbsp;Resource(s)</a></li>
                 <li id="copy-to-another-space"><a href="#" onclick="sidora.ProjectSpaces.DuplicateOrTransfer(\'duplicate\',\'concept\'); return false;" id="copy-to-another-space-menu"><i class="material-icons">content_copy</i>Copy&nbsp;concept&nbsp;to&nbsp;another research&nbsp;space</a></li>
                 <li id="move-to-another-space"><a href="#" onclick="sidora.ProjectSpaces.DuplicateOrTransfer(\'transfer\',\'concept\'); return false;" id="move-to-another-space-menu"><i class="material-icons">call_made</i>Move&nbsp;concept&nbsp;to&nbsp;another research&nbsp;space</a></li>
-                <!-- Future implementation, only doing L&F now
-                <li id="link-to-another-concept"><a href="#" onclick="return false;" id="link-to-another-concept-menu"><i class="material-icons">swap_horiz</i>Link&nbsp;concept&nbsp;to&nbsp;another concept</a></li>
-                -->
+                <li id="link-to-another-concept"><a href="#" onclick="sidora.ProjectSpaces.DuplicateOrTransfer(\'link\', \'concept\'); return false;" id="link-to-another-concept-menu"><i class="material-icons">swap_horiz</i>Link&nbsp;concept&nbsp;to&nbsp;another concept</a></li>
                 <li id="deleteConcept"><a href="#" onclick="sidora.concept.DeleteConcept(); return false;"><i class="material-icons">delete</i>Delete</a></li>
 ';
       if (sidora_is_admin()) $block['content'] .= '
@@ -4350,7 +4353,7 @@ function sidora_block_view($delta = '') {
       $block['content'] .= '
   <div id="concept_tabs">
     <ul>
-      <li><a href="#concept-meta"><i class="material-icons">info</i><div class="sidora-ui-text sidora-ui-link" style="float:right;margin: 3px 0 0 4px;">Details</div></a></li>
+      <li><a href="#concept-meta" id="concept-meta-link"><i class="material-icons">info</i><div class="sidora-ui-text sidora-ui-link" style="float:right;margin: 3px 0 0 4px;">Details</div></a></li>
       <li><a href="#concept-resource-list"><i class="material-icons">panorama</i><div class="sidora-ui-text sidora-ui-link" style="float:right;margin: 3px 0 0 4px;">Resources</div></a></li>
       <li><a href="#concept-relationships"><i class="material-icons">compare_arrows</i><div class="sidora-ui-text sidora-ui-link" style="float:right;margin: 3px 0 0 4px;">Links</div></a></li>
     </ul>
@@ -4359,9 +4362,6 @@ function sidora_block_view($delta = '') {
         <div class="workbench-nav">
         </div>
       </div>
-    </div>
-    <div id="concept-relationships">
-      Concept Relationships
     </div>
     <div id="concept-resource-list" class="sidora-menu">
       <div id="concept-resource-list-internal"/>
@@ -4375,7 +4375,7 @@ function sidora_block_view($delta = '') {
             <li><a href="#" onclick="return false;">Edit</a>
               <ul>
                 <li><a href="#" onclick="return false;" id="edit-resource-metadata-menu" class="ui-state-disabled">Edit&nbsp;Metadata</a></li>
-                                                                <li><a href="#" onclick="return false;" id="edit-resource-datastream-menu" class="ui-state-disabled">Update&nbsp;Content</a></li>';
+                <li><a href="#" onclick="return false;" id="edit-resource-datastream-menu" class="ui-state-disabled">Update&nbsp;Content</a></li>';
       if (sidora_is_admin()) $block['content'] .= '
                 <li><a href="#" onclick="return false;" id="manage-resource" class="ui-state-disabled">Manage&nbsp;Resource</a></li>';
       $block['content'] .= '
@@ -4392,7 +4392,8 @@ function sidora_block_view($delta = '') {
         </div>
       </div>
     </div>
-    <div id="tabs-3">
+    <div id="concept-relationships">
+      Concept Relationships
     </div>
   </div>';
       $block['content'] .= '</div>';//Comes fully from javascript

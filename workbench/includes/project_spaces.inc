@@ -32,7 +32,7 @@
  * the code reflects that. The term moving forward should always be research space.
  * Do not put "project space" anywhere that the end user would be able to see it, and
  * preferrably for the administrators as well. This includes urls, like 
- * .../sidora/project_space_create, etc.
+ * .../sidora/research_space_create, etc.
  */
 
 /*
@@ -423,11 +423,14 @@ function sidora_get_groups_for_project_space($pid, $administrative_bookkeeping =
 /**
  * Returns a tree based on the research spaces the user has access to, defaults to 4 levels total
  */
-function sidora_project_spaces_tree($root_label = 'Project Spaces where you can create:', $include_href = FALSE, $permissions = array("create"), $start_open = TRUE, $num_levels = 3){
+function sidora_project_spaces_tree($root_label = 'Research Spaces where you can create:', $include_href = FALSE, $permissions = array("create"), $start_open = TRUE, $num_levels = 3){
   $ignore_pid = filter_input(INPUT_GET, 'ignore_pid', FILTER_SANITIZE_STRING);
   $specify_pids = filter_input(INPUT_GET, 'specify_pids', FILTER_SANITIZE_STRING);
   if (!empty($specify_pids)) {
     $specify_pids = explode(',', $specify_pids);
+    if (empty($root_label)) {
+      $root_label = 'Highlight a concept and submit';
+    }
   }
   $always_ignore_pids = array('si:root','si:user-projects');
   global $user;
@@ -457,7 +460,10 @@ function sidora_project_spaces_tree($root_label = 'Project Spaces where you can 
         }
       }
       if ($continue_output) {
-        $filled = sidora_build_tree_from_nodes_by_pid($pid,$num_levels - 1);
+        $filled = sidora_build_tree_from_nodes_by_pid($pid, $num_levels - 1);
+        if (!empty($specify_pids)) {
+          $filled = $filled[0]['children'];
+        }
         $html_tree_from_query_result = sidora_html_tree_from_query_results_tree($filled, '', $num_levels, '', 'a', $include_href, $permissions);
         $to_return .= '<ul>';
         $to_return .= $html_tree_from_query_result;
@@ -828,7 +834,7 @@ function sidora_project_space_transfer_form_submit($form, &$form_state) {
     $node = sidora_get_concept_node($pid);
     $worked = sidora_transfer_project_space($node, $to_user);
     if ($worked) {
-      drupal_set_message("Project Space ownership transferred.");
+      drupal_set_message("Research Space ownership transferred.");
       drupal_goto(substr(current_path(), 0, strrpos(current_path(), '/')));
     }
     else {
@@ -871,7 +877,7 @@ function sidora_project_spaces_form($form = array(), &$form_state, $uid = NULL) 
   }
   $owned_groups = sidora_get_project_spaces_by_member($uid);
   $form['cnps'] = array(
-    '#markup' => '<a style="float:right" href="project_space_create"><input type="button" id="cnps" name="cnps" value="Create New Project Space" class="form-submit"></a>',
+    '#markup' => '<a style="float:right" href="research_space_create"><input type="button" id="cnps" name="cnps" value="Create New Research Space" class="form-submit"></a>',
   );
   $form['table'] = array(
     '#theme' => 'table',
@@ -1183,7 +1189,7 @@ function sidora_create_personal_project_space($account = NULL, $info = NULL) {
   $user_ps_object->owner = $owner->name;
   $ontology_location = "USER_INITIATED_PROJECT_SPACE_CREATION";
   if (empty($info) || empty($info['label'])) {
-    $user_ps_object->label = "{$owner->name} Project Space";
+    $user_ps_object->label = "{$owner->name} Research Space";
     $ontology_location = "AUTOMATIC_PROJECT_SPACE_CREATION";
   }
   else {
