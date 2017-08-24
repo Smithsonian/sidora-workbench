@@ -72,7 +72,7 @@ loadMultiparent = function() {
 }
 loadParents = function(clickedChoice, pid) {
   jQuery.ajax({
-    "url" : "http://sidora0c.myquotient.net/~randerson/sidora/sidora0.5/sidora/info/"+pid+"/relationships_basic"
+    "url" : Drupal.settings.basePath + "sidora/info/"+pid+"/relationships_basic"
   }).done(function(html){
     jQuery("tr.before-"+pid.replace(":","-")+" > td:last").html(html);
   });
