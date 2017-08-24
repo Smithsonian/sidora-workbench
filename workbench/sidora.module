@@ -1418,7 +1418,7 @@ jQuery(document).ready(function() {
  * Returns HTML that is a table containing the parents with removal links (if more than one parent) or
  * HTML indicating it is an orphan.
  */
-function sidora_get_parent_table($pid, $only_basic_table_and_direct_removal_call = FALSE) {
+function sidora_get_parent_table($pid, $only_basic_table_and_direct_removal_call = FALSE, $include_pid_column = FALSE) {
   module_load_include('inc', 'sidora', 'includes/utils');
   $output = '';
   if (empty($only_basic_table_and_direct_removal_call)) {
@@ -1431,6 +1431,9 @@ function sidora_get_parent_table($pid, $only_basic_table_and_direct_removal_call
   $parents = sidora_get_parent_concepts($object);
 
   $header = array(t('Title'), t('Type'));
+  if ($include_pid_column) {
+    $header[] = t('PID');
+  }
   if (sizeof($parents) > 1) $header[] = t('Remove');
   $unassociate_location = $GLOBALS['base_url'].'/sidora/ajax_parts/unassociate/';
   $administering_pid = sidora_get_owning_parent_concept_pid_by_administered_pid($pid);
@@ -1455,6 +1458,9 @@ function sidora_get_parent_table($pid, $only_basic_table_and_direct_removal_call
       array('data' => $parent['label'], 'ppid' => $parent['pid']),
       array('data' => $concept_type),
     );
+    if ($include_pid_column) {
+      $row[] = array('data' => $parent['pid']);
+    }
     if (sizeof($parents) > 1) {
       if ($parent['pid'] == $administering_pid) {
        $row[] = array('data' => t('Administering parent'));
@@ -3649,7 +3655,7 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
   $to_output = '';
   switch ($type) {
     case 'relationships_basic':
-      print sidora_get_parent_table($pid, TRUE);
+      print sidora_get_parent_table($pid, TRUE, TRUE);
       break;
     case 'relationships':
       print sidora_get_parent_table($pid);
