@@ -1649,7 +1649,7 @@ sidora.ResizeToBrowser = function(){
     leftSideHeight -= jQuery("footer").height();
   }
   jQuery("#conceptResizable").css("height",leftSideHeight+"px");
-  jQuery("#fjt-holder").css("height",(leftSideHeight-40)+"px").css("top","40px");
+  jQuery("#fjt-holder").css("height",(leftSideHeight-40)+"px").css("top","43px");
   var tabsHeight = leftSideHeight-50;
   jQuery("#concept_tabs").css("height",tabsHeight+"px");
   var baseMax = sidora.ResizeMaxWidth();
