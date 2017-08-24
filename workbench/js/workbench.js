@@ -735,6 +735,9 @@ sidora.ProjectSpaces.isAbleToTransfer = function() {
   return false;
 }
 sidora.ProjectSpaces.ChangeProjectSpace = function(selectedValue, suppressClick) {
+  if (jQuery("#"+selectedValue).length == 0) {
+    return false;
+  }
   var projectSelectorCss = jQuery("#"+selectedValue).siblings().map(function(){return "#" + this.id;}).get().join(", ");
   if (projectSelectorCss.length > 0) {
     projectSelectorCss += " , ";
@@ -747,6 +750,7 @@ sidora.ProjectSpaces.ChangeProjectSpace = function(selectedValue, suppressClick)
     jQuery("#"+selectedValue).children("a").click();
   }
   var owned = !jQuery("#"+selectedValue).children("a").hasClass("not-owned");
+  return true;
 }
 sidora.ProjectSpaces.DuplicateOrTransferIntro = function(type, pids) {
   var intro = "<p>";
@@ -1195,8 +1199,12 @@ sidora.InitiateJSTree = function(){
           selected = "selected";
         }
         var optionToAdd = jQuery("<option value='"+optionVal+"'"+selected+">"+htmlEntities(optionText)+"</option>");
-        jQuery("#psdd-select").append(optionToAdd);      
+        jQuery("#psdd-select").append(optionToAdd); 
       }
+      jQuery("#psdd-select").append("<option value='sep1'>-----</option>");
+      jQuery("#psdd-select").append("<option value='link_viewAll'>View all Research Spaces...</option>");
+      jQuery("#psdd-select").append("<option value='sep2'>-----</option>");
+      jQuery("#psdd-select").append("<option value='link_createNew'>Create a Research Space...</option>");
       if (window.location.hash == "") {
         var selectedValue = mainTreeChildren[selectedIndex].id;
         sidora.ProjectSpaces.ChangeProjectSpace(selectedValue);
@@ -1228,8 +1236,24 @@ sidora.InitiateJSTree = function(){
       // save the url path so we can go to that item
       
       // set the change handler and immediately call it
-      jQuery("#psdd-select").change(function(){ sidora.ProjectSpaces.ChangeProjectSpace(this.value); });
+      jQuery("#psdd-select").change(function(){ 
+        if (!sidora.ProjectSpaces.ChangeProjectSpace(this.value)) {
+          // Don't let the drop down change if it went to a menu item
+          if (this.value == 'link_viewAll') {
+            sidora.ProjectSpaces.viewAll();
+          }
+          if (this.value == 'link_createNew') {
+            sidora.ProjectSpaces.showCreate();
+          }
+          jQuery(this).val(jQuery.data(this, 'current'));
+        }
+        else {
+          jQuery.data(this, 'current', jQuery(this).val());
+        }
+      });
       sidora.ProjectSpaces.ChangeProjectSpace( jQuery("#psdd-select").val(), true );
+      // initialize the current setting so we can change it back if needed
+      jQuery.data(document.getElementById("psdd-select"), 'current', jQuery("#psdd-select").val());
       
     }, 200);
     jQuery("#page").show();
@@ -1649,7 +1673,7 @@ sidora.ResizeToBrowser = function(){
     leftSideHeight -= jQuery("footer").height();
   }
   jQuery("#conceptResizable").css("height",leftSideHeight+"px");
-  jQuery("#fjt-holder").css("height",(leftSideHeight-40)+"px").css("top","40px");
+  jQuery("#fjt-holder").css("height",(leftSideHeight-40)+"px").css("top","43px");
   var tabsHeight = leftSideHeight-50;
   jQuery("#concept_tabs").css("height",tabsHeight+"px");
   var baseMax = sidora.ResizeMaxWidth();
