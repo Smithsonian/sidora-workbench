@@ -10767,9 +10767,12 @@ function sidora_call_batch_API($method, $url, $data = false)
   curl_setopt($curl, CURLOPT_URL, $url);
   curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1);
   $result = curl_exec($curl);
-  watchdog('Sidora_debug',t("Bulk metadata Curl error:<br/> %curl_dump",
+  $curl_dump_info = substr(curl_error($curl),0,1024);
+  if (!empty($curl_dump_info)) {
+    watchdog('Sidora_debug',t("Bulk metadata Curl error:<br/> %curl_dump",
                 array('%curl_dump' => substr(curl_error($curl),0,1024)))
                 );
+  }
   curl_close($curl);
   return $result;
 }
