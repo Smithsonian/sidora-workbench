@@ -250,7 +250,6 @@ sidora.AddResource = function() {
   Shadowbox.open({
     content:    Drupal.settings.basePath+"sidora/ajax_parts/create_resource/"+window.sidora.concept.GetPid()+"",
     player:     "iframe",
-    width: 800,
     title:      sidora.display.CREATE_RESOURCE_TITLE,
     options: {
       onFinish:  function(){}
@@ -568,14 +567,13 @@ sidora.concept.LoadContent = function(leaveContentIfAlreadyLoaded){
   jQuery('#concept-meta .error-message').remove();
 
   // Show the correct menu for space vs normal concept
-  var isPS = (sidora.ProjectSpaces.isProjectSpace(sidora.concept.GetPid()));
-  jQuery("#concept-menu-edit-concept").toggle(!isPS);
-  jQuery("#concept-menu-edit-space").toggle(isPS);
+  var irs = sidora.concept.IsResearchSpace();
+  jQuery("#concept-menu-edit-concept").toggle(!irs);
+  jQuery("#concept-menu-edit-space").toggle(irs);
 
   sidora.concept.LoadContentHelp.Permissions(conceptOfInterest);
   sidora.concept.LoadContentHelp.Exhibition_view(conceptOfInterest);
   sidora.concept.LoadContentHelp.Metadata(conceptOfInterest);
-  var irs = sidora.concept.IsResearchSpace();
   jQuery("a[href='#concept-resource-list']").parent().toggle(!irs);
   if (!irs) {
     sidora.concept.LoadContentHelp.FullTableReload(conceptOfInterest);
@@ -710,16 +708,6 @@ sidora.ProjectSpaces.writableProjectSpaces = function() {
     }
   }
   return toReturn;
-}
-sidora.ProjectSpaces.isProjectSpace = function(pid) {
-  // TBD TODO add a indicator on the item to indicate it is a project space instead of this
-  var toCheck = jQuery("[pid='"+pid+"']").parent();
-  for(var tci = 0; tci < toCheck.length; tci++) {
-    if (jQuery("#psdd-select").children("[value='" +jQuery(toCheck[tci]).attr("id") + "']").length > 0) {
-      return true;
-    }
-  }
-  return false;
 }
 sidora.ProjectSpaces.isAbleToTransfer = function() {
   var projectSpaceRep = sidora.util.GetTreeNodesByPid(sidora.ProjectSpaces.currentPid())[0];
@@ -1006,7 +994,7 @@ sidora.contextMenu.SetUp = function(){
                 "sep1": "---------",
                 "editResearchSpace": {name: "Edit Research Space", icon: "edit", disabled: cmnps},
                 "addConcept": {name: "Add New Concept", icon: "paste", disabled: cmnps},
-                "changePermissions": {name: "Change Space Permissions...", icon: "copy", disabled: cmnps},
+                "changePermissions": {name: "Change Space Permissions...", disabled: cmnps},
                 "changeOwner": {name: "Move Space to New Owner...", icon: "arrow-right", disabled: cmnps},
             }
         });
@@ -1879,6 +1867,16 @@ sidora.ProjectSpaces.showCreate = function() {
       onFinish:  function(){}
     }
   });},100);
+}
+/**
+ * returns an array of pids that are currently shown in the table
+ */
+sidora.resources.getShownPids = function(){
+  var shownResources = [];
+  jQuery(sidora.resources.dataTable).find("tr").each(function(){
+    if (this.id != "") shownResources.push(this.id);
+  });
+  return shownResources;
 }
 /*
  * Return thumbnail if resource has a unique thumbnail that is showing, otherwise return false
@@ -3120,9 +3118,12 @@ sidora.resources.individualPanel.Create = function() {
     sidora.manage.Open(resourcePid, resourceName, "Manage Resource", "Update resource information");
   });
 }
+sidora.resources.shownResourcesQueryParams = function(){
+  return ((sidora_util.readCookie('Drupal.dtFilter') == '')?'all':sidora_util.readCookie('Drupal.dtFilter')) + '\n' + jQuery("#titleFilter").val() + '\n' + ((sidora_util.readCookie('Drupal.sortOn') == '')?'':sidora_util.readCookie('Drupal.sortOn')) + '\n' + ((sidora_util.readCookie('Drupal.sortOrder') == '')?'':sidora_util.readCookie('Drupal.sortOrder'));
+}
 sidora.resources.ShowDetails = function(showPid){
   Shadowbox.open({
-    content:    Drupal.settings.basePath+"sidora/ajax_parts/details/"+showPid,
+    content:    Drupal.settings.basePath+"sidora/ajax_parts/details/"+showPid+"?resq="+encodeURI(sidora.resources.shownResourcesQueryParams()+"&ppid="+sidora.concept.GetPid()),
     player:     "iframe",
     title:      "Resource Metadata",
     options: {

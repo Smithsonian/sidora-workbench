@@ -32,7 +32,6 @@ input {
   font-family: "Jaldi", sans-serif;
   font-size: 1.6rem;
 }
-
 /* --------------------------------
  *
  * Main Components
@@ -256,5 +255,12 @@ li.has-children label {
 ul, .block ul {
   list-style-type: none;
   margin: 0px 0px 0px 0px;
+}
+.content {
+  text-align: center;
+}
+ul.cd-accordion-menu {
+  text-align: left;
+  margin: auto;
 }
 

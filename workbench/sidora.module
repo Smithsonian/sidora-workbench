@@ -3866,18 +3866,7 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
       }
       break;
     case 'resources':
-      $resource_types = array(
-        'all' => array('si:imageCModel', 'si:generalImageCModel','si:fieldbookCModel','si:datasetCModel','islandora:sp-audioCModel','islandora:sp_videoCModel','si:genericCModel','si:rawGeneSequenceCModel','si:assembledGeneSequenceCModel'),
-        'images' => array('si:imageCModel', 'si:generalImageCModel'),
-        'pdf' => array('si:fieldbookCModel'),
-        'csv' => array('si:datasetCModel'),
-        'audio' => array('islandora:sp-audioCModel'),
-        'video' => array('islandora:sp_videoCModel'),
-        'rawsequence' => array('si:rawGeneSequenceCModel'),
-        'assembledsequence' => array('si:assembledGeneSequenceCModel'),
-        'generic' => array('si:genericCModel'),
-        'text' => FALSE
-      );
+      $resource_types = sidora_get_resource_types();
       if ($download == 'browser' && $formatted == 'dataTableServerSideProcessing') {
         $jsdt_title_and_type_search_val = filter_var($_GET['search']['value'], FILTER_SANITIZE_STRING);
         // The search value holds both the type of object and the title search, pull those out
@@ -4123,7 +4112,20 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
   }
   print $to_output;
 }
-
+function sidora_get_resource_types() {
+  return array(
+    'all' => array('si:imageCModel', 'si:generalImageCModel','si:fieldbookCModel','si:datasetCModel','islandora:sp-audioCModel','islandora:sp_videoCModel','si:genericCModel','si:rawGeneSequenceCModel','si:assembledGeneSequenceCModel'),
+    'images' => array('si:imageCModel', 'si:generalImageCModel'),
+    'pdf' => array('si:fieldbookCModel'),
+    'csv' => array('si:datasetCModel'),
+    'audio' => array('islandora:sp-audioCModel'),
+    'video' => array('islandora:sp_videoCModel'),
+    'rawsequence' => array('si:rawGeneSequenceCModel'),
+    'assembledsequence' => array('si:assembledGeneSequenceCModel'),
+    'generic' => array('si:genericCModel'),
+    'text' => FALSE
+  );
+}
 function sidora_get_content_model_names() {
   $cache_name = "sidora:content_model_names";
   if (cache_get($cache_name) === FALSE) {
@@ -4183,7 +4185,30 @@ function sidora_concept_resource_listing_count($pid, $resource_types_list, $reso
   }
   return -1;
 }
-
+/*
+ * Returns an array of resource pids that are children of the concept
+ * $pid - the concept's pid
+ * $resource_types
+ * $limit - how many items should be returned
+ * $offset - where the list should start out of a full listing
+ * $specific_resource_type -
+ * $title_search - if only specific labels are being looked for, uses a %contains% type search
+ */
+function sidora_concept_resource_listing_pids_only($pid, $resource_types, $limit, $offset, $specific_resource_type = 'all', $title_search = '', $sort_on = 'created', $sort_order = 'DESC') {
+  $to_return = array();
+  $tuque = islandora_get_tuque_connection();
+  $concept_pid = $pid;
+  if ($tuque) {
+    $query = sidora_generate_child_resource_sparql_query($concept_pid, $resource_types[$specific_resource_type], $title_search, $sort_order, $sort_on, $limit, $offset);
+    $ri = $tuque->repository->ri;
+    $results = $ri->sparqlQuery($query);
+    foreach ($results as $resindex=>$result) {
+      $tpid = ($result['object']['value']);
+      $to_return[] = $tpid;
+    }
+  }
+  return $to_return;
+}
 /*
  * Returns an array of resources that are children of the concept
  * $pid - the concept's pid
@@ -4333,8 +4358,8 @@ function sidora_block_view($delta = '') {
            <li id="concept-menu-edit-space" style="display:none;"><a href="#" onclick="return false;"><i class="material-icons">edit</i> Edit&nbsp;Research&nbsp;Space <i class="material-icons">arrow_drop_down</i></a>
              <ul>
                 <li id="edit-RS"><a href="#" onclick="sidora.menuChoice(\'editResearchSpace\',sidora.ProjectSpaces.currentPid());return false;"><i class="material-icons">edit</i>Edit&nbsp;Metadata</a></li>
-                <li id="perm-RS"><a href="#" onclick="sidora.menuChoice(\'changePermissions\',sidora.ProjectSpaces.currentPid());return false;"><i class="material-icons">edit</i>Change&nbsp;Permissions</a></li>
-                <li id="move-RS"><a href="#" onclick="sidora.menuChoice(\'changeOwner\',      sidora.ProjectSpaces.currentPid());return false;"><i class="material-icons">edit</i>Move&nbsp;Space&nbsp;To&nbsp;Owner</a></li>
+                <li id="perm-RS"><a href="#" onclick="sidora.menuChoice(\'changePermissions\',sidora.ProjectSpaces.currentPid());return false;"><i class="material-icons">lock</i>Change&nbsp;Permissions</a></li>
+                <li id="move-RS"><a href="#" onclick="sidora.menuChoice(\'changeOwner\',      sidora.ProjectSpaces.currentPid());return false;"><i class="material-icons">call_made</i>Move&nbsp;Space&nbsp;To&nbsp;Owner</a></li>
              </ul>
            </li>
            <li id="concept-menu-edit-concept"><a href="#" onclick="return false;"><i class="material-icons">edit</i> Edit&nbsp;Concept <i class="material-icons">arrow_drop_down</i></a>
@@ -4747,17 +4772,62 @@ function sidora_ajax_parts($call_type, $param1 = '', $param2 = '', $param3 = '')
     <ul>
       <li><a href="#details-tab"><i class="material-icons">info</i><div class="sidora-ui-text sidora-ui-link" style="float:right;margin: 3px 0 0 4px;">Details</div></a></li>
       <li><a href="#links-tab"><i class="material-icons">panorama</i><div class="sidora-ui-text sidora-ui-link" style="float:right;margin: 3px 0 0 4px;">Links</div></a></li>
-    </ul>
+    </ul>';
+    if (!empty($obj['TN'])){
+      $to_return .= '
     <div id="details-tab" class="choosable-tab">
-      <iframe style="width:100%;height:100%" src="'.base_path().'sidora/info/'.$pid.'/meta/sidora_xsl_config_variable/browser/html"></iframe>
-    </div>
-    <div id="links-tab" class="choosable-tab">';
+      <img src="'.$GLOBALS['base_url'].'/sidora/info/'.$obj->id.'/meta/TN/browser" />
+      <iframe style="width:calc(100% - 236);height:calc(100% - 67px);left:220px;position:absolute;" src="'.base_path().'sidora/info/'.$pid.'/meta/sidora_xsl_config_variable/browser/html"></iframe>
+    </div>';
+    }
+    else {
+      $to_return .= '
+    <div id="details-tab" class="choosable-tab">
+      <iframe style="width:calc(100% - 20px);height:calc(100% - 20px);" src="'.base_path().'sidora/info/'.$pid.'/meta/sidora_xsl_config_variable/browser/html"></iframe>
+    </div>';
+    }
+    $to_return .= '<div id="links-tab" class="choosable-tab">';
     $to_return .= sidora_get_parent_table($pid);
     $to_return .= sidora_get_related_codebook_table($pid);
     $to_return .= '
     </div>
   </div>
     ';
+    if (!empty($_GET['resq'])) {
+      $prev = '';
+      $next = '';
+      $ppid = '';
+      $resq = explode("\n", $_GET['resq']);
+      if (sizeof($resq) == 4) {
+        $ppid = empty($_GET['ppid'])?'':$_GET['ppid'];
+        if (sidora_allow(NULL,$ppid)) { 
+          $pids = sidora_concept_resource_listing_pids_only($ppid, sidora_get_resource_types(), NULL, 0, $resq[0], $resq[1], $resq[2], $resq[3]);
+          $location_in_array = array_search($pid, $pids);
+          if ($location_in_array !== 0) {
+            $prev = $pids[$location_in_array - 1];
+          }
+          if ($location_in_array !== sizeof($pids) - 1) {
+            $next = $pids[$location_in_array + 1];
+          }
+        }
+      }
+      $to_return .= '<div style="width:100%;height:30px;text-align: right;padding-top: 10px;">';
+      if (!empty($prev)) {
+        $to_return .= '<a href="' . $GLOBALS['base_url'] . '/sidora/ajax_parts/details/' . $prev . '?resq=' . urlencode($_GET['resq']) . '&ppid=' . $ppid . '">';
+      }
+      $to_return .= '<input value="Prev" class="details-button form-submit sidora-form-button sidora-form-prev ' . (empty($prev)?'form-button-disabled':'') . '">';
+      if (!empty($prev)) {
+        $to_return .= '</a>';
+      }
+      if (!empty($next)) {
+        $to_return .= '<a href="' . $GLOBALS['base_url'] . '/sidora/ajax_parts/details/' . $next . '?resq=' . urlencode($_GET['resq']) . '&ppid=' . $ppid . '">';
+      }
+      $to_return .= '<input value="Next" class="details-button form-submit sidora-form-button sidora-form-next ' . (empty($next)?'form-button-disabled':'') . '">'.$next;
+      if (!empty($next)) {
+        $to_return .= '</a>';
+      }
+      $to_return .= '</div>';
+    }
     return $to_return; 
   }
   if ($call_type == 'create_concept' || $call_type == 'create_resource') {
@@ -4915,7 +4985,7 @@ function sidora_create_html_li_from_obj($name, $obj, $parent_pid, $resource_or_c
     else {
       $li_classes = 'current-item';
       $ontology =  array_key_exists('ontology-id',$obj)?$obj['ontology-id']:'no-ontology-id-set';
-      $inner_content = "<a href='" . $GLOBALS['base_url'] . "/sidora/create_$resource_or_concept/$parent_pid/" . $obj['model'] . '/' . $obj['form'] . '/' . $ontology . "'>" . $name . "</a>";
+      $inner_content = "<a href='" . $GLOBALS['base_url'] . "/sidora/create_$resource_or_concept/$parent_pid/" . $obj['model'] . '/' . $obj['form'] . '/' . $ontology . "/fresh'>" . $name . "</a>";
     }
   }
   $to_return = '<li class="' . $li_classes . '" title="' . $obj['description'] . '">';
