@@ -6764,6 +6764,9 @@ function _sidora_get_child_results_cache($child_pid) {
  *   A sparql query string
  */
 function sidora_generate_child_resource_sparql_query($pid, array $resource_types, $search = '', $sort = 'DESC', $sort_by = 'created', $limit = NULL, $offset = NULL) {
+  if (empty($sort_by)) {
+    $sort_by = 'created';
+  }
   $limit_types = '';
   if (!empty($resource_types)) {
     $limit_type_expression = function($o) {
