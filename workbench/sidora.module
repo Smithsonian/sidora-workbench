@@ -4822,7 +4822,7 @@ function sidora_ajax_parts($call_type, $param1 = '', $param2 = '', $param3 = '')
       if (!empty($next)) {
         $to_return .= '<a href="' . $GLOBALS['base_url'] . '/sidora/ajax_parts/details/' . $next . '?resq=' . urlencode($_GET['resq']) . '&ppid=' . $ppid . '">';
       }
-      $to_return .= '<input value="Next" class="details-button form-submit sidora-form-button sidora-form-next ' . (empty($next)?'form-button-disabled':'') . '">'.$next;
+      $to_return .= '<input value="Next" class="details-button form-submit sidora-form-button sidora-form-next ' . (empty($next)?'form-button-disabled':'') . '">';
       if (!empty($next)) {
         $to_return .= '</a>';
       }
