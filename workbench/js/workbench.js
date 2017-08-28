@@ -970,8 +970,33 @@ sidora.queue = new SidoraQueue();
 sidora.contextMenu = {};
 sidora.contextMenu.SetUp = function(){
   $ = jQuery
-  var cmips = function(key, opt){return jQuery(opt.$trigger).hasClass("is-project-space");};
-  var cmnps = function(key, opt){return !jQuery(opt.$trigger).hasClass("is-project-space");};
+  var cmips = function(key, opt){
+    if (key == 'editConcept' && !sidora.concept.permissions.update) {
+      return true;
+    }
+    if (key == 'addResources' && !sidora.concept.permissions.create) {
+      return true;
+    }
+    if (key == 'moveConcept' && !sidora.concept.permissions.delete) {
+      return true;
+    }
+    return jQuery(opt.$trigger).hasClass("is-project-space");
+  };
+  var cmnps = function(key, opt){
+    if (key == 'addConcept' && !sidora.concept.permissions.create) {
+      return true;
+    }
+    if (key == 'changePermissions' && !sidora.ProjectSpaces.isOwned()) {
+      return true;
+    }
+    if (key == 'changeOwner' && !sidora.ProjectSpaces.isOwned()) {
+      return true;
+    }
+    if (key == 'editResearchSpace' && !sidora.ProjectSpaces.isOwned()) {
+      return true;
+    }
+    return !jQuery(opt.$trigger).hasClass("is-project-space");
+  };
   $(function() {
         $.contextMenu({
             selector: '#fjt-holder .jstree-anchor',  // Everything that will be on the tree
@@ -1838,6 +1863,9 @@ sidora.InitiatePage = function(){
   }
   sidora.IsUserSetUp(sidora.continueInit, sidora.doubleCheckUser);
 };
+sidora.ProjectSpaces.isOwned = function() {
+  return !jQuery("[pid='"+sidora.ProjectSpaces.currentPid()+"']").hasClass("not-owned");
+}
 sidora.ProjectSpaces.viewAll = function() {
   Shadowbox.close();
   setTimeout(function(){
