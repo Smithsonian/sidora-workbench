@@ -477,7 +477,7 @@ sidora.concept.LoadContentHelp.Relationships = function(conceptOfInterest, place
 }
 sidora.concept.IsResearchSpace = function() {
   var isSpace = jQuery('#' + sidora.util.getNodeIdByHref() + " > a.is-project-space").length; 
-  return isSpace;
+  return isSpace > 0;
 }
 /*
  * Loads the metadata screen for the concept
