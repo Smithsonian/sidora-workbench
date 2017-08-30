@@ -1955,7 +1955,7 @@ sidora.util.RefreshTreeHelper = function(secondsOfWait, pid, onlyRefreshIfNew) {
     if (parentNode.id == '#') {
       //window.location.reload(); //TBD give proper refresh when adding a concept to their root
     }
-    if (typeof(parentNode.attr) != 'undefined') {
+    if (typeof(parentNode.a_attr) != 'undefined') {
       var parentPid = parentNode.a_attr.pid;
       setTimeout(function(myPid){
         jQuery.ajax({
