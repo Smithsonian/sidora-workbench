@@ -477,7 +477,7 @@ sidora.concept.LoadContentHelp.Relationships = function(conceptOfInterest, place
 }
 sidora.concept.IsResearchSpace = function() {
   var isSpace = jQuery('#' + sidora.util.getNodeIdByHref() + " > a.is-project-space").length; 
-  return isSpace;
+  return isSpace > 0;
 }
 /*
  * Loads the metadata screen for the concept
@@ -569,7 +569,7 @@ sidora.concept.LoadContent = function(leaveContentIfAlreadyLoaded){
   // Show the correct menu for space vs normal concept
   var irs = sidora.concept.IsResearchSpace();
   jQuery("#concept-menu-edit-concept").toggle(!irs);
-  jQuery("#concept-menu-edit-space").toggle(irs);
+  jQuery("#concept-menu-edit-space").toggle(irs && sidora.ProjectSpaces.isOwned());
 
   sidora.concept.LoadContentHelp.Permissions(conceptOfInterest);
   sidora.concept.LoadContentHelp.Exhibition_view(conceptOfInterest);
@@ -970,8 +970,33 @@ sidora.queue = new SidoraQueue();
 sidora.contextMenu = {};
 sidora.contextMenu.SetUp = function(){
   $ = jQuery
-  var cmips = function(key, opt){return jQuery(opt.$trigger).hasClass("is-project-space");};
-  var cmnps = function(key, opt){return !jQuery(opt.$trigger).hasClass("is-project-space");};
+  var cmips = function(key, opt){
+    if (key == 'editConcept' && !sidora.concept.permissions.update) {
+      return true;
+    }
+    if (key == 'addResources' && !sidora.concept.permissions.create) {
+      return true;
+    }
+    if (key == 'moveConcept' && !sidora.concept.permissions.delete) {
+      return true;
+    }
+    return jQuery(opt.$trigger).hasClass("is-project-space");
+  };
+  var cmnps = function(key, opt){
+    if (key == 'addConcept' && !sidora.concept.permissions.create) {
+      return true;
+    }
+    if (key == 'changePermissions' && !sidora.ProjectSpaces.isOwned()) {
+      return true;
+    }
+    if (key == 'changeOwner' && !sidora.ProjectSpaces.isOwned()) {
+      return true;
+    }
+    if (key == 'editResearchSpace' && !sidora.ProjectSpaces.isOwned()) {
+      return true;
+    }
+    return !jQuery(opt.$trigger).hasClass("is-project-space");
+  };
   $(function() {
         $.contextMenu({
             selector: '#fjt-holder .jstree-anchor',  // Everything that will be on the tree
@@ -1838,6 +1863,9 @@ sidora.InitiatePage = function(){
   }
   sidora.IsUserSetUp(sidora.continueInit, sidora.doubleCheckUser);
 };
+sidora.ProjectSpaces.isOwned = function() {
+  return !jQuery("[pid='"+sidora.ProjectSpaces.currentPid()+"']").hasClass("not-owned");
+}
 sidora.ProjectSpaces.viewAll = function() {
   Shadowbox.close();
   setTimeout(function(){

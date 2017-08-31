@@ -828,12 +828,15 @@ function sidora_project_space_transfer_form_validate($form, &$form_state) {
 
 function sidora_project_space_transfer_form_submit($form, &$form_state) {
   if ($form_state['values']['op'] == 'Confirm') {
-    $to_user = user_load_by_name($form_state['values']['username_new']);
+    $name = $form_state['values']['username_new'];
+    $to_user = user_load_by_name($name);
     $pid = $form_state['storage']['pid'];
     // The sidora_transfer_project_space will hold the functionality to stop unauthorized users from making the change
     $node = sidora_get_concept_node($pid);
     $worked = sidora_transfer_project_space($node, $to_user);
     if ($worked) {
+      $obj = sidora_obj($pid);
+      $obj->owner = strtolower($name);
       drupal_set_message("Research Space ownership transferred.");
       drupal_goto(substr(current_path(), 0, strrpos(current_path(), '/')));
     }
