@@ -28,9 +28,9 @@
  */
 jQuery(function() {
   jQuery("body").css("padding-top","0px");
-    var prev = -1;
-    jQuery( "#selectable>ul" ).selectable({
-    filter: "ul>li",
+  var prev = -1;
+  jQuery( "#selectable>ul" ).selectable({
+    filter: "li.visibility-row",
     selecting: function(e, ui) {
         var curr = jQuery(ui.selecting.tagName, e.target).index(ui.selecting);
         if(e.shiftKey && prev > -1) {
@@ -48,97 +48,146 @@ jQuery(function() {
       }
   });
   jQuery( ".accordion >div" ).accordion({header: "h3", collapsible: true});
+  var rootPid = getRootPid();
+  jQuery.ajax({
+    dataType: "json",
+    method:"get",
+    url: Drupal.settings.basePath+'exhibition_config/ajax_parts/clear_session/'+rootPid
+  });
 });
-fillInSidebar = function(){
+getRootPid = function(){
+  var rootPid = window.location.href.substring(window.location.href.indexOf("/visibility/")+12);
+  return rootPid;
+}
+// tells if a sidebar information retrieval is ongoing. We don't want to send out multiple
+window.sidebarRetrieveOngoing = false;
+// Indication that things have changed since the last sidebar retrieval started. Set to true
+// to indicate we need to go out and get new information once the current retrieval is complete
+window.queueSidebarRetrieve = false;
+
+fillInSidebarSection = function(infoArray, selector, selectorSummary) {
+  var max_shown = 1000;
   var totalAdded;
 
   totalAdded = 0;
-  jQuery("#main_shown .fieldset-wrapper").html("");
-  jQuery("[id$='show-name']:checked").not("[id$='future-children-show-name']").each(function(){
-    jQuery("#main_shown .fieldset-wrapper").append("<div>"+jQuery(this).closest("li").children()[2].innerHTML+"</div>");
-    totalAdded++;
-  });
-  jQuery("#main_shown .summary").html("("+totalAdded+")");
-
-  totalAdded = 0;
-  jQuery("#main_hidden .fieldset-wrapper").html("");
-  jQuery("[id$=show-name]").not(":checked").not("[id$='future-children-show-name']").each(function(){
-    jQuery("#main_hidden .fieldset-wrapper").append("<div>"+jQuery(this).closest("li").children()[2].innerHTML+"</div>");
-    totalAdded++;
-  });
-  jQuery("#main_hidden .summary").html("("+totalAdded+")");
-
-  totalAdded = 0;
-  jQuery("#meta_shown .fieldset-wrapper").html("");
-  jQuery("[id$=show-meta]:checked").not("[id$='future-children-show-meta']").each(function(){
-    jQuery("#meta_shown .fieldset-wrapper").append("<div>"+jQuery(this).closest("li").children()[2].innerHTML+"</div>");
-    totalAdded++;
-  });
-  jQuery("#meta_shown .summary").html("("+totalAdded+")");
-
-  totalAdded = 0;
-  jQuery("#meta_hidden .fieldset-wrapper").html("");
-  jQuery("[id$=show-meta]").not(":checked").not("[id$='future-children-show-meta']").each(function(){
-    if (jQuery(jQuery(this).closest("li").children()[3]).find("input:checked").size() > 0){
-      jQuery("#meta_hidden .fieldset-wrapper").append("<div>"+jQuery(this).closest("li").children()[2].innerHTML+"</div>");
-      totalAdded++;
+  jQuery(selector).html("");
+  jQuery(infoArray).each(function(index, value){
+    if (totalAdded < max_shown) {
+      jQuery(selector).append("<div>"+value+"</div>");
     }
-  });
-  jQuery("#meta_hidden .summary").html("("+totalAdded+")");
-
-  totalAdded = 0;
-  jQuery("#preview_shown .fieldset-wrapper").html("");
-  jQuery("#exhibition-permission-form [id$=show-preview]:checked").not("[id$='future-children-show-preview']").each(function(){
-    jQuery("#preview_shown .fieldset-wrapper").append("<div>"+jQuery(this).closest("li").children()[2].innerHTML+"</div>");
+    if (totalAdded == max_shown) {
+      jQuery(selector).append("<div>(Truncated at "+max_shown+" items)</div>");
+    }
     totalAdded++;
   });
-  jQuery("#preview_shown .summary").html("("+totalAdded+")");
+  jQuery(selectorSummary).html("("+totalAdded+")");
 
-  totalAdded = 0;
-  jQuery("#preview_hidden .fieldset-wrapper").html("");
-  jQuery("exhibition-permission-form [id$=show-preview]").not(":checked").not("[id$='future-children-show-preview']").each(function(){
-    if (jQuery(jQuery(this).closest("li").children()[3]).find("input:checked").size() > 0){
-      jQuery("#preview_hidden .fieldset-wrapper").append("<div>"+jQuery(this).closest("li").children()[2].innerHTML+"</div>");
-      totalAdded++;
-    }
-  });
-  jQuery("#preview_hidden .summary").html("("+totalAdded+")");
-
-  totalAdded = 0;
-  jQuery("#downloads_shown .fieldset-wrapper").html("");
-  jQuery("[id$=allow-download]:checked").not("[id$='future-children-allow-download']").each(function(){
-    jQuery("#downloads_shown .fieldset-wrapper").append("<div>"+jQuery(this).closest("li").children()[2].innerHTML+"</div>");
-    totalAdded++;
-  });
-  jQuery("#downloads_shown .summary").html("("+totalAdded+")");
-
-  totalAdded = 0;
-  jQuery("#downloads_hidden .fieldset-wrapper").html("");
-  jQuery("[id$=allow-download]").not(":checked").not("[id$='future-children-allow-download']").each(function(){
-    if (jQuery(jQuery(this).closest("li").children()[3]).find("input:checked").size() > 0){
-      jQuery("#downloads_hidden .fieldset-wrapper").append("<div>"+jQuery(this).closest("li").children()[2].innerHTML+"</div>");
-      totalAdded++;
-    }
-  });
-  jQuery("#downloads_hidden .summary").html("("+totalAdded+")");
+}
+// Go get the information summary for the full exhibition
+fillInSidebar = function(){
+  if (window.sidebarRetrieveOngoing) {
+    window.queueSidebarRetrieve = true;
+    return;
+  }
+  window.sidebarRetrieveOngoing = true;
+  setTimeout(function(){
+    var rootPid = getRootPid();
+    jQuery.ajax({
+      dataType:'json',
+      url: Drupal.settings.basePath+'exhibition_config/ajax_parts/sidebar/' + rootPid,
+      success: function(data){
+        window.sidebarRetrieveOngoing = false;
+        if (window.queueSidebarRetrieve) {
+          window.queueSidebarRetrieve = false;
+          window.fillInSidebar();
+        }
+        fillInSidebarSection(data['shown'],            '#main_shown .fieldset-wrapper',      '#main_shown .summary');
+        fillInSidebarSection(data['hidden'],          '#main_hidden .fieldset-wrapper',     '#main_hidden .summary');
+        fillInSidebarSection(data['meta_shown'],       '#meta_shown .fieldset-wrapper',      '#meta_shown .summary');
+        fillInSidebarSection(data['meta_hidden'],     '#meta_hidden .fieldset-wrapper',     '#meta_hidden .summary');
+        fillInSidebarSection(data['preview'],       '#preview_shown .fieldset-wrapper',   '#preview_shown .summary');
+        fillInSidebarSection(data['no_preview'],   '#preview_hidden .fieldset-wrapper',  '#preview_hidden .summary');
+        fillInSidebarSection(data['download'],    '#downloads_shown .fieldset-wrapper', '#downloads_shown .summary');
+        fillInSidebarSection(data['no_download'],'#downloads_hidden .fieldset-wrapper','#downloads_hidden .summary');
+      }
+    });
+  },5000);
 }
 resizeConceptTreePage = function() {
-  jQuery("#concept_tree").parent().height(jQuery(window).innerHeight()-(jQuery("#page").offset().top + 25));
+  jQuery("#concept_tree").parent().height(jQuery(window).innerHeight()-(jQuery("#page").offset().top + 50));
 }
+basicPagingSuccess = function(data){
+  if (jQuery.trim(data)){
+    jQuery('.visibility-row').detach();
+    jQuery('.visibility-list-table>#header').after(data);
+    fillInSidebar();
+    resizeConceptTreePage();
+    jQuery('#concept_tree li:even').addClass('light-background');
+    jQuery('#open-advanced').after(jQuery('#edit-save'));
+    jQuery(window).resize(resizeConceptTreePage);
+    jQuery('#sidora-resources-page-number').val(parseInt(jQuery('#sidora-resources-page-number').val()));
+    jQuery('body').css("cursor", "default");
+    hideOverlay();
+  }   
+}
+refreshCurrentPage = function(){
+  var rootPid = getRootPid();
+  jQuery.ajax({
+    dataType:'html',
+    url: Drupal.settings.basePath+'exhibition_config/ajax_parts/paging/' + rootPid + '/' + parseInt(jQuery("[name='objectsPerPage']").val()) + '/' + parseInt(jQuery('#sidora-resources-page-number').val()),
+    success: function(data){
+      basicPagingSuccess(data);
+    }
+  });
+}
+setChildVisibilityIfNeeded = function(rootPid, pidPath, resetCheckboxID){
+  if (jQuery("#"+resetCheckboxID).closest("li").children("div .visibility-type").html().toLowerCase() == 'concept') {
+    visibilitySettings = {};
+    visibilitySettings['all'] = '1';
+    setChildVisibility(rootPid, pidPath, visibilitySettings);
+  }
+  else {
+    refreshCurrentPage();
+  }
+}
+/**
+ * Set the visibility of the child to 
+ */
+setChildVisibility = function(rootPid, pidPath, visibilitySettings){
+  jQuery.ajax({
+    dataType: "json",
+    method:"post",
+    url: Drupal.settings.basePath+'exhibition_config/ajax_parts/set_children_visibility/' + rootPid,
+    data: {"parent_pid_path":pidPath,
+           "visibility":JSON.stringify(visibilitySettings)},
+    success: function(visibility){
+      refreshCurrentPage();
+    }
+  });
+}
+
 jQuery(function(){
   fillInSidebar();
   resizeConceptTreePage();
   jQuery("#concept_tree li:even").addClass("light-background");
   jQuery("#open-advanced").after(jQuery("#edit-save"));
   jQuery(window).resize(resizeConceptTreePage);
-  jQuery("input:checkbox").click(function(){
-  if (jQuery(this).is(":checked")){
+  jQuery("#selectable").on("click","input:checkbox",function(){
+    if (jQuery(this).is(":checked")){
+      showOverlay("Processing...");
+      var parentsToCheck = [];
       var invisibleParents = [];
       var message = "";
       message += "<ul>";
       var pidPath = jQuery(this).attr("path");
       var path = pidPath.split("/");
+      var rootPid = jQuery("[name='pid']").val();
       pid = "";
+      var resetCheckboxID = jQuery(this).attr("id");
+      var selectedCheckbox = this;
+      jQuery('body').css("cursor", "progress"); 
+      visibilitySettings = {};
+      visibilitySettings['show_name'] = '';
       for (ctr=0;ctr<path.length;ctr++){
         if (pid == "") {
           message = "In order to display this object and its information, the object and a path through the exhibition needs to be displayed. If you confirm, the following items will be shown."+message;
@@ -146,83 +195,238 @@ jQuery(function(){
         }else{
           pid = pid+"/"+path[ctr];
         }
-        visibilityToCheck = "visibility["+pid+"][show_name]";
-        if (!(jQuery("[name=\'"+visibilityToCheck+"\']").is(":checked"))) {      
-          invisibleParents.push(visibilityToCheck);
-          message += "<li>" + jQuery("[name=\'"+visibilityToCheck+"\']").attr("label")+"</li>";
-        }
+          parentsToCheck.push(pid);
       }
-      message += "</ul>";
-      if (invisibleParents.length > 0){
-        var resetCheckboxID = jQuery(this).attr("id");
-        var selectedCheckbox = this;
-        changeParentConfirm("Visibility Settings Change", message, 
-          function(){ 
-            setToChecked(invisibleParents);
-            //store and restore the current settings for this object
-            var changeBack = jQuery(selectedCheckbox).closest("li").find("input").filter(
-              function(){
-                if (jQuery(this) == jQuery(selectedCheckbox)) return false;
-                if (jQuery(this).attr("name").indexOf("[show_name]") != -1) return false;
-                return true;
-              }
-            );
-            var objSettings = changeBack.map(function(){return jQuery(this).prop("checked");});
-            changedShowName(pidPath, true);
-            for (ctr=0;ctr<changeBack.length;ctr++) {
-              jQuery(changeBack[ctr]).prop("checked",objSettings[ctr]);
+      parentsToCheck.pop();
+      jQuery.ajax({
+        dataType: "json",
+        method:"post",
+        url: Drupal.settings.basePath+'exhibition_config/ajax_parts/check_visibility/'+rootPid,
+        data: {"csv_pids":parentsToCheck.join(),
+               "visibility":JSON.stringify(visibilitySettings),
+               "condition":""},
+        success: function(visibility){
+          hideOverlay();
+          console.log(visibility);
+          for (ctr=0;ctr<visibility.length;ctr++){
+            if (visibility[ctr].status == "true") {
+            invisibleParents.push(visibility[ctr].pid);
+            message += "<li>" + visibility[ctr].label+"</li>";
             }
-          },
-          function(){ jQuery("#"+resetCheckboxID).prop("checked",false); }
-        ); 
-      }
-      else {
-        if (jQuery(this).attr("name").indexOf("[show_name]") != -1) {
-          changedShowName(pidPath, true);
+          }  
+          message += "</ul>";
+          if (invisibleParents.length > 0) {
+            changeParentConfirm(
+              "Visibility Settings Change",
+              message,
+              function(){
+                showOverlay("Processing...");
+                visibilitySettings = {};
+                visibilitySettings['show_name'] = '1';
+                var multivisibility = {};
+                for (var parentIndex = 0; parentIndex < invisibleParents.length; parentIndex++) {
+                  multivisibility[invisibleParents[parentIndex]] = visibilitySettings;
+                }
+                multivisibility[pidPath] = {
+                  'show_name' : '1', 'show_meta' : '1','show_preview' : '1', 'show_degraded' : '1','allow_download' : '1'
+                } 
+                jQuery.ajax({
+                  dataType: "json",
+                  method:"post",
+                  url: Drupal.settings.basePath+'exhibition_config/ajax_parts/set_visibility_multiple/'+rootPid,
+                  data: {
+                  "visibility":JSON.stringify(multivisibility)},
+                  success: function(visibility){
+                    if (jQuery("#"+resetCheckboxID).attr("name").indexOf("[show_name]") == -1) {
+                      var parsedName = jQuery("#"+resetCheckboxID).attr("name").split("[");
+                      var settingName = parsedName[parsedName.length-1].slice(0,-1);
+                      visibilitySettings = {};
+                      visibilitySettings[settingName] = '1';
+                      visibilitySettings['show_name'] = '1';
+                      jQuery.ajax({
+                        dataType: "json",
+                        method:"post",
+                        url: Drupal.settings.basePath+'exhibition_config/ajax_parts/set_visibility/'+rootPid,
+                        data: {"csv_pids":pidPath,
+                               "visibility":JSON.stringify(visibilitySettings)},
+                        success: function(data){
+                          setChildVisibilityIfNeeded(rootPid, pidPath, resetCheckboxID);
+                        }
+                      });
+                    }
+                    else {
+                      setChildVisibilityIfNeeded(rootPid, pidPath, resetCheckboxID);
+                    }
+                  }
+                });
+              },
+              function(){ jQuery("#"+resetCheckboxID).prop("checked",false); }
+            ); 
+          }
+          else {
+            jQuery('body').css("cursor", "progress");
+            if (jQuery("#"+resetCheckboxID).attr("name").indexOf("[show_name]") != -1) {
+              // set_visibility for all/true for this pid
+              visibilitySettings = {};
+              visibilitySettings['all'] = '1';
+              jQuery.ajax({
+                dataType: "json",
+                method:"post",
+                url: Drupal.settings.basePath+'exhibition_config/ajax_parts/set_visibility/'+rootPid,
+                data: {"csv_pids":pidPath,
+                "visibility":JSON.stringify(visibilitySettings)},
+                success: function(visibility){
+                  setChildVisibilityIfNeeded(rootPid, pidPath, resetCheckboxID);
+                }
+              });
+            }
+            else{
+              var parsedName = jQuery("#"+resetCheckboxID).attr("name").split("[");
+              var settingName = parsedName[parsedName.length-1].slice(0,-1);
+              visibilitySettings = {};
+              visibilitySettings[settingName] = '1';
+              visibilitySettings['show_name'] = '1';
+              jQuery('body').css("cursor", "progress");
+              jQuery.ajax({
+                dataType: "json",
+                method:"post",
+                url: Drupal.settings.basePath+'exhibition_config/ajax_parts/set_visibility/'+rootPid,
+                data: {"csv_pids":pidPath,
+                "visibility":JSON.stringify(visibilitySettings)},
+                success: function(data){
+                  refreshCurrentPage();
+                }
+              });
+            } 
+          }
+          jQuery('body').css("cursor", "default");
         }
-      }
+      });
     }
     else {
+      showOverlay("Processing...");
+      jQuery('body').css("cursor", "progress"); 
+      var pidPath = jQuery(this).attr("path");
+      var rootPid = jQuery("[name='pid']").val();
+      var resetCheckboxID = jQuery(this).attr("id");
+      var selectedCheckbox = this;
       if (jQuery(this).attr("name").indexOf("[show_name]") != -1) {
-        var pidPath = jQuery(this).attr("path");
-        var linesToBeHidden = getUL(pidPath).find("li").filter(
-          function(){
-            return jQuery(this).find("input:checked").length > 0;
-          }
-        );
-        var message = "When hiding this concept, all children and child trees will be hidden. If you confirm, the concept and the following items will be hidden.";
-        message += "<ul>";
-        for (ctr=0;ctr<linesToBeHidden.length;ctr++){
-          message += "<li>"+ jQuery(linesToBeHidden[ctr]).attr("name") + "</li>";
+        var linesToBeHidden = [];
+        if (jQuery("#"+resetCheckboxID).closest("li").children("div .visibility-type").html().toLowerCase() == 'concept') {
+          visibilitySettings = {};
+          visibilitySettings['all'] = '1';
+          jQuery.ajax({
+            dataType: "json",
+            method:"post",
+            url: Drupal.settings.basePath+'exhibition_config/ajax_parts/get_children_visibility/' + rootPid,
+            data: {"parent_pid_path":pidPath,
+                 "visibility":JSON.stringify(visibilitySettings),
+                 "condition":"or"},
+            success: function(visibility){
+              for (ctr=0;ctr<visibility.length;ctr++){
+                linesToBeHidden.push(visibility[ctr]);
+              }  
+              var message = "When hiding this concept, all children and child trees will be hidden. If you confirm, the concept and the following items will be hidden.";
+              message += "<ul>";
+              for (ctr=0;ctr<linesToBeHidden.length;ctr++){
+                message += "<li>"+ linesToBeHidden[ctr].label + "</li>";
+              }
+              message += "</ul>";
+              if (linesToBeHidden.length > 0){ //This is a concept with children that will be changed
+                hideOverlay();
+                changeParentConfirm("Visibility Settings Change", message, 
+                  function(){
+                    showOverlay("Processing");
+                    visibilitySettings = {};
+                    visibilitySettings['all'] = '';
+                    jQuery.ajax({
+                      dataType: "json",
+                      method:"post",
+                      url: Drupal.settings.basePath+'exhibition_config/ajax_parts/set_visibility/'+rootPid,
+                      data: {"csv_pids":pidPath,
+                             "visibility":JSON.stringify(visibilitySettings)},
+                      success: function(visibility){
+                        visibilitySettings = {};
+                        visibilitySettings['all'] = '';
+                        setChildVisibility(rootPid, pidPath, visibilitySettings);
+                      }
+                    });
+                  },
+                  function(){ jQuery("#"+resetCheckboxID).prop("checked",true); }
+                ); 
+              }
+              else {  //This is a resource of concept with no children that change, just hide it
+                visibilitySettings = {};
+                visibilitySettings['all'] = '';
+                jQuery.ajax({
+                  dataType: "json",
+                  method:"post",
+                  url: Drupal.settings.basePath+'exhibition_config/ajax_parts/set_visibility/'+rootPid,
+                  data: {"csv_pids":pidPath,
+                 "visibility":JSON.stringify(visibilitySettings)},
+                  success: function(visibility){
+                    refreshCurrentPage();
+                  }
+                });
+              } // endif linestobehidden
+            }
+          });
         }
-        message += "</ul>";
-        if (linesToBeHidden.length > 0){ //This is a concept with children that will be changed
-          var resetCheckboxID = jQuery(this).attr("id");
-          var pidPath = jQuery(this).attr("path");
-          changeParentConfirm("Visibility Settings Change", message, 
-            function(){ changedShowName(pidPath, false); },
-            function(){ jQuery("#"+resetCheckboxID).prop("checked",true); }
-          ); 
-        }
-        else {  //This is a resource of concept with no children that change, just hide it
-          changedShowName(pidPath, false);
+        else {
+          visibilitySettings = {};
+          visibilitySettings['all'] = '';
+          jQuery.ajax({
+            dataType: "json",
+            method:"post",
+            url: Drupal.settings.basePath+'exhibition_config/ajax_parts/set_visibility/'+rootPid,
+            data: {"csv_pids":pidPath,
+                 "visibility":JSON.stringify(visibilitySettings)},
+            success: function(visibility){
+              refreshCurrentPage();
+            }
+          });
         }
       }
+      else {
+        var parsedName = jQuery("#"+resetCheckboxID).attr("name").split("[");
+        var settingName = parsedName[parsedName.length-1].slice(0,-1);
+        visibilitySettings = {};
+        visibilitySettings[settingName] = '';
+        jQuery.ajax({
+          dataType: "json",
+          method:"post",
+          url: Drupal.settings.basePath+'exhibition_config/ajax_parts/set_visibility/'+rootPid,
+          data: {"csv_pids":pidPath,
+                 "visibility":JSON.stringify(visibilitySettings)},
+          success: function(data){
+            refreshCurrentPage();
+          }
+        });
+      } 
     }
     fillInSidebar();
+    jQuery('body').css("cursor", "default"); 
   }); //Ends jQuery("input:checkbox").click
   jQuery("#change_all").click(changeAllWindow);
   jQuery("#open-advanced").click(openAdvancedWindow);
   jQuery("input[type='submit']").click(function(event) {
-    if (jQuery("[name$='\\[allow_download\\]']:not(:checked)").length > 0) {
-      event.preventDefault();
-      return previewWithoutDownloadCheck();
-    }
-    else{
-      return true;
-    }		
+    event.preventDefault();
+    previewWithoutDownloadCheck();
   });
 }); //Ends openAdvanced click
+/**
+ * Generally show an overlay when you need it
+ */
+showOverlay = function(textToShow) {
+  showOverlay(textToShow, "width:170px;margin:200px auto;height:100px;font-size:48px;");
+}
+showOverlay = function(textToShow, extraStyle) {
+  jQuery('#fsOverlay').detach();
+  jQuery('body').append('<div id="fsOverlay" style="position:fixed;top:0;left:0;width:100%;height:100%;background-color:#ddd;z-index:10000;"><div style="'+extraStyle+'">'+textToShow+'</div>');
+}
+hideOverlay = function(){
+  jQuery('#fsOverlay').detach();
+}
 /*
  * When turning on show name, also show everything about the concept or resource automatically
  * When turning off show name, everything about the item should be hidden
@@ -248,7 +452,6 @@ getUL = function(pidPath){
   }
   return jQuery(docElementForUL);
 }
-
 changeSelected = function(visibilitySettings) {
   jQuery("li.ui-selected").each(function() {
     if (visibilitySettings.showName != 'indeterminate')
@@ -261,7 +464,7 @@ changeSelected = function(visibilitySettings) {
       if (visibilitySettings.allowDownload != 'indeterminate')
         jQuery("[name='visibility["+jQuery(this).attr("depth")+"][allow_download]']").prop("checked",visibilitySettings.allowDownload=="checked");
       if (visibilitySettings.showDegraded != 'indeterminate'){
-	if ((jQuery("[name='visibility["+jQuery(this).attr("depth")+"][show_name]']").attr("model")).toLowerCase().indexOf("image") !== -1)
+        if ((jQuery("[name='visibility["+jQuery(this).attr("depth")+"][show_name]']").attr("model")).toLowerCase().indexOf("image") !== -1)
          jQuery("[name='visibility["+jQuery(this).attr("depth")+"][show_degraded]']").prop("checked",visibilitySettings.showDegraded=="checked");
       }
     }
@@ -269,10 +472,17 @@ changeSelected = function(visibilitySettings) {
   fillInSidebar();
 }
 changeAdvanced = function(visibilitySettings) {
-  for (ctr=0;ctr<visibilitySettings.length;ctr++){
-    var settingName = 'visibility[' + visibilitySettings[ctr].name + '][future_children_' + visibilitySettings[ctr].setting + ']';
-    jQuery("[name='" + settingName + "']").prop("checked",visibilitySettings[ctr].value);
-  }
+ // ajax request to set_visibility with list of pid paths and visibility settings
+  var rootPid = jQuery("[name='pid']").val();
+  jQuery.ajax({
+    dataType: "json",
+    method:"post",
+    url: Drupal.settings.basePath+'exhibition_config/ajax_parts/set_visibility_multiple/'+rootPid,
+    data: {"visibility":JSON.stringify(visibilitySettings)},
+    success: function(visibility){
+      jQuery("#exhibition-permission-form").submit();
+    }
+  });
 }   
 setToChecked = function(namesOfCheckboxes) {
   for (ctr=0;ctr<namesOfCheckboxes.length;ctr++){
@@ -308,6 +518,7 @@ changeParentConfirm = function(title, questionText, onConfirmation, onCancel, co
   jQuery("#userConfirm").dialog(dialogConfig);
 }
 openAdvancedWindow = function(){
+  var rootPid = jQuery("[name='pid']").val();
   var conceptsInTree = jQuery("li.visibility-row").filter(function(){return jQuery(this).children("div")[1].innerHTML == 'Concept';})
   if (conceptsInTree.length >0){
     jQuery('#changeAdvanced').remove();
@@ -327,15 +538,17 @@ openAdvancedWindow = function(){
     checkboxesHtml += "</ul>";//<div>Note: Future Concept children cannot have previews or downloads</div>";
     //checkboxesHtml += "<div>Saving will apply visibility changes to the following:</div>";
     checkboxesHtml += "<ul class='visibility-list-table'>";
+    conceptPidsInTree = [];
     for (ctr=0;ctr<conceptsInTree.length;ctr++){
       checkboxesHtml += "<li class='dialog-visibility-row' path='" + jQuery(conceptsInTree[ctr]).attr('depth') +"'><div class='visibility-name'>"+jQuery(conceptsInTree[ctr]).attr('name')+"</div>";
       checkboxesHtml += "<div class='visibility-type'>"+jQuery(conceptsInTree[ctr]).children("div")[1].innerHTML+"</div>";
       checkboxesHtml += "<div class='visibility-path'>"+jQuery(conceptsInTree[ctr]).children("div")[2].innerHTML+"</div>";
+      conceptPidsInTree.push(jQuery(conceptsInTree[ctr]).attr('depth'));
       for (var visibilityCtr = 0;visibilityCtr < visibilitySettings.length;visibilityCtr++) {
         var checkboxFilter = jQuery("[name*='future_children_" + visibilitySettings[visibilityCtr] + "']");
-	var checkboxSelector = jQuery(conceptsInTree[ctr]).find(checkboxFilter);
-	var checked = jQuery(checkboxSelector).is(":checked")?' checked':'';
-	checkboxesHtml += "<div class='visibility-setting'><input type='checkbox' name='future[" + jQuery(conceptsInTree[ctr]).attr('depth')+ "][" + visibilitySettings[visibilityCtr] + "]' value='" + jQuery(checkboxSelector).attr("value") + "'" + checked + "></div>";
+        var checkboxSelector = jQuery(conceptsInTree[ctr]).find(checkboxFilter);
+        var checked = jQuery(checkboxSelector).is(":checked")?' checked':'';
+        checkboxesHtml += "<div class='visibility-setting'><input type='checkbox' name='future[" + jQuery(conceptsInTree[ctr]).attr('depth')+ "][" + visibilitySettings[visibilityCtr] + "]' value='" + jQuery(checkboxSelector).attr("value") + "'" + checked + "></div>";
       }
       checkboxesHtml += "</li>";
     }
@@ -354,96 +567,128 @@ openAdvancedWindow = function(){
     };
     dialogConfig.buttons['Save'] = function() {
       var futureVisibility = [];
+      var advancedVisibility = {};
       var visibilitySettings = ['show_name','show_meta','show_preview','show_degraded','allow_download'];
       for (var viCtr=0;viCtr < visibilitySettings.length;viCtr++) {
         var futureArray = jQuery("[name^='future'][name$='\\[" + visibilitySettings[viCtr] + "\\]']");
         for (var ctr=0;ctr<futureArray.length;ctr++){
           futureVisibility.push({
-	    name:jQuery(futureArray[ctr]).closest("li").attr("path"),
-	    setting:visibilitySettings[viCtr],
-	    value:futureArray[ctr].checked
-	  });
-	} 
-      }	     
+            name:jQuery(futureArray[ctr]).closest("li").attr("path"),
+            setting:visibilitySettings[viCtr],
+            value:futureArray[ctr].checked
+          });
+          var pidPath = jQuery(futureArray[ctr]).closest("li").attr("path");
+          var settingName = 'future_children_' + visibilitySettings[viCtr];
+          var settingValue = futureArray[ctr].checked ? '1':'';
+          if (advancedVisibility[pidPath] === undefined) {
+            advancedVisibility[pidPath] = {};
+            advancedVisibility[pidPath][settingName] = settingValue;
+          } 
+          else {
+            advancedVisibility[pidPath][settingName] = settingValue;
+          }   
+        } 
+      }      
       var futurePreviewEnabled = [],
-	previewEnabled = [],
-	previewMessage = '';
-     // result holds array of concepts which have future_children_allow_download disabled
-	var result = jQuery.grep(futureVisibility, function(e){return e.setting === 'allow_download' && e.value === false});
-	if (result.length > 0) {
-         // filter out the result array from above to concepts that have future_children_show_preview enabled
-	  jQuery.map(result, function (downloadSetting, i) { if (jQuery.grep(futureVisibility, function (e) { return e.name === downloadSetting.name && e.setting === 'show_preview' && e.value === true}).length > 0) { futurePreviewEnabled.push(downloadSetting.name); }})
-       }
-       if (futurePreviewEnabled.length > 0){
-	  previewMessage = '<div class="dialog_concept_tree">Future Resource children for:';
-          jQuery.map(futurePreviewEnabled, function(obj, i) { 
-	    previewMessage += '<div>' + jQuery("li[path='"+obj+"']").children("div")[2].innerHTML + '</div>';
-	  });
-	  previewMessage += '</div>';
-	}	
-	// get all resources from the main visibility form where preview is enabled and download disabled
-	jQuery("[name$='\\[show_preview\\]']:checked").not("[name^='future[']").map(function() { 
-	var fieldName = 'visibility['+jQuery(this).attr('path')+'][allow_download]'; 
-	if (!(jQuery("[name=\'"+fieldName+"\']").is(':checked'))) { 
-	  previewEnabled.push(jQuery(this).closest("li").children()[2].innerHTML);
-	}
-	});
-	if (previewEnabled.length > 0){
-	  previewMessage += '<div style="padding-top:5px;"></div><div class="dialog_concept_tree">';
-          for (ctr=0;ctr<previewEnabled.length;ctr++){
-            previewMessage += "<div>"+previewEnabled[ctr]+"</div>";
+      previewEnabled = [],
+      previewMessage = '';
+      // result holds array of concepts which have future_children_allow_download disabled
+      var result = jQuery.grep(futureVisibility, function(e){return e.setting === 'allow_download' && e.value === false});
+      if (result.length > 0) {
+        // filter out the result array from above to concepts that have future_children_show_preview enabled
+        jQuery.map(result, function (downloadSetting, i) { 
+          if (jQuery.grep(futureVisibility, function (e) {
+            return e.name === downloadSetting.name && e.setting === 'show_preview' && e.value === true
+          }).length > 0) {
+            futurePreviewEnabled.push(downloadSetting.name);
           }
-	   previewMessage += '<div>';
-	}
-	if ((previewEnabled.length > 0) || (futurePreviewEnabled.length > 0)) { 
-	  jQuery.ajax({
-            url: Drupal.settings.basePath+"exhibition_config/preview_warning",
-            success: function(msg){
-	    previewMessage = '<div>' + msg + '</div>' + previewMessage;
-            jQuery("#changeAdvanced").append("<div id='previewWarning' style='display:none;' title='Preview without download'><div>"+previewMessage+"</div></div>");
-            var dialogPreview = {
-              resizable: true,
-              height:450,
-              width: 600,
-              modal: true,
-              buttons: {},
-              close: function(){
-	        jQuery( this ).dialog( "destroy" ).remove();
+        })
+      }
+      if (futurePreviewEnabled.length > 0){
+        previewMessage = '<div class="dialog_concept_tree">Future Resource children for:';
+        jQuery.map(futurePreviewEnabled, function(obj, i) { 
+          previewMessage += '<div>' + jQuery("li[path='"+obj+"']").children("div")[2].innerHTML + '</div>';
+        });
+        previewMessage += '</div>';
+      } 
+      // get all resources from the main visibility form where preview is enabled and download disabled
+      // make an ajax request to get all resources from the current root visibility where show preview is enabled and download is disabled
+      // return an array of resource visibility paths
+      visibilitySettings = {};
+      visibilitySettings['show_preview'] = '1';
+      visibilitySettings['allow_download'] = '';
+      jQuery('body').css("cursor", "progress"); 
+      jQuery.ajax({
+        dataType: "json",
+        method:"post",
+        url: Drupal.settings.basePath+'exhibition_config/ajax_parts/get_children_visibility/' + rootPid,
+        data: {"parent_pid_path":conceptPidsInTree.join(),
+             "visibility":JSON.stringify(visibilitySettings),
+             "condition":"and"},
+        success: function(visibility){
+          for (ctr=0;ctr<visibility.length;ctr++){
+            if (visibility[ctr].status == 'true') previewEnabled.push(visibility[ctr].label);
+          }  
+          if (previewEnabled.length > 0){
+            previewMessage += '<div style="padding-top:5px;"></div><div class="dialog_concept_tree">';
+            for (ctr=0;ctr<previewEnabled.length;ctr++){
+              previewMessage += "<div>"+previewEnabled[ctr]+"</div>";
+            }
+            previewMessage += '<div>';
+          }
+          if ((previewEnabled.length > 0) || (futurePreviewEnabled.length > 0)) { 
+            jQuery.ajax({
+              url: Drupal.settings.basePath+"exhibition_config/preview_warning",
+              success: function(msg){
+                previewMessage = '<div>' + msg + '</div>' + previewMessage;
+                jQuery("#changeAdvanced").append("<div id='previewWarning' style='display:none;' title='Preview without download'><div>"+previewMessage+"</div></div>");
+                jQuery('body').css("cursor", "default"); 
+                var dialogPreview = {
+                  resizable: true,
+                  height:450,
+                  width: 600,
+                  modal: true,
+                  buttons: {},
+                  close: function(){
+                    jQuery( this ).dialog( "destroy" ).remove();
+                  }
+                };
+                dialogPreview.buttons['Continue'] = function() {
+                  changeAdvanced(advancedVisibility);
+                  jQuery(this).dialog("destroy").remove();
+                };
+                dialogPreview.buttons['Cancel'] = function() {
+                  jQuery(this).dialog("destroy").remove();
+                }
+                jQuery("#previewWarning").dialog(dialogPreview);
+                jQuery("#previewWarning .dialog_concept_tree div:odd").addClass("light-background");
               }
-            };
-            dialogPreview.buttons['Continue'] = function() {
-             changeAdvanced(futureVisibility);
-	     jQuery("#exhibition-permission-form").submit();
-	     jQuery(this).dialog("destroy").remove();
-            };
-          dialogPreview.buttons['Cancel'] = function() {
-	   jQuery(this).dialog("destroy").remove();
+            });
           }
-          jQuery("#previewWarning").dialog(dialogPreview);
-          jQuery("#previewWarning .dialog_concept_tree div:odd").addClass("light-background");
-	}
+          else{
+            changeAdvanced(advancedVisibility);
+            jQuery( this ).dialog( "destroy" ).remove();
+          }
+        }
       });
     }
-    else{
-      changeAdvanced(futureVisibility);
-      jQuery("#exhibition-permission-form").submit();
+    dialogConfig.buttons['Cancel'] = function() {
       jQuery( this ).dialog( "destroy" ).remove();
-   }
-  }
-  dialogConfig.buttons['Cancel'] = function() {
-    jQuery( this ).dialog( "destroy" ).remove();
-  }
-  jQuery("#changeAdvanced").dialog(dialogConfig);
-  jQuery("#changeAdvanced .visibility-list-table li:odd").addClass("light-background");
+    }
+    jQuery("#changeAdvanced").dialog(dialogConfig);
+    jQuery("#changeAdvanced .visibility-list-table li:odd").addClass("light-background");
   }
 }
 changeAllWindow = function(){
   var selectedArray = [];
+  var pidsToUpdate = [];
+  var rootPid = jQuery("[name='pid']").val();
   jQuery("li.ui-selected").each(function() {
     selectedArray.push({
       path: jQuery(this).attr("depth"), 
       name:  jQuery(this).children("div")[2].innerHTML
     }); 
+    pidsToUpdate.push(jQuery(this).attr("depth"));
   });
   if (selectedArray.length >0){
     jQuery('#changeAll').remove();
@@ -485,20 +730,25 @@ changeAllWindow = function(){
      }
     };
     dialogConfig.buttons['Apply'] = function() {
-      var visibilitySettings = [];
-      var showNameDirect = jQuery("#future-children-show-name").is(":checked")?"checked":(jQuery("#future-children-show-name").prop("indeterminate")?"indeterminate":"off");
-      visibilitySettings = {
-        showMeta: jQuery("#future-children-show-meta").is(":checked")?"checked":(jQuery("#future-children-show-meta").prop("indeterminate")?"indeterminate":"off"),
-        showPreview: jQuery("#future-children-show-preview").is(":checked")?"checked":(jQuery("#future-children-show-preview").prop("indeterminate")?"indeterminate":"off"),
-        showDegraded: jQuery("#future-children-show-degraded").is(":checked")?"checked":(jQuery("#future-children-show-degraded").prop("indeterminate")?"indeterminate":"off"),
-        allowDownload: jQuery("#future-children-allow-download").is(":checked")?"checked":(jQuery("#future-children-allow-download").prop("indeterminate")?"indeterminate":"off")
-      };
-      visibilitySettings.showName = (
-        visibilitySettings.showMeta=="checked" ||
-        visibilitySettings.showPreview=="checked" ||
-	visibilitySettings.allowDownload =="checked" ||
-        showNameDirect=="checked") ? "checked" : showNameDirect;
-      changeSelected(visibilitySettings);
+      var visibilitySettings = {};
+      var showNameDirect = "";
+      if (!jQuery("#future-children-show-name").prop("indeterminate")) showNameDirect = jQuery("#future-children-show-name").is(":checked")?"1":"";
+      if (!jQuery("#future-children-show-meta").prop("indeterminate")) visibilitySettings['show_meta'] = jQuery("#future-children-show-meta").is(":checked")?"1":"";
+      if (!jQuery("#future-children-show-preview").prop("indeterminate")) visibilitySettings['show_preview'] = jQuery("#future-children-show-preview").is(":checked")?"1":"";
+      if (!jQuery("#future-children-show-degraded").prop("indeterminate")) visibilitySettings['show_degraded'] = jQuery("#future-children-show-degraded").is(":checked")?"1":"";
+      if (!jQuery("#future-children-allow-download").prop("indeterminate")) visibilitySettings['allow_download'] = jQuery("#future-children-allow-download").is(":checked")?"1":"";
+      visibilitySettings['show_name'] = (visibilitySettings["showMeta"]=="1" || visibilitySettings["showPreview"]=="1" || visibilitySettings["allowDownload"] =="1" || showNameDirect=="checked") ? "1" : showNameDirect;
+      jQuery('body').css("cursor", "progress"); 
+      jQuery.ajax({
+        dataType: "json",
+        method:"post",
+        url: Drupal.settings.basePath+'exhibition_config/ajax_parts/set_visibility/'+rootPid,
+        data: {"csv_pids":pidsToUpdate.join(),
+              "visibility":JSON.stringify(visibilitySettings)},
+        success: function(visibility){
+          refreshCurrentPage();
+        }
+      });      
       jQuery( this ).dialog( "close" );
     };
     dialogConfig.buttons['Cancel'] = function() {
@@ -510,52 +760,114 @@ changeAllWindow = function(){
   }//Ends selectedArray.length>0
 }
 previewWithoutDownloadCheck = function() {
+  var rootPid = jQuery("[name='pid']").val();
   var previewEnabled = [];
-  jQuery("[name$='\\[show_preview\\]']:checked").map(function() { 
-  var fieldName = 'visibility['+jQuery(this).attr('path')+'][allow_download]'; 
-  if (!(jQuery("[name=\'"+fieldName+"\']").is(':checked'))) { 
-    previewEnabled.push(jQuery(this).closest("li").children()[2].innerHTML);
-  }
-  });
-  if (previewEnabled.length > 0) {
-    var previewMessage = '';
-    var msg = '';
-    jQuery.ajax({
-    url: Drupal.settings.basePath+"exhibition_config/preview_warning",
-    success: function(msg){
-      previewMessage = msg;
-      jQuery('#previewWarning').remove();
-      var message = '<div>' + previewMessage + '</div>';
-      message += "<div class='dialog_concept_tree'>";
-      for (ctr=0;ctr<previewEnabled.length;ctr++){
-        message += "<div>"+previewEnabled[ctr]+"</div>";
-      }
-      message += "</div>"; 
-      jQuery("body").append("<div id='previewWarning' style='display:none;' title='Preview without download'><div>"+message+"</div></div>");
-      var dialogConfig = {
-        resizable: true,
-        height:450,
-        width: 600,
-        modal: true,
-        buttons: {},
-        close: function(){
-          jQuery( this ).dialog( "destroy" ).remove();
+  visibilitySettings = {};
+  visibilitySettings['show_preview'] = '1';
+  visibilitySettings['allow_download'] = '';
+  jQuery('body').css("cursor", "progress"); 
+  jQuery.ajax({
+    dataType: "json",
+    method:"post",
+    url: Drupal.settings.basePath+'exhibition_config/ajax_parts/check_visibility/'+rootPid,
+    data: {"csv_pids":"all",
+           "visibility":JSON.stringify(visibilitySettings),
+           "condition":"and"},
+    success: function(visibility){
+      console.log(visibility);
+      for (ctr=0;ctr<visibility.length;ctr++){
+        if (visibility[ctr].status == "true") {
+          previewEnabled.push(visibility[ctr].label);
         }
-      };
-      dialogConfig.buttons['Continue'] = function() {
-       jQuery("#exhibition-permission-form").submit();
-       jQuery(this).dialog("destroy").remove();
-      };
-      dialogConfig.buttons['Cancel'] = function() {
-	jQuery(this).dialog("destroy").remove();
+      }   
+      if (previewEnabled.length > 0) {
+        var previewMessage = '';
+        var msg = '';
+        jQuery.ajax({
+          url: Drupal.settings.basePath+"exhibition_config/preview_warning",
+          success: function(msg){
+            previewMessage = msg;
+            jQuery('#previewWarning').remove();
+            var message = '<div>' + previewMessage + '</div>';
+            message += "<div class='dialog_concept_tree'>";
+            for (ctr=0;ctr<previewEnabled.length;ctr++){
+              message += "<div>"+previewEnabled[ctr]+"</div>";
+            }
+            message += "</div>"; 
+            jQuery("body").append("<div id='previewWarning' style='display:none;' title='Preview without download'><div>"+message+"</div></div>");
+            jQuery('body').css("cursor", "default"); 
+            var dialogConfig = {
+              resizable: true,
+              height:450,
+              width: 600,
+              modal: true,
+              buttons: {},
+              close: function(){
+                jQuery( this ).dialog( "destroy" ).remove();
+              }
+            };
+            dialogConfig.buttons['Continue'] = function() {
+              showProcessingSaveTime();
+              submitFormViaAjax();
+              jQuery(this).dialog("destroy").remove();
+            };
+            dialogConfig.buttons['Cancel'] = function() {
+              jQuery(this).dialog("destroy").remove();
+            }
+            jQuery("#previewWarning").dialog(dialogConfig);
+            jQuery("#previewWarning .dialog_concept_tree div:odd").addClass("light-background");
+            return false;
+          }
+        });
       }
-      jQuery("#previewWarning").dialog(dialogConfig);
-      jQuery("#previewWarning .dialog_concept_tree div:odd").addClass("light-background");
-      return false;
-     }
-    });
+      else{
+        showProcessingSaveTime();
+        submitFormViaAjax();
+      } 
+    }
+  });
+}
+submitFormViaAjax = function() {
+  unpublish();
+  jQuery.ajax({
+    type: 'POST',
+    url: window.location.href,
+    data: jQuery("#exhibition-permission-form").serialize(),
+    success: function(){
+      jQuery(".save-information").html("Visibility Processing Complete<br><br>You can close this pop-up now.");
+      jQuery('body').css("cursor", "default"); 
+    }
+  });
+}
+showProcessingSaveTime = function() {
+      var numPages = parseInt(jQuery("#sidora-resources-page-count").text());
+      // Estimating 2 seconds per page
+      var estimatedSecondsPerPage = 1.5;
+      var estimatedFinish = new Date(Date.now()+numPages*estimatedSecondsPerPage*1000);
+      var hour = estimatedFinish.getHours();
+      var am_pm = (hour > 11) ? "PM" : "AM";
+      var hourText  = (hour > 12) ? ""+(hour - 12): ""+hour;
+      var minuteText = (estimatedFinish.getMinutes() > 9) ? ""+estimatedFinish.getMinutes() : "0"+estimatedFinish.getMinutes();
+      showOverlay(
+        "<div><div class='save-information'>Processing...<br>Estimated completion time:<br>"+hourText+":"+minuteText+" "+am_pm+"<hr></div></div><div style='font-size:15px'><br>On saving the visibility, the exhibition becomes unpublished.<br> Resave the exhibition to publish it.</div>",
+        "width: 850px;margin:200px auto;height: 400px;font-size:48px;line-height: 1em;text-align: center;"
+      );
+      
+}
+
+unpublish = function() {
+  var rootPid = jQuery("[name='pid']").val();
+  jQuery.ajax({
+    dataType: "text",
+    method:"get",
+    url: Drupal.settings.basePath+'exhibition_config/unpublish/'+rootPid
+  });
+  jQuery(".exhibition-link-available", window.parent.document).hide();
+  jQuery(".exhibition-link-unavailable", window.parent.document).show();
+};
+
+closeVisibility = function() {
+  if (window.parent != window) {
+    window.parent.Shadowbox.close();
   }
-  else{
-    jQuery("#exhibition-permission-form").submit();
-  }	
 }

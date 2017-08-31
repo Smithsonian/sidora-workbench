@@ -14,3 +14,8 @@ legend {
   line-height: 1.2;
   font-size: 18px;
 }
+a.exhibition-link-unavailable {
+  display: none;
+  color: gray !important;
+  cursor: default;
+}

@@ -2668,6 +2668,15 @@ sidora.util.RefreshTreeHelper = function(secondsOfWait, pid, onlyRefreshIfNew) {
   if (typeof(secondsOfWait) == 'undefined' || secondsOfWait == null) secondsOfWait = .01;
   //Since we are concerned about the children of this and our treeAddition function expects to get the grandparent
   //of newly changed items, find an appropriate parent 
+  var nodeIds = sidora.util.GetTreeNodesByPid(pid);
+  var jst = jQuery("#forjstree").jstree();
+  nodeIds.forEach(function(node, index, arr) {
+    var parentNode = jst.get_node(node.parent);
+    if (parentNode.id == '#') {
+      //window.location.reload(); //TBD give proper refresh when adding a concept to their root
+    }
+    if (typeof(parentNode.a_attr) != 'undefined') {
+      var parentPid = parentNode.a_attr.pid;
       setTimeout(function(myPid){
         jQuery.ajax({
           url: Drupal.settings.basePath+'sidora/ajax_parts/tree/'+myPid+"/2",
@@ -2686,16 +2695,16 @@ sidora.util.RefreshTreeHelper = function(secondsOfWait, pid, onlyRefreshIfNew) {
             }
           }
           if (suggestedAction.suggestIgnore) { return; }
-          if (!suggestedAction.valid) { console.log(sidora.display.CONSOLE_OUTPUT_UNKNOWN_TREE_ISSUE); return; }
-          /*
-          */
+          if (!suggestedAction.valid) { console.log("Unknown tree issue. Error code:surt1"); return; }
           sidora.util.treeAddition(tree_html);//, null, "changes");
           sidora.util.refreshTreeFailuresInARow = 0;
         }).fail(function(failure_obj){
           sidora.recentAjaxFailure(failure_obj);
         }).always(function(){
         });
-      },secondsOfWait*1000,pid);
+      },secondsOfWait*1000,parentPid);
+    }
+  }); //ends nodeIds.forEach
 }
 /*
  * These two are the functions that get called in practice

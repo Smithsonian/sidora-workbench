@@ -27,6 +27,95 @@
  * those of third-party libraries, please see the product release notes.
  */
 
+class VisibilityPagination {
+  private $pagination_settings = array();
+  public $pagination_defaults = array(
+    'pageNumber' => 1,
+	  'perPage' => 10
+  );
+	public function __construct($entire_visibility_array,$current_page_number,$objects_per_page) {
+  error_log("\nIn visibility_pagination","3",DRUPAL_ROOT.'/'.drupal_get_path('module','exhibition_config')."/errorlog.txt");
+	  $this->data = $entire_visibility_array;
+		$this->currentPage = ($current_page_number == null ? $this->pagination_defaults['pageNumber']    : $current_page_number);
+    $this->perPage = ($objects_per_page == null ? $this->pagination_defaults['perPage'] : $objects_per_page);
+	}
+	public function __set($name, $value) 
+    { 
+      $this->pagination_settings[$name] = $value;
+    } 
+    public function __get($name)
+    {
+      if (array_key_exists($name, $this->pagination_settings)) {
+        return $this->pagination_settings[$name];
+      }
+      return false;
+    }
+    public function get_visibility_page()
+    {
+      // Assign the page variable
+      if (empty($this->pagination_settings['current_page']) !== false) {
+        $this->page = $this->pagination_settings['current_page']; // using the get method
+      } else {
+        $this->page = 1; // if we don't have a page number then assume we are on the first page
+      }
+      if (empty($this->pagination_settings['per_page']) !== false) {
+        $this->per_page = $this->pagination_settings['per_page']; // using the get method
+      } else {
+        $this->per_page = 10; // if we don't have a page number then assume we are on the first page
+      }
+      
+      // Take the length of the array
+      $this->length = count($this->data);
+      
+      // Get the number of pages
+      $this->pages = ceil($this->length / $this->per_page);
+      
+      // Calculate the starting point 
+      $this->start = ceil(($this->page - 1) * $this->per_page);
+      
+      // return the portion of results
+      return array_slice($this->data, $this->start, $this->per_page);
+    }
+    
+  public function getLinks($params = array())
+    {
+      // Initiate the links array
+      $plinks = array();
+      $links = array();
+      $slinks = array();
+      
+      // If we have more then one pages
+      if (($this->pages) > 1) {
+        // Assign the 'previous page' link into the array if we are not on the first page
+        if ($this->page != 1) {
+          if ($this->_showFirstAndLast) {
+            $plinks[] = ' <a href="?page=1'.$queryUrl.'">&laquo;&laquo; First </a> ';
+          }
+          $plinks[] = ' <a href="?page='.($this->page - 1).$queryUrl.'">&laquo; Prev</a> ';
+        }
+        
+        // Assign all the page numbers & links to the array
+        for ($j = 1; $j < ($this->pages + 1); $j++) {
+          if ($this->page == $j) {
+            $links[] = ' <a class="selected">'.$j.'</a> '; // If we are on the same page as the current item
+          } else {
+            $links[] = ' <a href="?page='.$j.$queryUrl.'">'.$j.'</a> '; // add the link to the array
+          }
+        }
+        // Assign the 'next page' if we are not on the last page
+        if ($this->page < $this->pages) {
+          $slinks[] = ' <a href="?page='.($this->page + 1).$queryUrl.'"> Next &raquo; </a> ';
+          if ($this->_showFirstAndLast) {
+            $slinks[] = ' <a href="?page='.($this->pages).$queryUrl.'"> Last &raquo;&raquo; </a> ';
+          }
+        }
+        
+        // Push the array into a string using any some glue
+        return implode(' ', $plinks).implode($this->mainSeperator, $links).implode(' ', $slinks);
+      }
+      return;
+    }
+}
 /**
  * @file
  *
@@ -120,6 +209,7 @@ function si_exhibition_get_child_concept_info(FedoraObject $object) {
  * @return string
  *   An itql query string.
  */
+
 function si_exhibition_generate_child_concept_query($pid) {
   $count = 'count(select $c from <#ri> where
     $o <fedora-rels-ext:hasConcept> $c and
