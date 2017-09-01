@@ -357,11 +357,28 @@ sidora.concept.LoadContentHelp.Resources.TableActionsSetup = function(){
       '<div id="jstree-dnd" class="jstree-default"><i class="jstree-icon jstree-er"></i>' + jQuery(this).text() + '<span class="fakejstree-copy" style="'+displayPlusToIndicateCopy+'">+</span></div>'
     );
   });
-  jQuery('.dataTables_length').append(' of type <select id=\"sidora-resource-type-dropdown\" class="form-select" name=\"search\"><option value=\"\">'+htmlEntities(sidora.display.RESOURCES_DD_ALL)+'</option><option value=\"images\">'+htmlEntities(sidora.display.RESOURCES_DD_IMAGE) + '</option><option value=\"pdf\">'+htmlEntities(sidora.display.RESOURCES_DD_DIGITIZED_TEXT) +'</option><option value=\"csv\">'+htmlEntities(sidora.display.RESOURCES_DD_TABULAR_DATASET)+'</option><option value=\"audio\">'+htmlEntities(sidora.display.RESOURCES_DD_AUDIO)+'</option><option value=\"video\">'+htmlEntities(sidora.display.RESOURCES_DD_VIDEO)+'</option></select>');
+  var dlHtml = ' of type <select id=\"sidora-resource-type-dropdown\" class="form-select" name=\"search\">';
+  dlHtml += '<option value=\"\">'+htmlEntities(sidora.display.RESOURCES_DD_ALL)+'</option>';
+  dlHtml += '<option value=\"images\">'+htmlEntities(sidora.display.RESOURCES_DD_IMAGE) + '</option>';
+  dlHtml += '<option value=\"pdf\">'+htmlEntities(sidora.display.RESOURCES_DD_DIGITIZED_TEXT) +'</option>';
+  dlHtml += '<option value=\"csv\">'+htmlEntities(sidora.display.RESOURCES_DD_TABULAR_DATASET)+'</option>';
+  dlHtml += '<option value=\"audio\">'+htmlEntities(sidora.display.RESOURCES_DD_AUDIO)+'</option>';
+  dlHtml += '<option value=\"video\">'+htmlEntities(sidora.display.RESOURCES_DD_VIDEO)+'</option>';
+  dlHtml += '</select>';
+  jQuery('.dataTables_length').append(dlHtml);
   if (sidora_util.readCookie('Drupal.dtFilter') != ''){
     jQuery("#sidora-resource-type-dropdown").val(sidora_util.readCookie('Drupal.dtFilter'));
-  }   
-  jQuery('#res_table_processing').before('<div id="sidora-resource-sort">'+htmlEntities(sidora.display.RESOURCES_DD_SORT_TITLE)+'<select id=\"sidora-resource-sort-dropdown\" class="form-select" name=\"sort\"><option value=\"title\">' + htmlEntities(sidora.display.RESOURCES_DD_TITLE)+'</option><option value=\"model\">'+htmlEntities(sidora.display.RESOURCES_DD_MODEL)+'</option><option value=\"created\" selected=\"selected\">'+htmlEntities(sidora.display.RESOURCES_DD_CREATED) + '</option></select></div>');
+  }
+  var rtpHtml = '<div id="sidora-resource-sort">';
+  rtpHtml += htmlEntities(sidora.display.RESOURCES_DD_SORT_TITLE);
+  rtpHtml += '<select id=\"sidora-resource-sort-dropdown\" class="form-select" name=\"sort\"><option value=\"title\">';
+  rtpHtml += htmlEntities(sidora.display.RESOURCES_DD_TITLE);
+  rtpHtml += '</option><option value=\"model\">';
+  rtpHtml += htmlEntities(sidora.display.RESOURCES_DD_MODEL);
+  rtpHtml += '</option><option value=\"created\" selected=\"selected\">';
+  rtpHtml += htmlEntities(sidora.display.RESOURCES_DD_CREATED);
+  rtpHtml += '</option></select></div>';
+  jQuery('#res_table_processing').before(rtpHtml);
   jQuery('#sidora-resource-sort-dropdown').after('  <select id=\"sidora-resource-sortorder-dropdown\" class="form-select" name=\"sortorder\"><option value=\"ASC\">'+htmlEntities(sidora.display.ASCENDING) + '</option><option value=\"DESC\" selected=\"selected\">'+htmlEntities(sidora.display.DESCENDING) + '</option></select>');
   if (sidora_util.readCookie('Drupal.sortOn') != ''){
     jQuery('#sidora-resource-sort-dropdown').val(sidora_util.readCookie('Drupal.sortOn'));
@@ -901,10 +918,8 @@ sidora.ProjectSpaces.ShowWhereToForm = function(selectionIntro, pids, ignorePid,
       height: Math.max(600,jQuery("body").height()-100),
       options: {
         onFinish:  function(){
-          jQuery.ajax({
-            // Do not include the current project space as a place to duplicate the tree
-            "url":Drupal.settings.basePath+"sidora/ajax_parts/research_spaces_tree" + appendToUrl + query,
-            "success":function(data){
+          var url = Drupal.settings.basePath+"sidora/ajax_parts/research_spaces_tree" + appendToUrl + query;
+          var onDataComplete = function(data) {
               jQuery("#destination-tree").html(data);
               jQuery("#destination-tree").jstree({
                 "core": {
@@ -922,11 +937,25 @@ sidora.ProjectSpaces.ShowWhereToForm = function(selectionIntro, pids, ignorePid,
                   onSubmit(destPid);
                 }
               });
-            },
-            "error":function(){
-              console.log("pst error");
-            }
-          });
+          };
+          var cachedData = sidora_util.cache(url);
+          if (typeof(cachedData) == 'undefined') { 
+            jQuery.ajax({
+              // Do not include the current project space as a place to duplicate the tree
+              "url":url,
+              "success":function(data){
+                // For the next 20 min, use this info (assume we aren't changing much)
+                sidora_util.cache(url, data, 1200);
+                onDataComplete(data);
+              },
+              "error":function(){
+                console.log("pst error");
+              }
+            });
+          }
+          else {
+            onDataComplete(cachedData);
+          }
         }
       }
       });
@@ -1187,7 +1216,6 @@ sidora.InitiateJSTree = function(){
     jQuery("#forjstree").bind("before.jstree", function(e, data){
       console.log("bjt");
     });
-
 
     jQuery('#forjstree').show();
     window.sidora.contextMenu.SetUp();

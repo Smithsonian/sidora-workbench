@@ -137,6 +137,36 @@ sidora_util.clickBlocker.block = function(showOrHide) {
   }
 }
 sidora_util.clickBlocker.unblock = function(){this.block(false);}
+sidora_util.cachedObjects = {};
+sidora_util.cache = function(key, object, ttlSeconds) {
+  if (typeof(object) == 'undefined') {
+    var cachedObj = sidora_util.cachedObjects[key];
+    if (typeof(cachedObj) == 'undefined') {
+      return;
+    }
+    if (Date.now() < cachedObj.expire) {
+      return cachedObj.obj;
+    }
+    delete sidora_util.cachedObjects[key];
+    return;
+  }
+  sidora_util.cachedObjects[key] = {
+    'obj' : object,
+    'expire' : Date.now() + 1000 * ttlSeconds
+  };
+}
+sidora_util.cacheTidy = function(){
+  for (var key in sidora_util.cachedObjects) {
+    if (sidora_util.cachedObjects[key].expire > Date.now()) {
+      delete sidora_util.cachedObjects[key];
+    }
+  }
+}
+sidora_util.cacheClear = function(){
+  for (var key in sidora_util.cachedObjects) {
+    delete sidora_util.cachedObjects[key];
+  }
+}
 sidora_util.writeCookie = function(name,value,days) {
     var date, expires;
     if (days) {

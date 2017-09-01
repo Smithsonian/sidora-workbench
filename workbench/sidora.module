@@ -3124,9 +3124,18 @@ function sidora_allow($user_pid_or_drupal_user, $pid_or_fedora_object, $type_of_
     $object = $pid_or_fedora_object;
   }
 
+  if (empty($object)) {
+    return FALSE;
+  }
   // At this point, we no longer use $pid_or_fedora_object
   // $pid is the pid
   // $object is the object, only loaded if we already had it or no node was found for it
+  if ($object->state != 'A') {
+    // do not perform actions on deleted or inactive objects, even for admins
+    // if you want to do something like this, set it to active in the Fedora Admin Flash app
+    //   and re-delete afterward
+    return FALSE;
+  }
 
   //hopefully this is a valid fedora object now
   //if the user is an administrator, they always have the rights
@@ -4135,6 +4144,7 @@ function sidora_obj($pid) {
     $object = islandora_object_load($pid);
   }
   if (empty($object)) return NULL;
+  if ($object->state != 'A') return NULL;
   $is_concept = sidora_is_concept($object);
   $is_codebook = sidora_is_codebook($object);
   $is_resource = sidora_is_resource($object);
@@ -5500,6 +5510,8 @@ function sidora_copy($copy_to_id, $pid, $show_output = TRUE) {
     if (sizeof($existing_rels) > 0) {
       $to_output['error'] = TRUE;
       $to_output['description'] = t("Object already exists on target");
+      $to_output['target'] = $copy_to->id;
+      $to_output['payload'] = $pid;
       $to_output['code'] = 'copy3';
     }
     else {
@@ -5514,6 +5526,8 @@ function sidora_copy($copy_to_id, $pid, $show_output = TRUE) {
     if (sizeof($existing_rels) > 0) {
       $to_output['error'] = TRUE;
       $to_output['description'] = t("Object already exists on target");
+      $to_output['target'] = $copy_to->id;
+      $to_output['payload'] = $pid;
       $to_output['code'] = 'copy4';
     }
     else {

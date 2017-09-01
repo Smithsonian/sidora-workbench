@@ -452,7 +452,7 @@ function sidora_project_spaces_tree($root_label = 'Research Spaces where you can
     ) {
       $continue_output = FALSE;
       if (empty($permissions)) {
-        $continue_output = TRUE;
+        $continue_output = sidora_allow($user, $pid, 'view');
       }
       foreach($permissions as $permission_name) {
         if ($continue_output || sidora_allow($user, $pid, $permission_name)) {
@@ -896,53 +896,56 @@ function sidora_project_spaces_form($form = array(), &$form_state, $uid = NULL) 
     }
     else {
       $pid = $owned_group->field_fedora_pid[$owned_group->language][0]["safe_value"];
-      $name_markup = '<span class="rs-listing-rs-name">';
-      $name_markup .= (empty($owned_group->field_fedora_label[$owned_group->language]))?"(none)":$owned_group->field_fedora_label[$owned_group->language][0]["safe_value"];
-      $name_markup .= '</span>';
-      $name_markup .= '<br>';
-      $name_markup .= '<span class="rs-listing-rs-desc">';
-      $name_markup .= (empty($owned_group->body[$owned_group->language]))?"":$owned_group->body[$owned_group->language][0]["value"];
-      $name_markup .= '</span>';
-      $row = array(
-        "name_$i" => array('data' => array(
-          '#markup' => $name_markup,
-        )),
-        "owner_$i" => array('data' => array(
-          '#markup' => sidora_get_username_from_uid($owned_group->uid),
-        )),
-      );
-      if (empty($uid) || $uid == $user->uid){
-        $form['table']['#header'] = array(t('Name'), t('Owner'), t('Is Default'));
-        $row["is_default_$i"] = array('data' => array(
-          "check_default_$i" => array(
-            '#type' =>'radio',
-            '#attributes' => array(
-              'name' => "default_ps",
-              'value' => $pid,
+      $obj = sidora_obj($pid);
+      if (!empty($obj)) {
+        $name_markup = '<span class="rs-listing-rs-name">';
+        $name_markup .= (empty($owned_group->field_fedora_label[$owned_group->language]))?"(none)":$owned_group->field_fedora_label[$owned_group->language][0]["safe_value"];
+        $name_markup .= '</span>';
+        $name_markup .= '<br>';
+        $name_markup .= '<span class="rs-listing-rs-desc">';
+        $name_markup .= (empty($owned_group->body[$owned_group->language]))?"":$owned_group->body[$owned_group->language][0]["value"];
+        $name_markup .= '</span>';
+        $row = array(
+          "name_$i" => array('data' => array(
+            '#markup' => $name_markup,
+          )),
+          "owner_$i" => array('data' => array(
+            '#markup' => sidora_get_username_from_uid($owned_group->uid),
+          )),
+        );
+        if (empty($uid) || $uid == $user->uid){
+          $form['table']['#header'] = array(t('Name'), t('Owner'), t('Is Default'));
+          $row["is_default_$i"] = array('data' => array(
+            "check_default_$i" => array(
+              '#type' =>'radio',
+              '#attributes' => array(
+                'name' => "default_ps",
+                'value' => $pid,
+              ),
             ),
-          ),
-        ));
-        if ($pid == $default_ps) {
-          $row["is_default_$i"]['data']["check_default_$i"]['#attributes']['checked'] = 'checked';
+          ));
+          if ($pid == $default_ps) {
+            $row["is_default_$i"]['data']["check_default_$i"]['#attributes']['checked'] = 'checked';
+          }
         }
-      }
-      if (sidora_allow($user, $pid, 'permissions')) {
-        $operations_markup = l(t('Edit'),'/sidora/research_space_create/' . $pid);
-        $operations_markup .= ' | ';
-        $operations_markup .= l(t('Permissions'),'/sidora/sharing_permissions/' . $pid);
-        $operations_markup .= ' | ';
-        $operations_markup .= l(t('Change Owner'),'/sidora/research_space_transfer/' . $pid);
-        $row["edit_$i"] = array('data' => array(
-          '#markup' => $operations_markup,
+        if (sidora_allow($user, $pid, 'permissions')) {
+          $operations_markup = l(t('Edit'),'/sidora/research_space_create/' . $pid);
+          $operations_markup .= ' | ';
+          $operations_markup .= l(t('Permissions'),'/sidora/sharing_permissions/' . $pid);
+          $operations_markup .= ' | ';
+          $operations_markup .= l(t('Change Owner'),'/sidora/research_space_transfer/' . $pid);
+          $row["edit_$i"] = array('data' => array(
+            '#markup' => $operations_markup,
+          ));
+          $can_change_permission = TRUE;
+        }
+        else {
+          $row["edit_$i"] = array('data' => array(
+            '#markup' => ''
         ));
-        $can_change_permission = TRUE;
+        }
+        $rows['myrow'.$i] = $row;
       }
-      else {
-        $row["edit_$i"] = array('data' => array(
-          '#markup' => ''
-        ));
-      }
-      $rows['myrow'.$i] = $row;
     }
   }
   if ($can_change_permission) {
