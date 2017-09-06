@@ -998,7 +998,7 @@ sidora.ProjectSpaces.ShowProjectSpaceTransferForm = function(pid){
 sidora.queue = new SidoraQueue();
 sidora.contextMenu = {};
 sidora.contextMenu.SetUp = function(){
-  $ = jQuery
+  $ = jQuery;
   var cmips = function(key, opt){
     if (key == 'editConcept' && !sidora.concept.permissions.update) {
       return true;
@@ -1236,6 +1236,7 @@ sidora.InitiateJSTree = function(){
         var optionToAdd = jQuery("<option value='"+optionVal+"'"+selected+">"+htmlEntities(optionText)+"</option>");
         jQuery("#psdd-select").append(optionToAdd); 
       }
+      // value of sep1 is used as a marker for where to dynamically add newly created project spaces
       jQuery("#psdd-select").append("<option value='sep1'>-----</option>");
       jQuery("#psdd-select").append("<option value='link_viewAll'>View all Research Spaces...</option>");
       jQuery("#psdd-select").append("<option value='link_createNew'>Create a Research Space...</option>");
@@ -2429,6 +2430,9 @@ sidora.util.reorderTreeChildrenAlphabetical = function(node) {
 sidora.util.treeAdditionSingleItem = function(onLoadComplete, overwriteType, jst, documentFragment, currChild){
   var ccp = currChild.a_attr.pid;
   var dfAnchor = jQuery(documentFragment).children().find("[pid='"+ccp+"']");
+  return sidora.util.treeAdditionSingleItemPassAnchors(onLoadComplete, overwriteType, jst, documentFragment, currChild, ccp, dfAnchor);
+}
+sidora.util.treeAdditionSingleItemPassAnchors = function(onLoadComplete, overwriteType, jst, documentFragment, currChild, ccp, dfAnchor){
   //If the document fragment does not include the child then that concept was removed
   if (dfAnchor.length > 0) {
     //Find the current child representation in the document fragment
@@ -2922,7 +2926,7 @@ sidora.ProjectSpaces.refreshOptions = function(){
       });
       // elemAttr now contains the information to give to jstree for this item
       var newDomId = jst.create_node('j1_1' ,  { "text" : elem.innerHTML,"a_attr": elemAttr}, "last", function(){  console.log("done:"+elem.innerHTML); });
-      jQuery("#psdd-select").append("<option value='"+newDomId+"'>"+elem.innerHTML+"</option>");
+      jQuery("option[value='sep1']").before("<option value='"+newDomId+"'>"+elem.innerHTML+"</option>");
       sidora.ProjectSpaces.ChangeProjectSpace(jQuery("#psdd-select").val(), true);
     };
   });

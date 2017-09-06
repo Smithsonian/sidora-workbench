@@ -539,6 +539,10 @@ function sidora_project_space_creation_form($form = array(), &$form_state, $exis
   $init_info = array('name'=>'','desc'=>'','file'=>'');
   if (!empty($existing_pid)) {
     if (!sidora_is_project_space($existing_pid) || !sidora_allow($user, $existing_pid, 'update')) {
+      // Maybe this was just created and never initialized, try initializing it now
+      sidora_build_tree_from_nodes_by_pid($existing_pid, 0);
+    }
+    if (!sidora_is_project_space($existing_pid) || !sidora_allow($user, $existing_pid, 'update')) {
       $form['info'] = array(
         '#markup' => t('Unable to load the Research Space for editing. This error has been entered into the log so site administrators can view the issue. Contact the site administrator if you would like immediate assistance.'),
       );
@@ -658,6 +662,8 @@ function sidora_project_space_creation_form_submit($form, &$form_state) {
     }
     $created_node = sidora_create_personal_project_space($user, array("label"=>$form_state['values']['ps_name'],"description"=>$form_state['values']['ps_desc']));
     if (!empty($created_node)) {
+      // Load the information into the node from Fedora
+      sidora_update_node_from_fedora($created_node);
       drupal_set_message("New Research Space Created");
     }
   }
