@@ -1084,7 +1084,7 @@ sidora.menuChoice = function(key, pid){
       myTitle = Drupal.t("Research Space Edit");
       break;
     case "addConcept":
-      myUrl = Drupal.settings.basePath+"sidora/ajax_parts/create_resource/"+pid;
+      myUrl = Drupal.settings.basePath+"sidora/ajax_parts/create_concept/"+pid;
       myTitle = sidora.display.CREATE_CONCEPT_TITLE;
       break;
     case "changePermissions":
@@ -2574,7 +2574,9 @@ sidora.util.treeAddition = function(htmlTree, onLoadComplete, overwriteType){
  * @return true if call will be made, false if call was already made and will not be made again
  */
 sidora.util.loadTreeSection = function(openingPid, onLoadComplete, overwriteType) {
-
+  if (typeof(openingPid) == 'undefined') {
+    console.log("No opening pid for loadTreeSection");
+  }
   if (typeof(sidora.util.loadTreeSectionCurrent) == 'undefined') {
     sidora.util.loadTreeSectionCurrent = [];
   }
@@ -2733,6 +2735,9 @@ sidora.util.RefreshTreeHelper = function(secondsOfWait, pid, onlyRefreshIfNew) {
     }
     if (typeof(parentNode.a_attr) != 'undefined') {
       var parentPid = parentNode.a_attr.pid;
+      if (typeof(parentPid) == 'undefined') {
+        parentPid = node.a_attr.pid;
+      }
       setTimeout(function(myPid){
         jQuery.ajax({
           url: Drupal.settings.basePath+'sidora/ajax_parts/tree/'+myPid+"/2",

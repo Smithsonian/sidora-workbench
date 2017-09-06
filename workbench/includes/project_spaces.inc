@@ -884,7 +884,7 @@ function sidora_project_spaces_form($form = array(), &$form_state, $uid = NULL) 
   );
   $form['table'] = array(
     '#theme' => 'table',
-    '#header' => array(t('Name'), t('Description'), t('Owner')),
+    '#header' => array(t('Name'), t('Owner')),
   );
   $rows = array();
   $can_change_permission = FALSE;
@@ -952,16 +952,18 @@ function sidora_project_spaces_form($form = array(), &$form_state, $uid = NULL) 
     $form['table']['#header'][] = t('Operations');
   }
   $form['table']['#rows'] = $rows;
-  $form['default_ps'] = array('#type'=>'radio', '#attributes' => array('style' => 'display:none;'));
-  if (sidora_is_admin()) { 
-    $form['show_all'] = array(
-      '#markup' => '<div>' . l(t('Show All'),'/sidora/project_spaces/all') . '<div>',
+  if (empty($uid) || $uid == $user->uid){
+    $form['default_ps'] = array('#type'=>'radio', '#attributes' => array('style' => 'display:none;'));
+    if (sidora_is_admin()) { 
+      $form['show_all'] = array(
+        '#markup' => '<div>' . l(t('Show All'),'/sidora/research_spaces/all') . '<div>',
+      );
+    }
+    $form['submit'] = array(
+      '#type' => 'submit',
+      '#value' => t('Submit'),
     );
   }
-  $form['submit'] = array(
-    '#type' => 'submit',
-    '#value' => t('Submit'),
-  );
   return $form;
 }
 
