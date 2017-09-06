@@ -1223,12 +1223,6 @@ sidora.InitiateJSTree = function(){
     jst.open_node(jst.get_node("j1_1"));
     setTimeout(function(){
       var mainTreeChildren = jQuery("#j1_1").children("ul").children();
-      var rsMiniLinks = '<div class="rs-mini-links" style="position: absolute;top: 26px;left: 10px;font-size: 10px;">';
-      rsMiniLinks += '<a href="#" onclick="sidora.ProjectSpaces.viewAll(); return false;">View All</a>';
-      rsMiniLinks += '&nbsp;&nbsp;&nbsp;&nbsp;';
-      rsMiniLinks += '<a href="#" onclick="sidora.ProjectSpaces.showCreate(); return false;">Create New</a>';
-      rsMiniLinks += '</div>';
-      jQuery("#conceptResizable").prepend(rsMiniLinks);
       jQuery("#conceptResizable").prepend("<div class='project-space-drop-down'><select id='psdd-select'></select></div>");
       var selectedIndex = 0;
       for(var mtci = 0; mtci < mainTreeChildren.length; mtci++){
@@ -1244,7 +1238,6 @@ sidora.InitiateJSTree = function(){
       }
       jQuery("#psdd-select").append("<option value='sep1'>-----</option>");
       jQuery("#psdd-select").append("<option value='link_viewAll'>View all Research Spaces...</option>");
-      jQuery("#psdd-select").append("<option value='sep2'>-----</option>");
       jQuery("#psdd-select").append("<option value='link_createNew'>Create a Research Space...</option>");
       if (window.location.hash == "") {
         var selectedValue = mainTreeChildren[selectedIndex].id;
