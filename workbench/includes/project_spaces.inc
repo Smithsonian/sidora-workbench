@@ -541,6 +541,7 @@ function sidora_project_space_creation_form($form = array(), &$form_state, $exis
     if (!sidora_is_project_space($existing_pid) || !sidora_allow($user, $existing_pid, 'update')) {
       // Maybe this was just created and never initialized, try initializing it now
       sidora_build_tree_from_nodes_by_pid($existing_pid, 0);
+      sidora_put_into_proper_project_space($existing_pid);
     }
     if (!sidora_is_project_space($existing_pid) || !sidora_allow($user, $existing_pid, 'update')) {
       $form['info'] = array(
@@ -688,6 +689,7 @@ function sidora_project_space_creation_form_submit($form, &$form_state) {
       );
     }
     node_save($created_node);
+    sidora_put_into_proper_project_space($created_node);
     drupal_goto('sidora/research_spaces');
   }
   else {
@@ -1252,6 +1254,9 @@ function sidora_create_personal_project_space($account = NULL, $info = NULL) {
   sidora_create_sidora_group($owner, $concept_pid, 'view');
   sidora_create_sidora_group($owner, $concept_pid, 'edit');
   sidora_create_sidora_group($owner, $concept_pid, 'delete');
+  node_save($created_node);
+  sidora_put_into_project_spaces($concept_pid, $concept_pid);
+   
   return $created_node;
 }
 
