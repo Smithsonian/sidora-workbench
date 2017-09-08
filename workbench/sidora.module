@@ -3260,6 +3260,10 @@ function sidora_exact_duplicate($copy_from_pid) {
   $tuque = islandora_get_tuque_connection();
   module_load_include('inc', 'islandora', 'includes/utilities');
   module_load_include('inc', 'islandora', 'includes/ingest.form');
+  if ($copy_from == null) {
+    watchdog('sidora',t("Tried to make an exact duplicate of object that was not in Fedora: %pid",array('%pid'=>$copy_from_pid)));
+    return null;
+  }
   $copied_to = islandora_copy_object($copy_from);
   $apim = $tuque->repository->api->m;
   $nextPid = $apim->getNextPid(islandora_get_namespace('si:root'));
@@ -3286,54 +3290,62 @@ function sidora_duplicate_tree_and_resources($pid_of_item_to_duplicate, $project
     // If it has codebooks, those will be taken care of in the 
     // assocation process (this function or sidora_copy) to its new parent
     $new_obj = sidora_exact_duplicate($pid_of_item_to_duplicate);
-    return $new_obj->id;
+    if (!empty($new_obj)) {
+      return $new_obj->id;
+    }
+    return null;
   }
   if (!empty($pids)) {
   // For each item in this list
     foreach($pids as $pid => $node_id) {
       // create a duplicate
       $new_obj = sidora_exact_duplicate($pid);
-      if (!empty($project_space_pid)) {
-        $node = sidora_update_or_create_node_from_fedora($new_obj);
-        module_load_include('inc', 'sidora', 'includes/project_spaces');
-        sidora_put_into_project_spaces($node, $project_space_pid);
-      }
-      //  Store the association between the old and new
-      $processed_duplicates[$pid] = $new_obj->id;
-      // create duplicates of each resource
-      $original_obj = sidora_obj($pid);
-      $resource_rels = $original_obj->relationships->get(FEDORA_RELS_EXT_URI, 'hasResource');
-      foreach($resource_rels as $resource_rel) {
-        $original_resource_pid = $resource_rel['object']['value'];
-        if (!array_key_exists($original_resource_pid, $processed_duplicates)) {
-          $new_res = sidora_exact_duplicate($original_resource_pid);
-          // Store the association between the old and new
-          $processed_duplicates[$original_resource_pid] = $new_res->id;
-          // Check the resource's codebook, and duplicate that as well
-          $codebook_pids = sidora_get_codebook_pids($original_resource_pid);
-          foreach($codebook_pids as $codebook_pid){
-            // If the codebook's owner is already the project space that it's being moved into
-            // then there's no need to duplicate it
-            $codebook_manager_pid = sidora_get_codebook_manager_pid($codebook_pid);
-            // Below line includes the idea that if they are both empty then no need to duplicate
-            if ($project_space_pid != $codebook_manager_pid){
-              // If it's already been duplicated, then do not reduplicate
-              $duplicated_pids = array_keys($processed_duplicates);
-              if (!in_array($codebook_pid, $duplicated_pids)) {
-                // Put the new codebook on the project space, if specified
-                $new_codebook = sidora_exact_duplicate($codebook_pid);
-                // Manager of the new codebook is the project space the tabular data got copied into
-                if (!empty($project_space_pid)) {
-                  $ps_obj = sidora_obj($project_space_pid);
-                  $ps_obj->relationships->add(FEDORA_RELS_EXT_URI, 'managesCodebook', $new_codebook->id);
+      // if the RELS-EXT is pointing to something that doesn't exist, don't try to use a new object
+      if (!empty($new_obj)) {
+        if (!empty($project_space_pid)) {
+          $node = sidora_update_or_create_node_from_fedora($new_obj);
+          module_load_include('inc', 'sidora', 'includes/project_spaces');
+          sidora_put_into_project_spaces($node, $project_space_pid);
+        }
+        //  Store the association between the old and new
+        $processed_duplicates[$pid] = $new_obj->id;
+        // create duplicates of each resource
+        $original_obj = sidora_obj($pid);
+        $resource_rels = $original_obj->relationships->get(FEDORA_RELS_EXT_URI, 'hasResource');
+        foreach($resource_rels as $resource_rel) {
+          $original_resource_pid = $resource_rel['object']['value'];
+          if (!array_key_exists($original_resource_pid, $processed_duplicates)) {
+            $new_res = sidora_exact_duplicate($original_resource_pid);
+            // Store the association between the old and new
+            $processed_duplicates[$original_resource_pid] = $new_res->id;
+            // Check the resource's codebook, and duplicate that as well
+            $codebook_pids = sidora_get_codebook_pids($original_resource_pid);
+            foreach($codebook_pids as $codebook_pid){
+              // If the codebook's owner is already the project space that it's being moved into
+              // then there's no need to duplicate it
+              $codebook_manager_pid = sidora_get_codebook_manager_pid($codebook_pid);
+              // Below line includes the idea that if they are both empty then no need to duplicate
+              if ($project_space_pid != $codebook_manager_pid){
+                // If it's already been duplicated, then do not reduplicate
+                $duplicated_pids = array_keys($processed_duplicates);
+                if (!in_array($codebook_pid, $duplicated_pids)) {
+                  // Put the new codebook on the project space, if specified
+                  $new_codebook = sidora_exact_duplicate($codebook_pid);
+                  // Manager of the new codebook is the project space the tabular data got copied into
+                  if (!empty($project_space_pid)) {
+                    $ps_obj = sidora_obj($project_space_pid);
+                    $ps_obj->relationships->add(FEDORA_RELS_EXT_URI, 'managesCodebook', $new_codebook->id);
+                  }
+                  // Add this to the list of duplicated items, which will allow checking
+                  // to not reduplicate and also perform the reassociation of relationships
+                  $processed_duplicates[$codebook_pid] = $new_codebook->id;
                 }
-                // Add this to the list of duplicated items, which will allow checking
-                // to not reduplicate and also perform the reassociation of relationships
-                $processed_duplicates[$codebook_pid] = $new_codebook->id;
               }
             }
+            // Out of codebook_pids loop
           }
         }
+        // Out of resources loop
       }
     }
     $original_pids_that_were_processed = array_keys($processed_duplicates);

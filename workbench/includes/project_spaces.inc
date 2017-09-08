@@ -423,7 +423,7 @@ function sidora_get_groups_for_project_space($pid, $administrative_bookkeeping =
 /**
  * Returns a tree based on the research spaces the user has access to, defaults to 4 levels total
  */
-function sidora_project_spaces_tree($root_label = 'Research Spaces where you can create:', $include_href = FALSE, $permissions = array("create"), $start_open = TRUE, $num_levels = 3){
+function sidora_project_spaces_tree($root_label = 'Research Space Destinations:', $include_href = FALSE, $permissions = array("create"), $start_open = TRUE, $num_levels = 3){
   $ignore_pid = filter_input(INPUT_GET, 'ignore_pid', FILTER_SANITIZE_STRING);
   $specify_pids = filter_input(INPUT_GET, 'specify_pids', FILTER_SANITIZE_STRING);
   if (!empty($specify_pids)) {

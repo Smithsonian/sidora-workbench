@@ -760,10 +760,10 @@ sidora.ProjectSpaces.ChangeProjectSpace = function(selectedValue, suppressClick)
 sidora.ProjectSpaces.DuplicateOrTransferIntro = function(type, pids) {
   var intro = "<p>";
   if (type == "duplicate") {
-    intro = "You selected the following to be duplicated:";
+    intro = "You selected the following to be copy:";
   }
   if (type == "transfer") {
-    intro = "You selected the following to be transferred:";
+    intro = "You selected the following to be moved:";
   }
   if (type == "link") {
     intro = "You selected for links to be created to the following:";
@@ -887,7 +887,7 @@ sidora.ProjectSpaces.DuplicateOrTransferHtml = function(selectionIntroHtml){
   var toReturn = "<div style='height:100%'>";
   toReturn += selectionIntroHtml;
   toReturn += "<div id='destination-tree' style='width:100%;overflow:auto;height:calc(100% - 200px);'>Loading destination trees...</div>";
-  toReturn += '<div id="destination-chosen" class="sidora-ui-text sidora-thin-button" style="float:right">Submit</div>';
+  toReturn += '<input id="destination-chosen" class="form-submit" style="float:right; width:100px;" value="Submit" />';
   return toReturn;
 }
 sidora.ProjectSpaces.ShowWhereToForm = function(selectionIntro, pids, ignorePid, specifyPids, onSubmit, specifiedDepth){
@@ -1045,9 +1045,11 @@ sidora.contextMenu.SetUp = function(){
                 "copyConceptAndChildren": {name: "Copy Concept & Children...", icon: "copy", disabled: cmips},
                 "moveConcept": {name: "Move Concept...", icon: "arrow-right", disabled: cmips},
                 "linkConcept": {name: "Link Concept...", icon: "external-link", disabled: cmips},
+                "deleteConcept": {name: "Delete Concept", icon: "delete", disabled: cmips},
                 "sep1": "---------",
+                "addConcept": {name: "Add New Concept", icon: "paste"},
+                "sep2": "---------",
                 "editResearchSpace": {name: "Edit Research Space", icon: "edit", disabled: cmnps},
-                "addConcept": {name: "Add New Concept", icon: "paste", disabled: cmnps},
                 "changePermissions": {name: "Change Space Permissions...", disabled: cmnps},
                 "changeOwner": {name: "Move Space to New Owner...", icon: "arrow-right", disabled: cmnps},
             }
@@ -1056,20 +1058,24 @@ sidora.contextMenu.SetUp = function(){
 }
 sidora.contextMenu.Chooser = function(key, options) {
   var pid = jQuery(sidora.contextMenu.ClickItem).attr("pid");
-  sidora.menuChoice(key,pid);
+  var treeId = jQuery(sidora.contextMenu.ClickItem).parent().attr("id");
+  sidora.menuChoice(key,pid,treeId);
 }
-sidora.menuChoice = function(key, pid){
+sidora.menuChoice = function(key, pid, treeId){
   var myUrl = null;
   var myTitle = null;
   switch(key) {
     case "copyConceptAndChildren":
       sidora.ProjectSpaces.DuplicateOrTransfer('duplicate', 'concept', pid);
+      myTitle = Drupal.t("Copy Concept");
       break;
     case "moveConcept":
       sidora.ProjectSpaces.DuplicateOrTransfer('transfer', 'concept', pid);
+      myTitle = Drupal.t("Move Concept");
       break;
     case "linkConcept":
       sidora.ProjectSpaces.DuplicateOrTransfer('link', 'concept',pid);
+      myTitle = Drupal.t("Create New Link");
       break;
     case "editConcept":
       myUrl = Drupal.settings.basePath+"sidora/edit_metadata/"+pid;
@@ -1094,6 +1100,10 @@ sidora.menuChoice = function(key, pid){
     case "changeOwner":
       myUrl = Drupal.settings.basePath+"sidora/research_space_transfer/"+pid;
       myTitle = Drupal.t("Research Space Transfer");
+      break;
+    case "deleteConcept":
+      sidora.concept.DeleteConceptByTreeId(treeId);
+      return;
       break;
   }
   if (myUrl != null) {
@@ -2975,10 +2985,20 @@ sidora.util.Confirm = function(title, questionText, onConfirmation, onCancel, co
 /*
  * Check to see if the concept can be deleted and if so, asks for confirmation from user before unassociate / delete
  */
+sidora.concept.DeleteConceptByTreeId = function(treeId) {
+  var rc = parseInt(jQuery("#" + treeId + " a").attr("resourcechildren"));
+  var cc = parseInt(jQuery("#" + treeId + " a").attr("conceptchildren"));
+  var pid = (jQuery("#" + treeId + " a").attr("pid"));
+  var name = (jQuery("#" + treeId + " a").attr("fullname"));
+  return sidora.concept.DeleteConceptSpecified(name, pid, cc, rc);
+}
 sidora.concept.DeleteConcept = function(){
+  return sidora.concept.DeleteConceptSpecified(sidora.concept.GetName(), sidora.concept.GetPid(), sidora.concept.GetConceptChildrenLength(), sidora.concept.GetResourceChildrenLength());
+}
+sidora.concept.DeleteConceptSpecified = function(name, pid, conceptChildrenLen, resourceChildrenLen) {
   jQuery('#deleteConceptDialog').remove();
-  if ((sidora.concept.GetConceptChildrenLength() == null) || (sidora.concept.GetResourceChildrenLength() == null)){
-    jQuery("body").append("<div id='deleteConceptDialog' style='display:none;' title='"+htmlEntities(sidora.display.DELETE_CONCEPT_TITLE)+"'><p>Error getting the child concepts or resources for this concept. Cannot delete this concept</p><p>"+sidora.concept.GetName()+" ("+sidora.concept.GetPid()+")</p></div>");
+  if ((conceptChildrenLen == null) || (resourceChildrenLen == null)) {
+    jQuery("body").append("<div id='deleteConceptDialog' style='display:none;' title='"+htmlEntities(sidora.display.DELETE_CONCEPT_TITLE)+"'><p>Error getting the child concepts or resources for this concept. Cannot delete this concept</p><p>"+name+" ("+pid+")</p></div>");
     jQuery("#deleteConceptDialog").dialog({
       resizable: false,
       height:250,
@@ -2992,8 +3012,8 @@ sidora.concept.DeleteConcept = function(){
     });
     return;
   }
-  if (sidora.concept.GetConceptChildrenLength() + sidora.concept.GetResourceChildrenLength() > 0){
-    jQuery("body").append("<div id='deleteConceptDialog' style='display:none;' title='"+htmlEntities(sidora.display.DELETE_CONCEPT_TITLE)+"'><p>This concept has "+sidora.concept.GetConceptChildrenLength()+" concept(s) and has "+sidora.concept.GetResourceChildrenLength()+" resource(s) as children. It cannot be deleted while it has children.</p><p>"+sidora.concept.GetName()+" ("+sidora.concept.GetPid()+")</p></div>");
+  if (conceptChildrenLen + resourceChildrenLen > 0){
+    jQuery("body").append("<div id='deleteConceptDialog' style='display:none;' title='"+htmlEntities(sidora.display.DELETE_CONCEPT_TITLE)+"'><p>This concept has "+conceptChildrenLen+" concept(s) and has "+resourceChildrenLen+" resource(s) as children. It cannot be deleted while it has children.</p><p>"+name+" ("+pid+")</p></div>");
     jQuery("#deleteConceptDialog").dialog({
       resizable: false,
       height:250,
@@ -3007,35 +3027,35 @@ sidora.concept.DeleteConcept = function(){
     });
     return;
   }
-  jQuery("body").append("<div id='deleteConceptDialog' style='display:none;' title='"+htmlEntities(sidora.display.DELETE_CONCEPT_TITLE)+"'><p>Are you sure you want to delete this concept?</p><p>"+sidora.concept.GetName()+" ("+sidora.concept.GetPid()+")</p></div>");
+  jQuery("body").append("<div id='deleteConceptDialog' style='display:none;' title='"+htmlEntities(sidora.display.DELETE_CONCEPT_TITLE)+"'><p>Are you sure you want to delete this concept?</p><p>"+name+" ("+pid+")</p></div>");
   jQuery("#deleteConceptDialog").dialog({
-  resizable: false,
-      height:205,
-      width: 400,
-      modal: true,
-      buttons: {
-        "Delete concept": function() {
-          var toClose = this;
-          var onDeleteWorked = sidora.util.createFunctionRefreshTree(sidora.concept.GetPid());
-          var onDeleteFailed = function(data){
-            jQuery("#deleteConceptConfirm").remove();
-            if (typeof(data) != 'undefined' && typeof(data.description) != 'undefined'){
-              jQuery("body").append("<div title='Concept Not Deleted' id='deleteConceptConfirm'><p>Concept Not Deleted</p><p>"+data.description+"</p><div>");
-            }else{
-              jQuery("body").append("<div title='Concept Not Deleted' id='deleteConceptConfirm'><p>Concept Not Deleted</p><p>Unknown error.  Please indicate steps taken to recreate this error, including Fedora PIDS used if possible.</p><div>");
-            }
-            jQuery("#deleteConceptConfirm").dialog({
-              resizable:false, modal:true
-            });
-          };
-          sidora.concept.DeleteConceptBusinessLogic(onDeleteWorked,onDeleteFailed);
-          jQuery( toClose ).dialog( "close" );
-        },
-        Cancel: function() {
-          jQuery( this ).dialog( "close" );
-        }
+    resizable: false,
+    height:205,
+    width: 400,
+    modal: true,
+    buttons: {
+      "Delete concept": function() {
+        var toClose = this;
+        var onDeleteWorked = sidora.util.createFunctionRefreshTree(pid);
+        var onDeleteFailed = function(data){
+          jQuery("#deleteConceptConfirm").remove();
+          if (typeof(data) != 'undefined' && typeof(data.description) != 'undefined'){
+            jQuery("body").append("<div title='Concept Not Deleted' id='deleteConceptConfirm'><p>Concept Not Deleted</p><p>"+data.description+"</p><div>");
+          }else{
+            jQuery("body").append("<div title='Concept Not Deleted' id='deleteConceptConfirm'><p>Concept Not Deleted</p><p>Unknown error.  Please indicate steps taken to recreate this error, including Fedora PIDS used if possible.</p><div>");
+          }
+          jQuery("#deleteConceptConfirm").dialog({
+            resizable:false, modal:true
+          });
+        };
+        sidora.util.deletePid(pid, onDeleteWorked, onDeleteFailed, 'deleteConcept');
+        jQuery( toClose ).dialog( "close" );
+      },
+      Cancel: function() {
+        jQuery( this ).dialog( "close" );
       }
-    });
+    }
+  });
 }
 sidora.resources.UserFriendlyListing = function(pids) {
   var userFriendlyListing = '<ul>';
