@@ -760,7 +760,7 @@ sidora.ProjectSpaces.ChangeProjectSpace = function(selectedValue, suppressClick)
 sidora.ProjectSpaces.DuplicateOrTransferIntro = function(type, pids) {
   var intro = "<p>";
   if (type == "duplicate") {
-    intro = "You selected the following to be copy:";
+    intro = "You selected the following to be copied:";
   }
   if (type == "transfer") {
     intro = "You selected the following to be moved:";
@@ -782,7 +782,10 @@ sidora.util.FirstVisibleNodeWithPid = function(pid) {
     if (jQuery("#"+a.id).length > 0) return a; else return null;
   })[0];
 }
-sidora.ProjectSpaces.DuplicateOrTransfer = function(type, conceptsOrResources, specificPids) {
+sidora.ProjectSpaces.DuplicateOrTransfer = function(type, conceptsOrResources, specificPids, myTitle) {
+  if (typeof(myTitle) == 'undefined' || myTitle == null) {
+    myTitle = sidora.display.PROJECT_SPACE_PERMISSION_TITLE;
+  }
   var pids = [];
   var parentPid = null;
   if (conceptsOrResources == 'resources') {
@@ -881,7 +884,7 @@ sidora.ProjectSpaces.DuplicateOrTransfer = function(type, conceptsOrResources, s
       );
     }
   }
-  sidora.ProjectSpaces.ShowWhereToForm(intro, pids, ignoredDestination, specificDestination, onSubmit, specifiedDepth);
+  sidora.ProjectSpaces.ShowWhereToForm(intro, pids, ignoredDestination, specificDestination, onSubmit, specifiedDepth, myTitle);
 }
 sidora.ProjectSpaces.DuplicateOrTransferHtml = function(selectionIntroHtml){
   var toReturn = "<div style='height:100%'>";
@@ -890,7 +893,7 @@ sidora.ProjectSpaces.DuplicateOrTransferHtml = function(selectionIntroHtml){
   toReturn += '<input id="destination-chosen" class="form-submit" style="float:right; width:100px;" value="Submit" />';
   return toReturn;
 }
-sidora.ProjectSpaces.ShowWhereToForm = function(selectionIntro, pids, ignorePid, specifyPids, onSubmit, specifiedDepth){
+sidora.ProjectSpaces.ShowWhereToForm = function(selectionIntro, pids, ignorePid, specifyPids, onSubmit, specifiedDepth, myTitle){
   var params = {
   };
   if (typeof(ignorePid) == 'string' && ignorePid != '') {
@@ -913,7 +916,7 @@ sidora.ProjectSpaces.ShowWhereToForm = function(selectionIntro, pids, ignorePid,
     Shadowbox.open({
       content:    "<div style='height:100%;background:floralwhite;'><div style='padding:10px;height:calc(100% - 20px);'>"+sidora.ProjectSpaces.DuplicateOrTransferHtml(selectionIntro, onSubmit)+"</div></div>",
       player:     "html",
-      title:      sidora.display.PROJECT_SPACE_PERMISSION_TITLE,
+      title:      myTitle,
       width: 800,
       height: Math.max(600,jQuery("body").height()-100),
       options: {
@@ -1066,16 +1069,16 @@ sidora.menuChoice = function(key, pid, treeId){
   var myTitle = null;
   switch(key) {
     case "copyConceptAndChildren":
-      sidora.ProjectSpaces.DuplicateOrTransfer('duplicate', 'concept', pid);
       myTitle = Drupal.t("Copy Concept");
+      sidora.ProjectSpaces.DuplicateOrTransfer('duplicate', 'concept', pid, myTitle);
       break;
     case "moveConcept":
-      sidora.ProjectSpaces.DuplicateOrTransfer('transfer', 'concept', pid);
       myTitle = Drupal.t("Move Concept");
+      sidora.ProjectSpaces.DuplicateOrTransfer('transfer', 'concept', pid, myTitle);
       break;
     case "linkConcept":
-      sidora.ProjectSpaces.DuplicateOrTransfer('link', 'concept',pid);
       myTitle = Drupal.t("Create New Link");
+      sidora.ProjectSpaces.DuplicateOrTransfer('link', 'concept', pid, myTitle);
       break;
     case "editConcept":
       myUrl = Drupal.settings.basePath+"sidora/edit_metadata/"+pid;
@@ -2004,10 +2007,10 @@ sidora.resources.performBulkActions = function(){
     return;
   }
   if (action == 'duplicate') {
-    sidora.ProjectSpaces.DuplicateOrTransfer('duplicate', 'resources', pids);
+    sidora.ProjectSpaces.DuplicateOrTransfer('duplicate', 'resources', pids, Drupal.t("Bulk Copy Resources"));
   }
   if (action == 'move') {
-    sidora.ProjectSpaces.DuplicateOrTransfer('transfer', 'resources', pids);
+    sidora.ProjectSpaces.DuplicateOrTransfer('transfer', 'resources', pids, Drupal.t("Bulk Move Resources"));
   }
   if (action == 'delete') {
     sidora.resources.DeleteResource(pids);
