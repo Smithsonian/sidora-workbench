@@ -113,10 +113,10 @@ window.sidora.display = {
   "PROJECT_SPACE_PERMISSION_TITLE" : Drupal.t("Research Space Permission"),
   "PROJECT_SPACE_CHOICE_CHANGE_PERMISSIONS" : Drupal.t("Change permissions of the current research space"),
   "PROJECT_SPACE_CHOICE_TRANSFER_PS_TO_NEW_OWNER" : Drupal.t("Transfer this research space to a new owner"),
-  "PROJECT_SPACE_CHOICE_DUPLICATE_CONCEPT" : Drupal.t("Duplicate the selected concept and its children in another research space"),
-  "PROJECT_SPACE_CHOICE_TRANSFER_CONCEPT" : Drupal.t("Transfer the selected concept to another research space"),
-  "PROJECT_SPACE_CHOICE_DUPILCATE_RESOURCE" : Drupal.t("Duplicate the selected resources in another research space"),
-  "PROJECT_SPACE_CHOICE_TRANSFER_RESOURCE" : Drupal.t("Transfer the selected resources to another research space"),
+  "PROJECT_SPACE_CHOICE_DUPLICATE_CONCEPT" : Drupal.t("Copy the selected concept and its children"),
+  "PROJECT_SPACE_CHOICE_TRANSFER_CONCEPT" : Drupal.t("Move the selected concept"),
+  "PROJECT_SPACE_CHOICE_DUPLICATE_RESOURCE" : Drupal.t("Copy the selected resources"),
+  "PROJECT_SPACE_CHOICE_TRANSFER_RESOURCE" : Drupal.t("Move the selected resources"),
 
 
   // Only ever put to console, doesn't actually display on browser screen
@@ -592,6 +592,7 @@ sidora.concept.LoadContent = function(leaveContentIfAlreadyLoaded){
   sidora.concept.LoadContentHelp.Exhibition_view(conceptOfInterest);
   sidora.concept.LoadContentHelp.Metadata(conceptOfInterest);
   jQuery("a[href='#concept-resource-list']").parent().toggle(!irs);
+  jQuery("#concept_tabs").children("ul").toggle(!irs);
   if (!irs) {
     sidora.concept.LoadContentHelp.FullTableReload(conceptOfInterest);
   }
@@ -807,7 +808,10 @@ sidora.ProjectSpaces.DuplicateOrTransfer = function(type, conceptsOrResources, s
     pids = specificPids;
   }
   // Only allow things to get duplicated and moved outside of the current research space
-  var ignoredDestination = jQuery("#" + jQuery("#psdd-select").val()).children("a").attr("pid");
+  var ignoredDestination = '';
+  if (type == 'transfer') {
+    ignoredDestination = jQuery("#" + jQuery("#psdd-select").val()).children("a").attr("pid");
+  }
   var specificDestination = '';
   var specifiedDepth = null;
   if (type == 'link') {
@@ -836,8 +840,8 @@ sidora.ProjectSpaces.DuplicateOrTransfer = function(type, conceptsOrResources, s
   var description = '';
   var operation = '';
   if (type == 'transfer') {
-    title = ("Transfer Object");
-    description = "transfer";
+    title = ("Move Object");
+    description = "move";
     operation = 'move';
   }
   if (type == 'link') {
@@ -878,6 +882,14 @@ sidora.ProjectSpaces.DuplicateOrTransfer = function(type, conceptsOrResources, s
             sidora.util.loadTreeSection(destPid);
           }
           else if (type == 'link') {
+            var data = {};
+            data.node = nodeThatIsMoving;
+            data.parent = nodeMoveTo.id;
+            data.old_parent = nodeMoveFrom.id;
+            data.moveFromPid = parentPid;
+            data.moveToPid = destPid;
+            sidora.concept.CopyNode(data);
+            sidora.util.loadTreeSection(destPid);
           }
           Shadowbox.close();
         }
@@ -1045,16 +1057,16 @@ sidora.contextMenu.SetUp = function(){
             items: {
                 "editConcept": {name: "Edit Concept", icon: "edit", disabled: cmips},
                 "addResources": {name: "Add Resource(s)", icon: "paste", disabled: cmips},
-                "copyConceptAndChildren": {name: "Copy Concept & Children...", icon: "copy", disabled: cmips},
-                "moveConcept": {name: "Move Concept...", icon: "arrow-right", disabled: cmips},
-                "linkConcept": {name: "Link Concept...", icon: "external-link", disabled: cmips},
+                "copyConceptAndChildren": {name: "Copy Concept ...", icon: "copy", disabled: cmips},
+                "moveConcept": {name: "Move Concept ...", icon: "arrow-right", disabled: cmips},
+                "linkConcept": {name: "Link Concept ...", icon: "external-link", disabled: cmips},
                 "deleteConcept": {name: "Delete Concept", icon: "delete", disabled: cmips},
                 "sep1": "---------",
                 "addConcept": {name: "Add New Concept", icon: "paste"},
                 "sep2": "---------",
                 "editResearchSpace": {name: "Edit Research Space", icon: "edit", disabled: cmnps},
-                "changePermissions": {name: "Change Space Permissions...", disabled: cmnps},
-                "changeOwner": {name: "Move Space to New Owner...", icon: "arrow-right", disabled: cmnps},
+                "changePermissions": {name: "Change Space Permissions ...", disabled: cmnps},
+                "changeOwner": {name: "Move Space to New Owner ...", icon: "arrow-right", disabled: cmnps},
             }
         });
     });
@@ -1170,30 +1182,7 @@ sidora.InitiateJSTree = function(){
     });
     jQuery("#forjstree").unbind('copy_node.jstree');
     jQuery('#forjstree').bind('copy_node.jstree', function (e, data) {
-      //Copy node
-      var toMovePid = data.node.a_attr.pid;
-      var moveToPid = jQuery("#"+data.parent+" a").attr('pid');
-      var actionUrl = Drupal.settings.basePath+'sidora/ajax_parts/copy/'+moveToPid+'/'+toMovePid
-      if (typeof(toMovePid) == 'undefined'){
-        //Both types of resource drags are interpreted as "copy_node"
-        //regardless of whether control is held down
-        //console.log("resource copy/move");
-        jQuery("#forjstree").jstree("delete_node",data.node);
-        return; //resource actions are handled by the 'dnd_stop.vakata' event
-      }
-      var jst = jQuery("#forjstree").jstree(true);
-      var newParentExistingChildConceptsNumber = parseInt(jQuery("#"+data.parent).children("a").attr("conceptchildren"));
-      var npReplacer = newParentExistingChildConceptsNumber+1;
-      jQuery("#"+data.parent).children("a").attr("conceptchildren",""+npReplacer);
-      jst.get_node(data.parent).a_attr.conceptchildren = ""+npReplacer;
-      sidora.queue.incomingRequestsAreSilent = true;
-      sidora.queue.Request(htmlEntities(sidora.display.CREATE_LINK_TO_CONCEPT), actionUrl, function(){
-        sidora.concept.LoadContentHelp.Relationships();
-      }, 
-      sidora.util.createFunctionRefreshTree(moveToPid)
-      , [moveToPid,toMovePid],'copyConcept');
-      sidora.queue.incomingRequestsAreSilent = false;
-      sidora.queue.Next();
+      sidora.concept.CopyNode(data);
     });
 
     jQuery("#forjstree").unbind('delete_node.jstree');
@@ -2206,6 +2195,32 @@ sidora.ResizeOnWindowResize = function(){
   jQuery("#concept-meta div.metadata-table").height(jQuery(window).height() - 270);
 }
 
+sidora.concept.CopyNode = function(data) {
+      //Copy node
+      var toMovePid = data.node.a_attr.pid;
+      var moveToPid = jQuery("#"+data.parent+" a").attr('pid');
+      var actionUrl = Drupal.settings.basePath+'sidora/ajax_parts/copy/'+moveToPid+'/'+toMovePid
+      if (typeof(toMovePid) == 'undefined'){
+        //Both types of resource drags are interpreted as "copy_node"
+        //regardless of whether control is held down
+        //console.log("resource copy/move");
+        jQuery("#forjstree").jstree("delete_node",data.node);
+        return; //resource actions are handled by the 'dnd_stop.vakata' event
+      }
+      var jst = jQuery("#forjstree").jstree(true);
+      var newParentExistingChildConceptsNumber = parseInt(jQuery("#"+data.parent).children("a").attr("conceptchildren"));
+      var npReplacer = newParentExistingChildConceptsNumber+1;
+      jQuery("#"+data.parent).children("a").attr("conceptchildren",""+npReplacer);
+      jst.get_node(data.parent).a_attr.conceptchildren = ""+npReplacer;
+      sidora.queue.incomingRequestsAreSilent = true;
+      sidora.queue.Request(htmlEntities(sidora.display.CREATE_LINK_TO_CONCEPT), actionUrl, function(){
+        sidora.concept.LoadContentHelp.Relationships();
+      }, 
+      sidora.util.createFunctionRefreshTree(moveToPid)
+      , [moveToPid,toMovePid],'copyConcept');
+      sidora.queue.incomingRequestsAreSilent = false;
+      sidora.queue.Next();
+}
 /**
  * Performs a the necessary changes to the data in the tree and Fedora after a tree node move has occurred (or should occur)
  * data.node = node that is moving
@@ -3675,7 +3690,14 @@ from:
 http://learn.jquery.com/using-jquery-core/faq/how-do-i-select-an-element-by-an-id-that-has-characters-used-in-css-notation/
 */
 function jq( myid ) {
-  return "#" + myid.replace( /(:|\.|\[|\])/g, "\\$1" );
+  if (typeof(myid) == 'string') {
+    return "#" + myid.replace( /(:|\.|\[|\])/g, "\\$1" );
+  }
+  else {
+    console.log("Tried to get a jQuery id from non-string");
+    console.log(myid);
+  }
+  return null;
 }
 function getNewPid( jsonString ) {
   var pidString = jsonString.slice(jsonString.indexOf("New Pid:"),jsonString.indexOf(":End New Pid"));
