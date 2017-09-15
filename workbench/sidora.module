@@ -4551,8 +4551,13 @@ function sidora_ontology_json_default() {
 /**
  * duplciates the object to the destination, returning an array like the following:
  * array( "error" => TRUE / FALSE, "description" => human readable description )
+ * If the object to be duplicated has a hasResource or a hasConcept pointing to it from the destination,
+ * Rename the Object to "Copy of <original name> from YYYY/MM/DD HH:Mi" or 
  * $destination - pid to put the duplicates on
  * $to_duplicate - pid of the root of the tree (or resource pid) to duplicate
+ * 
+ * Keep in mind that what sidora_copy does is what we currently call "link" to the user (was called copy prior to 0.6)
+ * 
  */
 
 function sidora_duplicate($destination, $to_duplicate, $show_output = TRUE) {
@@ -4588,6 +4593,41 @@ function sidora_duplicate($destination, $to_duplicate, $show_output = TRUE) {
           $copy_return = sidora_copy($destination, $duplicated_root, FALSE);
           sidora_ajax_lock($pid, 'release', FALSE);
           if ($copy_return === TRUE) {
+             
+            // Rename the copy if needed:
+            $parent_obj = sidora_obj($pid);
+            $also_points_to_original = FALSE;
+            $dup_obj = sidora_obj($duplicated_root);
+            if (sidora_is_concept($dup_obj)) {
+              $children_concepts = $parent_obj->relationships->get(FEDORA_RELS_EXT_URI, 'hasConcept');
+              foreach($children_concepts as $child_rel) {
+                $to_check_pid = $child_rel['object']['value'];
+                if ($to_check_pid == $to_duplicate){
+                  $also_points_to_original = TRUE;
+                }
+              }
+            }
+            else {
+              $children_resources = $parent_obj->relationships->get(FEDORA_RELS_EXT_URI, 'hasResource');
+              foreach($children_resources as $child_rel) {
+                $to_check_pid = $child_rel['object']['value'];
+                if ($to_check_pid == $to_duplicate){
+                  $also_points_to_original = TRUE;
+                }
+              }
+            }
+            if ($also_points_to_original) {
+              $original_label = $dup_obj->label;
+              $new_label = 'Copy of ' . $original_label . ' from ' .  date('Y/m/d H:i');
+              $dup_obj->label = $new_label;
+              $sidora_data = sidora_get_form_and_dsid($duplicated_root);
+              // rename within the metadata xml
+              $dsid = $sidora_data['dsid'];
+              $orig_xml = $dup_obj[$dsid]->content;
+              $new_xml = str_replace('>' . $original_label . '<','>' . $new_label . '<', $orig_xml);
+              $dup_obj[$dsid]->setContentFromString($new_xml);
+              
+            }
             $to_return = array("error" => FALSE, "description" => t('Objects duplicated to destination'));
           }
           else {
@@ -4631,9 +4671,13 @@ function sidora_ajax_parts($call_type, $param1 = '', $param2 = '', $param3 = '')
   if ($call_type == 'research_spaces_tree') {
     module_load_include('inc', 'sidora', 'includes/project_spaces');
     if (!empty($param1)) {
+      sidora_project_spaces_tree("",TRUE, array("view"), TRUE, $param1);
+      sleep(10);
       print sidora_project_spaces_tree("",TRUE, array("view"), TRUE, $param1);
     }
     else {
+      sidora_project_spaces_tree();
+      sleep(10);
       print sidora_project_spaces_tree();
     }
     drupal_exit();
@@ -4652,7 +4696,16 @@ function sidora_ajax_parts($call_type, $param1 = '', $param2 = '', $param3 = '')
   if ($call_type == 'tree'){
     ini_set('max_execution_time',60);
     ini_set('memory_limit','512M');
-    print sidora_html_tree_for_ajax($param1, $param2);
+    try{
+      sidora_html_tree_for_ajax($param1, $param2);
+      sleep(3);
+      print sidora_html_tree_for_ajax($param1, $param2);
+    }catch(PDOException $e) {
+      // Sending two tree requests at the same time with a change in the tree that needs to be processed can
+      // cause deadlocks, so wait a bit and retry
+      sleep(3);
+      print sidora_html_tree_for_ajax($param1, $param2);
+    }
     drupal_exit();
   }
   if ($call_type == 'unassociate_delete_orphan') {
@@ -5711,16 +5764,19 @@ function sidora_html_tree_for_ajax($root_pid = '', $num_levels = 3, $url_params 
     return sidora_project_spaces_tree("", TRUE,  array("create","view","update","delete"), FALSE, 2);
   }
   else {
-    return sidora_html_tree_from_given_pid($root_pid, NULL, $num_levels, $url_params);
+    $recent_update = empty($_GET['recent_update'])?0:filter_var($_GET['recent_update'], FILTER_SANITIZE_NUMBER_INT);
+    return sidora_html_tree_from_given_pid($root_pid, NULL, $num_levels, $url_params, !empty($recent_update));
   }
 }
 
 /*
  * Returns a html_string for the concept tree
  */
-function sidora_html_tree_from_given_pid($root_pid = '', $root = NULL, $num_levels = 3, $url_params = ''){
+function sidora_html_tree_from_given_pid($root_pid = '', $root = NULL, $num_levels = 3, $url_params = '', $sleep_check = TRUE){
+  $sleep_check = FALSE;
   global $user;
   module_load_include('inc', 'sidora', 'includes/utils');
+  //$expected_num_child_concepts = empty($_GET['expected_child_concepts'])?0:filter_var($_GET['expected_child_concepts'], FILTER_SANITIZE_NUMBER_INT);
   if (empty($root_pid)) $root_pid = sidora_get_user_root_object();
   // In some circumstances, a user could get here without their root set up.  Create it now.
   if (empty($root_pid)) {
@@ -5751,9 +5807,24 @@ function sidora_html_tree_from_given_pid($root_pid = '', $root = NULL, $num_leve
     $root_children_pids = array();
     $filled = sidora_fill_concepts_children($results, array(), $root_children_pids); 
     /* */ 
+    // Allow the nodes and resource index to catch up to whatever change just occurred
+    if ($sleep_check) { 
+      sleep(20);
+    }
     $filled = sidora_build_tree_from_nodes_by_pid($root_pid, $num_levels);
+    // Check that the thing we're checking on has the right number of child concepts in the tree vs. the RELS-EXT
+    // This is because the resource index can return early with bad info
+    $actual_num_child_concepts = empty($filled[0])?0:sizeof($filled[0]['children']);
+    $attempts = 1;
+    while ($attempts < 3 && (empty($filled[0]))){ // || ($actual_num_child_concepts != $expected_num_child_concepts && !empty($expected_num_child_concepts)))) {
+      // Nodes, Resource Index, and Fedora may not be in sync for a bit
+      // Wait a bit to see if they sync up and try again
+      sleep(10);
+      $filled = sidora_build_tree_from_nodes_by_pid($root_pid, $num_levels);
+      $actual_num_child_concepts = empty($filled[0])?0:sizeof($filled[0]['children']);
+      $attempts++;
+    }
     if (empty($filled[0])) {
-      // If the resource index does not update quickly, this can be expected.
       return 'Invalid';
     }
     $filled = $filled[0]['children'];
@@ -5823,7 +5894,9 @@ function sidora_block_content_navigation() {
   $to_return .= '<div id="forjstree" root_pid="'.$root_pid.'">';
   module_load_include('inc', 'sidora', 'includes/project_spaces');
   if (sidora_is_admin()) {
-    $extra_admin_part = sidora_html_tree_from_given_pid($root_pid, NULL, 3, $send_params);
+    $extra_admin_part = sidora_html_tree_from_given_pid($root_pid, NULL, 3, $send_params, FALSE);
+    // double pull, first check
+    sidora_project_spaces_tree($extra_admin_part, TRUE, array(), FALSE);
     $to_return .= sidora_project_spaces_tree($extra_admin_part, TRUE, array(), FALSE);
   }
   else {
@@ -5832,6 +5905,8 @@ function sidora_block_content_navigation() {
     if (empty($nodes)) {
       sidora_create_personal_project_space();
     }
+    // double pull, first check
+    sidora_project_spaces_tree("", TRUE,  array("create","view","update","delete"), FALSE);
     $to_return .= sidora_project_spaces_tree("", TRUE,  array("create","view","update","delete"), FALSE);
   }
   $to_return .= '</div></div>';

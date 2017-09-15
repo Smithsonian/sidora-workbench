@@ -807,16 +807,16 @@ sidora.ProjectSpaces.DuplicateOrTransfer = function(type, conceptsOrResources, s
   if (typeof(specificPids) == 'object') {
     pids = specificPids;
   }
-  // Only allow things to get duplicated and moved outside of the current research space
   var ignoredDestination = '';
   if (type == 'transfer') {
-    ignoredDestination = jQuery("#" + jQuery("#psdd-select").val()).children("a").attr("pid");
+    // Only allow things to get transferred outside of the current research space
+    ignoredDestination = sidora.ProjectSpaces.currentPid();
   }
   var specificDestination = '';
   var specifiedDepth = null;
   if (type == 'link') {
     // Only allow links within the current research space
-    specificDestination = ignoredDestination;
+    specificDestination = sidora.ProjectSpaces.currentPid();
     ignoredDestination = '';
     specifiedDepth = 10;
   }
@@ -830,7 +830,7 @@ sidora.ProjectSpaces.DuplicateOrTransfer = function(type, conceptsOrResources, s
         Drupal.t("Duplicate Creation"),
         Drupal.t("Confirm to duplicate objects to %friendlyname", {"%friendlyname":sidora.util.FriendlyNameDirect(destPid)}),
         function(){
-          sidora.performDuplicate(destPid, pids, sidora.util.loadTreeSection.bind(sidora.util, destPid));
+          sidora.performDuplicate(destPid, pids, function(){ setTimeout( function(){sidora.util.loadTreeSection(destPid)}, 20000)});
           Shadowbox.close();
         }
       );
@@ -869,7 +869,6 @@ sidora.ProjectSpaces.DuplicateOrTransfer = function(type, conceptsOrResources, s
             else {
               sidora.resources.performCopyOrMove(operation, nodeMoveTo.id, pids);
             }
-            sidora.util.loadTreeSection(destPid);
           }
           else if (type == 'transfer') {
             var data = {};
@@ -879,7 +878,6 @@ sidora.ProjectSpaces.DuplicateOrTransfer = function(type, conceptsOrResources, s
             data.moveFromPid = parentPid;
             data.moveToPid = destPid;
             sidora.concept.MoveNode(data);
-            sidora.util.loadTreeSection(destPid);
           }
           else if (type == 'link') {
             var data = {};
@@ -889,7 +887,6 @@ sidora.ProjectSpaces.DuplicateOrTransfer = function(type, conceptsOrResources, s
             data.moveFromPid = parentPid;
             data.moveToPid = destPid;
             sidora.concept.CopyNode(data);
-            sidora.util.loadTreeSection(destPid);
           }
           Shadowbox.close();
         }
@@ -901,7 +898,7 @@ sidora.ProjectSpaces.DuplicateOrTransfer = function(type, conceptsOrResources, s
 sidora.ProjectSpaces.DuplicateOrTransferHtml = function(selectionIntroHtml){
   var toReturn = "<div style='height:100%'>";
   toReturn += selectionIntroHtml;
-  toReturn += "<div id='destination-tree' style='width:100%;overflow:auto;height:calc(100% - 200px);'>Loading destination trees...</div>";
+  toReturn += "<div id='destination-tree' style='width:100%;overflow:auto;height:calc(100% - 130px);'>Loading destination trees...</div>";
   toReturn += '<input id="destination-chosen" class="form-submit" style="float:right; width:100px;" value="Submit" />';
   return toReturn;
 }
@@ -1200,11 +1197,16 @@ sidora.InitiateJSTree = function(){
       jst.get_node(poi).a_attr.conceptchildren = ""+opReplacer;
       //next requests are silent
       sidora.queue.incomingRequestsAreSilent = true;
-      sidora.queue.Request('Remove concept association', actionUrl, function(){
-        sidora.concept.LoadContentHelp.Relationships();
-      },
-      sidora.util.createFunctionRefreshTree(moveFromPid)
-      , [toMovePid,moveFromPid],'unassociate');
+      sidora.queue.Request(
+        'Remove concept association',
+        actionUrl,
+        function(){
+          sidora.concept.LoadContentHelp.Relationships();
+          sidora.util.createFunctionRefreshTree(moveFromPid);
+        },
+        sidora.util.createFunctionRefreshTree(moveFromPid)
+        , [toMovePid,moveFromPid],'unassociate'
+      );
       sidora.queue.incomingRequestsAreSilent = false;
       sidora.queue.Next();
     });
@@ -1600,9 +1602,10 @@ sidora.RelocateTreeOnPage = function(){
   jQuery("#fjt-holder").append(jQuery("#forjstree"));
   jQuery("#fjt-holder").css("width","280px");
   jQuery("#fjt-holder").css("min-width","200px");
-  jQuery("#fjt-holder").css("height","100%");
-  jQuery("#fjt-holder").css("position","fixed");
-  jQuery("#fjt-holder").css("top",parseInt(jQuery("body").css("padding-top"))+10+"px");
+  jQuery("#fjt-holder").css("height","calc(100% - 43px)");
+  jQuery("#fjt-holder").css("position","absolute");
+  jQuery("#fjt-holder").css("top",'40px');
+  jQuery("#fjt-holder").css("overflow",'auto');
   jQuery("#fjt-holder")
       .wrap('<div/>')
           .parent()
@@ -1616,11 +1619,9 @@ sidora.RelocateTreeOnPage = function(){
                  })
                 .resizable({handles:'e',resize:sidora.ResizeTree,stop:sidora.stopResizeTree})
                     .find('#fjt-holder')
-                      .css({'overflow':'auto',
-                            'position':'absolute',
-                            'width': function(){return parseInt(jQuery('#conceptResizable').outerWidth())-10+'px';},
-                            'top':'0px',
-                            'height':'100%'});
+                      .css({
+                            'width': function(){return parseInt(jQuery('#conceptResizable').outerWidth())-10+'px';}
+                            });
   jQuery('#conceptResizable')
     .wrap('<div/>')
       .parent()
@@ -1710,7 +1711,6 @@ sidora.ResizeToBrowser = function(){
     leftSideHeight -= jQuery("footer").height();
   }
   jQuery("#conceptResizable").css("height",leftSideHeight+"px");
-  jQuery("#fjt-holder").css("height",(leftSideHeight-40)+"px").css("top","43px");
   var tabsHeight = leftSideHeight-50;
   jQuery("#concept_tabs").css("height",tabsHeight+"px");
   var baseMax = sidora.ResizeMaxWidth();
@@ -2213,11 +2213,17 @@ sidora.concept.CopyNode = function(data) {
       jQuery("#"+data.parent).children("a").attr("conceptchildren",""+npReplacer);
       jst.get_node(data.parent).a_attr.conceptchildren = ""+npReplacer;
       sidora.queue.incomingRequestsAreSilent = true;
-      sidora.queue.Request(htmlEntities(sidora.display.CREATE_LINK_TO_CONCEPT), actionUrl, function(){
-        sidora.concept.LoadContentHelp.Relationships();
-      }, 
-      sidora.util.createFunctionRefreshTree(moveToPid)
-      , [moveToPid,toMovePid],'copyConcept');
+      sidora.queue.Request(
+        htmlEntities(sidora.display.CREATE_LINK_TO_CONCEPT),
+        actionUrl,
+        function(){
+          sidora.concept.LoadContentHelp.Relationships();
+          var cfrt = sidora.util.createFunctionRefreshTree(moveToPid);
+          cfrt();
+        }, 
+        sidora.util.createFunctionRefreshTree(moveToPid)
+        , [moveToPid,toMovePid],'copyConcept'
+      );
       sidora.queue.incomingRequestsAreSilent = false;
       sidora.queue.Next();
 }
@@ -2258,13 +2264,15 @@ sidora.concept.MoveNode = function(data) {
   }
   //next requests are silent
   sidora.queue.incomingRequestsAreSilent = true;
+  var cfrt = sidora.util.createFunctionRefreshTree([moveToPid,moveFromPid]);
   sidora.queue.Request(
     'Concept move',
     actionUrl, 
     function(){
       sidora.concept.LoadContentHelp.Relationships();
+      cfrt();
     },
-    sidora.util.createFunctionRefreshTree([moveToPid,moveFromPid]),
+    cfrt,
     [moveToPid,toMovePid,moveFromPid],
     'moveConcept'
   );
@@ -2423,12 +2431,15 @@ sidora.util.childrenPidsListedInUIByNode = function(node) {
   }
   return currentChildrenPids;
 }
-sidora.util.createFunctionRefreshTree = function(pids) {
+sidora.util.createFunctionRefreshTree = function(pids, secondsOfWait) {
   if (typeof(pids) == "string") pids = [pids];
+  if (typeof(secondsOfWait) != 'number') secondsOfWait = 20;
   return function() {
-    pids.forEach(function(pid,index,arr){
-      sidora.util.RefreshTree(null,pid);
-    });
+    setTimeout(function(){
+      pids.forEach(function(pid,index,arr){
+        sidora.util.RefreshTree(null,pid);
+      });
+    },secondsOfWait * 1000);
   }
 }
 sidora.util.createFunctionTreeAddition = function(openingPid, onLoadComplete, overwriteType) {
@@ -2924,8 +2935,19 @@ sidora.util.refreshConceptTreeUIDirect = function(pid, tree_html){
  *   used for refreshing the options when a new one is created
  * Not everything that is needed when an established project space
  * permissions are updated to include the current user
+ *
+ * Nodes need to talk with Fedora to be updated, give them X seconds
+ * to get settled and resaved to the DB
  */
-sidora.ProjectSpaces.refreshOptions = function(){
+sidora.ProjectSpaces.refreshOptions = function(waitSecondsBeforeCall){
+  if (typeof(waitSecondsBeforeCall) != 'number') {
+    waitSecondsBeforeCall = 20;
+  }
+  setTimeout(function(){
+    sidora.ProjectSpaces.refreshOptionsImmediate();
+  }, waitSecondsBeforeCall * 1000)
+}
+sidora.ProjectSpaces.refreshOptionsImmediate = function(){
   jQuery.ajax({
     url: Drupal.settings.basePath+'sidora/ajax_parts/research_spaces_tree/1',
   }).done(function(returnedHtml){
