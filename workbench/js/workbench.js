@@ -665,7 +665,7 @@ sidora.util.openToCurrentPathAndSelectItem = function(currentUrl){
   }
   var itemSelectorForCurrentItemInTree = 'a[href=\"'+currentUrl+'\"]';
   var selectThisNode = jst.get_node(itemSelectorForCurrentItemInTree);
-  sidora.util.loadTreeSectionsIfNeeded(selectThisNode);
+  sidora.util.loadTreeSectionsIfNeeded(selectThisNode, true);
   jst.select_node(selectThisNode); 
 }
 sidora.util.throbberize = function() {
@@ -680,7 +680,7 @@ sidora.util.throbberize = function() {
  * Given a node, loads its grandchildren if needed and checks the validation status of grandchildren
  * @param data - jstree node or item that has a node attribute containing a jstree node
  */
-sidora.util.loadTreeSectionsIfNeeded = function(data){
+sidora.util.loadTreeSectionsIfNeeded = function(data, doFast){
   if (data == false) return;
   var jst = jQuery("#forjstree").jstree();
   var node = data;
@@ -708,7 +708,7 @@ sidora.util.loadTreeSectionsIfNeeded = function(data){
         }
       }
       if (doRetrieval) {
-        sidora.util.loadTreeSection(openingPid);
+        sidora.util.loadTreeSection(openingPid, null, null, doFast);
       }
     }
   }
@@ -808,10 +808,11 @@ sidora.ProjectSpaces.DuplicateOrTransfer = function(type, conceptsOrResources, s
     pids = specificPids;
   }
   var ignoredDestination = '';
-  if (type == 'transfer') {
+  // transfer is now move, and we can move within the project space
+  //if (type == 'transfer') {
     // Only allow things to get transferred outside of the current research space
-    ignoredDestination = sidora.ProjectSpaces.currentPid();
-  }
+    //ignoredDestination = sidora.ProjectSpaces.currentPid();
+  //}
   var specificDestination = '';
   var specifiedDepth = null;
   if (type == 'link') {
@@ -830,7 +831,7 @@ sidora.ProjectSpaces.DuplicateOrTransfer = function(type, conceptsOrResources, s
         Drupal.t("Duplicate Creation"),
         Drupal.t("Confirm to duplicate objects to %friendlyname", {"%friendlyname":sidora.util.FriendlyNameDirect(destPid)}),
         function(){
-          sidora.performDuplicate(destPid, pids, function(){ setTimeout( function(){sidora.util.loadTreeSection(destPid)}, 20000)});
+          sidora.performDuplicate(destPid, pids, function(){ setTimeout( function(){sidora.util.loadTreeSection(destPid, null, null, false)}, 20000)});
           Shadowbox.close();
         }
       );
@@ -911,6 +912,7 @@ sidora.ProjectSpaces.ShowWhereToForm = function(selectionIntro, pids, ignorePid,
   if (typeof(specifyPids) == 'string' && specifyPids != '') {
     params['specify_pids'] = specifyPids;
   }
+  params['doFast'] = 'true';
   var query = jQuery.param(params);
   if (query != '') {
     query = '?' + query;
@@ -1155,9 +1157,14 @@ sidora.InitiateJSTree = function(){
         if (treeNode.a_attr.conceptchildren > treeNode.children.length) {
           var parentNode = jst.get_node(treeNode.parent);
           var openingPid = parentNode.a_attr.pid;
-          sidora.util.loadTreeSection(openingPid, function(){
-            jQuery("#forjstree").trigger("loaded.jstree");
-          });
+          sidora.util.loadTreeSection(
+            openingPid, 
+            function(){
+              jQuery("#forjstree").trigger("loaded.jstree");
+            },
+            null, // overwriteType (defaults to changes)
+            true  // doFast
+          );
           return;
         }
       }
@@ -1165,7 +1172,7 @@ sidora.InitiateJSTree = function(){
 
     jQuery("#forjstree").unbind('open_node.jstree');
     jQuery('#forjstree').bind('open_node.jstree', function (e, data) {
-      sidora.util.loadTreeSectionsIfNeeded(data);
+      sidora.util.loadTreeSectionsIfNeeded(data, true);
     });
     sidora.util.openToCurrentPathAndSelectItem(currentUrl);
     //When you select a node, update the url in the browser, change the page title (not browser title) and load the concept content into the main window
@@ -1175,7 +1182,7 @@ sidora.InitiateJSTree = function(){
       window.location = jQuery('#'+data.selected[0]).children('a').attr('href');
       sidora.UpdateTitleBasedOnNameInTree(jQuery(jQuery('#'+data.selected[0]).find("a")[0]).text());
       sidora.concept.LoadContent();
-      sidora.util.loadTreeSectionsIfNeeded(data);
+      sidora.util.loadTreeSectionsIfNeeded(data, true);
     });
     jQuery("#forjstree").unbind('copy_node.jstree');
     jQuery('#forjstree').bind('copy_node.jstree', function (e, data) {
@@ -2433,7 +2440,7 @@ sidora.util.childrenPidsListedInUIByNode = function(node) {
 }
 sidora.util.createFunctionRefreshTree = function(pids, secondsOfWait) {
   if (typeof(pids) == "string") pids = [pids];
-  if (typeof(secondsOfWait) != 'number') secondsOfWait = 20;
+  if (typeof(secondsOfWait) != 'number') secondsOfWait = 5;
   return function() {
     setTimeout(function(){
       pids.forEach(function(pid,index,arr){
@@ -2609,7 +2616,7 @@ sidora.util.treeAddition = function(htmlTree, onLoadComplete, overwriteType){
  *                      - "changes" - remove items that are gone from the return and add items from return that don't exist
  * @return true if call will be made, false if call was already made and will not be made again
  */
-sidora.util.loadTreeSection = function(openingPid, onLoadComplete, overwriteType) {
+sidora.util.loadTreeSection = function(openingPid, onLoadComplete, overwriteType, doFast) {
   if (typeof(openingPid) == 'undefined') {
     console.log("No opening pid for loadTreeSection");
   }
@@ -2625,12 +2632,15 @@ sidora.util.loadTreeSection = function(openingPid, onLoadComplete, overwriteType
   }
   //Inform the utility that we are checking on this already so don't check again
   sidora.util.loadTreeSectionCurrent[openingPid] = true;
-
+  var url = Drupal.settings.basePath+"sidora/ajax_parts/tree/"+openingPid+"/2";
+  if (doFast) {
+    url += "?doFast=true";
+  }
   var jst = jQuery("#forjstree").jstree(true);
   jQuery.ajax({
     "dataType":"html",
     "method":"GET",
-    "url": Drupal.settings.basePath+"sidora/ajax_parts/tree/"+openingPid+"/2",
+    "url": url,
     "success": sidora.util.createFunctionTreeAddition(openingPid, onLoadComplete, overwriteType)
   });
   return true;
@@ -3729,8 +3739,9 @@ function getNewPid( jsonString ) {
 sidora.reloadPage = function(){
   window.location.reload();
 }
-sidora.util.refreshPidInTree = function(){
-sidora.util.RefreshTree(null,sidora.concept.GetPid());
+sidora.util.refreshPidInTree = function(secondsOfWait){
+  if (typeof(secondsOfWait) == 'undefined') secondsOfWait = null;
+  sidora.util.RefreshTree(secondsOfWait,sidora.concept.GetPid());
 }
 function htmlEntities(str) {
     return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');

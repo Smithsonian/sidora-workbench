@@ -4671,13 +4671,17 @@ function sidora_ajax_parts($call_type, $param1 = '', $param2 = '', $param3 = '')
   if ($call_type == 'research_spaces_tree') {
     module_load_include('inc', 'sidora', 'includes/project_spaces');
     if (!empty($param1)) {
-      sidora_project_spaces_tree("",TRUE, array("view"), TRUE, $param1);
-      sleep(10);
+      if (empty($_GET['doFast'])) {
+        sidora_project_spaces_tree("",TRUE, array("view"), TRUE, $param1);
+        sleep(10);
+      }
       print sidora_project_spaces_tree("",TRUE, array("view"), TRUE, $param1);
     }
     else {
-      sidora_project_spaces_tree();
-      sleep(10);
+      if (empty($_GET['doFast'])) {
+        sidora_project_spaces_tree();
+        sleep(10);
+      }
       print sidora_project_spaces_tree();
     }
     drupal_exit();
@@ -4697,8 +4701,10 @@ function sidora_ajax_parts($call_type, $param1 = '', $param2 = '', $param3 = '')
     ini_set('max_execution_time',60);
     ini_set('memory_limit','512M');
     try{
-      sidora_html_tree_for_ajax($param1, $param2);
-      sleep(3);
+      if (empty($_GET['doFast'])) {
+        sidora_html_tree_for_ajax($param1, $param2);
+        sleep(3);
+      }
       print sidora_html_tree_for_ajax($param1, $param2);
     }catch(PDOException $e) {
       // Sending two tree requests at the same time with a change in the tree that needs to be processed can
@@ -5764,16 +5770,14 @@ function sidora_html_tree_for_ajax($root_pid = '', $num_levels = 3, $url_params 
     return sidora_project_spaces_tree("", TRUE,  array("create","view","update","delete"), FALSE, 2);
   }
   else {
-    $recent_update = empty($_GET['recent_update'])?0:filter_var($_GET['recent_update'], FILTER_SANITIZE_NUMBER_INT);
-    return sidora_html_tree_from_given_pid($root_pid, NULL, $num_levels, $url_params, !empty($recent_update));
+    return sidora_html_tree_from_given_pid($root_pid, NULL, $num_levels, $url_params);
   }
 }
 
 /*
  * Returns a html_string for the concept tree
  */
-function sidora_html_tree_from_given_pid($root_pid = '', $root = NULL, $num_levels = 3, $url_params = '', $sleep_check = TRUE){
-  $sleep_check = FALSE;
+function sidora_html_tree_from_given_pid($root_pid = '', $root = NULL, $num_levels = 3, $url_params = ''){
   global $user;
   module_load_include('inc', 'sidora', 'includes/utils');
   //$expected_num_child_concepts = empty($_GET['expected_child_concepts'])?0:filter_var($_GET['expected_child_concepts'], FILTER_SANITIZE_NUMBER_INT);
@@ -5807,10 +5811,6 @@ function sidora_html_tree_from_given_pid($root_pid = '', $root = NULL, $num_leve
     $root_children_pids = array();
     $filled = sidora_fill_concepts_children($results, array(), $root_children_pids); 
     /* */ 
-    // Allow the nodes and resource index to catch up to whatever change just occurred
-    if ($sleep_check) { 
-      sleep(20);
-    }
     $filled = sidora_build_tree_from_nodes_by_pid($root_pid, $num_levels);
     // Check that the thing we're checking on has the right number of child concepts in the tree vs. the RELS-EXT
     // This is because the resource index can return early with bad info
@@ -5894,9 +5894,9 @@ function sidora_block_content_navigation() {
   $to_return .= '<div id="forjstree" root_pid="'.$root_pid.'">';
   module_load_include('inc', 'sidora', 'includes/project_spaces');
   if (sidora_is_admin()) {
-    $extra_admin_part = sidora_html_tree_from_given_pid($root_pid, NULL, 3, $send_params, FALSE);
-    // double pull, first check
-    sidora_project_spaces_tree($extra_admin_part, TRUE, array(), FALSE);
+    $extra_admin_part = sidora_html_tree_from_given_pid($root_pid, NULL, 3, $send_params);
+    // double pull, first check, assume there was not a recent change 
+    //sidora_project_spaces_tree($extra_admin_part, TRUE, array(), FALSE);  // BBB
     $to_return .= sidora_project_spaces_tree($extra_admin_part, TRUE, array(), FALSE);
   }
   else {
@@ -5904,9 +5904,11 @@ function sidora_block_content_navigation() {
     // if a user ever logs in with all accesses revoked, create a personal space for them
     if (empty($nodes)) {
       sidora_create_personal_project_space();
+      // double pull, first check
+      // sidora_project_spaces_tree("", TRUE,  array("create","view","update","delete"), FALSE); //BBB
     }
     // double pull, first check
-    sidora_project_spaces_tree("", TRUE,  array("create","view","update","delete"), FALSE);
+    // sidora_project_spaces_tree("", TRUE,  array("create","view","update","delete"), FALSE); //BBB
     $to_return .= sidora_project_spaces_tree("", TRUE,  array("create","view","update","delete"), FALSE);
   }
   $to_return .= '</div></div>';

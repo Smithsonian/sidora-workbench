@@ -367,7 +367,7 @@ SidoraQueue.prototype.Done = function(completedItem, ajaxReturn){
           executeOnceOnly = true;
         }    
         sidora.concept.LoadContent();
-        sidora.util.refreshPidInTree();
+        sidora.util.refreshPidInTree(5);
         if (processedItemCount != ''){
           var processedResourceCountArray = processedItemCount.split(' of ');
           if ((processedResourceCountArray.length > 1) && (processedResourceCountArray[0] == processedResourceCountArray[1]-1)){
