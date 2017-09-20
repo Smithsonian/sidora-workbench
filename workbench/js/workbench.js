@@ -1189,6 +1189,8 @@ sidora.InitiateJSTree = function(){
     });
     jQuery("#forjstree").unbind('copy_node.jstree');
     jQuery('#forjstree').bind('copy_node.jstree', function (e, data) {
+      var jst = jQuery("#forjstree").jstree(true);
+      if (typeof(jst.pureUIChange) != 'undefined' && jst.pureUIChange) return true; //don't want a Fedora change
       sidora.concept.CopyNode(data);
     });
 
@@ -1319,6 +1321,9 @@ sidora.InitiateJSTree = function(){
     "core" : {
       "check_callback": function(callbackType,draggedObjects,mouseOverObject,someNum,dragStatus){
         if (callbackType == "copy_node"){
+          var jst = jQuery("#forjstree").jstree(true);
+          if (typeof(jst.pureUIChange) != 'undefined' && jst.pureUIChange) return true; //don't want a Fedora change
+
           //Note that all resource moves are also considered "copy_node"
           if (typeof(draggedObjects.instance) == 'undefined'){ 
             //instance only exists if it is being dragged from a tree, resources do not exist in a jstree
@@ -2206,36 +2211,38 @@ sidora.ResizeOnWindowResize = function(){
 }
 
 sidora.concept.CopyNode = function(data) {
-      //Copy node
-      var toMovePid = data.node.a_attr.pid;
-      var moveToPid = jQuery("#"+data.parent+" a").attr('pid');
-      var actionUrl = Drupal.settings.basePath+'sidora/ajax_parts/copy/'+moveToPid+'/'+toMovePid
-      if (typeof(toMovePid) == 'undefined'){
-        //Both types of resource drags are interpreted as "copy_node"
-        //regardless of whether control is held down
-        //console.log("resource copy/move");
-        jQuery("#forjstree").jstree("delete_node",data.node);
-        return; //resource actions are handled by the 'dnd_stop.vakata' event
-      }
-      var jst = jQuery("#forjstree").jstree(true);
-      var newParentExistingChildConceptsNumber = parseInt(jQuery("#"+data.parent).children("a").attr("conceptchildren"));
-      var npReplacer = newParentExistingChildConceptsNumber+1;
-      jQuery("#"+data.parent).children("a").attr("conceptchildren",""+npReplacer);
-      jst.get_node(data.parent).a_attr.conceptchildren = ""+npReplacer;
-      sidora.queue.incomingRequestsAreSilent = true;
-      sidora.queue.Request(
-        htmlEntities(sidora.display.CREATE_LINK_TO_CONCEPT),
-        actionUrl,
-        function(){
-          sidora.concept.LoadContentHelp.Relationships();
-          var cfrt = sidora.util.createFunctionRefreshTree(moveToPid);
-          cfrt();
-        }, 
-        sidora.util.createFunctionRefreshTree(moveToPid)
-        , [moveToPid,toMovePid],'copyConcept'
-      );
-      sidora.queue.incomingRequestsAreSilent = false;
-      sidora.queue.Next();
+  //Copy node
+  var toMovePid = data.node.a_attr.pid;
+  var moveToPid = jQuery("#"+data.parent+" a").attr('pid');
+  var actionUrl = Drupal.settings.basePath+'sidora/ajax_parts/copy/'+moveToPid+'/'+toMovePid
+  if (typeof(toMovePid) == 'undefined'){
+    //Both types of resource drags are interpreted as "copy_node"
+    //regardless of whether control is held down
+    //console.log("resource copy/move");
+    jQuery("#forjstree").jstree("delete_node",data.node);
+    return; //resource actions are handled by the 'dnd_stop.vakata' event
+  }
+  if (typeof(moveToPid) == 'undefined') {
+    moveToPid = data.moveToPid;
+  }
+  var jst = jQuery("#forjstree").jstree(true);
+  var newParentExistingChildConceptsNumber = parseInt(jQuery("#"+data.parent).children("a").attr("conceptchildren"));
+  var npReplacer = newParentExistingChildConceptsNumber+1;
+  jQuery("#"+data.parent).children("a").attr("conceptchildren",""+npReplacer);
+  jst.get_node(data.parent).a_attr.conceptchildren = ""+npReplacer;
+  sidora.queue.incomingRequestsAreSilent = true;
+  sidora.queue.Request(
+  htmlEntities(sidora.display.CREATE_LINK_TO_CONCEPT),
+    actionUrl,
+    function(){
+      sidora.concept.LoadContentHelp.Relationships();
+      sidora.util.conceptLinkCreated(toMovePid, moveToPid);
+    }, 
+    sidora.util.createFunctionRefreshTree(moveToPid)
+    , [moveToPid,toMovePid],'copyConcept'
+  );
+  sidora.queue.incomingRequestsAreSilent = false;
+  sidora.queue.Next();
 }
 /**
  * Performs a the necessary changes to the data in the tree and Fedora after a tree node move has occurred (or should occur)
@@ -2247,11 +2254,11 @@ sidora.concept.MoveNode = function(data) {
   var jst = jQuery("#forjstree").jstree();
   var toMovePid = data.node.a_attr.pid;
   var moveToPid = jQuery("#"+data.parent+" a").attr('pid');
-  if (moveToPid == undefined) {
+  if (typeof(moveToPid) == 'undefined') {
     moveToPid = data.moveToPid;
   }
   var moveFromPid = jQuery("#"+data.old_parent+" a").attr('pid');
-  if (moveFromPid == undefined) {
+  if (typeof(moveFromPid) == 'undefined') {
     moveFromPid = data.moveFromPid;
   }
   console.log("Move:"+toMovePid+" from:"+moveFromPid+" to:"+moveToPid);
@@ -2280,7 +2287,7 @@ sidora.concept.MoveNode = function(data) {
     actionUrl, 
     function(){
       sidora.concept.LoadContentHelp.Relationships();
-      cfrt();
+      sidora.util.conceptMovedTreeChange(toMovePid, moveFromPid, moveToPid);
     },
     cfrt,
     [moveToPid,toMovePid,moveFromPid],
@@ -3689,7 +3696,98 @@ sidora.manage.removeDatastream = function(pid,dsid){
   jQuery("#removeDatastreamDialog").css("overflow", "hidden");
   jQuery("#removeDatastreamDialog").closest(".ui-dialog").css("z-index", 1000); //shadowbox is 998
 }
+sidora.util.conceptLinkCreated = function(linkedPid, newParentPid) {
+  // Straight copy the node over, fix href on it and children, remove grandchildren, close it
+  var jst = jQuery("#forjstree").jstree();
+  jst.pureUIChange = true;
+  var exampleNode = sidora.util.GetTreeNodesByPid(linkedPid);
+  var toCopyNode = exampleNode[0];
+  var newParents = sidora.util.GetTreeNodesByPid(newParentPid);
 
+  for (var npi = 0; npi < newParents.length; npi++) {
+    var newParentId = newParents[npi];
+    var newParent = jst.get_node(newParentId);
+    jst.copy_node(toCopyNode, newParent, "last", function(newNode, newParent, position){
+      var destinationUrl = sidora.util.constructChildUrl(newParent.a_attr.href, linkedPid);
+      newNode.a_attr.href = destinationUrl;
+      // remove any children so we have full control over the future content
+      for (var ci = 0; ci < newNode.children.length; ci++){
+        jst.remove_node(jst.get_node(newNode.children[ci]));
+      }
+      for (var ci = 0; ci < toCopyNode.children.length; ci++){
+        var childNode = jst.get_node(toCopyNode.children[ci]);
+        var destinationUrl = sidora.util.constructChildUrl(newNode.a_attr.href, linkedPid);
+        jst.copy_node(childNode, newNode, "last", function(newChild, myCopyParent, position){
+          var destinationUrl = sidora.util.constructChildUrl(myCopyParent.a_attr.href, newChild.a_attr.pid);
+          newChild.a_attr.href = destinationUrl;
+        });
+        jst.close_node(newNode);
+      }
+    });
+  }
+  jst.pureUIChange = false;
+  jst.redraw(true);
+}
+sidora.util.conceptMovedTreeChange = function(movedPid, oldParentPid, newParentPid){
+  // Find one of the nodes, move it to one of the new parents
+  // delete the nodes of all the other parents
+  // copy the node and its children to the other new parents
+  var jst = jQuery("#forjstree").jstree();
+  var movedNodes = sidora.util.GetTreeNodesByPid(movedPid);
+  var newParents = sidora.util.GetTreeNodesByPid(newParentPid);
+  jst.pureUIChange = true;
+  var movedNode = movedNodes[0];
+  jst.move_node(movedNode, newParents[0], "last", function(newNode, newParent, position){
+    for (var ci = 0; ci < movedNode.children.length; ci++){
+      var childNode = jst.get_node(movedNode.children[ci]);
+      var destinationUrl = sidora.util.constructChildUrl(movedNode.a_attr.href, childNode.a_attr.pid);
+      childNode.a_attr.href = destinationUrl;
+      // Remove the grandchildren, to be reloaded when the node is opened
+      for (var gci = 0; gci < childNode.children.length; gci++) {
+        jst.delete_node(jst.get_node(childNode.children[gci]));
+      }
+    }
+  });
+  // replace the href on the moved node
+  destinationUrl = sidora.util.constructChildUrl(newParents[0].a_attr.href, movedPid);
+  movedNode.a_attr.href = destinationUrl; 
+
+  sidora.util.conceptRemovedTreeChange(oldParentPid, movedPid);
+
+  for (var npi = 1; npi < newParents.length; npi++) {
+    var newParentId = newParents[npi];
+    var newParent = jst.get_node(newParentId);
+    jst.copy_node(movedNode, newParent, "last", function(newNode, newParent, position){
+      var destinationUrl = sidora.util.constructChildUrl(newParent.a_attr.href, movedPid);
+      newNode.a_attr.href = destinationUrl; 
+      for (var ci = 0; ci < movedNode.children.length; ci++){
+        var childNode = jst.get_node(movedNode.children[ci]);
+        jst.copy_node(childNode, newNode, "last", function(newChild, myCopyParent, position){
+          var destinationUrl = sidora.util.constructChildUrl(myCopyParent.a_attr.href, newChild.a_attr.pid);
+          newChild.a_attr.href = destinationUrl;
+        });
+      }
+    });
+    
+  }  
+  jst.pureUIChange = false;
+  jst.redraw(true);
+  // close the node so it will reload it's grandchildren when opened
+  jst.close_node(movedNode);
+}
+sidora.util.constructChildUrl = function(parentHref, childPid) {
+  var childHref = "/sidora/workbench/#" + childPid;
+  if (parentHref.indexOf("=") != -1 && !parentHref.endsWith("?path=")) {
+    childHref += "?path=" + parentHref.substring(parentHref.lastIndexOf("=")+1) + "," + parentHref.substring(parentHref.indexOf("#")+1,parentHref.lastIndexOf("?"));
+  }
+  else if (parentHref.endsWith("?path=")){
+    childHref += "?path=" + parentHref.substring(parentHref.indexOf("#")+1,parentHref.lastIndexOf("?"));
+  }
+  else {
+    childHref += "?path=" + parentHref.substring(parentHref.indexOf("#")+1);
+  }
+  return childHref;
+}
 sidora.util.conceptRemovedTreeChange = function(oldConceptParentPid, removedConceptPid) {
   var jst = jQuery("#forjstree").jstree();
   var oldParents = sidora.util.GetTreeNodesByPid(oldConceptParentPid); 
