@@ -605,6 +605,7 @@ function sidora_process_object_with_build_id($form_build_id) {
           og_group('node', $parent_group, array('entity_type' => 'node', 'entity' => $concept_node->nid));
         }
         // Update Drupal node of parent
+        drupal_set_message("New node created for new concept --" . $concept_node->nid . "--");
         sidora_update_concept_node_add_child($parent_node, $concept_node->nid);
 
         

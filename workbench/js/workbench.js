@@ -614,6 +614,9 @@ sidora.util.hasElement = function(data){
  * Get what the href would be for the parent of the input href, null if cannot figure it out
  */
 sidora.util.getParentHref = function(existingHref) {
+  if (typeof(existingHref) == 'undefined' || existingHref == null) {
+   existingHref = window.location.pathname + window.location.search + window.location.hash;
+  }
   ehParts = existingHref.split("#");
   if (ehParts.length != 2) return null;
   if (ehParts[1].indexOf("path") == -1) return null;
@@ -1640,7 +1643,7 @@ sidora.RelocateTreeOnPage = function(){
   sidora.stopResizeTree();
   sidora.testColoring();
 }
-sidora.testColoring = function()
+sidora.testColoring = function()  // TBD BBB TODO REMOVE
 {
       var sp = new URLSearchParams(location.search);
       var currentRoot = sp.get("nr");
@@ -3310,7 +3313,7 @@ sidora.resources.UpdateContent = function(resourcePid){
   });
   jQuery("#addDatastreamDialog").css("overflow", "hidden");
 }
-sidora.resources.Vestigial = function(){
+sidora.resources.Vestigial = function(){ // BBB TODO REMOVE TBD
   //The overlay is needed to protect the cursor from being lost to the iframe
   //For example, here's what would happen during a drag toward the iframe:
   //Drag looks like it is going fine, once cursor jumps "inside" the iframe, the drag ends.  Mouse up is not captured by the dragged element, so
@@ -3686,6 +3689,63 @@ sidora.manage.removeDatastream = function(pid,dsid){
   jQuery("#removeDatastreamDialog").css("overflow", "hidden");
   jQuery("#removeDatastreamDialog").closest(".ui-dialog").css("z-index", 1000); //shadowbox is 998
 }
+
+sidora.util.conceptRemovedTreeChange = function(oldConceptParentPid, removedConceptPid) {
+  var jst = jQuery("#forjstree").jstree();
+  var oldParents = sidora.util.GetTreeNodesByPid(oldConceptParentPid); 
+  for (var opi = 0; opi < oldParents.length; opi++) {
+    var oldParentId = oldParents[opi];
+    var oldParent = jst.get_node(oldParentId);
+    for (var opci = 0; opci < oldParent.children.length; opci++) {
+      var opChild = jst.get_node(oldParent.children[opci]);
+      var opChildPid = opChild.a_attr.pid;
+      if (opChildPid == removedConceptPid) {
+        jst.pureUIChange = true;
+        jst.delete_node(opChild);
+        jst.pureUIChange = false;
+      }
+    }
+  }
+}
+sidora.util.conceptAddedCompletelyNew = function(parentPid, pidOfNewItem, nidOfNewItem, nameOfNewItem) {
+  var jst = jQuery("#forjstree").jstree();
+  var oldParents = sidora.util.GetTreeNodesByPid(parentPid);
+  for (var opi = 0; opi < oldParents.length; opi++) {
+    var oldParentId = oldParents[opi];
+    var oldParent = jst.get_node(oldParentId);
+    // The child should take on its parents permissions, so use the parent's attributes
+    var a_attr_obj = new Object();
+    a_attr_obj.class = oldParent.a_attr.class;
+    a_attr_obj.permissions = oldParent.a_attr.permissions;
+    a_attr_obj.resourcechildren = "0";
+    a_attr_obj.conceptchildren = "0";
+    a_attr_obj.fullname = nameOfNewItem;
+    a_attr_obj.nid = nidOfNewItem; 
+    a_attr_obj.pid = pidOfNewItem;
+    // calculate and use the new url
+    parentHref = oldParent.a_attr.href;
+    var childHref = "/sidora/workbench/#" + pidOfNewItem;
+    if (parentHref.indexOf("=") != -1 && !parentHref.endsWith("?path=")) {
+      childHref += "?path=" + parentHref.substring(parentHref.lastIndexOf("=")+1) + "," + parentHref.substring(parentHref.indexOf("#")+1,parentHref.lastIndexOf("?"));
+    }
+    else if (parentHref.endsWith("?path=")){
+      childHref += "?path=" + parentHref.substring(parentHref.indexOf("#")+1,parentHref.lastIndexOf("?"));
+    }
+    else {
+      childHref += "?path=" + parentHref.substring(parentHref.indexOf("#")+1);
+    }
+    a_attr_obj.href = childHref;
+    var newNodeId = jQuery("#forjstree").jstree(
+	  "create_node",
+	  oldParent,
+	  { "text" : nameOfNewItem, "a_attr":a_attr_obj },
+	  0,
+	  function(){},
+	  true
+    );
+  }  
+}
+
 jQuery(function () {
   //Check to see that the page has a hash or ends with a '/' so that we will not have to reload the page on first click
   if (

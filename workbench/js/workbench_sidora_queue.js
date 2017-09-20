@@ -357,17 +357,13 @@ SidoraQueue.prototype.Done = function(completedItem, ajaxReturn){
       //If there was an update to the Pid user is currently looking at then anything may have changed.  Reload it.
       if (sidora.concept.GetPid() == completedItem.pidsBeingProcessed[i]){
         if ((completedItem.action == 'deleteConcept') && !(executeOnceOnly)){
-          parentLocation = sidora.util.getParentHref(window.location.href);
           var jst = jQuery("#forjstree").jstree();
-          var parentLocationFromBasePath = parentLocation.substring(parentLocation.indexOf(Drupal.settings.basePath));
-          var itemSelectorForCurrentItemInTree = 'a[href=\"'+parentLocationFromBasePath+'\"]';
-          var selectThisNode = jst.get_node(itemSelectorForCurrentItemInTree);
-          jst.deselect_all();
-          jst.select_node(selectThisNode);
+          var parentId = sidora.util.getNodeIdByHref(sidora.util.getParentHref());
+          jQuery("#" + parentId + " a").click();
           executeOnceOnly = true;
         }    
         sidora.concept.LoadContent();
-        sidora.util.refreshPidInTree(5);
+        //sidora.util.refreshPidInTree(5);
         if (processedItemCount != ''){
           var processedResourceCountArray = processedItemCount.split(' of ');
           if ((processedResourceCountArray.length > 1) && (processedResourceCountArray[0] == processedResourceCountArray[1]-1)){
