@@ -280,7 +280,7 @@ sidora.concept.LoadContentHelp.Resources.TableActionsSetup = function(){
   jQuery("#res_table_paginate").hide();
   jQuery("#res_table_wrapper").append('<input type="text" name="titleFilter" id="titleFilter" placeholder="Search Resources" style="border: solid 1px lightblue;">');
   jQuery("#res_table_wrapper").append('<a id="add-resource-button" href="#" onclick="sidora.AddResource(); return false;" class="sidora-thin-button"><span>+</span>Add New Resources</a>');
-  jQuery("#res_table_wrapper").append('<select id="sidora-resource-bulk-actions" class="form-select"><option value="">Bulk Actions</option><option value="duplicate">Duplicate</option><option value="move">Move</option><option value="delete">Delete</option></select>');
+  jQuery("#res_table_wrapper").append('<select id="sidora-resource-bulk-actions" class="form-select"><option value="">Bulk Actions</option><option value="duplicate">Copy</option><option value="move">Move</option><option value="delete">Delete</option></select>');
   jQuery("#sidora-resource-bulk-actions").change(function(){
     if (jQuery("#sidora-resource-bulk-actions").val() != "") {
       if (sidora.resources.getHighlighted().length == 0) {
@@ -764,13 +764,13 @@ sidora.ProjectSpaces.ChangeProjectSpace = function(selectedValue, suppressClick)
 sidora.ProjectSpaces.DuplicateOrTransferIntro = function(type, pids) {
   var intro = "<p>";
   if (type == "duplicate") {
-    intro = "You selected the following to be copied:";
+    intro = "Copy will create entirely new objects.<br> New objects will be duplicates and changes made to them will not affect the original objects.<br>You selected the following to be copied:";
   }
   if (type == "transfer") {
     intro = "You selected the following to be moved:";
   }
   if (type == "link") {
-    intro = "You selected for links to be created to the following:";
+    intro = "Links will not create a new object.<br> Any changes to made while using the link directly affect the original.<br> You selected for links to be created to the following:";
   }
   intro += "</p><ul>";
   for(var pidIndex = 0; pidIndex < pids.length; pidIndex++) {
@@ -831,8 +831,8 @@ sidora.ProjectSpaces.DuplicateOrTransfer = function(type, conceptsOrResources, s
   if (type == 'duplicate') {
     onSubmit = function(destPid){
       sidora.util.Confirm(
-        Drupal.t("Duplicate Creation"),
-        Drupal.t("Confirm to duplicate objects to %friendlyname", {"%friendlyname":sidora.util.FriendlyNameDirect(destPid)}),
+        Drupal.t("Copy Creation"),
+        Drupal.t("Confirm to create a copy of the objects to %friendlyname", {"%friendlyname":sidora.util.FriendlyNameDirect(destPid)}),
         function(){
           sidora.performDuplicate(destPid, pids, function(){ setTimeout( function(){sidora.util.loadTreeSection(destPid, null, null, false)}, 20000)});
           Shadowbox.close();
@@ -902,7 +902,8 @@ sidora.ProjectSpaces.DuplicateOrTransfer = function(type, conceptsOrResources, s
 sidora.ProjectSpaces.DuplicateOrTransferHtml = function(selectionIntroHtml){
   var toReturn = "<div style='height:100%'>";
   toReturn += selectionIntroHtml;
-  toReturn += "<div id='destination-tree' style='width:100%;overflow:auto;height:calc(100% - 130px);'>Loading destination trees...</div>";
+  var height = 110 + selectionIntroHtml.split("<br").length * 20;
+  toReturn += "<div id='destination-tree' style='width:100%;overflow:auto;height:calc(100% - "+height+"px);'>Loading destination trees...</div>";
   toReturn += '<input id="destination-chosen" class="form-submit" style="float:right; width:100px;" value="Submit" />';
   return toReturn;
 }
