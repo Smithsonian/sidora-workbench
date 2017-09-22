@@ -5546,6 +5546,19 @@ function sidora_copy($copy_to_id, $pid, $show_output = TRUE) {
       return $to_output;
     }
   }
+  // Can't put a link to itself
+  if ($copy_to_id == $pid) {
+    $to_output['error'] = TRUE;
+    $to_output['description'] = t("An object is not allowed to link to itself");
+    $to_output['code'] = "selfcopy";
+    if ($show_output) {
+      print json_encode($to_output);
+      drupal_exit();
+    }
+    else {
+      return $to_output;
+    } 
+  }
   // if the parent pids are locked, can't do it
   if (
        !sidora_obtain_lock($copy_to_id)

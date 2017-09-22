@@ -2232,11 +2232,16 @@ sidora.concept.CopyNode = function(data) {
   jst.get_node(data.parent).a_attr.conceptchildren = ""+npReplacer;
   sidora.queue.incomingRequestsAreSilent = true;
   sidora.queue.Request(
-  htmlEntities(sidora.display.CREATE_LINK_TO_CONCEPT),
+    htmlEntities(sidora.display.CREATE_LINK_TO_CONCEPT),
     actionUrl,
     function(){
       sidora.concept.LoadContentHelp.Relationships();
-      sidora.util.conceptLinkCreated(toMovePid, moveToPid);
+      try{
+        var ajaxReturn = JSON.parse(arguments[0]);
+        if (!ajaxReturn.error){
+          sidora.util.conceptLinkCreated(toMovePid, moveToPid);
+        }
+      }catch(exc){}
     }, 
     sidora.util.createFunctionRefreshTree(moveToPid)
     , [moveToPid,toMovePid],'copyConcept'
@@ -2287,7 +2292,12 @@ sidora.concept.MoveNode = function(data) {
     actionUrl, 
     function(){
       sidora.concept.LoadContentHelp.Relationships();
-      sidora.util.conceptMovedTreeChange(toMovePid, moveFromPid, moveToPid);
+      try{
+        var ajaxReturn = JSON.parse(arguments[0]);
+        if (!ajaxReturn.error){
+          sidora.util.conceptMovedTreeChange(toMovePid, moveFromPid, moveToPid);
+        }
+      }catch(exc){}
     },
     cfrt,
     [moveToPid,toMovePid,moveFromPid],
