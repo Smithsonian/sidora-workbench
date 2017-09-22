@@ -2057,7 +2057,7 @@ sidora.performTransfer = function(toLocationPid, pids) {
     var onSuccess = function() {
     }
     pidListForRequest = [droppedOn,droppedPid];
-    userFriendlyName = Drupal.t('Duplicating');
+    userFriendlyName = Drupal.t('Copying');
     queueAction = 'duplication';
     userFriendlyName += " <em>"+sidora.util.FriendlyNameDirect(droppedPid)+"</em>";
     userFriendlyName += sidora.display.TO + " <em>"+sidora.util.FriendlyNameDirect(droppedOn)+"</em>";
@@ -2078,7 +2078,7 @@ sidora.performDuplicate = function(toLocationPid, pids, onSuccess) {
       onSuccess = function() {};
     }
     pidListForRequest = [droppedOn,droppedPid];
-    userFriendlyName = Drupal.t('Duplicating');
+    userFriendlyName = Drupal.t('Copying');
     queueAction = 'duplication';
     userFriendlyName += " <em>"+sidora.util.FriendlyNameDirect(droppedPid)+"</em>";
     userFriendlyName += sidora.display.TO + " <em>"+sidora.util.FriendlyNameDirect(droppedOn)+"</em>";

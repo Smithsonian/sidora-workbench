@@ -4676,15 +4676,15 @@ function sidora_ajax_parts($call_type, $param1 = '', $param2 = '', $param3 = '')
     module_load_include('inc', 'sidora', 'includes/project_spaces');
     if (!empty($param1)) {
       if (empty($_GET['doFast'])) {
-        sidora_project_spaces_tree("",TRUE, array("view"), TRUE, $param1);
-        sleep(10);
+        //sidora_project_spaces_tree("",TRUE, array("view"), TRUE, $param1);
+        //sleep(10);
       }
       print sidora_project_spaces_tree("",TRUE, array("view"), TRUE, $param1);
     }
     else {
       if (empty($_GET['doFast'])) {
-        sidora_project_spaces_tree();
-        sleep(10);
+        //sidora_project_spaces_tree();
+        //sleep(10);
       }
       print sidora_project_spaces_tree();
     }
@@ -4706,8 +4706,8 @@ function sidora_ajax_parts($call_type, $param1 = '', $param2 = '', $param3 = '')
     ini_set('memory_limit','512M');
     try{
       if (empty($_GET['doFast'])) {
-        sidora_html_tree_for_ajax($param1, $param2);
-        sleep(3);
+        //sidora_html_tree_for_ajax($param1, $param2);
+        //sleep(3);
       }
       print sidora_html_tree_for_ajax($param1, $param2);
     }catch(PDOException $e) {
