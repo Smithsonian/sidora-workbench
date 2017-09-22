@@ -55,6 +55,22 @@ function sidora_put_into_project_spaces($item_identifier, $project_space_identif
   }
   return TRUE;
 }
+/**
+ * Put the first object in the groups of second object
+ */
+function sidora_put_this_into_their_project_space($add_to_groups_id, $get_groups_from_id) {
+  $atg_info = sidora_get_info($add_to_groups_id, FALSE);
+  $ggf_info = sidora_get_info($get_groups_from_id, FALSE);
+  if (empty($atg_info) || empty($ggf_info)) {
+    return FALSE;
+  }
+  $og_gids = sidora_get_group_nids_membership($ggf_info['nid']);
+  $groups = node_load_multiple($og_gids);
+  foreach($groups as $group) {
+    og_group('node', $group, array('entity_type' => 'node', 'entity' => $atg_info['nid']));
+  }
+  return TRUE;
+}
 
 /**
  * Assume that the passed in item has a node if it should, and put that node into the 

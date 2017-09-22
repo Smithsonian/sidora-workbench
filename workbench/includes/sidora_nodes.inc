@@ -227,7 +227,8 @@ function sidora_build_tree_from_nodes($root_node_id, $max_depth = 3, $current_de
   $to_return = array();
   $node = node_load($root_node_id);
   if ($resync_nodes_if_needed && !sidora_is_node_synced_with_fedora($node)) {
-    if (!sidora_update_node_from_fedora($node)) {
+    $returned_node = sidora_update_node_from_fedora($node);
+    if (empty($returned_node)){
      // This node could not be loaded from Fedora, likely it no longer exists in Fedora
      return NULL;
     }
@@ -322,7 +323,7 @@ function sidora_fedora_queue_sync($pid_or_nid) {
   if (sidora_contains($pid_or_nid,':')){
     $nid = sidora_quick_pid_to_node_id($pid_or_nid); 
   }
-  $node = node_load($nid);
+  $node = node_load($nid, NULL, TRUE);
   if (!empty($node)){
     $node_wrapper = entity_metadata_wrapper('node', $node);
     $node_wrapper->field_sidora_fedora_sync->set('0');
@@ -723,7 +724,7 @@ function sidora_update_node_from_fedora($pid_or_fedora_obj_or_nid_or_node){
     $to_return = sidora_update_concept_node($node, array('label' => ''), TRUE);
     return FALSE;
   }
-  sidora_update_or_create_node_from_fedora($pid_or_fedora_obj_or_nid_or_node);
+  return sidora_update_or_create_node_from_fedora($pid_or_fedora_obj_or_nid_or_node);
 }
 /**
  * Updates or creates a node based on its Fedora object. Requires that the object is a concept

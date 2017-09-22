@@ -621,6 +621,9 @@ function sidora_process_object_with_build_id($form_build_id) {
         foreach ($grandparents as $grandparent_pid => $grandparent) {
           sidora_clear_tree_cache($grandparent_pid);
         }
+        // put the new object into its groups
+        node_save($concept_node);
+        sidora_put_this_into_their_project_space($object->id, $parent->id);
       }
       elseif ($is_codebook) {
         // add codebook to project space's main item
