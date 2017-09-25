@@ -632,10 +632,13 @@ function sidora_project_space_creation_form($form = array(), &$form_state, $exis
   );
   $form['submit'] = array(
     '#type' => 'submit',
-    '#value' => t('Confirm'),
+    '#value' => t('Submit'),
     '#attributes' => array(
       'onclick' => 'jQuery(body).append("<div class=\"full-screen-overlay\"></div>");',
     ),
+  );
+  $form['close'] = array(
+    '#markup' => '<br><br><a style="" href="' . $GLOBALS['base_url'] . '/sidora/research_spaces" onclick="jQuery(body).append(\'<div class=\\\'full-screen-overlay\\\'></div>\');"><input type="button" id="closebottom" name="closebottom" value="Close" class="form-submit"></a>',
   );
   return $form;
 }
