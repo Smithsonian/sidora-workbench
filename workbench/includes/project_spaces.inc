@@ -907,6 +907,9 @@ function sidora_project_spaces_form($form = array(), &$form_state, $uid = NULL) 
   $form['cnps'] = array(
     '#markup' => '<a style="float:right" href="research_space_create"><input type="button" id="cnps" name="cnps" value="Create New Research Space" class="form-submit"></a>',
   );
+  $form['autopost'] = array(
+    '#markup' => '<script>jQuery(document).ready(function(){jQuery("[name=\'default_ps\']").click(function(){jQuery.post(\'\',jQuery("#sidora-project-spaces-form").serialize())});});</script>',
+  );
   $form['table'] = array(
     '#theme' => 'table',
     '#header' => array(t('Name'), t('Owner')),
@@ -985,6 +988,7 @@ function sidora_project_spaces_form($form = array(), &$form_state, $uid = NULL) 
       );
     }
     $form['submit'] = array(
+      '#attributes' => array('style' => 'display:none'),
       '#type' => 'submit',
       '#value' => t('Submit'),
     );
