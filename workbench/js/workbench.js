@@ -2971,6 +2971,13 @@ sidora.util.refreshConceptTreeUIDirect = function(pid, tree_html){
  * to get settled and resaved to the DB
  */
 sidora.ProjectSpaces.refreshOptions = function(waitSecondsBeforeCall){
+  // if the value of the dropdown does not match what's shown right now, fix it
+  var shownId = jQuery("#forjstree ul li ul li:visible").attr('id');
+  var selectedId = jQuery("#psdd-select").val();
+  if (shownId != selectedId) {
+    jQuery("#psdd-select").change();
+  }
+
   if (typeof(waitSecondsBeforeCall) != 'number') {
     waitSecondsBeforeCall = 20;
   }
