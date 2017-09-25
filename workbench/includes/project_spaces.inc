@@ -980,6 +980,9 @@ function sidora_project_spaces_form($form = array(), &$form_state, $uid = NULL) 
     $form['table']['#header'][] = t('Operations');
   }
   $form['table']['#rows'] = $rows;
+  $form['close'] = array(
+    '#markup' => '<a style="float:left" href="#" onclick="window.parent.Shadowbox.close(); return false;"><input type="button" id="closebottom" name="closebottom" value="Close" class="form-submit"></a>',
+  );
   if (empty($uid) || $uid == $user->uid){
     $form['default_ps'] = array('#type'=>'radio', '#attributes' => array('style' => 'display:none;'));
     if (sidora_is_admin()) { 
