@@ -807,6 +807,7 @@ function sidora_project_space_transfer_form($form = array(), &$form_state, $pid 
   if (empty($to_username)) {
     $form["username_new"] = array(
       '#type' => 'textfield',
+      '#autocomplete_path' => 'user/autocomplete',
       '#title' => t('Enter the username of the new owner'),
     );
     $form['submit'] = array(
@@ -1022,7 +1023,7 @@ function sidora_sharing_permissions_form($form = array(), &$form_state, $pid) {
   );
   $form['table'] = array(
     '#theme' => 'sidora_sharing_permissions',
-    '#header' => array(t('User'), t('Create'),t('View'),t('Edit'),t('Delete')),
+    '#header' => array(t('User'), t('View'), t('Create'), t('Edit'), t('Delete')),
   );
   $selected_groups = sidora_get_groups_for_project_space($pid);
   $member_to_group_association = sidora_get_member_to_group_association($selected_groups);
@@ -1035,21 +1036,25 @@ function sidora_sharing_permissions_form($form = array(), &$form_state, $pid) {
         "username_$uid" => array(
           '#markup' => $username,
         ),
-        "create_$uid" => array(
-          '#type' =>'checkbox',
-          '#default_value' => FALSE,
-        ),
         "view_$uid" => array(
           '#type' =>'checkbox',
           '#default_value' => FALSE,
+          '#attributes' => array("sidora_option"=>array('view_only')),
+        ),
+        "create_$uid" => array(
+          '#type' =>'checkbox',
+          '#default_value' => FALSE,
+          '#attributes' => array("sidora_option"=>array('require_view')),
         ),
         "edit_$uid" => array(
           '#type' =>'checkbox',
           '#default_value' => FALSE,
+          '#attributes' => array("sidora_option"=>array('require_view')),
         ),
         "delete_$uid" => array(
           '#type' =>'checkbox',
           '#default_value' => FALSE,
+          '#attributes' => array("sidora_option"=>array('require_view')),
         ),
       );
       foreach($groups as $group) {
@@ -1060,23 +1065,28 @@ function sidora_sharing_permissions_form($form = array(), &$form_state, $pid) {
   }
   $row = array(
     "username_new" => array(
+      '#autocomplete_path' => 'user/autocomplete',
       '#type' => 'textfield',
-    ),
-    "create_new" => array(
-      '#type' =>'checkbox',
-      '#default_value' => FALSE,
     ),
     "view_new" => array(
       '#type' =>'checkbox',
       '#default_value' => FALSE,
+      '#attributes' => array("sidora_option"=>array('view_only')),
+    ),
+    "create_new" => array(
+      '#type' =>'checkbox',
+      '#default_value' => FALSE,
+      '#attributes' => array("sidora_option"=>array('require_view')),
     ),
     "edit_new" => array(
       '#type' =>'checkbox',
       '#default_value' => FALSE,
+      '#attributes' => array("sidora_option"=>array('require_view')),
     ),
     "delete_new" => array(
       '#type' =>'checkbox',
       '#default_value' => FALSE,
+      '#attributes' => array("sidora_option"=>array('require_view')),
     ),
   );
   $rows[] = $row;
@@ -1153,6 +1163,25 @@ function sidora_sharing_permissions_form_submit($form, &$form_state) {
  */
 function theme_sidora_sharing_permissions(&$variables){
   drupal_add_css(drupal_get_path('module','sidora').'/css/workbench_basic_screen.css',array('weight' => '1000000', 'group' => CSS_THEME));
+  drupal_add_js("
+jQuery(document).ready(function(){
+
+jQuery('[sidora_option=\'require_view\']').change(function(){ checkViewPermission(this); });
+jQuery('[sidora_option=\'view_only\']').change(function(){ uncheckAllPermission(this); });
+uncheckAllPermission = function(clicked){
+   if (!clicked.checked){
+     var allItem = jQuery(clicked).closest('tr').find('[sidora_option=\'require_view\']');
+     jQuery(allItem).prop('checked','');
+   } 
+}
+checkViewPermission = function(clicked){
+   if (clicked.checked){
+     var viewItem = jQuery(clicked).closest('tr').find('[sidora_option=\'view_only\']');
+     jQuery(viewItem).prop('checked','checked');
+   } 
+}
+
+});  ", 'inline');
   $form = $variables['form'];
   $rows = $form['rows'];
   $header = $form['#header'];
