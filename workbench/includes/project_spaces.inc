@@ -1200,7 +1200,7 @@ checkViewPermission = function(clicked){
     // Add the row to the table.
     $content['#rows'][] = $row;
   }
-  return t('Giving a user create, edit, or delete permission will allow the user to view the content, even if view is not checked.') . drupal_render($content);
+  return t('Giving a user create, edit, or delete permission allows the user to view the content.') . drupal_render($content);
 }
 
 /*

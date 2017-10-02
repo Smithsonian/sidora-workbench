@@ -3938,6 +3938,10 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
             $operations .= '<a href="" onclick="sidora.ProjectSpaces.DuplicateOrTransfer(\'link\', \'resources\',\'' . $element_pid . '\',Drupal.t(\'Link Resources\')); return false;" class="sidora-ui-link">Link</a> ';
             $operations .= '<a href="" onclick="sidora.ProjectSpaces.DuplicateOrTransfer(\'duplicate\',\'resources\',\'' . $element_pid . '\',Drupal.t(\'Copy Resources\')); return false;" class="sidora-ui-link">Copy</a> ';
             $operations .= '<a href="" onclick="sidora.ProjectSpaces.DuplicateOrTransfer(\'transfer\',\'resources\',\'' . $element_pid . '\',Drupal.t(\'Move Resources\')); return false;" class="sidora-ui-link">Move</a>';
+            if (sidora_is_admin()) {
+              $operations .= '<br/>';
+              $operations .= '<a href="" onclick="sidora.manage.Open(\'' . $element_pid . '\', \'\', \'Manage Resource\', \'Update resource information\'); return false;" class="sidora-ui-link">Manage</a> ';
+            }
             $resource_actions = '<a href="" onclick="sidora.resources.openInNewWindow(\'' . $element_pid . '\'); return false;" class="sidora-ui-link" title="Open in New Window"><i class="material-icons">filter</i></a> ';
             $resource_actions .= '<a href="" onclick="sidora.resources.download(\'' . $element_pid . '\'); return false;" class="sidora-ui-link" title="Download"><i class="material-icons">file_download</i></a> ';
             $resource_actions .= '<a href="" onclick="sidora.resources.DeleteResource(\'' . $element_pid . '\'); return false;" class="sidora-ui-link" title="Delete"><i class="material-icons">delete</i></a>';
@@ -4405,12 +4409,14 @@ function sidora_block_view($delta = '') {
           </li>
         </ul>
 </div>';
+      // Firefox has a bug where float:right will be on a new line if placed after text, even if you tell it display:inline, make is a span, or any normal css fix
+      // So we are putting the floated stuff before the icon even though the HTML looks weird, it comes out looking how we want
       $block['content'] .= '
   <div id="concept_tabs">
     <ul>
-      <li><a href="#concept-meta" id="concept-meta-link"><i class="material-icons">info</i><div class="sidora-ui-text sidora-ui-link" style="float:right;margin: 3px 0 0 4px;">Details</div></a></li>
-      <li><a href="#concept-resource-list"><i class="material-icons">panorama</i><div class="sidora-ui-text sidora-ui-link" style="float:right;margin: 3px 0 0 4px;">Resources</div></a></li>
-      <li><a href="#concept-relationships"><i class="material-icons">compare_arrows</i><div class="sidora-ui-text sidora-ui-link" style="float:right;margin: 3px 0 0 4px;">Links</div></a></li>
+      <li><a href="#concept-meta" id="concept-meta-link"><div class="sidora-ui-text sidora-ui-link" style="float:right;margin: 3px 0 0 4px;">Details</div><i class="material-icons">info</i></a></li>
+      <li><a href="#concept-resource-list"><div class="sidora-ui-text sidora-ui-link" style="float:right;margin: 3px 0 0 4px;">Resources</div><i class="material-icons">panorama</i></a></li>
+      <li><a href="#concept-relationships"><div class="sidora-ui-text sidora-ui-link" style="float:right;margin: 3px 0 0 4px;">Links</div><i class="material-icons">compare_arrows</i></a></li>
     </ul>
     <div id="concept-meta">
       <div id="concept-meta-menu" class="sidora-menu">
@@ -5847,7 +5853,7 @@ function sidora_html_tree_from_given_pid($root_pid = '', $root = NULL, $num_leve
     $filled = $filled[0]['children'];
   }
   /* */
-  $html_tree_from_query_result = sidora_html_tree_from_query_results_tree($filled, $root_pid, $num_levels, $url_params);
+  $html_tree_from_query_result = sidora_html_tree_from_query_results_tree($filled, $root_pid, $num_levels, $url_params, 'a', TRUE, array("create","view","update","delete"), $root_pid);
   $html_escaped_name = htmlspecialchars($root_label);
   $to_return = '';
   $to_return .= '<ul>';
@@ -6488,7 +6494,7 @@ function sidora_cron() {
  *   create, read, update, delete as expected, but an empty array or an array with an empty element means to output a tree even if the current user
  *   does not have any access
  */
-function sidora_html_tree_from_query_results_tree($query_result_tree, $input_path = '', $num_levels = 3, $url_params = '', $dom_type = 'a', $include_href = TRUE, $include_permission_types = array("create","view","update","delete")){
+function sidora_html_tree_from_query_results_tree($query_result_tree, $input_path = '', $num_levels = 3, $url_params = '', $dom_type = 'a', $include_href = TRUE, $include_permission_types = array("create","view","update","delete"), $last_parent_pid = NULL){
   if (empty($query_result_tree)) return '';
   global $user;
   // Every entry needs a label or we will not show it in the tree
@@ -6575,6 +6581,10 @@ function sidora_html_tree_from_query_results_tree($query_result_tree, $input_pat
           $classes_for_ownership = " not-owned";
         }
       }
+      $isLink = '';//. $pid . ':' . $t_element['isAdministeredBy'].'[]'.$last_parent_pid;//'BBBNOLINKBBB';
+      if (!empty($t_element['isAdministeredBy']) && $last_parent_pid != $t_element['isAdministeredBy'] && !empty($last_parent_pid)) {
+        $isLink = '<img style="width:13px;height:13px;" src="' . $GLOBALS['base_url'] . '/' . drupal_get_path('module','sidora') . '/images/link.png"/>'; //TODO
+      }
       $class_for_default_project_space = '';
       if ($pid == $default_ps) {
         $class_for_default_project_space = ' default-project-space';
@@ -6594,16 +6604,25 @@ function sidora_html_tree_from_query_results_tree($query_result_tree, $input_pat
           $class_for_thumbnail = ' has-thumbnail';
         }
         $all_classes =  $classes_for_permissions . $classes_for_ownership . $class_for_default_project_space . $class_for_thumbnail;
-        $to_return .= '<' . $dom_type . $href . ' pid="' . $pid . '" fullname="' . $html_escaped_name . '" conceptchildren="' . count($t_element['children']) . '" resourcechildren="' . $resource_children_num . '" class="' . $all_classes . '" permissions="' . $permissions . '"' . $nid_info . $owner_info . $thumbnail_info . '>';
+        $to_return .= '<';
+        $to_return .= $dom_type . $href;
+        $to_return .= ' pid="' . $pid . '" fullname="' . $html_escaped_name . '"';
+        $to_return .= ' conceptchildren="' . count($t_element['children']) . '"';
+        $to_return .= ' resourcechildren="' . $resource_children_num . '"';
+        $to_return .= ' class="' . $all_classes . '" permissions="' . $permissions . '"';
+        $to_return .= $nid_info . $owner_info . $thumbnail_info;
+        $to_return .= '>';
+        $to_return .= $isLink;
         if (!empty($thumbnail_info)) {
            $to_return .= '<div><img src="'.file_create_url($t_element['t']['thumbnail']).'"/></div>';
         }
+        
         $to_return .= $t_element['t']['value'];
         if ($resource_children_num > 0) $to_return .= ' ('.$resource_children_num.')';
         $to_return .= "</$dom_type>";
         if (array_key_exists('children',$t_element)){
           $to_return .= '<ul>';
-          $to_return .= sidora_html_tree_from_query_results_tree($t_element['children'], $current_path, $num_levels - 1, $url_params, $dom_type, $include_href, $include_permission_types);
+          $to_return .= sidora_html_tree_from_query_results_tree($t_element['children'], $current_path, $num_levels - 1, $url_params, $dom_type, $include_href, $include_permission_types, $pid);
           $to_return .= '</ul>';
         }
         if (array_key_exists('already_in_tree',$t_element) && $t_element['already_in_tree']){

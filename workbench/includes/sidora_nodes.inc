@@ -220,6 +220,7 @@ function sidora_build_tree_from_nodes_by_pid($pid, $max_depth = 3, $preload_node
     return '';
   }
   $to_return = array();
+  module_load_include('inc', 'sidora', 'includes/project_spaces');
   $to_return[] = sidora_build_tree_from_nodes($nid, $max_depth, 0, TRUE, $preload_nodes);
   return $to_return;
 }
@@ -258,7 +259,20 @@ function sidora_build_tree_from_nodes($root_node_id, $max_depth = 3, $current_de
     $to_return['crud']['r'] = sidora_node_allow('view', $node);
     $to_return['crud']['u'] = sidora_node_allow('update', $node);
     $to_return['crud']['d'] = sidora_node_allow('delete', $node);
+    
     $to_return['nid'] = $node->nid;
+    $og_gids = sidora_get_group_nids_membership($node->nid);
+    // sidora_get_owning_parent_concept_by_administered_pid($pid)
+    // if it's in more than 4 groups then ask what its administered by to see if it's a link
+    $parent_array = sidora_get_owning_parent_concept_by_administered_pid($pid);
+    $parent_pid = 'BBB';
+    if (!empty($parent_array)) {
+      foreach($parent_array as $pid => $parent_obj) { 
+        $parent_pid = $pid;
+      }
+    }
+
+    $to_return['isAdministeredBy'] = $parent_pid;
     $username = sidora_get_username_from_uid($node->uid);
     $to_return['owner'] = array('value'=>$username);
     // Load each child
