@@ -747,6 +747,13 @@ a.sidora-ui-link, .sidora-ui-link {
 #conceptResizable {
   background-color: rgb(245,245,245);
 }
+[is-link='TRUE'] {
+  padding-left:13px;
+  background-image: url('../images/link.png');
+  background-size: 13px 13px;
+  background-repeat: no-repeat;
+  background-position: 0px 5px;
+}
 button.sidora-button span.sidora-button-text{
   padding:0;display:block;line-height:normal;
 }

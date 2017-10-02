@@ -565,6 +565,14 @@ sidora.concept.LoadContentHelp.FullTableReload = function(conceptOfInterest){
 sidora.concept.loadedContentPid = null;
 sidora.concept.forceRefreshOnNextLoadContent = false;
 sidora.concept.LoadContent = function(leaveContentIfAlreadyLoaded){
+  var newName = sidora.concept.GetName();
+  if (typeof(newName) == 'undefined') {
+    var phref = sidora.util.getParentHref();
+    window.location.href = phref;
+    var nodeId = sidora.util.getNodeIdByHref(window.location.pathname + window.location.search + window.location.hash);
+    jQuery("#" + nodeId + " > a").click();
+    return;
+  }
   jQuery("#concept-name-holder").html("<h1 class='page-title'>"+sidora.concept.GetName()+"</h1>");
   if (typeof(leaveContentIfAlreadyLoaded) == 'undefined') leaveContentIfAlreadyLoaded = false;
   if (this.forceRefreshOnNextLoadContent) {
@@ -2242,7 +2250,9 @@ sidora.concept.CopyNode = function(data) {
         if (!ajaxReturn.error){
           sidora.util.conceptLinkCreated(toMovePid, moveToPid);
         }
-      }catch(exc){}
+      }catch(exc){
+        console.log(exc);
+      }
     }, 
     sidora.util.createFunctionRefreshTree(moveToPid)
     , [moveToPid,toMovePid],'copyConcept'
@@ -2298,7 +2308,9 @@ sidora.concept.MoveNode = function(data) {
         if (!ajaxReturn.error){
           sidora.util.conceptMovedTreeChange(toMovePid, moveFromPid, moveToPid);
         }
-      }catch(exc){}
+      }catch(exc){
+        console.log(exc);
+      }
     },
     cfrt,
     [moveToPid,toMovePid,moveFromPid],
@@ -2512,10 +2524,12 @@ sidora.util.treeAdditionSingleItemPassAnchors = function(onLoadComplete, overwri
     var a_attr_obj = {};
     jQuery(jQuery(currRep).children("a").first()[0].attributes).each(
       function() {
-       // jstree puts in its own classes and we dont want to overwrite those for now
-       if (this.nodeName != 'class') {
-         a_attr_obj[this.nodeName] = this.nodeValue;
-       }
+        // jstree puts in its own classes and we dont want to overwrite those for now
+        if (this.nodeName != 'class') {
+          if (this.nodeName != 'is-link' && this.nodeName != 'last-parent') {
+            a_attr_obj[this.nodeName] = this.nodeValue;
+          }
+        }
       }
     );   
     a_attr_obj["href"] = currChild.a_attr.href;
@@ -2568,8 +2582,9 @@ sidora.util.treeAdditionSingleItemPassAnchors = function(onLoadComplete, overwri
         var isFound = ctgMap[crcPid];
        
         var a_attr_obj = {};
+        // skip copying the last parent and whether it's a link
         jQuery(jQuery(currRepChild).children("a").first()[0].attributes).each(function() {
-          a_attr_obj[this.nodeName] = this.nodeValue;
+            a_attr_obj[this.nodeName] = this.nodeValue;
         });
         //The information coming back from the ajax call will not have the path through the tree
         //and since the concept listed can be in multiple places, the path to the concepts
@@ -2979,13 +2994,13 @@ sidora.ProjectSpaces.refreshOptions = function(waitSecondsBeforeCall){
   }
 
   if (typeof(waitSecondsBeforeCall) != 'number') {
-    waitSecondsBeforeCall = 20;
+    waitSecondsBeforeCall = 5;
   }
   setTimeout(function(){
-    sidora.ProjectSpaces.refreshOptionsImmediate();
+    sidora.ProjectSpaces.refreshOptionsImmediate(3);
   }, waitSecondsBeforeCall * 1000)
 }
-sidora.ProjectSpaces.refreshOptionsImmediate = function(){
+sidora.ProjectSpaces.refreshOptionsImmediate = function(refreshesUntilGiveUp){
   jQuery.ajax({
     url: Drupal.settings.basePath+'sidora/ajax_parts/research_spaces_tree/1',
   }).done(function(returnedHtml){
@@ -3004,6 +3019,7 @@ sidora.ProjectSpaces.refreshOptionsImmediate = function(){
         missingElems.push(elem);
       }
     });
+    var changeMade = false;
     for (var ei = 0; ei < missingElems.length; ei++){
       var elem = missingElems[ei];
       var elemAttr = [];
@@ -3015,8 +3031,16 @@ sidora.ProjectSpaces.refreshOptionsImmediate = function(){
       // elemAttr now contains the information to give to jstree for this item
       var newDomId = jst.create_node('j1_1' ,  { "text" : elem.innerHTML,"a_attr": elemAttr}, "last", function(){  console.log("done:"+elem.innerHTML); });
       jQuery("option[value='sep1']").before("<option value='"+newDomId+"'>"+elem.innerHTML+"</option>");
+      jQuery("#psdd-select").val(newDomId);
       sidora.ProjectSpaces.ChangeProjectSpace(jQuery("#psdd-select").val(), true);
+      jQuery("#" + newDomId + " > a").click();
+      changeMade = true;
     };
+    if (!changeMade && refreshesUntilGiveUp > 0) {
+      setTimeout(function(){
+        sidora.ProjectSpaces.refreshOptionsImmediate(refreshesUntilGiveUp-1);
+      }, 1000);
+    }
   });
 }
 /*
@@ -3725,14 +3749,21 @@ sidora.util.conceptLinkCreated = function(linkedPid, newParentPid) {
   for (var npi = 0; npi < newParents.length; npi++) {
     var newParentId = newParents[npi];
     var newParent = jst.get_node(newParentId);
+    // if the node already exists on the tree here, remove it so we can constsruct one with the proper
+    // updated attributes
+    if (jQuery("#"+newParent.id+" ul li a[pid='"+toCopyNode.a_attr.pid+"']").length > 0){
+      jst.delete_node(jQuery("#"+newParent.id+" ul li a[pid='"+toCopyNode.a_attr.pid+"']").parent().attr('id'));
+    }
     jst.copy_node(toCopyNode, newParent, "last", function(newNode, newParent, position){
       var destinationUrl = sidora.util.constructChildUrl(newParent.a_attr.href, linkedPid);
       newNode.a_attr.href = destinationUrl;
+      newNode.a_attr['is-link'] = 'TRUE';
+      newNode.a_attr['last-parent'] = newParent.a_attr.pid;
       // remove any children so we have full control over the future content
       for (var ci = 0; ci < newNode.children.length; ci++){
         jst.remove_node(jst.get_node(newNode.children[ci]));
       }
-      for (var ci = 0; ci < toCopyNode.children.length; ci++){
+      for (var ci = 0; typeof(toCopyNode.children) != 'undefined' && ci < toCopyNode.children.length; ci++){
         var childNode = jst.get_node(toCopyNode.children[ci]);
         var destinationUrl = sidora.util.constructChildUrl(newNode.a_attr.href, linkedPid);
         jst.copy_node(childNode, newNode, "last", function(newChild, myCopyParent, position){
@@ -3741,6 +3772,9 @@ sidora.util.conceptLinkCreated = function(linkedPid, newParentPid) {
         });
         jst.close_node(newNode);
       }
+      setTimeout(function(){
+        jst.redraw(true);
+      },3000);
     });
   }
   jst.pureUIChange = false;
