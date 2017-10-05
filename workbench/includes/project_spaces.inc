@@ -909,7 +909,7 @@ function sidora_project_spaces_form($form = array(), &$form_state, $uid = NULL) 
   }
   $owned_groups = sidora_get_project_spaces_by_member($uid);
   $form['cnps'] = array(
-    '#markup' => '<a style="float:right" href="' . $GLOBALS['base_url'] . '/sidora/research_space_create"><input type="button" id="cnps" name="cnps" value="Create New Research Space" class="form-submit"></a>',
+    '#markup' => '<a style="float:right" href="' . $GLOBALS['base_url'] . '/sidora/research_space_create"><input type="button" id="cnps" name="cnps" value="Create Research Space" class="form-submit"></a>',
   );
   $form['autopost'] = array(
     '#markup' => '<script>jQuery(document).ready(function(){jQuery("[name=\'default_ps\']").click(function(){jQuery.post(\'\',jQuery("#sidora-project-spaces-form").serialize())});});</script>',
@@ -986,16 +986,18 @@ function sidora_project_spaces_form($form = array(), &$form_state, $uid = NULL) 
     $form['table']['#header'][] = t('Operations');
   }
   $form['table']['#rows'] = $rows;
-  $form['close'] = array(
-    '#markup' => '<a style="float:left" href="#" onclick="window.parent.Shadowbox.close(); return false;"><input type="button" id="closebottom" name="closebottom" value="Close" class="form-submit"></a>',
-  );
   if (empty($uid) || $uid == $user->uid){
     $form['default_ps'] = array('#type'=>'radio', '#attributes' => array('style' => 'display:none;'));
     if (sidora_is_admin()) { 
       $form['show_all'] = array(
-        '#markup' => '<div>' . l(t('Show All'),'/sidora/research_spaces/all') . '<div>',
+        '#markup' => '<div style="position:relative;top:-30px;height:0px;">' . l(t('Show All'),'/sidora/research_spaces/all') . '</div>',
       );
     }
+  }
+  $form['close'] = array(
+    '#markup' => '<a style="float:left" href="#" onclick="window.parent.Shadowbox.close(); return false;"><input type="button" id="closebottom" name="closebottom" value="Close" class="form-submit"></a>',
+  );
+  if (empty($uid) || $uid == $user->uid){
     $form['submit'] = array(
       '#attributes' => array('style' => 'display:none'),
       '#type' => 'submit',

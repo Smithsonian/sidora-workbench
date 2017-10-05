@@ -1085,7 +1085,7 @@ sidora.contextMenu.SetUp = function(){
                 "sep2": "---------",
                 "editResearchSpace": {name: "Edit Research Space", icon: "edit", disabled: cmnps},
                 "changePermissions": {name: "Change Space Permissions ...", disabled: cmnps},
-                "changeOwner": {name: "Move Space to New Owner ...", icon: "arrow-right", disabled: cmnps},
+                "changeOwner": {name: "Change Owner ...", icon: "arrow-right", disabled: cmnps},
             }
         });
     });
@@ -3106,7 +3106,7 @@ sidora.concept.DeleteConcept = function(){
 sidora.concept.DeleteConceptSpecified = function(name, pid, conceptChildrenLen, resourceChildrenLen) {
   jQuery('#deleteConceptDialog').remove();
   if ((conceptChildrenLen == null) || (resourceChildrenLen == null)) {
-    jQuery("body").append("<div id='deleteConceptDialog' style='display:none;' title='"+htmlEntities(sidora.display.DELETE_CONCEPT_TITLE)+"'><p>Error getting the child concepts or resources for this concept. Cannot delete this concept</p><p>"+name+" ("+pid+")</p></div>");
+    jQuery("body").append("<div id='deleteConceptDialog' style='display:none;' title='"+htmlEntities(sidora.display.DELETE_CONCEPT_TITLE)+"'><p>Error getting the child concepts or resources for this concept. Cannot delete this concept</p><p>"+name+"<span style='display:none'> ("+pid+")</span></p></div>");
     jQuery("#deleteConceptDialog").dialog({
       resizable: false,
       height:250,
@@ -3121,7 +3121,7 @@ sidora.concept.DeleteConceptSpecified = function(name, pid, conceptChildrenLen, 
     return;
   }
   if (conceptChildrenLen + resourceChildrenLen > 0){
-    jQuery("body").append("<div id='deleteConceptDialog' style='display:none;' title='"+htmlEntities(sidora.display.DELETE_CONCEPT_TITLE)+"'><p>This concept has "+conceptChildrenLen+" concept(s) and has "+resourceChildrenLen+" resource(s) as children. It cannot be deleted while it has children.</p><p>"+name+" ("+pid+")</p></div>");
+    jQuery("body").append("<div id='deleteConceptDialog' style='display:none;' title='"+htmlEntities(sidora.display.DELETE_CONCEPT_TITLE)+"'><p>This concept has "+conceptChildrenLen+" concept(s) and has "+resourceChildrenLen+" resource(s) as children. It cannot be deleted while it has children.</p><p>"+name+"<span style='display:none'> ("+pid+")</span></p></div>");
     jQuery("#deleteConceptDialog").dialog({
       resizable: false,
       height:250,
@@ -3135,7 +3135,7 @@ sidora.concept.DeleteConceptSpecified = function(name, pid, conceptChildrenLen, 
     });
     return;
   }
-  jQuery("body").append("<div id='deleteConceptDialog' style='display:none;' title='"+htmlEntities(sidora.display.DELETE_CONCEPT_TITLE)+"'><p>Are you sure you want to delete this concept?</p><p>"+name+" ("+pid+")</p></div>");
+  jQuery("body").append("<div id='deleteConceptDialog' style='display:none;' title='"+htmlEntities(sidora.display.DELETE_CONCEPT_TITLE)+"'><p>Are you sure you want to delete this concept?</p><p>"+name+"<span style='display:none;'> ("+pid+")</span></p></div>");
   jQuery("#deleteConceptDialog").dialog({
     resizable: false,
     height:205,
