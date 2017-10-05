@@ -909,7 +909,7 @@ function sidora_project_spaces_form($form = array(), &$form_state, $uid = NULL) 
   }
   $owned_groups = sidora_get_project_spaces_by_member($uid);
   $form['cnps'] = array(
-    '#markup' => '<a style="float:right" href="research_space_create"><input type="button" id="cnps" name="cnps" value="Create New Research Space" class="form-submit"></a>',
+    '#markup' => '<a style="float:right" href="' . $GLOBALS['base_url'] . '/sidora/research_space_create"><input type="button" id="cnps" name="cnps" value="Create New Research Space" class="form-submit"></a>',
   );
   $form['autopost'] = array(
     '#markup' => '<script>jQuery(document).ready(function(){jQuery("[name=\'default_ps\']").click(function(){jQuery.post(\'\',jQuery("#sidora-project-spaces-form").serialize())});});</script>',

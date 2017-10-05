@@ -241,6 +241,9 @@ sidora.AddConcept = function() {
     width: 800,
     title:      sidora.display.CREATE_CONCEPT_TITLE,
     options: {
+      onClose: function(){
+        sidora_util.cacheClear();
+      },
       onFinish:  function(){}
     }
   });
@@ -252,6 +255,9 @@ sidora.AddResource = function() {
     player:     "iframe",
     title:      sidora.display.CREATE_RESOURCE_TITLE,
     options: {
+      onClose: function(){
+        sidora_util.cacheClear();
+      },
       onFinish:  function(){}
     }
   });
@@ -843,6 +849,7 @@ sidora.ProjectSpaces.DuplicateOrTransfer = function(type, conceptsOrResources, s
         Drupal.t("Confirm to create a copy of the objects to %friendlyname", {"%friendlyname":sidora.util.FriendlyNameDirect(destPid)}),
         function(){
           sidora.performDuplicate(destPid, pids, function(){ setTimeout( function(){sidora.util.loadTreeSection(destPid, null, null, false)}, 20000)});
+          sidora_util.cacheClear();
           Shadowbox.close();
         }
       );
@@ -900,6 +907,7 @@ sidora.ProjectSpaces.DuplicateOrTransfer = function(type, conceptsOrResources, s
             data.moveToPid = destPid;
             sidora.concept.CopyNode(data);
           }
+          sidora_util.cacheClear();
           Shadowbox.close();
         }
       );
@@ -1323,7 +1331,6 @@ sidora.InitiateJSTree = function(){
     if (typeof(updateLocationWith) != 'undefined') window.location = updateLocationWith;
     //if the content is already based on the highlighted concept, do nothing
     sidora.UpdateTitleBasedOnNameInTree();
-    sidora.concept.LoadContent(true);
   },200)});
   jQuery('#forjstree').hide();
   jQuery('#forjstree').jstree({
@@ -1892,7 +1899,6 @@ sidora.InitiatePage = function(){
     sidora.RelocateTreeOnPage();
     sidora.ReformatPage();
     jQuery('#concept_tabs').tabs();
-    sidora.concept.LoadContent();
     jQuery("#page-title").after(jQuery("#workbench-menu"));
     jQuery("#concept-meta").prepend(jQuery("#concept-meta-menu"));
     sidora.ontology.CreateConceptMenu();
@@ -2419,7 +2425,7 @@ sidora.util.constantCheck = function(){
 
   var current_local_minute = Math.floor(d.getTime() / 60000);
   if (current_local_minute < sidora.util.init_time.local + 100) {
-    setTimeout(sidora.util.constantCheck, 30000);
+    setTimeout(sidora.util.constantCheck, 60000);
   }
 
   sidora.resources.updateThumbnails();

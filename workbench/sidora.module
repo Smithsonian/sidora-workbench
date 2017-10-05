@@ -4638,6 +4638,10 @@ function sidora_duplicate($destination, $to_duplicate, $show_output = TRUE) {
               $dup_obj[$dsid]->setContentFromString($new_xml);
               
             }
+            else {
+              $dup_obj->relationships->remove(SI_RELS_EXT_URI, 'isAdministeredBy');
+              $dup_obj->relationships->add(SI_RELS_EXT_URI, 'isAdministeredBy', $pid);
+            }
             $to_return = array("error" => FALSE, "description" => t('Objects duplicated to destination'));
           }
           else {
