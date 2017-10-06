@@ -920,7 +920,8 @@ sidora.ProjectSpaces.DuplicateOrTransferHtml = function(selectionIntroHtml){
   toReturn += selectionIntroHtml;
   var height = 110 + selectionIntroHtml.split("<br").length * 20;
   toReturn += "<div id='destination-tree' style='width:100%;overflow:auto;height:calc(100% - "+height+"px);'>Loading destination trees...</div>";
-  toReturn += '<input id="destination-chosen" class="form-submit" style="float:right; width:100px;" value="Submit" />';
+  toReturn += '<input id="destination-chosen" class="form-submit form-button-disabled" disabled="disabled" style="float:left; width:100px;" value="Submit" />';
+  toReturn += '<input id="closer" class="form-submit" style="float:left; width:100px;" value="Close" />';
   return toReturn;
 }
 sidora.ProjectSpaces.ShowWhereToForm = function(selectionIntro, pids, ignorePid, specifyPids, onSubmit, specifiedDepth, myTitle){
@@ -954,12 +955,18 @@ sidora.ProjectSpaces.ShowWhereToForm = function(selectionIntro, pids, ignorePid,
         onFinish:  function(){
           var url = Drupal.settings.basePath+"sidora/ajax_parts/research_spaces_tree" + appendToUrl + query;
           var onDataComplete = function(data) {
+              jQuery("#destination-tree").bind('select_node.jstree', function(){ 
+                jQuery("#destination-chosen").removeAttr("disabled").removeClass("form-button-disabled");
+              });
               jQuery("#destination-tree").html(data);
               jQuery("#destination-tree").jstree({
                 "core": {
                   "multiple" : false,
                   "initially_open" : ["proj_spaces_tree_root"]
                 }
+              });
+              jQuery("#closer").click(function(){
+                Shadowbox.close();
               });
               jQuery("#destination-chosen").click(function(){
                 var destree = jQuery("#destination-tree").jstree();

@@ -4371,7 +4371,10 @@ function sidora_block_view($delta = '') {
              <ul>
                 <li id="edit-RS"><a href="#" onclick="sidora.menuChoice(\'editResearchSpace\',sidora.ProjectSpaces.currentPid());return false;"><i class="material-icons">edit</i>Edit&nbsp;Metadata</a></li>
                 <li id="perm-RS"><a href="#" onclick="sidora.menuChoice(\'changePermissions\',sidora.ProjectSpaces.currentPid());return false;"><i class="material-icons">lock</i>Change&nbsp;Permissions</a></li>
-                <li id="move-RS"><a href="#" onclick="sidora.menuChoice(\'changeOwner\',      sidora.ProjectSpaces.currentPid());return false;"><i class="material-icons">call_made</i>Move&nbsp;Space&nbsp;To&nbsp;Owner</a></li>
+                <li id="move-RS"><a href="#" onclick="sidora.menuChoice(\'changeOwner\',      sidora.ProjectSpaces.currentPid());return false;"><i class="material-icons">call_made</i>Move&nbsp;Space&nbsp;To&nbsp;Owner</a></li>';
+      if (sidora_is_admin()) $block['content'] .= '
+                <li id="manageConcept"><a href="#" onclick="sidora.concept.Manage(); return false;">Manage&nbsp;Concept</a></li>';
+      $block['content'] .= '
              </ul>
            </li>
            <li id="concept-menu-edit-concept"><a href="#" onclick="return false;"><i class="material-icons">edit</i> Edit&nbsp;Concept <i class="material-icons">arrow_drop_down</i></a>
