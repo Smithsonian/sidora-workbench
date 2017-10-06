@@ -88,7 +88,7 @@ function sidora_block_info() {
     // Our caching is done with the Sidora specific caching
   );
   $blocks['sidora_concept_info'] = array(
-    'info' => t('Sidora Concept Information'),
+    'info' => t('Sidora Folder Information'),
     'cache' => DRUPAL_NO_CACHE, 
     // Our caching is done with the Sidora specific caching
   );
@@ -154,14 +154,14 @@ function sidora_menu() {
     ),
     'sidora/create_resource' => array(
       'title' => 'Create Resource',
-      'description' => 'Create a new concept',
+      'description' => 'Create a new folder',
       'page callback' => 'sidora_create_resource',
       'access callback' => 'user_is_logged_in',
       'type' => MENU_CALLBACK,
     ),
     'sidora/create_concept' => array(
-      'title' => 'Create Concept',
-      'description' => 'Create a new concept',
+      'title' => 'Create Folder',
+      'description' => 'Create a new folder',
       'page callback' => 'sidora_create_concept',
       'access callback' => 'user_is_logged_in',
       'type' => MENU_CALLBACK,
@@ -605,7 +605,7 @@ function sidora_process_object_with_build_id($form_build_id) {
           og_group('node', $parent_group, array('entity_type' => 'node', 'entity' => $concept_node->nid));
         }
         // Update Drupal node of parent
-        drupal_set_message("New node created for new concept --" . $concept_node->nid . "--");
+        drupal_set_message("New node created for new folder --" . $concept_node->nid . "--");
         sidora_update_concept_node_add_child($parent_node, $concept_node->nid);
 
         
@@ -1527,7 +1527,7 @@ function sidora_get_parent_table($pid, $only_basic_table_and_direct_removal_call
           cp.append("<div>Problem removing: "+data.description+"</div>");
         }
         else {
-          // When I unassociate from the currently selected concept, reload the resources table,
+          // When I unassociate from the currently selected folder, reload the resources table,
           if (ppid == sidora.concept.GetPid()) {
             sidora.concept.LoadContentHelp.FullTableReload(ppid);
             sidora.concept.LoadContentHelp.Relationships();
@@ -1800,13 +1800,13 @@ function sidora_create_concept($parent_pid = 'si:root', $model = 'si:collectionC
   // if the parent pid is locked, can't do it
   if (!sidora_obtain_lock($parent_pid)) {
     $to_return = '';
-    $to_return .= t('The parent of this concept is currently locked by another user');
+    $to_return .= t('The parent of this folder is currently locked by another user');
     return $to_return;
   }
   module_load_include('inc', 'islandora', 'includes/utilities');
   module_load_include('inc', 'islandora', 'includes/ingest.form');
   if (!sidora_allow($user, $parent_pid, 'create')) {
-    $to_return = t('This user does not have permission to create children of the selected concept. The option to create should not have been visible. Error #: scc1');
+    $to_return = t('This user does not have permission to create children of the selected folder. The option to create should not have been visible. Error #: scc1');
     return $to_return;
   }
   drupal_add_js(drupal_get_path('module','sidora').'/js/workbench_util.js',array('weight' => '1000000', 'group' => JS_THEME));
@@ -1820,7 +1820,7 @@ function sidora_create_concept($parent_pid = 'si:root', $model = 'si:collectionC
     );
   }
   $page->owner = $user->name;
-  $page->label = 'New Concept'; 
+  $page->label = 'New Folder'; 
   // Label of object if no label gets put into place
   $page->models = 'si:collectionCModel';
   drupal_static('parent_collection_pid', $parent_pid);
@@ -3466,7 +3466,7 @@ function sidora_user_view($account, $view_mode, $langcode){
   );
   if ($is_logged_in_as_admin){
     $account->content['workbench']['reset_islandora_user_pid'] = array(
-      '#title' => t('View / Set this user\'s Islandora Pid (Their root concept / user project)'),
+      '#title' => t('View / Set this user\'s Islandora Pid (Their root folder / user project)'),
       '#markup' => '<form id="reset_user_pid" method="post"><input type="text" name="user_pid" value="'.$user_pid.'" class="form-text"/><input type="submit" class="form-submit"/></form>',
       '#class' => 'islandora_user_pid',
       '#type' => 'user_profile_item',
@@ -3989,7 +3989,7 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
       elseif ($download == 'browser' && $formatted == 'html') {
         $resources = sidora_concept_resource_listing($pid,$resource_types,$limit,$offset);
         if (sizeof($resources) == 0) {
-          $to_output = t('<div class="resources-table">No resources available on this concept</div>');
+          $to_output = t('<div class="resources-table">No resources available on this folder</div>');
         }
         else {
           $to_output = '<table id="res_table" class="resources-table">';
@@ -4171,7 +4171,7 @@ function sidora_obj($pid) {
   if (!($is_concept || $is_codebook || $is_resource)) {
     sidora_add_fedora_assumption_problem_object(
       $pid,
-      t('This object does not contain an object model consistent with a concept, codebook, or resource')
+      t('This object does not contain an object model consistent with a folder, codebook, or resource')
     );
     return NULL;
   }
@@ -4362,7 +4362,7 @@ function sidora_block_view($delta = '') {
 "><span class="" style="
     font-size: 20px;
     font-weight: bold;
-    ">+</span></span>Add New Concept</a></div>
+    ">+</span></span>Add New Folder</a></div>
     <div id="concept-name-holder"></div>
 
 
@@ -4373,11 +4373,11 @@ function sidora_block_view($delta = '') {
                 <li id="perm-RS"><a href="#" onclick="sidora.menuChoice(\'changePermissions\',sidora.ProjectSpaces.currentPid());return false;"><i class="material-icons">lock</i>Change&nbsp;Permissions</a></li>
                 <li id="move-RS"><a href="#" onclick="sidora.menuChoice(\'changeOwner\',      sidora.ProjectSpaces.currentPid());return false;"><i class="material-icons">call_made</i>Move&nbsp;Space&nbsp;To&nbsp;Owner</a></li>';
       if (sidora_is_admin()) $block['content'] .= '
-                <li id="manageConcept"><a href="#" onclick="sidora.concept.Manage(); return false;">Manage&nbsp;Concept</a></li>';
+                <li id="manageConcept"><a href="#" onclick="sidora.concept.Manage(); return false;">Manage&nbsp;Folder</a></li>';
       $block['content'] .= '
              </ul>
            </li>
-           <li id="concept-menu-edit-concept"><a href="#" onclick="return false;"><i class="material-icons">edit</i> Edit&nbsp;Concept <i class="material-icons">arrow_drop_down</i></a>
+           <li id="concept-menu-edit-concept"><a href="#" onclick="return false;"><i class="material-icons">edit</i> Edit&nbsp;Folder <i class="material-icons">arrow_drop_down</i></a>
              <ul>
                 <li id="editMetadataConcept">
                   <a href="#" onclick="sidora.menuChoice(\'editConcept\', sidora.concept.GetPid(), null); return false;" id="edit-concept-metadata-menu">
@@ -4386,24 +4386,24 @@ function sidora_block_view($delta = '') {
                 </li>
                 <li id="add-resources"><a href="#" onclick="sidora.AddResource(); return false;" id="add-resources-concept-metadata-menu"><i class="material-icons">add_box</i>Add&nbsp;Resource(s)</a></li>
                 <li id="copy-to-another-space">
-                  <a href="#" onclick="sidora.ProjectSpaces.DuplicateOrTransfer(\'duplicate\',\'concept\',0,Drupal.t(\'Copy Concept\')); return false;" id="copy-to-another-space-menu">
-                    <i class="material-icons">content_copy</i>Copy&nbsp;Concept&nbsp;...
+                  <a href="#" onclick="sidora.ProjectSpaces.DuplicateOrTransfer(\'duplicate\',\'concept\',0,Drupal.t(\'Copy Folder\')); return false;" id="copy-to-another-space-menu">
+                    <i class="material-icons">content_copy</i>Copy&nbsp;Folder&nbsp;...
                   </a>
                 </li>
                 <li id="move-to-another-space">
-                  <a href="#" onclick="sidora.ProjectSpaces.DuplicateOrTransfer(\'transfer\',\'concept\',0,Drupal.t(\'Move Concept\')); return false;" id="move-to-another-space-menu">
-                    <i class="material-icons">call_made</i>Move&nbsp;Concept&nbsp;...
+                  <a href="#" onclick="sidora.ProjectSpaces.DuplicateOrTransfer(\'transfer\',\'concept\',0,Drupal.t(\'Move Folder\')); return false;" id="move-to-another-space-menu">
+                    <i class="material-icons">call_made</i>Move&nbsp;Folder&nbsp;...
                   </a>
                 </li>
                 <li id="link-to-another-concept">
-                  <a href="#" onclick="sidora.ProjectSpaces.DuplicateOrTransfer(\'link\', \'concept\',0,Drupal.t(\'Link Concept\')); return false;" id="link-to-another-concept-menu">
-                    <i class="material-icons">swap_horiz</i>Link&nbsp;Concept&nbsp;...
+                  <a href="#" onclick="sidora.ProjectSpaces.DuplicateOrTransfer(\'link\', \'concept\',0,Drupal.t(\'Link Folder\')); return false;" id="link-to-another-concept-menu">
+                    <i class="material-icons">swap_horiz</i>Link&nbsp;Folder&nbsp;...
                   </a>
                 </li>
                 <li id="deleteConcept"><a href="#" onclick="sidora.concept.DeleteConcept(); return false;"><i class="material-icons">delete</i>Delete</a></li>
 ';
       if (sidora_is_admin()) $block['content'] .= '
-                <li id="manageConcept"><a href="#" onclick="sidora.concept.Manage(); return false;">Manage&nbsp;Concept</a></li>';
+                <li id="manageConcept"><a href="#" onclick="sidora.concept.Manage(); return false;">Manage&nbsp;Folder</a></li>';
       $block['content'] .='
               </ul>
            </li>
@@ -4457,7 +4457,7 @@ function sidora_block_view($delta = '') {
       </div>
     </div>
     <div id="concept-relationships">
-      Concept Relationships
+      Folder Relationships
     </div>
   </div>';
       $block['content'] .= '</div>';//Comes fully from javascript
@@ -4494,68 +4494,68 @@ function sidora_ontology_object() {
 function sidora_ontology_json_default() {
     return '
    {
-    "Project":{"description":"This concept is used to represent a project as a whole or some major subdivision of a project. In both cases it is where you can give a project a title, talk about who is involved, describe the work of the project in a general way, etc.","children":{},"model":"si:projectCModel","form":"Research Project"},
+    "Project":{"description":"This folder is used to represent a project as a whole or some major subdivision of a project. In both cases it is where you can give a project a title, talk about who is involved, describe the work of the project in a general way, etc.","children":{},"model":"si:projectCModel","form":"Research Project"},
     "Actor":{
         "description":"",
         "children":{
         "Person":{"description":"The Person object is used to describe a person. It includes information about exist dates, full name, address, occupations and biographical information","children":{},"model":"si:projectCModel","form":"Person"},
-        "Organization":{"description":"The Organization, Institution or Expedition content model is used to organize the concepts relating to an Organization or Expedition.","children":{},"model":"si:projectCModel","form":"Organization"},
-        "Expedition":{"description":"The Organization, Institution or Expedition content model is used to organize the concepts relating to an Organization or Expedition.","children":{},"model":"si:projectCModel","form":"Expedition"}
+        "Organization":{"description":"The Organization, Institution or Expedition content model is used to organize the folders relating to an Organization or Expedition.","children":{},"model":"si:projectCModel","form":"Organization"},
+        "Expedition":{"description":"The Organization, Institution or Expedition content model is used to organize the folders relating to an Organization or Expedition.","children":{},"model":"si:projectCModel","form":"Expedition"}
         }
       },
     "Place":{
         "description":"",
         "children":{
-        "General Place":{"description":"This concept is a general concept used to describe a place and includes very basic information such as place name, description, etc.","children":{},"model":"si:projectCModel","form":"Research Project", "disabled":true},
-        "Archaeological Site":{"description":"This concept describes a characteristics of an archaeological site or excavation including stratigraphy, location etc.","children":{},"model":"si:ctPlotCModel","form":"Archaeology Site"},
-        "Research Site":{"description":"This concept describes a data set pertaining to a geographic area.","children":{},"model":"si:projectCModel","form":"Research Site or Area - Full Description", "disabled":true}
+        "General Place":{"description":"This folder is a general folder used to describe a place and includes very basic information such as place name, description, etc.","children":{},"model":"si:projectCModel","form":"Research Project", "disabled":true},
+        "Archaeological Site":{"description":"This folder describes a characteristics of an archaeological site or excavation including stratigraphy, location etc.","children":{},"model":"si:ctPlotCModel","form":"Archaeology Site"},
+        "Research Site":{"description":"This folder describes a data set pertaining to a geographic area.","children":{},"model":"si:projectCModel","form":"Research Site or Area - Full Description", "disabled":true}
 
         }
       },
-    "Built Environment":{"description":"This concept describes a man-made construction or landscape, such as a building, garden or facility of some kind.","children":{},"model":"si:projectCModel","form":"Research Project"},
+    "Built Environment":{"description":"This folder describes a man-made construction or landscape, such as a building, garden or facility of some kind.","children":{},"model":"si:projectCModel","form":"Research Project"},
     "Object or Entity":{
         "description":"",
         "children":{
-        "Cultural Heritage Entity or Object":{"description":"The Cultural Heritage Entity or Object Concept can be used to describe Artifacts, works of Art, and human-built entities such as a fountain standing in a square etc. ","children":{},"model":"si:lidoCollectionCModel","form":"Cultural Heritage Entity or Object"},
-        "Archaeological Feature":{"description":"This concept is used to describe an archaeological feature that is discovered as part of an excavation such as a tomb, a midden or a housing structure.","children":{},"model":"si:projectCModel","form":"Research Project", "disabled":true}
+        "Cultural Heritage Entity or Object":{"description":"The Cultural Heritage Entity or Object Folder can be used to describe Artifacts, works of Art, and human-built entities such as a fountain standing in a square etc. ","children":{},"model":"si:lidoCollectionCModel","form":"Cultural Heritage Entity or Object"},
+        "Archaeological Feature":{"description":"This folder is used to describe an archaeological feature that is discovered as part of an excavation such as a tomb, a midden or a housing structure.","children":{},"model":"si:projectCModel","form":"Research Project", "disabled":true}
         }
       },
     "Animal":{
         "description":"",
         "children":{
-        "Species":{"description":"This concept is used to describe general characteristics of an animal species.","children":{},"model":"si:dwcCModel","form":"Animal Species or Specimen - Brief Description", "disabled":true},
-        "Specimen":{"description":"This concept is used to describe general characteristics of an animal specimen used as part of a research project and includes the catalog number, scientific name and common name of a specific specimen.","children":{},"model":"si:dwcCModel","form":"Animal Species or Specimen - Brief Description"},
-        "Component":{"description":"This concept is used to describe a specific body part or component of a specimen used as part of a researc project.","children":{},"model":"si:projectCModel","form":"Research Project", "disabled":true}
+        "Species":{"description":"This folder is used to describe general characteristics of an animal species.","children":{},"model":"si:dwcCModel","form":"Animal Species or Specimen - Brief Description", "disabled":true},
+        "Specimen":{"description":"This folder is used to describe general characteristics of an animal specimen used as part of a research project and includes the catalog number, scientific name and common name of a specific specimen.","children":{},"model":"si:dwcCModel","form":"Animal Species or Specimen - Brief Description"},
+        "Component":{"description":"This folder is used to describe a specific body part or component of a specimen used as part of a researc project.","children":{},"model":"si:projectCModel","form":"Research Project", "disabled":true}
         }
       },
     "Plant":{
         "description":"",
         "children":{
-        "Species":{"description":"This concept is used to describe general characteristics of a plant species.","children":{},"model":"si:projectCModel","form":"Research Project", "disabled":true},
-        "Specimen":{"description":"This concept is used to describe general characteristics of an animal specimen used as part of a research project and includes the catalog number, scientific name and common name of a specific specimen.","children":{},"model":"si:projectCModel","form":"Research Project", "disabled":true},
-        "Component":{"description":"This concept is used to describe a specific body part or component of a specimen used as part of a research project.","children":{},"model":"si:projectCModel","form":"Research Project", "disabled":true}
+        "Species":{"description":"This folder is used to describe general characteristics of a plant species.","children":{},"model":"si:projectCModel","form":"Research Project", "disabled":true},
+        "Specimen":{"description":"This folder is used to describe general characteristics of an animal specimen used as part of a research project and includes the catalog number, scientific name and common name of a specific specimen.","children":{},"model":"si:projectCModel","form":"Research Project", "disabled":true},
+        "Component":{"description":"This folder is used to describe a specific body part or component of a specimen used as part of a research project.","children":{},"model":"si:projectCModel","form":"Research Project", "disabled":true}
 
         }
       },
     "Deployment":{
         "description":"",
         "children":{
-        "Instrument Deployment":{"description":"This concept describes an arbitrary instrument deployed to capture data.","children":{},"model":"si:projectCModel","form":"Research Project", "disabled":true},
-         "Camera Deployment":{"description":"The Camera Deployment concept describes the deployment of an camera that collect images automatically at a specific location for a specific period of time.","children":{},"model":"si:cameraTrapCModel","form":"Camera Trap Deployment"}
+        "Instrument Deployment":{"description":"This folder describes an arbitrary instrument deployed to capture data.","children":{},"model":"si:projectCModel","form":"Research Project", "disabled":true},
+         "Camera Deployment":{"description":"The Camera Deployment folder describes the deployment of an camera that collect images automatically at a specific location for a specific period of time.","children":{},"model":"si:cameraTrapCModel","form":"Camera Trap Deployment"}
         }
       },
     "Collection":{
         "description":"",
         "children":{
-        "General Collection":{"description":"This concept is used to describe a general grouping of items as part of a research project.  It includes at the very least a title and description.","children":{},"model":"si:projectCModel","form":"Research Project"},
-        "Natural History Collection":{"description":"NCD (Natural Collections Description) concepts capture information about collections of Natural History materials. The Natural Collections Description covers all types of collections of natural history material including specimens, original artwork, photographs, archives, published material or a mixture. Each record describes one entire collection, including information on the extent and purpose of the collection, conditions of access and use and who to contact for more information. ","children":{},"model":"si:projectCModel","form":"Research Project"},
-        "Dataset":{"description":"This concept is used to describe the characteristics of set resources including the collector of the data and the reason the data was collected.","children":{},"model":"si:projectCModel","form":"Research Project", "disabled":true}
+        "General Collection":{"description":"This folder is used to describe a general grouping of items as part of a research project.  It includes at the very least a title and description.","children":{},"model":"si:projectCModel","form":"Research Project"},
+        "Natural History Collection":{"description":"NCD (Natural Collections Description) folder capture information about collections of Natural History materials. The Natural Collections Description covers all types of collections of natural history material including specimens, original artwork, photographs, archives, published material or a mixture. Each record describes one entire collection, including information on the extent and purpose of the collection, conditions of access and use and who to contact for more information. ","children":{},"model":"si:projectCModel","form":"Research Project"},
+        "Dataset":{"description":"This folder is used to describe the characteristics of set resources including the collector of the data and the reason the data was collected.","children":{},"model":"si:projectCModel","form":"Research Project", "disabled":true}
 
         }
       },
-    "Experiment":{"description":"This concept is used to describe the characteristics of a research experiment including the hypothesis, process steps, observations and conclusion of the experiment.","children":{},"model":"si:projectCModel","form":"Research Project", "disabled":true},
-    "Event":{"description":"This concept is used to describe a general event including a date, time and description of the significance of the event.","children":{},"model":"si:projectCModel","form":"Research Project", "disabled":true},
-    "Idea":{"description":"This concept is used to describe an idea or an organizing concept or theme pertaining to a research project.","children":{},"model":"si:projectCModel","form":"Research Project", "disabled":true}
+    "Experiment":{"description":"This folder is used to describe the characteristics of a research experiment including the hypothesis, process steps, observations and conclusion of the experiment.","children":{},"model":"si:projectCModel","form":"Research Project", "disabled":true},
+    "Event":{"description":"This folder is used to describe a general event including a date, time and description of the significance of the event.","children":{},"model":"si:projectCModel","form":"Research Project", "disabled":true},
+    "Idea":{"description":"This folder is used to describe an idea or an organizing folder or theme pertaining to a research project.","children":{},"model":"si:projectCModel","form":"Research Project", "disabled":true}
   }
   ';
 
@@ -4928,9 +4928,10 @@ function sidora_ajax_parts($call_type, $param1 = '', $param2 = '', $param3 = '')
   }
   if ($call_type == 'create_concept' || $call_type == 'create_resource') {
     $cr_type = 'concept';
+    $cr_ui_output = 'folder';
     $cr_json = variable_get('sidora_ontology_json','');
     if ($call_type == 'create_resource') {
-      $cr_type = 'resource';
+      $cr_ui_output = $cr_type = 'resource';
       $cr_json = variable_get('sidora_resource_ontology_json','');
     }
     drupal_add_library('system','ui.tooltip');
@@ -4939,7 +4940,7 @@ function sidora_ajax_parts($call_type, $param1 = '', $param2 = '', $param3 = '')
     if (empty($pid)) {
       return t("New objects must have a parent, no parent found");
     }
-    $to_return = 'Select type of ' . $cr_type . ':';
+    $to_return = 'Select type of ' . $cr_ui_output . ':';
     $to_return .= sidora_create_html_list_from_json($cr_json, $pid, $cr_type);
     $to_return .= '
 <script>
@@ -5213,7 +5214,7 @@ function sidora_move($move_from_id, $copy_to_id, $pid, $show_output = TRUE) {
        !sidora_allow($user, $move_from_id, 'update')
       ) {
     $to_output['error'] = TRUE;
-    $to_output['description'] = t("Logged in user does not have permissions for one or more of the following: update this concept's children, update the target concept's children, read access to the object to be moved.");
+    $to_output['description'] = t("Logged in user does not have permissions for one or more of the following: update this folder's children, update the target folder's children, read access to the object to be moved.");
     $to_output['code'] = "sm1";
     if ($show_output) {
       print json_encode($to_output);
@@ -5229,7 +5230,7 @@ function sidora_move($move_from_id, $copy_to_id, $pid, $show_output = TRUE) {
        !sidora_obtain_lock($move_from_id)
      ) {
     $to_output['error'] = TRUE;
-    $to_output['description'] = t("One of the concepts involved in this move have been locked by another user.");
+    $to_output['description'] = t("One of the folders involved in this move have been locked by another user.");
     $to_output['code'] = "sm2";
     if ($show_output) {
       print json_encode($to_output);
@@ -5340,7 +5341,7 @@ function sidora_unassociate($remove_from_pid, $pid_to_remove, $show_output = TRU
        !sidora_allow($user, $remove_from_pid, 'update')
       ) {
     $to_output['error'] = TRUE;
-    $to_output['description'] = t("Logged in user does not have permissions for: update this concept's children");
+    $to_output['description'] = t("Logged in user does not have permissions for: update this folder's children");
     $to_output['code'] = "su1";
     if ($show_output) {
       print json_encode($to_output);
@@ -5355,7 +5356,7 @@ function sidora_unassociate($remove_from_pid, $pid_to_remove, $show_output = TRU
        !sidora_obtain_lock($remove_from_pid)
      ) {
     $to_output['error'] = TRUE;
-    $to_output['description'] = t("The parent concept for the unassociate have been locked by another user.");
+    $to_output['description'] = t("The parent folder for the unassociate have been locked by another user.");
     $to_output['code'] = "su2";
     if ($show_output) {
       print json_encode($to_output);
@@ -5372,7 +5373,7 @@ function sidora_unassociate($remove_from_pid, $pid_to_remove, $show_output = TRU
     
   // Can't orphan it
     $to_output['error'] = TRUE;
-    $to_output['description'] = t("There is only one parent concept for this object. Protecting the object from being an orphan.");
+    $to_output['description'] = t("There is only one parent folder for this object. Protecting the object from being an orphan.");
     $to_output['code'] = "su3";
     if ($show_output) {
       print json_encode($to_output); drupal_exit();
@@ -5449,7 +5450,7 @@ function sidora_unassociate_delete_if_orphaned($remove_from_pid, $pid_to_remove,
        !sidora_allow($user, $pid_to_remove, 'delete')
       ) {
     $to_output['error'] = TRUE;
-    $to_output['description'] = t("Logged in user does not have permissions for one or more of the following: update this concept's children, delete the object when orphaned");
+    $to_output['description'] = t("Logged in user does not have permissions for one or more of the following: update this folder's children, delete the object when orphaned");
     $to_output['code'] = "udio1";
     if ($show_output) {
       print json_encode($to_output);
@@ -5547,7 +5548,7 @@ function sidora_copy($copy_to_id, $pid, $show_output = TRUE) {
        !sidora_allow($user, $copy_to_id, 'update')
       ) {
     $to_output['error'] = TRUE;
-    $to_output['description'] = t("Logged in user does not have permissions for updating the target concept");
+    $to_output['description'] = t("Logged in user does not have permissions for updating the target folder");
     $to_output['perm1'] = t("read: %up", array('%up' => sidora_allow($user, $pid, 'view')?"T":"F"));
     $to_output['perm2'] = t("update: %up", array('%up' => sidora_allow($user, $copy_to_id, 'update')?"T":"F"));
     $to_output['code'] = "sc1";
@@ -5577,7 +5578,7 @@ function sidora_copy($copy_to_id, $pid, $show_output = TRUE) {
        !sidora_obtain_lock($copy_to_id)
      ) {
     $to_output['error'] = TRUE;
-    $to_output['description'] = t("The target concept is locked by another user.");
+    $to_output['description'] = t("The target folder is locked by another user.");
     $to_output['code'] = "sc2";
     if ($show_output) {
       print json_encode($to_output);
@@ -5737,7 +5738,7 @@ function sidora_json_for_delete($pid, $show_output = TRUE) {
     $child_count = count($children_concepts) + count($children_resources) + count($children_codebooks);
     if ($child_count > 0) {
       $to_output['error'] = TRUE;
-      $to_output['description'] = t("Cannot delete object with children.  It has @children_count concept(s) and @resource_count resource(s).",
+      $to_output['description'] = t("Cannot delete object with children.  It has @children_count folder(s) and @resource_count resource(s).",
          array('@children_count'=> count($children_concepts), '@resource_count' => count($children_resources)));
       if ($show_output) {
         print json_encode($to_output);

@@ -43,8 +43,8 @@ window.sidora = {
 window.sidora.display = {
   //Resource specific
   "LINK_TO_RESOURCE_TITLE" : Drupal.t("Create links to resource"),
-  "RESOURCES_EXISTED_AT_TARGET_WILL_REMOVE_FROM_SOURCE" : Drupal.t("The resources listed below existed on the target already and will not be overwritten. They will be removed from the concepts that they were dragged from:"),
-  "CREATE_LINKS_OF_RESOURCES_TO_DESTINATION" : Drupal.t("Create links of following resources inside of the concept "),
+  "RESOURCES_EXISTED_AT_TARGET_WILL_REMOVE_FROM_SOURCE" : Drupal.t("The resources listed below existed on the target already and will not be overwritten. They will be removed from the folders that they were dragged from:"),
+  "CREATE_LINKS_OF_RESOURCES_TO_DESTINATION" : Drupal.t("Create links of following resources inside of the folder "),
   "MOVE_RESOURCES_TO_DESTINATION" : Drupal.t("Move the following resources to "),
   "MOVE_RESOURCES_TITLE": Drupal.t("Move Resources"),
   "RESOURCES" : Drupal.t(' resources'),
@@ -58,20 +58,20 @@ window.sidora.display = {
   "RESOURCES_DD_TITLE" : Drupal.t('Title'),
   "RESOURCES_DD_MODEL" : Drupal.t('Model'),
   "RESOURCES_DD_CREATED" : Drupal.t('Created'),
-  "CREATE_NEW_RESOURCE_TOOLTIP" : Drupal.t("Create a new resource as a child of the highlighted concept."),
+  "CREATE_NEW_RESOURCE_TOOLTIP" : Drupal.t("Create a new resource as a child of the highlighted folder."),
   "CREATE_RESOURCE_TITLE" : Drupal.t("Create Resource"),
 
   //Concept specific
-  "CREATE_LINKS_OF_FOLLOWING_TO" : Drupal.t("Create links of the following concepts inside of the concept "),
-  "MOVE_CONCEPT_TITLE": Drupal.t("Move concept"),
-  "MOVE_FOLLOWING_CONCEPTS_TO" : Drupal.t("Move the following concepts to "),
-  "CONCEPTS_EXISTED_AT_TARGET_WILL_REMOVE_FROM_SOURCE" : Drupal.t("The concepts listed below existed on the target already and will not be overwritten. They will be removed from the concepts that they were dragged from:"),
-  "CREATE_A_CONCEPT_AS_CHILD_OF_HIGHLIGHT" : Drupal.t("Create a new concept as a child of the highlighted concept."),
-  "CREATE_CONCEPT_TITLE" : Drupal.t("Create Concept"),
-  "MANAGE_CONCEPT_TITLE" : Drupal.t("Manage Concept"), 
-  "UPDATE_CONCEPT_INFORMATION" : Drupal.t("Update Concept Information"),
-  "CREATE_LINK_TO_CONCEPT" : Drupal.t('Create Link To Concept'),
-  "DELETE_CONCEPT_TITLE" : Drupal.t("Delete Concept"),
+  "CREATE_LINKS_OF_FOLLOWING_TO" : Drupal.t("Create links of the following folders inside of the folder "),
+  "MOVE_CONCEPT_TITLE": Drupal.t("Move folder"),
+  "MOVE_FOLLOWING_CONCEPTS_TO" : Drupal.t("Move the following folders to "),
+  "CONCEPTS_EXISTED_AT_TARGET_WILL_REMOVE_FROM_SOURCE" : Drupal.t("The folders listed below existed on the target already and will not be overwritten. They will be removed from the folders that they were dragged from:"),
+  "CREATE_A_CONCEPT_AS_CHILD_OF_HIGHLIGHT" : Drupal.t("Create a new folder as a child of the highlighted folder."),
+  "CREATE_CONCEPT_TITLE" : Drupal.t("Create Folder"),
+  "MANAGE_CONCEPT_TITLE" : Drupal.t("Manage Folder"), 
+  "UPDATE_CONCEPT_INFORMATION" : Drupal.t("Update Folder Information"),
+  "CREATE_LINK_TO_CONCEPT" : Drupal.t('Create Link To Folder'),
+  "DELETE_CONCEPT_TITLE" : Drupal.t("Delete Folder"),
 
   //Button HTML
   "BUTTON_HTML_ADD_A_NEW_CONCEPT" : Drupal.t("&nbsp;Add&nbsp;a&nbsp;new&nbsp;concept"),
@@ -113,8 +113,8 @@ window.sidora.display = {
   "PROJECT_SPACE_PERMISSION_TITLE" : Drupal.t("Research Space Permission"),
   "PROJECT_SPACE_CHOICE_CHANGE_PERMISSIONS" : Drupal.t("Change permissions of the current research space"),
   "PROJECT_SPACE_CHOICE_TRANSFER_PS_TO_NEW_OWNER" : Drupal.t("Transfer this research space to a new owner"),
-  "PROJECT_SPACE_CHOICE_DUPLICATE_CONCEPT" : Drupal.t("Copy the selected concept and its children"),
-  "PROJECT_SPACE_CHOICE_TRANSFER_CONCEPT" : Drupal.t("Move the selected concept"),
+  "PROJECT_SPACE_CHOICE_DUPLICATE_CONCEPT" : Drupal.t("Copy the selected folder and its children"),
+  "PROJECT_SPACE_CHOICE_TRANSFER_CONCEPT" : Drupal.t("Move the selected folder"),
   "PROJECT_SPACE_CHOICE_DUPLICATE_RESOURCE" : Drupal.t("Copy the selected resources"),
   "PROJECT_SPACE_CHOICE_TRANSFER_RESOURCE" : Drupal.t("Move the selected resources"),
 
@@ -956,7 +956,14 @@ sidora.ProjectSpaces.ShowWhereToForm = function(selectionIntro, pids, ignorePid,
           var url = Drupal.settings.basePath+"sidora/ajax_parts/research_spaces_tree" + appendToUrl + query;
           var onDataComplete = function(data) {
               jQuery("#destination-tree").bind('select_node.jstree', function(){ 
-                jQuery("#destination-chosen").removeAttr("disabled").removeClass("form-button-disabled");
+                var destree = jQuery("#destination-tree").jstree();
+                var destPid = jQuery("#"+destree.get_selected()).children("a").attr("pid");
+                if (typeof(destPid) != 'undefined') {
+                  jQuery("#destination-chosen").removeAttr("disabled").removeClass("form-button-disabled");
+                }
+                else {
+                  jQuery("#destination-chosen").attr("disabled","disabled").addClass("form-button-disabled");
+                }
               });
               jQuery("#destination-tree").html(data);
               jQuery("#destination-tree").jstree({
@@ -1081,14 +1088,14 @@ sidora.contextMenu.SetUp = function(){
                 sidora.contextMenu.Chooser(key, options);
             },
             items: {
-                "editConcept": {name: "Edit Concept", icon: "edit", disabled: cmips},
+                "editConcept": {name: "Edit Folder", icon: "edit", disabled: cmips},
                 "addResources": {name: "Add Resource(s)", icon: "paste", disabled: cmips},
-                "copyConceptAndChildren": {name: "Copy Concept ...", icon: "copy", disabled: cmips},
-                "moveConcept": {name: "Move Concept ...", icon: "arrow-right", disabled: cmips},
-                "linkConcept": {name: "Link Concept ...", icon: "external-link", disabled: cmips},
-                "deleteConcept": {name: "Delete Concept", icon: "delete", disabled: cmips},
+                "copyConceptAndChildren": {name: "Copy Folder ...", icon: "copy", disabled: cmips},
+                "moveConcept": {name: "Move Folder ...", icon: "arrow-right", disabled: cmips},
+                "linkConcept": {name: "Link Folder ...", icon: "external-link", disabled: cmips},
+                "deleteConcept": {name: "Delete Folder", icon: "delete", disabled: cmips},
                 "sep1": "---------",
-                "addConcept": {name: "Add New Concept", icon: "paste"},
+                "addConcept": {name: "Add New Folder", icon: "paste"},
                 "sep2": "---------",
                 "editResearchSpace": {name: "Edit Research Space", icon: "edit", disabled: cmnps},
                 "changePermissions": {name: "Change Space Permissions ...", disabled: cmnps},
@@ -1107,11 +1114,11 @@ sidora.menuChoice = function(key, pid, treeId){
   var myTitle = null;
   switch(key) {
     case "copyConceptAndChildren":
-      myTitle = Drupal.t("Copy Concept");
+      myTitle = Drupal.t("Copy Folder");
       sidora.ProjectSpaces.DuplicateOrTransfer('duplicate', 'concept', pid, myTitle);
       break;
     case "moveConcept":
-      myTitle = Drupal.t("Move Concept");
+      myTitle = Drupal.t("Move Folder");
       sidora.ProjectSpaces.DuplicateOrTransfer('transfer', 'concept', pid, myTitle);
       break;
     case "linkConcept":
@@ -1234,7 +1241,7 @@ sidora.InitiateJSTree = function(){
       //next requests are silent
       sidora.queue.incomingRequestsAreSilent = true;
       sidora.queue.Request(
-        'Remove concept association',
+        'Remove folder association',
         actionUrl,
         function(){
           sidora.concept.LoadContentHelp.Relationships();
@@ -1556,7 +1563,7 @@ sidora.InitiateJSTree = function(){
               if (objectsToCopyOver.length > 0){
                 if (!sidora.util.isConfirmShowing()){
                   if (objectsToUnassociate.length > 0) showText += showTextForUnassociate;
-                  sidora.util.Confirm("Move Concept",showText,
+                  sidora.util.Confirm("Move Folder",showText,
                     function(){
                       sidora.util.userConfirmedMove = true;
                       for(var objIndex = 0; objIndex < objectsToCopyOver.length; objIndex++){
@@ -3113,7 +3120,7 @@ sidora.concept.DeleteConcept = function(){
 sidora.concept.DeleteConceptSpecified = function(name, pid, conceptChildrenLen, resourceChildrenLen) {
   jQuery('#deleteConceptDialog').remove();
   if ((conceptChildrenLen == null) || (resourceChildrenLen == null)) {
-    jQuery("body").append("<div id='deleteConceptDialog' style='display:none;' title='"+htmlEntities(sidora.display.DELETE_CONCEPT_TITLE)+"'><p>Error getting the child concepts or resources for this concept. Cannot delete this concept</p><p>"+name+"<span style='display:none'> ("+pid+")</span></p></div>");
+    jQuery("body").append("<div id='deleteConceptDialog' style='display:none;' title='"+htmlEntities(sidora.display.DELETE_CONCEPT_TITLE)+"'><p>Error getting the child folders or resources for this folder. Cannot delete this folder</p><p>"+name+"<span style='display:none'> ("+pid+")</span></p></div>");
     jQuery("#deleteConceptDialog").dialog({
       resizable: false,
       height:250,
@@ -3128,7 +3135,7 @@ sidora.concept.DeleteConceptSpecified = function(name, pid, conceptChildrenLen, 
     return;
   }
   if (conceptChildrenLen + resourceChildrenLen > 0){
-    jQuery("body").append("<div id='deleteConceptDialog' style='display:none;' title='"+htmlEntities(sidora.display.DELETE_CONCEPT_TITLE)+"'><p>This concept has "+conceptChildrenLen+" concept(s) and has "+resourceChildrenLen+" resource(s) as children. It cannot be deleted while it has children.</p><p>"+name+"<span style='display:none'> ("+pid+")</span></p></div>");
+    jQuery("body").append("<div id='deleteConceptDialog' style='display:none;' title='"+htmlEntities(sidora.display.DELETE_CONCEPT_TITLE)+"'><p>This folder has "+conceptChildrenLen+" folder(s) and has "+resourceChildrenLen+" resource(s) as children. It cannot be deleted while it has children.</p><p>"+name+"<span style='display:none'> ("+pid+")</span></p></div>");
     jQuery("#deleteConceptDialog").dialog({
       resizable: false,
       height:250,
@@ -3142,14 +3149,14 @@ sidora.concept.DeleteConceptSpecified = function(name, pid, conceptChildrenLen, 
     });
     return;
   }
-  jQuery("body").append("<div id='deleteConceptDialog' style='display:none;' title='"+htmlEntities(sidora.display.DELETE_CONCEPT_TITLE)+"'><p>Are you sure you want to delete this concept?</p><p>"+name+"<span style='display:none;'> ("+pid+")</span></p></div>");
+  jQuery("body").append("<div id='deleteConceptDialog' style='display:none;' title='"+htmlEntities(sidora.display.DELETE_CONCEPT_TITLE)+"'><p>Are you sure you want to delete this folder?</p><p>"+name+"<span style='display:none;'> ("+pid+")</span></p></div>");
   jQuery("#deleteConceptDialog").dialog({
     resizable: false,
     height:205,
     width: 400,
     modal: true,
     buttons: {
-      "Delete concept": function() {
+      "Delete folder": function() {
         var toClose = this;
         var onDeleteWorked = sidora.util.createFunctionRefreshTree(pid);
         var onDeleteFailed = function(data){
@@ -3224,22 +3231,22 @@ sidora.resources.DeleteResource = function(pid){
   if (cantRemoveLinksPids.length > 0) {
     removeFromParentTextBlock += "The following will <strong>not</strong> be removed:";
     removeFromParentTextBlock += sidora.resources.UserFriendlyListing(cantRemoveLinksPids);
-    removeFromParentTextBlock += "To remove the correlation between a resource above and this concept, please do one of the following:<br>";
+    removeFromParentTextBlock += "To remove the correlation between a resource above and this folder, please do one of the following:<br>";
     removeFromParentTextBlock += " 1) move the resource to another location<br>";
     removeFromParentTextBlock += " or<br>";
-    removeFromParentTextBlock += " 2) remove all other links to the resource and then you may delete it from this concept.<br><br>";
+    removeFromParentTextBlock += " 2) remove all other links to the resource and then you may delete it from this folder.<br><br>";
   }
   if (cantRemoveLinksPids.length == allPids.length) {
-    informationText += "<strong>Your selection can not be removed. </strong>You've selected only resources that are administered by the current concept that are linked to other concepts. Check the resource's 'Relationships' pane to see these links.<br>";
+    informationText += "<strong>Your selection can not be removed. </strong>You've selected only resources that are administered by the current folder that are linked to other folders. Check the resource's 'Relationships' pane to see these links.<br>";
     informationText += removeFromParentTextBlock;
   }
   else {
     if (cantRemoveLinksPids.length > 0) {
-      informationText += "<strong>Not all of your selections can be removed. </strong> Some of the selected resources are administered by the current concept and are linked to other concepts. Check the resource's 'Relationships' pane to see these links.";
+      informationText += "<strong>Not all of your selections can be removed. </strong> Some of the selected resources are administered by the current folder and are linked to other folders. Check the resource's 'Relationships' pane to see these links.";
       informationText += removeFromParentTextBlock;
     }
     if (removeLinksPids.length > 0) {
-      informationText += "<strong>The following links will be removed from this concept:</strong>";
+      informationText += "<strong>The following links will be removed from this folder:</strong>";
       informationText += sidora.resources.UserFriendlyListing(removeLinksPids);
     }
     if (deletePids.length > 0) {

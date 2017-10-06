@@ -401,7 +401,7 @@ function sidora_get_project_spaces_from_og_groups($group_nodes, $user, $only_ret
            }
            else {
              // if it's empty then there are permissions groups that point to pids that there is not a node for
-             watchdog('sidora','Permission groups exist for pid: '.$pid.' but no concept node exists for it.');
+             watchdog('sidora','Permission groups exist for pid: '.$pid.' but no folder node exists for it.');
            }
          }
       }
@@ -446,7 +446,7 @@ function sidora_project_spaces_tree($root_label = 'Research Space Destinations:'
   if (!empty($specify_pids)) {
     $specify_pids = explode(',', $specify_pids);
     if (empty($root_label)) {
-      $root_label = 'Highlight a concept and submit';
+      $root_label = 'Highlight a folder and submit';
     }
   }
   $always_ignore_pids = array('si:root','si:user-projects');
