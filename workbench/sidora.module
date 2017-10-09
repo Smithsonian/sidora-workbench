@@ -4367,7 +4367,7 @@ function sidora_block_view($delta = '') {
 
 
           <ul id="concept-menu">
-           <li id="concept-menu-edit-space" style="display:none;"><a href="#" onclick="return false;"><i class="material-icons">edit</i> Edit&nbsp;Research&nbsp;Space <i class="material-icons">arrow_drop_down</i></a>
+           <li id="concept-menu-edit-space" class="sidora-not-available"><a href="#" onclick="return false;"><i class="material-icons">edit</i> Edit&nbsp;Research&nbsp;Space <i class="material-icons">arrow_drop_down</i></a>
              <ul>
                 <li id="edit-RS"><a href="#" onclick="sidora.menuChoice(\'editResearchSpace\',sidora.ProjectSpaces.currentPid());return false;"><i class="material-icons">edit</i>Edit&nbsp;Metadata</a></li>
                 <li id="perm-RS"><a href="#" onclick="sidora.menuChoice(\'changePermissions\',sidora.ProjectSpaces.currentPid());return false;"><i class="material-icons">lock</i>Change&nbsp;Permissions</a></li>

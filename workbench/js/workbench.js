@@ -599,8 +599,14 @@ sidora.concept.LoadContent = function(leaveContentIfAlreadyLoaded){
 
   // Show the correct menu for space vs normal concept
   var irs = sidora.concept.IsResearchSpace();
-  jQuery("#concept-menu-edit-concept").toggle(!irs);
-  jQuery("#concept-menu-edit-space").toggle(irs && sidora.ProjectSpaces.isOwned());
+  if (irs) {
+    jQuery("#concept-menu-edit-concept").addClass('sidora-not-available');
+    jQuery("#concept-menu-edit-space").removeClass('sidora-not-available');
+  } else {
+    jQuery("#concept-menu-edit-space").addClass('sidora-not-available');
+    jQuery("#concept-menu-edit-concept").removeClass('sidora-not-available');
+  }
+  jQuery("#concept-menu-edit-space").toggle(sidora.ProjectSpaces.isOwned());
 
   sidora.concept.LoadContentHelp.Permissions(conceptOfInterest);
   sidora.concept.LoadContentHelp.Exhibition_view(conceptOfInterest);

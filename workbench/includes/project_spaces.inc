@@ -616,7 +616,7 @@ function sidora_project_space_creation_form($form = array(), &$form_state, $exis
       '#attributes' => array('default_image_path' => ''),
   );
   $form['logo_preview'] = array(
-    '#markup' => '<div><a href="#" onclick="doPreview();">Click here</a> to preview with current icon (must be uploaded) and name.<br><div class="logo-preview"></div></div>
+    '#markup' => '<div style="position:relative;top:-25px;"><a href="#" onclick="doPreview();">Click here</a> to preview with current icon (must be uploaded) and name.<br><div class="logo-preview"></div></div>
     <script>
       doPreview=function(){
         myHref = jQuery(".file a").attr("href");
@@ -638,7 +638,7 @@ function sidora_project_space_creation_form($form = array(), &$form_state, $exis
     ),
   );
   $form['close'] = array(
-    '#markup' => '<br><br><a style="" href="' . $GLOBALS['base_url'] . '/sidora/research_spaces" onclick="jQuery(body).append(\'<div class=\\\'full-screen-overlay\\\'></div>\');"><input type="button" id="closebottom" name="closebottom" value="Close" class="form-submit"></a>',
+    '#markup' => '<a style="" href="' . $GLOBALS['base_url'] . '/sidora/research_spaces" onclick="jQuery(body).append(\'<div class=\\\'full-screen-overlay\\\'></div>\');"><input type="button" id="closebottom" name="closebottom" value="Close" class="form-submit"></a>',
   );
   return $form;
 }
