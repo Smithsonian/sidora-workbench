@@ -994,6 +994,11 @@ function sidora_project_spaces_form($form = array(), &$form_state, $uid = NULL) 
       );
     }
   }
+  if ($uid == 'all') {
+    $form['show_mine'] = array(
+      '#markup' => '<div style="margin-bottom:8px;">' . l(t('Show Mine'),'/sidora/research_spaces') . '</div>',
+    );
+  }
   $form['close'] = array(
     '#markup' => '<a style="float:left" href="#" onclick="window.parent.Shadowbox.close(); return false;"><input type="button" id="closebottom" name="closebottom" value="Close" class="form-submit"></a>',
   );
