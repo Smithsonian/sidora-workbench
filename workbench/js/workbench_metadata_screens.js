@@ -52,7 +52,7 @@ jQuery().ready(function(){
           //If successful, kill itself.
           newPid = data.substring(0,data.indexOf(")"+" has been ingested")).substring(data.substring(0,data.indexOf(")"+" has been ingested")).lastIndexOf("si:"))
           newTitle = data.substring(data.indexOf("dcterms:title")+24, data.indexOf('class="dc-title')-2);
-          newNodeId = data.substring(data.indexOf("node created for new concept --")+31);
+          newNodeId = data.substring(data.indexOf("node created for new folder --")+31);
           newNodeId = newNodeId.substring(0,newNodeId.indexOf("--"));
           sidora.util.conceptAddedCompletelyNew(parentPid, newPid, newNodeId, newTitle);
 

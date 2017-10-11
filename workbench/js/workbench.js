@@ -574,9 +574,11 @@ sidora.concept.LoadContent = function(leaveContentIfAlreadyLoaded){
   var newName = sidora.concept.GetName();
   if (typeof(newName) == 'undefined') {
     var phref = sidora.util.getParentHref();
-    window.location.href = phref;
-    var nodeId = sidora.util.getNodeIdByHref(window.location.pathname + window.location.search + window.location.hash);
-    jQuery("#" + nodeId + " > a").click();
+    if (phref != null) {
+      window.location.href = phref;
+      var nodeId = sidora.util.getNodeIdByHref(window.location.pathname + window.location.search + window.location.hash);
+      jQuery("#" + nodeId + " > a").click();
+   }
     return;
   }
   jQuery("#concept-name-holder").html("<h1 class='page-title'>"+sidora.concept.GetName()+"</h1>");
@@ -691,33 +693,37 @@ sidora.util.openToCurrentPathAndSelectItem = function(currentUrl){
   sidora.util.loadTreeSectionsIfNeeded(selectThisNode, true);
   jst.select_node(selectThisNode); 
 }
-sidora.util.throbberize = function() {
+sidora.util.throbberize = function(jstIdentifier) {
+  if (typeof(jstIdentifier) == 'undefined') {
+    jstIdentifier = 'forjstree';
+  }
   //Prep the UI for children incoming
-  if (jQuery("#forjstree a").not("[conceptchildren=0]").parent(".jstree-leaf").length > 0){
-    jQuery("#forjstree a").not("[conceptchildren=0]").parent(".jstree-leaf").children("i")
+  if (jQuery("#"+jstIdentifier+" a").not("[conceptchildren=0]").parent(".jstree-leaf").length > 0){
+    jQuery("#"+jstIdentifier+" a").not("[conceptchildren=0]").parent(".jstree-leaf").children("i")
       .css("background","url(../../misc/throbber.gif) no-repeat 6px -14px");
-    jQuery("#forjstree a").not("[conceptchildren=0]").parent(".jstree-leaf").removeClass("jstree-leaf")
+    jQuery("#"+jstIdentifier+" a").not("[conceptchildren=0]").parent(".jstree-leaf").removeClass("jstree-leaf")
   }
 }
 /*
  * Given a node, loads its grandchildren if needed and checks the validation status of grandchildren
  * @param data - jstree node or item that has a node attribute containing a jstree node
  */
-sidora.util.loadTreeSectionsIfNeeded = function(data, doFast){
+sidora.util.loadTreeSectionsIfNeeded = function(data, doFast, jst){
   if (data == false) return;
-  var jst = jQuery("#forjstree").jstree();
+  if (typeof(jst) == 'undefined') {
+    jst = jQuery("#forjstree").jstree();
+  }
   var node = data;
   if (typeof(data.node) != 'undefined') {
     node = data.node;
   }
-  var jst = jQuery("#forjstree").jstree(true);
   var openingPid = node.a_attr.pid;
   if (typeof openingPid == 'undefined') return;
-  var currentChildrenPids = sidora.util.childrenPidsListedInUIByNode(node);
+  var currentChildrenPids = sidora.util.childrenPidsListedInUIByNode(node, jst);
   var childPidsCsv = currentChildrenPids.join();
   if (childPidsCsv.length > 0) {
     sidora.util.checkUIForInvalidPids(openingPid, childPidsCsv);
-    sidora.util.throbberize();
+    sidora.util.throbberize(jst.element.attr('id'));
     //load the next section of the tree
     if (currentChildrenPids.length > 0){
       //Only load information if the currentChildren have children that are not listed
@@ -731,7 +737,7 @@ sidora.util.loadTreeSectionsIfNeeded = function(data, doFast){
         }
       }
       if (doRetrieval) {
-        sidora.util.loadTreeSection(openingPid, null, null, doFast);
+        sidora.util.loadTreeSection(openingPid, null, null, doFast, jst);
       }
     }
   }
@@ -975,8 +981,14 @@ sidora.ProjectSpaces.ShowWhereToForm = function(selectionIntro, pids, ignorePid,
               jQuery("#destination-tree").jstree({
                 "core": {
                   "multiple" : false,
-                  "initially_open" : ["proj_spaces_tree_root"]
+                  "initially_open" : ["proj_spaces_tree_root"],
+                  "check_callback" : true
                 }
+              });
+              jQuery("#destination-tree").unbind('open_node.jstree');
+              jQuery('#destination-tree').bind('open_node.jstree', function (e, data) {
+                var dst = jQuery("#destination-tree").jstree();
+                sidora.util.loadTreeSectionsIfNeeded(data, true, dst);
               });
               jQuery("#closer").click(function(){
                 Shadowbox.close();
@@ -1934,6 +1946,7 @@ sidora.InitiatePage = function(){
     jQuery("#proj-space-button").click(sidora.ProjectSpaces.viewAll);
     // Add the close button to the top of the Shadowboxes, and remove the tooltip from them
     jQuery("#sb-nav-close").attr("title","").clone().addClass("sb-nav-close-clone").appendTo(jQuery("#sb-title"));
+    sidora.concept.LoadContent();
   }
   sidora.IsUserSetUp(sidora.continueInit, sidora.doubleCheckUser);
 };
@@ -2488,8 +2501,10 @@ sidora.util.getViewableJstreeNodesByPid = function(pid) {
 /*
  * Returns children from the tree's data structure
  */
-sidora.util.childrenPidsListedInUIByNode = function(node) {
-  var jst = jQuery("#forjstree").jstree(true);
+sidora.util.childrenPidsListedInUIByNode = function(node, jst) {
+  if (typeof(jst) == 'undefined') {
+    jst = jQuery("#forjstree").jstree(true);
+  }
   var currentChildren = node.children;
   var currentChildrenPids = [];
   for(var i=0; i<currentChildren.length; i++){
@@ -2508,10 +2523,10 @@ sidora.util.createFunctionRefreshTree = function(pids, secondsOfWait) {
     },secondsOfWait * 1000);
   }
 }
-sidora.util.createFunctionTreeAddition = function(openingPid, onLoadComplete, overwriteType) {
+sidora.util.createFunctionTreeAddition = function(openingPid, onLoadComplete, overwriteType, jst) {
   return function(htmlTree) {
     sidora.util.loadTreeSectionCurrent[openingPid] = false;
-    sidora.util.treeAddition(htmlTree, onLoadComplete, overwriteType);
+    sidora.util.treeAddition(htmlTree, onLoadComplete, overwriteType, jst);
   }
 }
 sidora.util.reorderTreeChildrenAlphabetical = function(node) {
@@ -2620,7 +2635,7 @@ sidora.util.treeAdditionSingleItemPassAnchors = function(onLoadComplete, overwri
         newHrefPath = currRepHrefPathParts[0] + prependHrefPath + ccp;
         a_attr_obj['href'] = newHrefPath;
         if (!isFound) {
-          var newNodeId = jQuery("#forjstree").jstree(
+          var newNodeId = jQuery("#" + jst.element.attr('id')).jstree(
                           "create_node", 
                           currChild,
                           { "text" : jQuery(currRepChild).children("a").first()[0].text, "a_attr":a_attr_obj }, 
@@ -2628,6 +2643,7 @@ sidora.util.treeAdditionSingleItemPassAnchors = function(onLoadComplete, overwri
                           individualReturnFunction,
                           true
                         );
+          console.log("Tree:" + jst.element.attr('id') + " Added node:"+ newNodeId);
         }else{
           jst.rename_node(isFound, jQuery(currRepChild).children("a").first()[0].text);
           jQuery(a_attr_obj).each(function(){
@@ -2640,21 +2656,23 @@ sidora.util.treeAdditionSingleItemPassAnchors = function(onLoadComplete, overwri
     sidora.util.reorderTreeChildrenAlphabetical(currChild);
   }//Ends dfAnchor.length not zero
 }
-sidora.util.treeAddition = function(htmlTree, onLoadComplete, overwriteType){
+sidora.util.treeAddition = function(htmlTree, onLoadComplete, overwriteType, jst){
+  if (typeof(jst) == 'undefined') {
+    jst = jQuery("#forjstree").jstree();
+  }
   if (typeof(onLoadComplete) != 'function') {
     onLoadComplete = function(){}
   }
   if (typeof(overwriteType) != 'string') {
     overwriteType = "changes";
   }
-  var jst = jQuery("#forjstree").jstree();
   var documentFragment = jQuery(document.createDocumentFragment());
   documentFragment.append(htmlTree);
   //Find the items in the existing tree that match with what is loaded.
   //Keep in mind there may be copies of the item in different parts of the tree
   var clickedOnPid = jQuery(documentFragment).children().find("a").first().attr("pid");
   //Note: Do not use jQuery to get information out of an existing jstree
-  mainItems = sidora.util.GetTreeNodesByPid(clickedOnPid);
+  mainItems = sidora.util.GetTreeNodesByPid(clickedOnPid, jst);
   //mainItems now holds all the nodes which have a pid matching the root pid from the returned html
   jQuery.each(mainItems, function( mii, mainItem) {
     //Update the current node of the main pid
@@ -2678,7 +2696,7 @@ sidora.util.treeAddition = function(htmlTree, onLoadComplete, overwriteType){
  *                      - "changes" - remove items that are gone from the return and add items from return that don't exist
  * @return true if call will be made, false if call was already made and will not be made again
  */
-sidora.util.loadTreeSection = function(openingPid, onLoadComplete, overwriteType, doFast) {
+sidora.util.loadTreeSection = function(openingPid, onLoadComplete, overwriteType, doFast, jst) {
   if (typeof(openingPid) == 'undefined') {
     console.log("No opening pid for loadTreeSection");
   }
@@ -2698,12 +2716,14 @@ sidora.util.loadTreeSection = function(openingPid, onLoadComplete, overwriteType
   if (doFast) {
     url += "?doFast=true";
   }
-  var jst = jQuery("#forjstree").jstree(true);
+  if (typeof(jst) == 'undefined') {
+    jst = jQuery("#forjstree").jstree(true);
+  }
   jQuery.ajax({
     "dataType":"html",
     "method":"GET",
     "url": url,
-    "success": sidora.util.createFunctionTreeAddition(openingPid, onLoadComplete, overwriteType)
+    "success": sidora.util.createFunctionTreeAddition(openingPid, onLoadComplete, overwriteType, jst)
   });
   return true;
 }
@@ -2711,7 +2731,7 @@ sidora.util.loadTreeSection = function(openingPid, onLoadComplete, overwriteType
  * Make ajax call to see if the pids are still valid objects, removes any invalid pids from the UI
  * @return true if call will be made, false if call was already made and will not be made again
  */
-sidora.util.checkUIForInvalidPids = function(openingPid, childPidsCsv) {
+sidora.util.checkUIForInvalidPids = function(openingPid, childPidsCsv, jst) {
   if (typeof(sidora.util.checkUIForInvalidPidsCurrent) == 'undefined') {
     sidora.util.checkUIForInvalidPidsCurrent = [];
   }
@@ -2721,7 +2741,9 @@ sidora.util.checkUIForInvalidPids = function(openingPid, childPidsCsv) {
   }
   //Inform the utility that we are checking on this already so don't check again
   sidora.util.checkUIForInvalidPidsCurrent[openingPid] = childPidsCsv;
-  var jst = jQuery("#forjstree").jstree(true);
+  if (typeof(jst) == 'undefined') {
+    jst = jQuery("#forjstree").jstree(true);
+  }
   var pidRemoval = function(pidsValidationInfo){
     if (pidsValidationInfo.invalid.length > 0) {
       for (var pii = 0; pii < pidsValidationInfo.invalid.length; pii++) {
@@ -2811,8 +2833,10 @@ sidora.util.refreshTreeFailuresInARow = 0;
 /*
  * Returns the existing tree nodes by a pid
  */
-sidora.util.GetTreeNodesByPid = function(pid) {
-  var jst = jQuery("#forjstree").jstree();
+sidora.util.GetTreeNodesByPid = function(pid, jst) {
+  if (typeof(jst) == 'undefined') {
+    jst = jQuery("#forjstree").jstree();
+  }
   var existingTreeNodes = jst.get_json('#', {flat:true});
   var mainItems = [];
   for (var etni = 0; etni < existingTreeNodes.length; etni++) {
@@ -2829,13 +2853,15 @@ sidora.util.GetTreeNodesByPid = function(pid) {
  *      - so that only one refresh tree request goes out no matter how many times its called during that time period
  * @param pid - pid of item that we expect the children to change, or for the name to change
  */
-sidora.util.RefreshTreeHelper = function(secondsOfWait, pid, onlyRefreshIfNew) {
+sidora.util.RefreshTreeHelper = function(secondsOfWait, pid, onlyRefreshIfNew, jst) {
+  if (typeof(jst) == 'undefined') {
+    jst = jQuery("#forjstree").jstree();
+  }
   
   if (typeof(secondsOfWait) == 'undefined' || secondsOfWait == null) secondsOfWait = .01;
   //Since we are concerned about the children of this and our treeAddition function expects to get the grandparent
   //of newly changed items, find an appropriate parent 
-  var nodeIds = sidora.util.GetTreeNodesByPid(pid);
-  var jst = jQuery("#forjstree").jstree();
+  var nodeIds = sidora.util.GetTreeNodesByPid(pid, jst);
   nodeIds.forEach(function(node, index, arr) {
     var parentNode = jst.get_node(node.parent);
     if (parentNode.id == '#') {
@@ -3000,6 +3026,8 @@ sidora.util.refreshConceptTreeUIDirect = function(pid, tree_html){
     jst.get_node(toUpdateId).a_attr.resourcechildren = ""+number_of_children;
   }
 }
+
+sidora.ProjectSpaces.showOverlayDuringRefresh = false;
 /**
  * Pulls the current project spaces from the backend and adds new ones
  * Does not remove any that the user lost permissions to view
@@ -3012,6 +3040,10 @@ sidora.util.refreshConceptTreeUIDirect = function(pid, tree_html){
  * to get settled and resaved to the DB
  */
 sidora.ProjectSpaces.refreshOptions = function(waitSecondsBeforeCall){
+  if (sidora.ProjectSpaces.showOverlayDuringRefresh) {
+    var overlay = jQuery('<div class="full-screen-overlay"><div id="countdown" style="color:white;margin:30px auto;width:200px;"></div></div>');
+    overlay.appendTo(document.body);
+  } 
   // if the value of the dropdown does not match what's shown right now, fix it
   var shownId = jQuery("#forjstree ul li ul li:visible").attr('id');
   var selectedId = jQuery("#psdd-select").val();
@@ -3067,6 +3099,8 @@ sidora.ProjectSpaces.refreshOptionsImmediate = function(refreshesUntilGiveUp){
         sidora.ProjectSpaces.refreshOptionsImmediate(refreshesUntilGiveUp-1);
       }, 1000);
     }
+    jQuery(".full-screen-overlay").remove();
+    sidora.ProjectSpaces.showOverlayDuringRefresh = false;
   });
 }
 /*
@@ -3155,14 +3189,14 @@ sidora.concept.DeleteConceptSpecified = function(name, pid, conceptChildrenLen, 
     });
     return;
   }
-  jQuery("body").append("<div id='deleteConceptDialog' style='display:none;' title='"+htmlEntities(sidora.display.DELETE_CONCEPT_TITLE)+"'><p>Are you sure you want to delete this folder?</p><p>"+name+"<span style='display:none;'> ("+pid+")</span></p></div>");
+  jQuery("body").append("<div id='deleteConceptDialog' style='display:none;' title='"+htmlEntities(sidora.display.DELETE_CONCEPT_TITLE)+"'><p>Click confirm to delete this folder:</p><p>"+name+"<span style='display:none;'> ("+pid+")</span></p></div>");
   jQuery("#deleteConceptDialog").dialog({
     resizable: false,
     height:205,
     width: 400,
     modal: true,
     buttons: {
-      "Delete folder": function() {
+      "Confirm": function() {
         var toClose = this;
         var onDeleteWorked = sidora.util.createFunctionRefreshTree(pid);
         var onDeleteFailed = function(data){
@@ -3270,7 +3304,7 @@ sidora.resources.DeleteResource = function(pid){
     width: 400,
     modal: true,
     buttons: {
-      "Delete resource": function() {
+      "Confirm": function() {
         var onDeleteWorked = sidora.util.createFunctionRefreshTree(sidora.concept.GetPid());
         var onDeleteFailed = function(data){};
         sidora.resources.DeleteResourceBusinessLogic(sendOutPids, onDeleteWorked, onDeleteFailed);
@@ -3747,7 +3781,7 @@ sidora.manage.removeDatastream = function(pid,dsid){
     width: 600,
     modal: true,
     buttons: {
-      "Yes, remove": function() {
+      "Confirm": function() {
         sidora.queue.RequestPost("Removed Datastream "+dsid+" from "+pid+" <em>"+sidora.util.FriendlyNameDirect(pid)+"</em>",Drupal.settings.basePath+"sidora/manage/"+pid+"/remove/"+dsid+"/confirm","",
           function(){
             sidora.manage.resetFrame();
@@ -3756,7 +3790,7 @@ sidora.manage.removeDatastream = function(pid,dsid){
         sidora.queue.Next();
         jQuery( this ).dialog( "close" );
       },
-      "No, Do not remove": function() {
+      "Cancel": function() {
         jQuery( this ).dialog( "close" );
       }
     }
@@ -3891,7 +3925,8 @@ sidora.util.conceptAddedCompletelyNew = function(parentPid, pidOfNewItem, nidOfN
     var oldParent = jst.get_node(oldParentId);
     // The child should take on its parents permissions, so use the parent's attributes
     var a_attr_obj = new Object();
-    a_attr_obj.class = oldParent.a_attr.class;
+    // take the class from the parent except about if its a project space
+    a_attr_obj.class = oldParent.a_attr.class.replace("is-project-space","");
     a_attr_obj.permissions = oldParent.a_attr.permissions;
     a_attr_obj.resourcechildren = "0";
     a_attr_obj.conceptchildren = "0";

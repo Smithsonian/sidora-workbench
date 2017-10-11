@@ -710,7 +710,7 @@ function sidora_project_space_creation_form_submit($form, &$form_state) {
     }
     node_save($created_node);
     sidora_put_into_proper_project_space($created_node);
-    drupal_goto('sidora/research_spaces');
+    drupal_goto('sidora/research_spaces', array('query' => array('close' => 'now')));
   }
   else {
     drupal_set_message("Research Space Editing Failed", "warning");
@@ -900,6 +900,14 @@ function sidora_project_spaces_form_submit($form, &$form_state) {
  */
 function sidora_project_spaces_form($form = array(), &$form_state, $uid = NULL) {
   drupal_add_css(drupal_get_path('module','sidora').'/css/workbench_basic_screen.css',array('weight' => '1000000', 'group' => CSS_THEME));
+  drupal_add_js("
+        jQuery(document).ready(function(){
+          if (window.location.href.endsWith('?close=now')) {
+            window.parent.sidora.ProjectSpaces.showOverlayDuringRefresh = true;
+            window.parent.Shadowbox.close();
+          }
+        });
+","inline");
   global $user;
   if (!sidora_is_admin($user) && !empty($uid)){
     $form['info'] = array(
