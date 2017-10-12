@@ -1118,6 +1118,8 @@ sidora.contextMenu.SetUp = function(){
                 "editResearchSpace": {name: "Edit Research Space", icon: "edit", disabled: cmnps},
                 "changePermissions": {name: "Change Space Permissions ...", disabled: cmnps},
                 "changeOwner": {name: "Change Owner ...", icon: "arrow-right", disabled: cmnps},
+                "sep3": "---------",
+                "reload": {name: "Reload Children", icon: "arrow-right"}
             }
         });
     });
@@ -1131,6 +1133,18 @@ sidora.menuChoice = function(key, pid, treeId){
   var myUrl = null;
   var myTitle = null;
   switch(key) {
+    case "reload":
+      var jst = jQuery("#forjstree").jstree();
+      var children = jst.get_node(treeId).children;
+      jst.pureUIChange = true;
+      for(var ci = children.length - 1; ci >= 0; ci--) {
+        console.log("Removing node:" + children[ci]);
+        var cnid = jst.delete_node(children[ci]);
+      }
+      jst.pureUIChange = false;
+      sidora.util.loadTreeSection(pid);
+      sidora_util.cacheClear();
+      break;
     case "copyConceptAndChildren":
       myTitle = Drupal.t("Copy Folder");
       sidora.ProjectSpaces.DuplicateOrTransfer('duplicate', 'concept', pid, myTitle);
