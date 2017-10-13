@@ -348,7 +348,7 @@ function sidora_menu() {
       'file' => 'includes/project_spaces.inc',
     ),
     'sidora/research_space_transfer' => array(
-      'title' => 'Transfer Research Space',
+      'title' => 'Change Research Space Owner',
       'page callback' => 'drupal_get_form',
       'page arguments' => array('sidora_project_space_transfer_form', 2, 3),
       'access callback' => 'user_is_logged_in',
