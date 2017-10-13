@@ -1052,7 +1052,7 @@ sidora.ProjectSpaces.ShowProjectSpaceTransferForm = function(pid){
     Shadowbox.open({
       content:    Drupal.settings.basePath+"sidora/project_space_transfer/"+pid,
       player:     "iframe",
-      title:      Drupal.t("Research Space Transfer"),
+      title:      Drupal.t("Change Owner"),
       options: {
         onFinish:  function(){}
       }
@@ -1179,7 +1179,7 @@ sidora.menuChoice = function(key, pid, treeId){
       break;
     case "changeOwner":
       myUrl = Drupal.settings.basePath+"sidora/research_space_transfer/"+pid;
-      myTitle = Drupal.t("Research Space Transfer");
+      myTitle = Drupal.t("Change Owner");
       break;
     case "deleteConcept":
       sidora.concept.DeleteConceptByTreeId(treeId);

@@ -348,14 +348,14 @@ function sidora_menu() {
       'file' => 'includes/project_spaces.inc',
     ),
     'sidora/research_space_transfer' => array(
-      'title' => 'Project Space Transfer',
+      'title' => 'Transfer Research Space',
       'page callback' => 'drupal_get_form',
       'page arguments' => array('sidora_project_space_transfer_form', 2, 3),
       'access callback' => 'user_is_logged_in',
       'file' => 'includes/project_spaces.inc',
     ),
     'sidora/research_space_create' => array(
-      'title' => 'Research Space Creation',
+      'title' => 'Create Research Space',
       'page callback' => 'drupal_get_form',
       'page arguments' => array('sidora_project_space_creation_form', 2),
       'access callback' => 'user_is_logged_in',
@@ -4371,7 +4371,7 @@ function sidora_block_view($delta = '') {
              <ul>
                 <li id="edit-RS"><a href="#" onclick="sidora.menuChoice(\'editResearchSpace\',sidora.ProjectSpaces.currentPid());return false;"><i class="material-icons">edit</i>Edit&nbsp;Metadata</a></li>
                 <li id="perm-RS"><a href="#" onclick="sidora.menuChoice(\'changePermissions\',sidora.ProjectSpaces.currentPid());return false;"><i class="material-icons">lock</i>Change&nbsp;Permissions</a></li>
-                <li id="move-RS"><a href="#" onclick="sidora.menuChoice(\'changeOwner\',      sidora.ProjectSpaces.currentPid());return false;"><i class="material-icons">call_made</i>Move&nbsp;Space&nbsp;To&nbsp;Owner</a></li>';
+                <li id="move-RS"><a href="#" onclick="sidora.menuChoice(\'changeOwner\',      sidora.ProjectSpaces.currentPid());return false;"><i class="material-icons">call_made</i>Change&nbsp;Owner</a></li>';
       if (sidora_is_admin()) $block['content'] .= '
                 <li id="manageConcept"><a href="#" onclick="sidora.concept.Manage(); return false;">Manage&nbsp;Folder</a></li>';
       $block['content'] .= '
