@@ -2912,6 +2912,9 @@ jQuery(document).ready(function() {
 });
 </script>
 ';
+      if (empty($_SESSION['codebook_choice']['upload_browser_already_shown'])) {
+        $_SESSION['codebook_choice']['upload_browser_already_shown'] = FALSE;
+      }
       $create_upload_form = !$_SESSION['codebook_choice']['upload_browser_already_shown'];
       if ($_SESSION['codebook_choice']['sample_uploaded']) {
         $create_upload_form = (count($current_uploads) < 2 && $_SESSION['codebook_choice']['upload_browser_already_shown'] == FALSE);
