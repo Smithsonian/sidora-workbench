@@ -528,7 +528,8 @@ sidora.concept.LoadContentHelp.Metadata = function(conceptOfInterest){
         player:     "iframe",
         title:      sidora.display.EDIT_METADATA_TITLE,
         options: {
-          onFinish:  function(){}
+          onClose:  function(){
+          }
         }
       });
     });
@@ -800,7 +801,7 @@ sidora.ProjectSpaces.DuplicateOrTransferIntro = function(type, pids) {
     intro = "You selected the following to be moved:";
   }
   if (type == "link") {
-    intro = "Links will not create a new object.<br> Any changes to made while using the link directly affect the original.<br> You selected for links to be created to the following:";
+    intro = "Links will not create a new object.<br> Any changes made while using the link directly affect the original.<br> You selected for links to be created to the following:";
   }
   intro += "</p><ul>";
   for(var pidIndex = 0; pidIndex < pids.length; pidIndex++) {
@@ -1137,6 +1138,7 @@ sidora.menuChoice = function(key, pid, treeId){
   var myUrl = null;
   var myTitle = null;
   var onFinish = function(){};
+  var onClose = function(){};
   switch(key) {
     case "reload":
       var jst = jQuery("#forjstree").jstree();
@@ -1165,6 +1167,8 @@ sidora.menuChoice = function(key, pid, treeId){
     case "editConcept":
       myUrl = Drupal.settings.basePath+"sidora/edit_metadata/"+pid;
       myTitle = sidora.display.EDIT_METADATA_TITLE;
+      onClose = function(){
+      };
       break;
     case "addResources":
       myUrl = Drupal.settings.basePath+"sidora/ajax_parts/create_resource/"+pid;
@@ -1200,7 +1204,8 @@ sidora.menuChoice = function(key, pid, treeId){
         player:     "iframe",
         title:      myTitle,
         options: {
-          onFinish:  onFinish
+          onFinish: onFinish,
+          onClose: onClose
         }
       });
 
@@ -2583,6 +2588,10 @@ sidora.util.treeAdditionSingleItemPassAnchors = function(onLoadComplete, overwri
     var dfAnchorText = jQuery(dfAnchor[0]).html();
     if (currChild.text != dfAnchorText) {
       jst.rename_node(currChild, dfAnchorText);
+      // if the name of the current loaded concept is getting changed, change the name of the page title as well
+      if (sidora.concept.GetPid() == currChild.a_attr.pid) {
+        jQuery("h1.page-title").html(dfAnchor["0"].attributes['fullname'].nodeValue);
+      }
     }
     var a_attr_obj = {};
     jQuery(jQuery(currRep).children("a").first()[0].attributes).each(

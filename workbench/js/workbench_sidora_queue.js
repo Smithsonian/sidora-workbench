@@ -349,6 +349,10 @@ SidoraQueue.prototype.Done = function(completedItem, ajaxReturn){
       if (sidora.resources.individualPanel.resourceOfInterest != null && sidora.resources.individualPanel.resourceOfInterest.pid == completedItem.pidsBeingProcessed[i]){
         sidora.resources.individualPanel.LoadRelationships();
       }
+      if (completedItem.action == 'editMeta' && sidora.util.GetTreeNodesByPid(completedItem.pidsBeingProcessed[i]).length > 0) {
+        var jst = jQuery("#forjstree").jstree();
+        sidora.util.loadTreeSection(completedItem.pidsBeingProcessed[i], null, null, true, jst); 
+      }
       //Update the tree counts if needed, only valid pids
       if (completedItem.pidsBeingProcessed.indexOf(":") != -1) {
         sidora.util.refreshConceptChildrenNumber(completedItem.pidsBeingProcessed[i]);
