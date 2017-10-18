@@ -256,6 +256,7 @@ function sidora_menu() {
       'page callback' => 'sidora_fedora_object_issues',
       'access arguments' => array('administer site configuration'),
       'type' => MENU_CALLBACK,
+      'file' => 'includes/sidora_admin_only.inc',
    ),
    'admin/sidora/fedora_sync' => array(
       'title' => 'SIdora / Fedora Drupal node Resynchronization',
@@ -5929,8 +5930,6 @@ function sidora_block_content_navigation() {
   module_load_include('inc', 'sidora', 'includes/project_spaces');
   if (sidora_is_admin()) {
     $extra_admin_part = sidora_html_tree_from_given_pid($root_pid, NULL, 3, $send_params);
-    // double pull, first check, assume there was not a recent change 
-    //sidora_project_spaces_tree($extra_admin_part, TRUE, array(), FALSE);  // BBB
     $to_return .= sidora_project_spaces_tree($extra_admin_part, TRUE, array(), FALSE);
   }
   else {
@@ -5938,11 +5937,7 @@ function sidora_block_content_navigation() {
     // if a user ever logs in with all accesses revoked, create a personal space for them
     if (empty($nodes)) {
       sidora_create_personal_project_space();
-      // double pull, first check
-      // sidora_project_spaces_tree("", TRUE,  array("create","view","update","delete"), FALSE); //BBB
     }
-    // double pull, first check
-    // sidora_project_spaces_tree("", TRUE,  array("create","view","update","delete"), FALSE); //BBB
     $to_return .= sidora_project_spaces_tree("", TRUE,  array("create","view","update","delete"), FALSE);
   }
   $to_return .= '</div></div>';
@@ -6593,7 +6588,7 @@ function sidora_html_tree_from_query_results_tree($query_result_tree, $input_pat
         }
       }
       $administeredBy = ' administered-by="' . $t_element['isAdministeredBy'] . '" last-parent="' . $last_parent_pid . '"';
-      $isLink = '';//. $pid . ':' . $t_element['isAdministeredBy'].'[]'.$last_parent_pid;//'BBBNOLINKBBB';
+      $isLink = '';
       if (!empty($t_element['isAdministeredBy']) && $last_parent_pid != $t_element['isAdministeredBy'] && !empty($last_parent_pid)) {
         $isLink = '<img style="width:13px;height:13px;" src="' . $GLOBALS['base_url'] . '/' . drupal_get_path('module','sidora') . '/images/link.png"/>'; //TODO
         $administeredBy .= ' is-link="TRUE"'; 

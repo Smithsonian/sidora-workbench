@@ -667,7 +667,6 @@ function sidora_project_space_creation_form_submit($form, &$form_state) {
       node_save($created_node);
     }
     drupal_set_message("Research Space Edits Saved");
-    return;
   }
   else {
     global $user;
@@ -710,7 +709,11 @@ function sidora_project_space_creation_form_submit($form, &$form_state) {
     }
     node_save($created_node);
     sidora_put_into_proper_project_space($created_node);
-    drupal_goto('sidora/research_spaces', array('query' => array('close' => 'now')));
+
+    // On a create, go to the research_spaces page (which will then close)
+    if (empty($form_state['existing_pid'])) {
+      drupal_goto('sidora/research_spaces', array('query' => array('close' => 'now')));
+    }
   }
   else {
     drupal_set_message("Research Space Editing Failed", "warning");

@@ -416,17 +416,21 @@ sidora.concept.LoadContentHelp.Resources.TableActionsSetup = function(){
     },3000); //Start the search if there is no key press for 3 seconds
   });
   jQuery('#sidora-resource-type-dropdown').change(function(){
-    sidora_util.writeCookie('Drupal.dtFilter',jQuery('#sidora-resource-type-dropdown').val(),'30')
+    sidora_util.writeCookie('Drupal.dtFilter',jQuery('#sidora-resource-type-dropdown').val(),'30');
     sidora.resources.reloadDatatableBasedOnCurrentFilters();
   });
   jQuery('#sidora-resource-sort-dropdown').change(function(){
-   sidora_util.writeCookie('Drupal.sortOn',jQuery('#sidora-resource-sort-dropdown').val(),'30')
-   sidora.resources.reloadDatatableBasedOnCurrentFilters();
-   });
+    sidora_util.writeCookie('Drupal.sortOn',jQuery('#sidora-resource-sort-dropdown').val(),'30');
+    sidora.resources.reloadDatatableBasedOnCurrentFilters();
+  });
   jQuery('#sidora-resource-sortorder-dropdown').change(function(){
-   sidora_util.writeCookie('Drupal.sortOrder',jQuery('#sidora-resource-sortorder-dropdown').val(),'30')
-   sidora.resources.reloadDatatableBasedOnCurrentFilters();
-   });
+    sidora_util.writeCookie('Drupal.sortOrder',jQuery('#sidora-resource-sortorder-dropdown').val(),'30');
+    sidora.resources.reloadDatatableBasedOnCurrentFilters();
+  });
+  jQuery("#res_table_length [name='res_table_length']").change(function(){
+    sidora_util.writeCookie('Drupal.pageLength',jQuery("#res_table_length [name='res_table_length']").val(),'30');
+    // This is part of the datatables library to update when the length is changed, we don't need to do it manually
+  });
 }
 /*
  * Sets the visiblility of menu items on the concept menu.  Remember, this is UI only and is not to be used for security
@@ -1132,6 +1136,7 @@ sidora.contextMenu.Chooser = function(key, options) {
 sidora.menuChoice = function(key, pid, treeId){
   var myUrl = null;
   var myTitle = null;
+  var onFinish = function(){};
   switch(key) {
     case "reload":
       var jst = jQuery("#forjstree").jstree();
@@ -1168,6 +1173,9 @@ sidora.menuChoice = function(key, pid, treeId){
     case "editResearchSpace":
       myUrl = Drupal.settings.basePath+"sidora/research_space_create/"+pid;
       myTitle = Drupal.t("Research Space Edit");
+      onFinish = function(){
+        sidora.ProjectSpaces.refreshOptions(1);
+      }
       break;
     case "addConcept":
       myUrl = Drupal.settings.basePath+"sidora/ajax_parts/create_concept/"+pid;
@@ -1192,7 +1200,7 @@ sidora.menuChoice = function(key, pid, treeId){
         player:     "iframe",
         title:      myTitle,
         options: {
-          onFinish:  function(){}
+          onFinish:  onFinish
         }
       });
 
@@ -3085,12 +3093,19 @@ sidora.ProjectSpaces.refreshOptionsImmediate = function(refreshesUntilGiveUp){
     var df = jQuery(returnedHtml);
     var psaList = jQuery(df).children("li").children("ul").children("li").children("a");
     var missingElems = [];
-    psaList.each(function(index,elem){
+    for (var pli = 0; pli < psaList.length; pli++) {
+      var elem = psaList[pli];
       var elemPid = elem.attributes['pid'].value;
-      if (psPids.indexOf(elemPid) == -1) {
+      var ddi = psPids.indexOf(elemPid); 
+      if (ddi == -1) {
         missingElems.push(elem);
       }
-    });
+      else {
+        // check for name change and for icon change
+        var tn = sidora.util.GetTreeNodesByPid(elem.attributes['pid'].value);
+        tn[0].text = elem.innerHTML;
+      }
+    };
     var changeMade = false;
     for (var ei = 0; ei < missingElems.length; ei++){
       var elem = missingElems[ei];
@@ -3115,6 +3130,8 @@ sidora.ProjectSpaces.refreshOptionsImmediate = function(refreshesUntilGiveUp){
     }
     jQuery(".full-screen-overlay").remove();
     sidora.ProjectSpaces.showOverlayDuringRefresh = false;
+    var jst = jQuery("#forjstree").jstree();
+    jst.redraw(true);
   });
 }
 /*
