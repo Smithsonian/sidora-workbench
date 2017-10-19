@@ -4876,7 +4876,7 @@ function sidora_ajax_parts($call_type, $param1 = '', $param2 = '', $param3 = '')
     if (!empty($obj['TN'])){
       $to_return .= '
     <div id="details-tab" class="choosable-tab">
-      <img src="'.$GLOBALS['base_url'].'/sidora/info/'.$obj->id.'/meta/TN/browser" />
+      <img src="'.$GLOBALS['base_url'].'/sidora/info/'.$obj->id.'/meta/TN/browser" style="max-width:190px"/>
       <iframe style="width:calc(100% - 236);height:calc(100% - 67px);left:220px;position:absolute;" src="'.base_path().'sidora/info/'.$pid.'/meta/sidora_xsl_config_variable/browser/html"></iframe>
     </div>';
     }
@@ -6607,6 +6607,7 @@ function sidora_html_tree_from_query_results_tree($query_result_tree, $input_pat
       if (!empty($permissions) && $included_in_output) {
         $to_return .= '<li>';
         $href = ($include_href)? ' href="' . base_path() . 'sidora/workbench/' . $url_params . '#' . $pid . '?path=' . $input_path . '"':'';
+        /*
         $class_for_thumbnail = '';
         $thumbnail_info = '';
         if (!empty($t_element['t']['thumbnail'])){
@@ -6614,17 +6615,18 @@ function sidora_html_tree_from_query_results_tree($query_result_tree, $input_pat
           $thumbnail_info = ' thumbnail="' . $thumb_src . '"';
           $class_for_thumbnail = ' has-thumbnail';
         }
-        $all_classes =  $classes_for_permissions . $classes_for_ownership . $class_for_default_project_space . $class_for_thumbnail;
+        */
+        $all_classes =  $classes_for_permissions . $classes_for_ownership . $class_for_default_project_space;// . $class_for_thumbnail;
         $to_return .= '<';
         $to_return .= $dom_type . $href;
         $to_return .= ' pid="' . $pid . '" fullname="' . $html_escaped_name . '"';
         $to_return .= ' conceptchildren="' . count($t_element['children']) . '"';
         $to_return .= ' resourcechildren="' . $resource_children_num . '"';
         $to_return .= ' class="' . $all_classes . '" permissions="' . $permissions . '"';
-        $to_return .= $nid_info . $owner_info . $thumbnail_info . $administeredBy;
+        $to_return .= $nid_info . $owner_info . $administeredBy;
         $to_return .= '>';
-        if (!empty($thumbnail_info)) {
-           $to_return .= '<div><img src="'.file_create_url($t_element['t']['thumbnail']).'"/></div>';
+        if (!empty($t_element['t']['thumbnail'])){
+           $to_return .= '<div class="concept-thumbnail"><img src="'.file_create_url($t_element['t']['thumbnail']).'"/></div>';
         }
         
         $to_return .= $t_element['t']['value'];

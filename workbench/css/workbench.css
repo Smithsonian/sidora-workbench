@@ -139,10 +139,10 @@ li a.not-owned {
 .sidora-info-holder {
   display: none;
 }
-a.has-thumbnail > div {
+div.concept-thumbnail {
   float: left;
 }
-a.has-thumbnail > div > img {
+div.concept-thumbnail > img {
   vertical-align: sub;
 }
 .full-screen-overlay {
