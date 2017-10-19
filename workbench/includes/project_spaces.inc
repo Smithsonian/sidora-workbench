@@ -611,6 +611,7 @@ function sidora_project_space_creation_form($form = array(), &$form_state, $exis
         // Pass the maximum file size in bytes
         'file_validate_size' => array(1 * 1024 * 1024),
         'file_validate_image_resolution' => array('24x24', '1x1'),
+        'sidora_icon_upload_message' => array(),
       ),
       '#upload_location' => 'public://',
       '#attributes' => array('default_image_path' => ''),
@@ -638,11 +639,14 @@ function sidora_project_space_creation_form($form = array(), &$form_state, $exis
     ),
   );
   $form['close'] = array(
-    '#markup' => '<a style="" href="' . $GLOBALS['base_url'] . '/sidora/research_spaces" onclick="jQuery(body).append(\'<div class=\\\'full-screen-overlay\\\'></div>\');"><input type="button" id="closebottom" name="closebottom" value="Close" class="form-submit"></a>',
+    '#markup' => '<a style="" href="' . $GLOBALS['base_url'] . '/sidora/research_spaces" onclick="if (window.parent.sidora) {window.parent.sidora.ProjectSpaces.refreshOptions(1);} jQuery(body).append(\'<div class=\\\'full-screen-overlay\\\'></div>\');"><input type="button" id="closebottom" name="closebottom" value="Close" class="form-submit"></a>',
   );
   return $form;
 }
-
+function sidora_icon_upload_message(){
+  drupal_set_message("Submit this form to save the new icon to the research space.", "warning");
+  return array();
+}
 function sidora_project_space_creation_form_validate($form, &$form_state) {
   if (empty($form_state['values']['ps_name'])){ 
     form_set_error('ps_name', 'Enter a name for the research space.');
