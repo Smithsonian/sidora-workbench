@@ -2057,8 +2057,11 @@ sidora.resources.updateThumbnails = function(){
   })
 }
 sidora.resources.refreshSelectedResourceThumbnail = function(){
- var pids = sidora.resources.getHighlighted();
- toRefreshPid = pids[0];
+  var pids = sidora.resources.getHighlighted();
+  toRefreshPid = pids[0];
+  sidora.resources.refreshResourceThumbnail(toRefreshPid);
+}
+sidora.resources.refreshResourceThumbnail = function(toRefreshPid){
   var me = jQuery(jq(toRefreshPid));
   if (typeof(me.children("td").children("div").children("img").attr("src")) == 'string'){
       var imgChild = me.children("td").children("div").children("img");
@@ -2073,7 +2076,7 @@ sidora.resources.refreshSelectedResourceThumbnail = function(){
 	  setTimeout(function(){
            me.children("td").children("div.resource-list-tn").append('<img style="max-height:90px;max-width:150px;display:none;">');
 	   me.children("td").children("div.resource-list-tn").children("img").load(function(){jQuery("#gray_overlay").remove();me.children("td").children("div.resource-list-tn").children("img").css("display","");}).attr("src",pidThumbnail+"?random="+new Date().getTime());
-	  },15000);
+	  },1000);
 	 }
         }
       });
@@ -3453,6 +3456,7 @@ sidora.resources.EditDetails = function(editPids){
   });
 }
 sidora.resources.UpdateContent = function(resourcePid){
+  jQuery("#addDatastreamDialog").closest("div").remove();
   jQuery("body").append("<div id='addDatastreamDialog' style='display:none;' title='Update Content'><iframe height='1000%' width='100%' style='height:100%;width:100%' src='"+Drupal.settings.basePath+"sidora/manage/"+resourcePid+"/upload_content' frameborder='0' marginwidth='0' marginheight='0' allowfullscreen></iframe></div>");
   jQuery("#addDatastreamDialog").dialog({
      resizable: true,
