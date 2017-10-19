@@ -935,7 +935,7 @@ sidora.ProjectSpaces.DuplicateOrTransfer = function(type, conceptsOrResources, s
 sidora.ProjectSpaces.DuplicateOrTransferHtml = function(selectionIntroHtml){
   var toReturn = "<div style='height:100%'>";
   toReturn += selectionIntroHtml;
-  var height = 110 + selectionIntroHtml.split("<br").length * 20;
+  var height = 110 + selectionIntroHtml.split("<br").length * 20 + ((selectionIntroHtml.split("<li").length - 2) * 20);
   toReturn += "<div id='destination-tree' style='width:100%;overflow:auto;height:calc(100% - "+height+"px);'>Loading destination trees...</div>";
   toReturn += '<input id="destination-chosen" class="form-submit form-button-disabled" disabled="disabled" style="float:left; width:100px;" value="Submit" />';
   toReturn += '<input id="closer" class="form-submit" style="float:left; width:100px;" value="Close" />';
