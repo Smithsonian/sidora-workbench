@@ -45,6 +45,7 @@
 function sidora_admin_settings() {
   module_load_include('inc', 'islandora', 'includes/content_model.autocomplete');
   module_load_include('inc', 'sidora', 'includes/workbench_viewers.admin');
+  module_load_include('inc', 'sidora', 'includes/xsl_handling');
   $form = array(
 /*
 
@@ -55,15 +56,6 @@ function sidora_admin_settings() {
       '#description' => t('The Fedora Commons pid will be directly appended to the above, end with / if needed.'),
     ),
 */
-/*
-    'sidora_metadata_xsl' => array(
-      '#type' => 'textarea',
-      '#title' => t('XSL for transforming the object metadata into HTML for display on the "Metadata" display'),
-      '#default_value' => sidora_xsl_string(),
-      //'#description' => t('The Fedora Commons pid will be directly appended to the above, end with / if needed.'),
-    ),
-*/
-
     'si_exhibition_website_location' => array(
       '#type' => 'textfield',
       '#title' => t('The prefix for exhibition links'),
@@ -534,6 +526,21 @@ tr.removed.odd {
     '#collapsed' => TRUE,
     'items' => $legacy_item_fieldset,
   );
+  $form['si_smx_collapse'] = array(
+    'fieldset' => array(
+      '#type' => 'fieldset',
+      '#title' => 'XSL for objects that have no XML Form',
+      '#description' => t(''),
+      '#collapsible' => TRUE,
+      '#collapsed' => TRUE,
+      'sidora_metadata_xsl' => array(
+        '#type' => 'textarea',
+        '#title' => t('XSL for transforming the object metadata into HTML for display on the "Metadata" display'),
+        '#default_value' => variable_get('sidora_metadata_xsl', sidora_xsl_string(NULL)),
+      ),
+    ),
+  );
+
   $form['site_administrator_contact'] = array(
     'fieldset' => array(
       '#type' => 'fieldset',
