@@ -43,8 +43,8 @@ window.sidora = {
 window.sidora.display = {
   //Resource specific
   "LINK_TO_RESOURCE_TITLE" : Drupal.t("Create links to resource"),
-  "RESOURCES_EXISTED_AT_TARGET_WILL_REMOVE_FROM_SOURCE" : Drupal.t("The resources listed below existed on the target already and will not be overwritten. They will be removed from the concepts that they were dragged from:"),
-  "CREATE_LINKS_OF_RESOURCES_TO_DESTINATION" : Drupal.t("Create links of following resources inside of the concept "),
+  "RESOURCES_EXISTED_AT_TARGET_WILL_REMOVE_FROM_SOURCE" : Drupal.t("The resources listed below existed on the target already and will not be overwritten. They will be removed from the folders that they were dragged from:"),
+  "CREATE_LINKS_OF_RESOURCES_TO_DESTINATION" : Drupal.t("Create links of following resources inside of the folder "),
   "MOVE_RESOURCES_TO_DESTINATION" : Drupal.t("Move the following resources to "),
   "MOVE_RESOURCES_TITLE": Drupal.t("Move Resources"),
   "RESOURCES" : Drupal.t(' resources'),
@@ -58,20 +58,20 @@ window.sidora.display = {
   "RESOURCES_DD_TITLE" : Drupal.t('Title'),
   "RESOURCES_DD_MODEL" : Drupal.t('Model'),
   "RESOURCES_DD_CREATED" : Drupal.t('Created'),
-  "CREATE_NEW_RESOURCE_TOOLTIP" : Drupal.t("Create a new resource as a child of the highlighted concept."),
+  "CREATE_NEW_RESOURCE_TOOLTIP" : Drupal.t("Create a new resource as a child of the highlighted folder."),
   "CREATE_RESOURCE_TITLE" : Drupal.t("Create Resource"),
 
   //Concept specific
-  "CREATE_LINKS_OF_FOLLOWING_TO" : Drupal.t("Create links of the following concepts inside of the concept "),
-  "MOVE_CONCEPT_TITLE": Drupal.t("Move concept"),
-  "MOVE_FOLLOWING_CONCEPTS_TO" : Drupal.t("Move the following concepts to "),
-  "CONCEPTS_EXISTED_AT_TARGET_WILL_REMOVE_FROM_SOURCE" : Drupal.t("The concepts listed below existed on the target already and will not be overwritten. They will be removed from the concepts that they were dragged from:"),
-  "CREATE_A_CONCEPT_AS_CHILD_OF_HIGHLIGHT" : Drupal.t("Create a new concept as a child of the highlighted concept."),
-  "CREATE_CONCEPT_TITLE" : Drupal.t("Create Concept"),
-  "MANAGE_CONCEPT_TITLE" : Drupal.t("Manage Concept"), 
-  "UPDATE_CONCEPT_INFORMATION" : Drupal.t("Update Concept Information"),
-  "CREATE_LINK_TO_CONCEPT" : Drupal.t('Create Link To Concept'),
-  "DELETE_CONCEPT_TITLE" : Drupal.t("Delete Concept"),
+  "CREATE_LINKS_OF_FOLLOWING_TO" : Drupal.t("Create links of the following folders inside of the folder "),
+  "MOVE_CONCEPT_TITLE": Drupal.t("Move folder"),
+  "MOVE_FOLLOWING_CONCEPTS_TO" : Drupal.t("Move the following folders to "),
+  "CONCEPTS_EXISTED_AT_TARGET_WILL_REMOVE_FROM_SOURCE" : Drupal.t("The folders listed below existed on the target already and will not be overwritten. They will be removed from the folders that they were dragged from:"),
+  "CREATE_A_CONCEPT_AS_CHILD_OF_HIGHLIGHT" : Drupal.t("Create a new folder as a child of the highlighted folder."),
+  "CREATE_CONCEPT_TITLE" : Drupal.t("Create Folder"),
+  "MANAGE_CONCEPT_TITLE" : Drupal.t("Manage Folder"), 
+  "UPDATE_CONCEPT_INFORMATION" : Drupal.t("Update Folder Information"),
+  "CREATE_LINK_TO_CONCEPT" : Drupal.t('Create Link To Folder'),
+  "DELETE_CONCEPT_TITLE" : Drupal.t("Delete Folder"),
 
   //Button HTML
   "BUTTON_HTML_ADD_A_NEW_CONCEPT" : Drupal.t("&nbsp;Add&nbsp;a&nbsp;new&nbsp;concept"),
@@ -113,8 +113,8 @@ window.sidora.display = {
   "PROJECT_SPACE_PERMISSION_TITLE" : Drupal.t("Research Space Permission"),
   "PROJECT_SPACE_CHOICE_CHANGE_PERMISSIONS" : Drupal.t("Change permissions of the current research space"),
   "PROJECT_SPACE_CHOICE_TRANSFER_PS_TO_NEW_OWNER" : Drupal.t("Transfer this research space to a new owner"),
-  "PROJECT_SPACE_CHOICE_DUPLICATE_CONCEPT" : Drupal.t("Copy the selected concept and its children"),
-  "PROJECT_SPACE_CHOICE_TRANSFER_CONCEPT" : Drupal.t("Move the selected concept"),
+  "PROJECT_SPACE_CHOICE_DUPLICATE_CONCEPT" : Drupal.t("Copy the selected folder and its children"),
+  "PROJECT_SPACE_CHOICE_TRANSFER_CONCEPT" : Drupal.t("Move the selected folder"),
   "PROJECT_SPACE_CHOICE_DUPLICATE_RESOURCE" : Drupal.t("Copy the selected resources"),
   "PROJECT_SPACE_CHOICE_TRANSFER_RESOURCE" : Drupal.t("Move the selected resources"),
 
@@ -241,6 +241,9 @@ sidora.AddConcept = function() {
     width: 800,
     title:      sidora.display.CREATE_CONCEPT_TITLE,
     options: {
+      onClose: function(){
+        sidora_util.cacheClear();
+      },
       onFinish:  function(){}
     }
   });
@@ -252,6 +255,9 @@ sidora.AddResource = function() {
     player:     "iframe",
     title:      sidora.display.CREATE_RESOURCE_TITLE,
     options: {
+      onClose: function(){
+        sidora_util.cacheClear();
+      },
       onFinish:  function(){}
     }
   });
@@ -280,7 +286,7 @@ sidora.concept.LoadContentHelp.Resources.TableActionsSetup = function(){
   jQuery("#res_table_paginate").hide();
   jQuery("#res_table_wrapper").append('<input type="text" name="titleFilter" id="titleFilter" placeholder="Search Resources" style="border: solid 1px lightblue;">');
   jQuery("#res_table_wrapper").append('<a id="add-resource-button" href="#" onclick="sidora.AddResource(); return false;" class="sidora-thin-button"><span>+</span>Add New Resources</a>');
-  jQuery("#res_table_wrapper").append('<select id="sidora-resource-bulk-actions" class="form-select"><option value="">Bulk Actions</option><option value="duplicate">Duplicate</option><option value="move">Move</option><option value="delete">Delete</option></select>');
+  jQuery("#res_table_wrapper").append('<select id="sidora-resource-bulk-actions" class="form-select"><option value="">Bulk Actions</option><option value="duplicate">Copy</option><option value="move">Move</option><option value="delete">Delete</option></select>');
   jQuery("#sidora-resource-bulk-actions").change(function(){
     if (jQuery("#sidora-resource-bulk-actions").val() != "") {
       if (sidora.resources.getHighlighted().length == 0) {
@@ -410,17 +416,21 @@ sidora.concept.LoadContentHelp.Resources.TableActionsSetup = function(){
     },3000); //Start the search if there is no key press for 3 seconds
   });
   jQuery('#sidora-resource-type-dropdown').change(function(){
-    sidora_util.writeCookie('Drupal.dtFilter',jQuery('#sidora-resource-type-dropdown').val(),'30')
+    sidora_util.writeCookie('Drupal.dtFilter',jQuery('#sidora-resource-type-dropdown').val(),'30');
     sidora.resources.reloadDatatableBasedOnCurrentFilters();
   });
   jQuery('#sidora-resource-sort-dropdown').change(function(){
-   sidora_util.writeCookie('Drupal.sortOn',jQuery('#sidora-resource-sort-dropdown').val(),'30')
-   sidora.resources.reloadDatatableBasedOnCurrentFilters();
-   });
+    sidora_util.writeCookie('Drupal.sortOn',jQuery('#sidora-resource-sort-dropdown').val(),'30');
+    sidora.resources.reloadDatatableBasedOnCurrentFilters();
+  });
   jQuery('#sidora-resource-sortorder-dropdown').change(function(){
-   sidora_util.writeCookie('Drupal.sortOrder',jQuery('#sidora-resource-sortorder-dropdown').val(),'30')
-   sidora.resources.reloadDatatableBasedOnCurrentFilters();
-   });
+    sidora_util.writeCookie('Drupal.sortOrder',jQuery('#sidora-resource-sortorder-dropdown').val(),'30');
+    sidora.resources.reloadDatatableBasedOnCurrentFilters();
+  });
+  jQuery("#res_table_length [name='res_table_length']").change(function(){
+    sidora_util.writeCookie('Drupal.pageLength',jQuery("#res_table_length [name='res_table_length']").val(),'30');
+    // This is part of the datatables library to update when the length is changed, we don't need to do it manually
+  });
 }
 /*
  * Sets the visiblility of menu items on the concept menu.  Remember, this is UI only and is not to be used for security
@@ -518,7 +528,8 @@ sidora.concept.LoadContentHelp.Metadata = function(conceptOfInterest){
         player:     "iframe",
         title:      sidora.display.EDIT_METADATA_TITLE,
         options: {
-          onFinish:  function(){}
+          onClose:  function(){
+          }
         }
       });
     });
@@ -565,6 +576,16 @@ sidora.concept.LoadContentHelp.FullTableReload = function(conceptOfInterest){
 sidora.concept.loadedContentPid = null;
 sidora.concept.forceRefreshOnNextLoadContent = false;
 sidora.concept.LoadContent = function(leaveContentIfAlreadyLoaded){
+  var newName = sidora.concept.GetName();
+  if (typeof(newName) == 'undefined') {
+    var phref = sidora.util.getParentHref();
+    if (phref != null) {
+      window.location.href = phref;
+      var nodeId = sidora.util.getNodeIdByHref(window.location.pathname + window.location.search + window.location.hash);
+      jQuery("#" + nodeId + " > a").click();
+   }
+    return;
+  }
   jQuery("#concept-name-holder").html("<h1 class='page-title'>"+sidora.concept.GetName()+"</h1>");
   if (typeof(leaveContentIfAlreadyLoaded) == 'undefined') leaveContentIfAlreadyLoaded = false;
   if (this.forceRefreshOnNextLoadContent) {
@@ -585,8 +606,14 @@ sidora.concept.LoadContent = function(leaveContentIfAlreadyLoaded){
 
   // Show the correct menu for space vs normal concept
   var irs = sidora.concept.IsResearchSpace();
-  jQuery("#concept-menu-edit-concept").toggle(!irs);
-  jQuery("#concept-menu-edit-space").toggle(irs && sidora.ProjectSpaces.isOwned());
+  if (irs) {
+    jQuery("#concept-menu-edit-concept").addClass('sidora-not-available');
+    jQuery("#concept-menu-edit-space").removeClass('sidora-not-available');
+  } else {
+    jQuery("#concept-menu-edit-space").addClass('sidora-not-available');
+    jQuery("#concept-menu-edit-concept").removeClass('sidora-not-available');
+  }
+  jQuery("#concept-menu-edit-space").toggle(sidora.ProjectSpaces.isOwned());
 
   sidora.concept.LoadContentHelp.Permissions(conceptOfInterest);
   sidora.concept.LoadContentHelp.Exhibition_view(conceptOfInterest);
@@ -614,6 +641,9 @@ sidora.util.hasElement = function(data){
  * Get what the href would be for the parent of the input href, null if cannot figure it out
  */
 sidora.util.getParentHref = function(existingHref) {
+  if (typeof(existingHref) == 'undefined' || existingHref == null) {
+   existingHref = window.location.pathname + window.location.search + window.location.hash;
+  }
   ehParts = existingHref.split("#");
   if (ehParts.length != 2) return null;
   if (ehParts[1].indexOf("path") == -1) return null;
@@ -665,36 +695,40 @@ sidora.util.openToCurrentPathAndSelectItem = function(currentUrl){
   }
   var itemSelectorForCurrentItemInTree = 'a[href=\"'+currentUrl+'\"]';
   var selectThisNode = jst.get_node(itemSelectorForCurrentItemInTree);
-  sidora.util.loadTreeSectionsIfNeeded(selectThisNode);
+  sidora.util.loadTreeSectionsIfNeeded(selectThisNode, true);
   jst.select_node(selectThisNode); 
 }
-sidora.util.throbberize = function() {
+sidora.util.throbberize = function(jstIdentifier) {
+  if (typeof(jstIdentifier) == 'undefined') {
+    jstIdentifier = 'forjstree';
+  }
   //Prep the UI for children incoming
-  if (jQuery("#forjstree a").not("[conceptchildren=0]").parent(".jstree-leaf").length > 0){
-    jQuery("#forjstree a").not("[conceptchildren=0]").parent(".jstree-leaf").children("i")
+  if (jQuery("#"+jstIdentifier+" a").not("[conceptchildren=0]").parent(".jstree-leaf").length > 0){
+    jQuery("#"+jstIdentifier+" a").not("[conceptchildren=0]").parent(".jstree-leaf").children("i")
       .css("background","url(../../misc/throbber.gif) no-repeat 6px -14px");
-    jQuery("#forjstree a").not("[conceptchildren=0]").parent(".jstree-leaf").removeClass("jstree-leaf")
+    jQuery("#"+jstIdentifier+" a").not("[conceptchildren=0]").parent(".jstree-leaf").removeClass("jstree-leaf")
   }
 }
 /*
  * Given a node, loads its grandchildren if needed and checks the validation status of grandchildren
  * @param data - jstree node or item that has a node attribute containing a jstree node
  */
-sidora.util.loadTreeSectionsIfNeeded = function(data){
+sidora.util.loadTreeSectionsIfNeeded = function(data, doFast, jst){
   if (data == false) return;
-  var jst = jQuery("#forjstree").jstree();
+  if (typeof(jst) == 'undefined') {
+    jst = jQuery("#forjstree").jstree();
+  }
   var node = data;
   if (typeof(data.node) != 'undefined') {
     node = data.node;
   }
-  var jst = jQuery("#forjstree").jstree(true);
   var openingPid = node.a_attr.pid;
   if (typeof openingPid == 'undefined') return;
-  var currentChildrenPids = sidora.util.childrenPidsListedInUIByNode(node);
+  var currentChildrenPids = sidora.util.childrenPidsListedInUIByNode(node, jst);
   var childPidsCsv = currentChildrenPids.join();
   if (childPidsCsv.length > 0) {
     sidora.util.checkUIForInvalidPids(openingPid, childPidsCsv);
-    sidora.util.throbberize();
+    sidora.util.throbberize(jst.element.attr('id'));
     //load the next section of the tree
     if (currentChildrenPids.length > 0){
       //Only load information if the currentChildren have children that are not listed
@@ -708,7 +742,7 @@ sidora.util.loadTreeSectionsIfNeeded = function(data){
         }
       }
       if (doRetrieval) {
-        sidora.util.loadTreeSection(openingPid);
+        sidora.util.loadTreeSection(openingPid, null, null, doFast, jst);
       }
     }
   }
@@ -761,13 +795,13 @@ sidora.ProjectSpaces.ChangeProjectSpace = function(selectedValue, suppressClick)
 sidora.ProjectSpaces.DuplicateOrTransferIntro = function(type, pids) {
   var intro = "<p>";
   if (type == "duplicate") {
-    intro = "You selected the following to be copied:";
+    intro = "Copy will create entirely new objects.<br> New objects will be duplicates and changes made to them will not affect the original objects.<br>You selected the following to be copied:";
   }
   if (type == "transfer") {
     intro = "You selected the following to be moved:";
   }
   if (type == "link") {
-    intro = "You selected for links to be created to the following:";
+    intro = "Links will not create a new object.<br> Any changes made while using the link directly affect the original.<br> You selected for links to be created to the following:";
   }
   intro += "</p><ul>";
   for(var pidIndex = 0; pidIndex < pids.length; pidIndex++) {
@@ -808,10 +842,11 @@ sidora.ProjectSpaces.DuplicateOrTransfer = function(type, conceptsOrResources, s
     pids = specificPids;
   }
   var ignoredDestination = '';
-  if (type == 'transfer') {
+  // transfer is now move, and we can move within the project space
+  //if (type == 'transfer') {
     // Only allow things to get transferred outside of the current research space
-    ignoredDestination = sidora.ProjectSpaces.currentPid();
-  }
+    //ignoredDestination = sidora.ProjectSpaces.currentPid();
+  //}
   var specificDestination = '';
   var specifiedDepth = null;
   if (type == 'link') {
@@ -827,10 +862,11 @@ sidora.ProjectSpaces.DuplicateOrTransfer = function(type, conceptsOrResources, s
   if (type == 'duplicate') {
     onSubmit = function(destPid){
       sidora.util.Confirm(
-        Drupal.t("Duplicate Creation"),
-        Drupal.t("Confirm to duplicate objects to %friendlyname", {"%friendlyname":sidora.util.FriendlyNameDirect(destPid)}),
+        Drupal.t("Copy Creation"),
+        Drupal.t("Confirm to create a copy of the objects to %friendlyname", {"%friendlyname":sidora.util.FriendlyNameDirect(destPid)}),
         function(){
-          sidora.performDuplicate(destPid, pids, function(){ setTimeout( function(){sidora.util.loadTreeSection(destPid)}, 20000)});
+          sidora.performDuplicate(destPid, pids, function(){ setTimeout( function(){sidora.util.loadTreeSection(destPid, null, null, false)}, 20000)});
+          sidora_util.cacheClear();
           Shadowbox.close();
         }
       );
@@ -888,6 +924,7 @@ sidora.ProjectSpaces.DuplicateOrTransfer = function(type, conceptsOrResources, s
             data.moveToPid = destPid;
             sidora.concept.CopyNode(data);
           }
+          sidora_util.cacheClear();
           Shadowbox.close();
         }
       );
@@ -898,8 +935,10 @@ sidora.ProjectSpaces.DuplicateOrTransfer = function(type, conceptsOrResources, s
 sidora.ProjectSpaces.DuplicateOrTransferHtml = function(selectionIntroHtml){
   var toReturn = "<div style='height:100%'>";
   toReturn += selectionIntroHtml;
-  toReturn += "<div id='destination-tree' style='width:100%;overflow:auto;height:calc(100% - 130px);'>Loading destination trees...</div>";
-  toReturn += '<input id="destination-chosen" class="form-submit" style="float:right; width:100px;" value="Submit" />';
+  var height = 110 + selectionIntroHtml.split("<br").length * 20 + ((selectionIntroHtml.split("<li").length - 2) * 20);
+  toReturn += "<div id='destination-tree' style='width:100%;overflow:auto;height:calc(100% - "+height+"px);'>Loading destination trees...</div>";
+  toReturn += '<input id="destination-chosen" class="form-submit form-button-disabled" disabled="disabled" style="float:left; width:100px;" value="Submit" />';
+  toReturn += '<input id="closer" class="form-submit" style="float:left; width:100px;" value="Close" />';
   return toReturn;
 }
 sidora.ProjectSpaces.ShowWhereToForm = function(selectionIntro, pids, ignorePid, specifyPids, onSubmit, specifiedDepth, myTitle){
@@ -911,6 +950,7 @@ sidora.ProjectSpaces.ShowWhereToForm = function(selectionIntro, pids, ignorePid,
   if (typeof(specifyPids) == 'string' && specifyPids != '') {
     params['specify_pids'] = specifyPids;
   }
+  params['doFast'] = 'true';
   var query = jQuery.param(params);
   if (query != '') {
     query = '?' + query;
@@ -932,12 +972,31 @@ sidora.ProjectSpaces.ShowWhereToForm = function(selectionIntro, pids, ignorePid,
         onFinish:  function(){
           var url = Drupal.settings.basePath+"sidora/ajax_parts/research_spaces_tree" + appendToUrl + query;
           var onDataComplete = function(data) {
+              jQuery("#destination-tree").bind('select_node.jstree', function(){ 
+                var destree = jQuery("#destination-tree").jstree();
+                var destPid = jQuery("#"+destree.get_selected()).children("a").attr("pid");
+                if (typeof(destPid) != 'undefined') {
+                  jQuery("#destination-chosen").removeAttr("disabled").removeClass("form-button-disabled");
+                }
+                else {
+                  jQuery("#destination-chosen").attr("disabled","disabled").addClass("form-button-disabled");
+                }
+              });
               jQuery("#destination-tree").html(data);
               jQuery("#destination-tree").jstree({
                 "core": {
                   "multiple" : false,
-                  "initially_open" : ["proj_spaces_tree_root"]
+                  "initially_open" : ["proj_spaces_tree_root"],
+                  "check_callback" : true
                 }
+              });
+              jQuery("#destination-tree").unbind('open_node.jstree');
+              jQuery('#destination-tree').bind('open_node.jstree', function (e, data) {
+                var dst = jQuery("#destination-tree").jstree();
+                sidora.util.loadTreeSectionsIfNeeded(data, true, dst);
+              });
+              jQuery("#closer").click(function(){
+                Shadowbox.close();
               });
               jQuery("#destination-chosen").click(function(){
                 var destree = jQuery("#destination-tree").jstree();
@@ -998,7 +1057,7 @@ sidora.ProjectSpaces.ShowProjectSpaceTransferForm = function(pid){
     Shadowbox.open({
       content:    Drupal.settings.basePath+"sidora/project_space_transfer/"+pid,
       player:     "iframe",
-      title:      Drupal.t("Research Space Transfer"),
+      title:      Drupal.t("Change Owner"),
       options: {
         onFinish:  function(){}
       }
@@ -1052,18 +1111,20 @@ sidora.contextMenu.SetUp = function(){
                 sidora.contextMenu.Chooser(key, options);
             },
             items: {
-                "editConcept": {name: "Edit Concept", icon: "edit", disabled: cmips},
+                "editConcept": {name: "Edit Folder", icon: "edit", disabled: cmips},
                 "addResources": {name: "Add Resource(s)", icon: "paste", disabled: cmips},
-                "copyConceptAndChildren": {name: "Copy Concept ...", icon: "copy", disabled: cmips},
-                "moveConcept": {name: "Move Concept ...", icon: "arrow-right", disabled: cmips},
-                "linkConcept": {name: "Link Concept ...", icon: "external-link", disabled: cmips},
-                "deleteConcept": {name: "Delete Concept", icon: "delete", disabled: cmips},
+                "copyConceptAndChildren": {name: "Copy Folder ...", icon: "copy", disabled: cmips},
+                "moveConcept": {name: "Move Folder ...", icon: "arrow-right", disabled: cmips},
+                "linkConcept": {name: "Link Folder ...", icon: "external-link", disabled: cmips},
+                "deleteConcept": {name: "Delete Folder", icon: "delete", disabled: cmips},
                 "sep1": "---------",
-                "addConcept": {name: "Add New Concept", icon: "paste"},
+                "addConcept": {name: "Add New Folder", icon: "paste"},
                 "sep2": "---------",
                 "editResearchSpace": {name: "Edit Research Space", icon: "edit", disabled: cmnps},
                 "changePermissions": {name: "Change Space Permissions ...", disabled: cmnps},
-                "changeOwner": {name: "Move Space to New Owner ...", icon: "arrow-right", disabled: cmnps},
+                "changeOwner": {name: "Change Owner ...", icon: "arrow-right", disabled: cmnps},
+                "sep3": "---------",
+                "reload": {name: "Reload Children", icon: "arrow-right"}
             }
         });
     });
@@ -1076,13 +1137,27 @@ sidora.contextMenu.Chooser = function(key, options) {
 sidora.menuChoice = function(key, pid, treeId){
   var myUrl = null;
   var myTitle = null;
+  var onFinish = function(){};
+  var onClose = function(){};
   switch(key) {
+    case "reload":
+      var jst = jQuery("#forjstree").jstree();
+      var children = jst.get_node(treeId).children;
+      jst.pureUIChange = true;
+      for(var ci = children.length - 1; ci >= 0; ci--) {
+        console.log("Removing node:" + children[ci]);
+        var cnid = jst.delete_node(children[ci]);
+      }
+      jst.pureUIChange = false;
+      sidora.util.loadTreeSection(pid);
+      sidora_util.cacheClear();
+      break;
     case "copyConceptAndChildren":
-      myTitle = Drupal.t("Copy Concept");
+      myTitle = Drupal.t("Copy Folder");
       sidora.ProjectSpaces.DuplicateOrTransfer('duplicate', 'concept', pid, myTitle);
       break;
     case "moveConcept":
-      myTitle = Drupal.t("Move Concept");
+      myTitle = Drupal.t("Move Folder");
       sidora.ProjectSpaces.DuplicateOrTransfer('transfer', 'concept', pid, myTitle);
       break;
     case "linkConcept":
@@ -1092,6 +1167,8 @@ sidora.menuChoice = function(key, pid, treeId){
     case "editConcept":
       myUrl = Drupal.settings.basePath+"sidora/edit_metadata/"+pid;
       myTitle = sidora.display.EDIT_METADATA_TITLE;
+      onClose = function(){
+      };
       break;
     case "addResources":
       myUrl = Drupal.settings.basePath+"sidora/ajax_parts/create_resource/"+pid;
@@ -1100,6 +1177,9 @@ sidora.menuChoice = function(key, pid, treeId){
     case "editResearchSpace":
       myUrl = Drupal.settings.basePath+"sidora/research_space_create/"+pid;
       myTitle = Drupal.t("Research Space Edit");
+      onFinish = function(){
+        sidora.ProjectSpaces.refreshOptions(1);
+      }
       break;
     case "addConcept":
       myUrl = Drupal.settings.basePath+"sidora/ajax_parts/create_concept/"+pid;
@@ -1111,7 +1191,7 @@ sidora.menuChoice = function(key, pid, treeId){
       break;
     case "changeOwner":
       myUrl = Drupal.settings.basePath+"sidora/research_space_transfer/"+pid;
-      myTitle = Drupal.t("Research Space Transfer");
+      myTitle = Drupal.t("Change Owner");
       break;
     case "deleteConcept":
       sidora.concept.DeleteConceptByTreeId(treeId);
@@ -1124,7 +1204,8 @@ sidora.menuChoice = function(key, pid, treeId){
         player:     "iframe",
         title:      myTitle,
         options: {
-          onFinish:  function(){}
+          onFinish: onFinish,
+          onClose: onClose
         }
       });
 
@@ -1155,9 +1236,14 @@ sidora.InitiateJSTree = function(){
         if (treeNode.a_attr.conceptchildren > treeNode.children.length) {
           var parentNode = jst.get_node(treeNode.parent);
           var openingPid = parentNode.a_attr.pid;
-          sidora.util.loadTreeSection(openingPid, function(){
-            jQuery("#forjstree").trigger("loaded.jstree");
-          });
+          sidora.util.loadTreeSection(
+            openingPid, 
+            function(){
+              jQuery("#forjstree").trigger("loaded.jstree");
+            },
+            null, // overwriteType (defaults to changes)
+            true  // doFast
+          );
           return;
         }
       }
@@ -1165,7 +1251,7 @@ sidora.InitiateJSTree = function(){
 
     jQuery("#forjstree").unbind('open_node.jstree');
     jQuery('#forjstree').bind('open_node.jstree', function (e, data) {
-      sidora.util.loadTreeSectionsIfNeeded(data);
+      sidora.util.loadTreeSectionsIfNeeded(data, true);
     });
     sidora.util.openToCurrentPathAndSelectItem(currentUrl);
     //When you select a node, update the url in the browser, change the page title (not browser title) and load the concept content into the main window
@@ -1175,10 +1261,12 @@ sidora.InitiateJSTree = function(){
       window.location = jQuery('#'+data.selected[0]).children('a').attr('href');
       sidora.UpdateTitleBasedOnNameInTree(jQuery(jQuery('#'+data.selected[0]).find("a")[0]).text());
       sidora.concept.LoadContent();
-      sidora.util.loadTreeSectionsIfNeeded(data);
+      sidora.util.loadTreeSectionsIfNeeded(data, true);
     });
     jQuery("#forjstree").unbind('copy_node.jstree');
     jQuery('#forjstree').bind('copy_node.jstree', function (e, data) {
+      var jst = jQuery("#forjstree").jstree(true);
+      if (typeof(jst.pureUIChange) != 'undefined' && jst.pureUIChange) return true; //don't want a Fedora change
       sidora.concept.CopyNode(data);
     });
 
@@ -1198,7 +1286,7 @@ sidora.InitiateJSTree = function(){
       //next requests are silent
       sidora.queue.incomingRequestsAreSilent = true;
       sidora.queue.Request(
-        'Remove concept association',
+        'Remove folder association',
         actionUrl,
         function(){
           sidora.concept.LoadContentHelp.Relationships();
@@ -1302,13 +1390,15 @@ sidora.InitiateJSTree = function(){
     if (typeof(updateLocationWith) != 'undefined') window.location = updateLocationWith;
     //if the content is already based on the highlighted concept, do nothing
     sidora.UpdateTitleBasedOnNameInTree();
-    sidora.concept.LoadContent(true);
   },200)});
   jQuery('#forjstree').hide();
   jQuery('#forjstree').jstree({
     "core" : {
       "check_callback": function(callbackType,draggedObjects,mouseOverObject,someNum,dragStatus){
         if (callbackType == "copy_node"){
+          var jst = jQuery("#forjstree").jstree(true);
+          if (typeof(jst.pureUIChange) != 'undefined' && jst.pureUIChange) return true; //don't want a Fedora change
+
           //Note that all resource moves are also considered "copy_node"
           if (typeof(draggedObjects.instance) == 'undefined'){ 
             //instance only exists if it is being dragged from a tree, resources do not exist in a jstree
@@ -1518,7 +1608,7 @@ sidora.InitiateJSTree = function(){
               if (objectsToCopyOver.length > 0){
                 if (!sidora.util.isConfirmShowing()){
                   if (objectsToUnassociate.length > 0) showText += showTextForUnassociate;
-                  sidora.util.Confirm("Move Concept",showText,
+                  sidora.util.Confirm("Move Folder",showText,
                     function(){
                       sidora.util.userConfirmedMove = true;
                       for(var objIndex = 0; objIndex < objectsToCopyOver.length; objIndex++){
@@ -1633,7 +1723,7 @@ sidora.RelocateTreeOnPage = function(){
   sidora.stopResizeTree();
   sidora.testColoring();
 }
-sidora.testColoring = function()
+sidora.testColoring = function()  // TBD BBB TODO REMOVE
 {
       var sp = new URLSearchParams(location.search);
       var currentRoot = sp.get("nr");
@@ -1868,7 +1958,6 @@ sidora.InitiatePage = function(){
     sidora.RelocateTreeOnPage();
     sidora.ReformatPage();
     jQuery('#concept_tabs').tabs();
-    sidora.concept.LoadContent();
     jQuery("#page-title").after(jQuery("#workbench-menu"));
     jQuery("#concept-meta").prepend(jQuery("#concept-meta-menu"));
     sidora.ontology.CreateConceptMenu();
@@ -1884,6 +1973,7 @@ sidora.InitiatePage = function(){
     jQuery("#proj-space-button").click(sidora.ProjectSpaces.viewAll);
     // Add the close button to the top of the Shadowboxes, and remove the tooltip from them
     jQuery("#sb-nav-close").attr("title","").clone().addClass("sb-nav-close-clone").appendTo(jQuery("#sb-title"));
+    sidora.concept.LoadContent();
   }
   sidora.IsUserSetUp(sidora.continueInit, sidora.doubleCheckUser);
 };
@@ -1967,8 +2057,11 @@ sidora.resources.updateThumbnails = function(){
   })
 }
 sidora.resources.refreshSelectedResourceThumbnail = function(){
- var pids = sidora.resources.getHighlighted();
- toRefreshPid = pids[0];
+  var pids = sidora.resources.getHighlighted();
+  toRefreshPid = pids[0];
+  sidora.resources.refreshResourceThumbnail(toRefreshPid);
+}
+sidora.resources.refreshResourceThumbnail = function(toRefreshPid){
   var me = jQuery(jq(toRefreshPid));
   if (typeof(me.children("td").children("div").children("img").attr("src")) == 'string'){
       var imgChild = me.children("td").children("div").children("img");
@@ -1983,7 +2076,7 @@ sidora.resources.refreshSelectedResourceThumbnail = function(){
 	  setTimeout(function(){
            me.children("td").children("div.resource-list-tn").append('<img style="max-height:90px;max-width:150px;display:none;">');
 	   me.children("td").children("div.resource-list-tn").children("img").load(function(){jQuery("#gray_overlay").remove();me.children("td").children("div.resource-list-tn").children("img").css("display","");}).attr("src",pidThumbnail+"?random="+new Date().getTime());
-	  },15000);
+	  },1000);
 	 }
         }
       });
@@ -2041,7 +2134,7 @@ sidora.performTransfer = function(toLocationPid, pids) {
     var onSuccess = function() {
     }
     pidListForRequest = [droppedOn,droppedPid];
-    userFriendlyName = Drupal.t('Duplicating');
+    userFriendlyName = Drupal.t('Copying');
     queueAction = 'duplication';
     userFriendlyName += " <em>"+sidora.util.FriendlyNameDirect(droppedPid)+"</em>";
     userFriendlyName += sidora.display.TO + " <em>"+sidora.util.FriendlyNameDirect(droppedOn)+"</em>";
@@ -2062,7 +2155,7 @@ sidora.performDuplicate = function(toLocationPid, pids, onSuccess) {
       onSuccess = function() {};
     }
     pidListForRequest = [droppedOn,droppedPid];
-    userFriendlyName = Drupal.t('Duplicating');
+    userFriendlyName = Drupal.t('Copying');
     queueAction = 'duplication';
     userFriendlyName += " <em>"+sidora.util.FriendlyNameDirect(droppedPid)+"</em>";
     userFriendlyName += sidora.display.TO + " <em>"+sidora.util.FriendlyNameDirect(droppedOn)+"</em>";
@@ -2196,36 +2289,45 @@ sidora.ResizeOnWindowResize = function(){
 }
 
 sidora.concept.CopyNode = function(data) {
-      //Copy node
-      var toMovePid = data.node.a_attr.pid;
-      var moveToPid = jQuery("#"+data.parent+" a").attr('pid');
-      var actionUrl = Drupal.settings.basePath+'sidora/ajax_parts/copy/'+moveToPid+'/'+toMovePid
-      if (typeof(toMovePid) == 'undefined'){
-        //Both types of resource drags are interpreted as "copy_node"
-        //regardless of whether control is held down
-        //console.log("resource copy/move");
-        jQuery("#forjstree").jstree("delete_node",data.node);
-        return; //resource actions are handled by the 'dnd_stop.vakata' event
+  //Copy node
+  var toMovePid = data.node.a_attr.pid;
+  var moveToPid = jQuery("#"+data.parent+" a").attr('pid');
+  var actionUrl = Drupal.settings.basePath+'sidora/ajax_parts/copy/'+moveToPid+'/'+toMovePid
+  if (typeof(toMovePid) == 'undefined'){
+    //Both types of resource drags are interpreted as "copy_node"
+    //regardless of whether control is held down
+    //console.log("resource copy/move");
+    jQuery("#forjstree").jstree("delete_node",data.node);
+    return; //resource actions are handled by the 'dnd_stop.vakata' event
+  }
+  if (typeof(moveToPid) == 'undefined') {
+    moveToPid = data.moveToPid;
+  }
+  var jst = jQuery("#forjstree").jstree(true);
+  var newParentExistingChildConceptsNumber = parseInt(jQuery("#"+data.parent).children("a").attr("conceptchildren"));
+  var npReplacer = newParentExistingChildConceptsNumber+1;
+  jQuery("#"+data.parent).children("a").attr("conceptchildren",""+npReplacer);
+  jst.get_node(data.parent).a_attr.conceptchildren = ""+npReplacer;
+  sidora.queue.incomingRequestsAreSilent = true;
+  sidora.queue.Request(
+    htmlEntities(sidora.display.CREATE_LINK_TO_CONCEPT),
+    actionUrl,
+    function(){
+      sidora.concept.LoadContentHelp.Relationships();
+      try{
+        var ajaxReturn = JSON.parse(arguments[0]);
+        if (!ajaxReturn.error){
+          sidora.util.conceptLinkCreated(toMovePid, moveToPid);
+        }
+      }catch(exc){
+        console.log(exc);
       }
-      var jst = jQuery("#forjstree").jstree(true);
-      var newParentExistingChildConceptsNumber = parseInt(jQuery("#"+data.parent).children("a").attr("conceptchildren"));
-      var npReplacer = newParentExistingChildConceptsNumber+1;
-      jQuery("#"+data.parent).children("a").attr("conceptchildren",""+npReplacer);
-      jst.get_node(data.parent).a_attr.conceptchildren = ""+npReplacer;
-      sidora.queue.incomingRequestsAreSilent = true;
-      sidora.queue.Request(
-        htmlEntities(sidora.display.CREATE_LINK_TO_CONCEPT),
-        actionUrl,
-        function(){
-          sidora.concept.LoadContentHelp.Relationships();
-          var cfrt = sidora.util.createFunctionRefreshTree(moveToPid);
-          cfrt();
-        }, 
-        sidora.util.createFunctionRefreshTree(moveToPid)
-        , [moveToPid,toMovePid],'copyConcept'
-      );
-      sidora.queue.incomingRequestsAreSilent = false;
-      sidora.queue.Next();
+    }, 
+    sidora.util.createFunctionRefreshTree(moveToPid)
+    , [moveToPid,toMovePid],'copyConcept'
+  );
+  sidora.queue.incomingRequestsAreSilent = false;
+  sidora.queue.Next();
 }
 /**
  * Performs a the necessary changes to the data in the tree and Fedora after a tree node move has occurred (or should occur)
@@ -2237,11 +2339,11 @@ sidora.concept.MoveNode = function(data) {
   var jst = jQuery("#forjstree").jstree();
   var toMovePid = data.node.a_attr.pid;
   var moveToPid = jQuery("#"+data.parent+" a").attr('pid');
-  if (moveToPid == undefined) {
+  if (typeof(moveToPid) == 'undefined') {
     moveToPid = data.moveToPid;
   }
   var moveFromPid = jQuery("#"+data.old_parent+" a").attr('pid');
-  if (moveFromPid == undefined) {
+  if (typeof(moveFromPid) == 'undefined') {
     moveFromPid = data.moveFromPid;
   }
   console.log("Move:"+toMovePid+" from:"+moveFromPid+" to:"+moveToPid);
@@ -2270,7 +2372,14 @@ sidora.concept.MoveNode = function(data) {
     actionUrl, 
     function(){
       sidora.concept.LoadContentHelp.Relationships();
-      cfrt();
+      try{
+        var ajaxReturn = JSON.parse(arguments[0]);
+        if (!ajaxReturn.error){
+          sidora.util.conceptMovedTreeChange(toMovePid, moveFromPid, moveToPid);
+        }
+      }catch(exc){
+        console.log(exc);
+      }
     },
     cfrt,
     [moveToPid,toMovePid,moveFromPid],
@@ -2379,7 +2488,7 @@ sidora.util.constantCheck = function(){
 
   var current_local_minute = Math.floor(d.getTime() / 60000);
   if (current_local_minute < sidora.util.init_time.local + 100) {
-    setTimeout(sidora.util.constantCheck, 30000);
+    setTimeout(sidora.util.constantCheck, 60000);
   }
 
   sidora.resources.updateThumbnails();
@@ -2422,8 +2531,10 @@ sidora.util.getViewableJstreeNodesByPid = function(pid) {
 /*
  * Returns children from the tree's data structure
  */
-sidora.util.childrenPidsListedInUIByNode = function(node) {
-  var jst = jQuery("#forjstree").jstree(true);
+sidora.util.childrenPidsListedInUIByNode = function(node, jst) {
+  if (typeof(jst) == 'undefined') {
+    jst = jQuery("#forjstree").jstree(true);
+  }
   var currentChildren = node.children;
   var currentChildrenPids = [];
   for(var i=0; i<currentChildren.length; i++){
@@ -2433,7 +2544,7 @@ sidora.util.childrenPidsListedInUIByNode = function(node) {
 }
 sidora.util.createFunctionRefreshTree = function(pids, secondsOfWait) {
   if (typeof(pids) == "string") pids = [pids];
-  if (typeof(secondsOfWait) != 'number') secondsOfWait = 20;
+  if (typeof(secondsOfWait) != 'number') secondsOfWait = 5;
   return function() {
     setTimeout(function(){
       pids.forEach(function(pid,index,arr){
@@ -2442,10 +2553,10 @@ sidora.util.createFunctionRefreshTree = function(pids, secondsOfWait) {
     },secondsOfWait * 1000);
   }
 }
-sidora.util.createFunctionTreeAddition = function(openingPid, onLoadComplete, overwriteType) {
+sidora.util.createFunctionTreeAddition = function(openingPid, onLoadComplete, overwriteType, jst) {
   return function(htmlTree) {
     sidora.util.loadTreeSectionCurrent[openingPid] = false;
-    sidora.util.treeAddition(htmlTree, onLoadComplete, overwriteType);
+    sidora.util.treeAddition(htmlTree, onLoadComplete, overwriteType, jst);
   }
 }
 sidora.util.reorderTreeChildrenAlphabetical = function(node) {
@@ -2480,14 +2591,20 @@ sidora.util.treeAdditionSingleItemPassAnchors = function(onLoadComplete, overwri
     var dfAnchorText = jQuery(dfAnchor[0]).html();
     if (currChild.text != dfAnchorText) {
       jst.rename_node(currChild, dfAnchorText);
+      // if the name of the current loaded concept is getting changed, change the name of the page title as well
+      if (sidora.concept.GetPid() == currChild.a_attr.pid) {
+        jQuery("h1.page-title").html(dfAnchor["0"].attributes['fullname'].nodeValue);
+      }
     }
     var a_attr_obj = {};
     jQuery(jQuery(currRep).children("a").first()[0].attributes).each(
       function() {
-       // jstree puts in its own classes and we dont want to overwrite those for now
-       if (this.nodeName != 'class') {
-         a_attr_obj[this.nodeName] = this.nodeValue;
-       }
+        // jstree puts in its own classes and we dont want to overwrite those for now
+        if (this.nodeName != 'class') {
+          if (this.nodeName != 'is-link' && this.nodeName != 'last-parent') {
+            a_attr_obj[this.nodeName] = this.nodeValue;
+          }
+        }
       }
     );   
     a_attr_obj["href"] = currChild.a_attr.href;
@@ -2540,8 +2657,9 @@ sidora.util.treeAdditionSingleItemPassAnchors = function(onLoadComplete, overwri
         var isFound = ctgMap[crcPid];
        
         var a_attr_obj = {};
+        // skip copying the last parent and whether it's a link
         jQuery(jQuery(currRepChild).children("a").first()[0].attributes).each(function() {
-          a_attr_obj[this.nodeName] = this.nodeValue;
+            a_attr_obj[this.nodeName] = this.nodeValue;
         });
         //The information coming back from the ajax call will not have the path through the tree
         //and since the concept listed can be in multiple places, the path to the concepts
@@ -2551,7 +2669,7 @@ sidora.util.treeAdditionSingleItemPassAnchors = function(onLoadComplete, overwri
         newHrefPath = currRepHrefPathParts[0] + prependHrefPath + ccp;
         a_attr_obj['href'] = newHrefPath;
         if (!isFound) {
-          var newNodeId = jQuery("#forjstree").jstree(
+          var newNodeId = jQuery("#" + jst.element.attr('id')).jstree(
                           "create_node", 
                           currChild,
                           { "text" : jQuery(currRepChild).children("a").first()[0].text, "a_attr":a_attr_obj }, 
@@ -2559,6 +2677,7 @@ sidora.util.treeAdditionSingleItemPassAnchors = function(onLoadComplete, overwri
                           individualReturnFunction,
                           true
                         );
+          console.log("Tree:" + jst.element.attr('id') + " Added node:"+ newNodeId);
         }else{
           jst.rename_node(isFound, jQuery(currRepChild).children("a").first()[0].text);
           jQuery(a_attr_obj).each(function(){
@@ -2571,21 +2690,23 @@ sidora.util.treeAdditionSingleItemPassAnchors = function(onLoadComplete, overwri
     sidora.util.reorderTreeChildrenAlphabetical(currChild);
   }//Ends dfAnchor.length not zero
 }
-sidora.util.treeAddition = function(htmlTree, onLoadComplete, overwriteType){
+sidora.util.treeAddition = function(htmlTree, onLoadComplete, overwriteType, jst){
+  if (typeof(jst) == 'undefined') {
+    jst = jQuery("#forjstree").jstree();
+  }
   if (typeof(onLoadComplete) != 'function') {
     onLoadComplete = function(){}
   }
   if (typeof(overwriteType) != 'string') {
     overwriteType = "changes";
   }
-  var jst = jQuery("#forjstree").jstree();
   var documentFragment = jQuery(document.createDocumentFragment());
   documentFragment.append(htmlTree);
   //Find the items in the existing tree that match with what is loaded.
   //Keep in mind there may be copies of the item in different parts of the tree
   var clickedOnPid = jQuery(documentFragment).children().find("a").first().attr("pid");
   //Note: Do not use jQuery to get information out of an existing jstree
-  mainItems = sidora.util.GetTreeNodesByPid(clickedOnPid);
+  mainItems = sidora.util.GetTreeNodesByPid(clickedOnPid, jst);
   //mainItems now holds all the nodes which have a pid matching the root pid from the returned html
   jQuery.each(mainItems, function( mii, mainItem) {
     //Update the current node of the main pid
@@ -2609,7 +2730,7 @@ sidora.util.treeAddition = function(htmlTree, onLoadComplete, overwriteType){
  *                      - "changes" - remove items that are gone from the return and add items from return that don't exist
  * @return true if call will be made, false if call was already made and will not be made again
  */
-sidora.util.loadTreeSection = function(openingPid, onLoadComplete, overwriteType) {
+sidora.util.loadTreeSection = function(openingPid, onLoadComplete, overwriteType, doFast, jst) {
   if (typeof(openingPid) == 'undefined') {
     console.log("No opening pid for loadTreeSection");
   }
@@ -2625,13 +2746,18 @@ sidora.util.loadTreeSection = function(openingPid, onLoadComplete, overwriteType
   }
   //Inform the utility that we are checking on this already so don't check again
   sidora.util.loadTreeSectionCurrent[openingPid] = true;
-
-  var jst = jQuery("#forjstree").jstree(true);
+  var url = Drupal.settings.basePath+"sidora/ajax_parts/tree/"+openingPid+"/2";
+  if (doFast) {
+    url += "?doFast=true";
+  }
+  if (typeof(jst) == 'undefined') {
+    jst = jQuery("#forjstree").jstree(true);
+  }
   jQuery.ajax({
     "dataType":"html",
     "method":"GET",
-    "url": Drupal.settings.basePath+"sidora/ajax_parts/tree/"+openingPid+"/2",
-    "success": sidora.util.createFunctionTreeAddition(openingPid, onLoadComplete, overwriteType)
+    "url": url,
+    "success": sidora.util.createFunctionTreeAddition(openingPid, onLoadComplete, overwriteType, jst)
   });
   return true;
 }
@@ -2639,7 +2765,7 @@ sidora.util.loadTreeSection = function(openingPid, onLoadComplete, overwriteType
  * Make ajax call to see if the pids are still valid objects, removes any invalid pids from the UI
  * @return true if call will be made, false if call was already made and will not be made again
  */
-sidora.util.checkUIForInvalidPids = function(openingPid, childPidsCsv) {
+sidora.util.checkUIForInvalidPids = function(openingPid, childPidsCsv, jst) {
   if (typeof(sidora.util.checkUIForInvalidPidsCurrent) == 'undefined') {
     sidora.util.checkUIForInvalidPidsCurrent = [];
   }
@@ -2649,7 +2775,9 @@ sidora.util.checkUIForInvalidPids = function(openingPid, childPidsCsv) {
   }
   //Inform the utility that we are checking on this already so don't check again
   sidora.util.checkUIForInvalidPidsCurrent[openingPid] = childPidsCsv;
-  var jst = jQuery("#forjstree").jstree(true);
+  if (typeof(jst) == 'undefined') {
+    jst = jQuery("#forjstree").jstree(true);
+  }
   var pidRemoval = function(pidsValidationInfo){
     if (pidsValidationInfo.invalid.length > 0) {
       for (var pii = 0; pii < pidsValidationInfo.invalid.length; pii++) {
@@ -2739,8 +2867,10 @@ sidora.util.refreshTreeFailuresInARow = 0;
 /*
  * Returns the existing tree nodes by a pid
  */
-sidora.util.GetTreeNodesByPid = function(pid) {
-  var jst = jQuery("#forjstree").jstree();
+sidora.util.GetTreeNodesByPid = function(pid, jst) {
+  if (typeof(jst) == 'undefined') {
+    jst = jQuery("#forjstree").jstree();
+  }
   var existingTreeNodes = jst.get_json('#', {flat:true});
   var mainItems = [];
   for (var etni = 0; etni < existingTreeNodes.length; etni++) {
@@ -2757,13 +2887,15 @@ sidora.util.GetTreeNodesByPid = function(pid) {
  *      - so that only one refresh tree request goes out no matter how many times its called during that time period
  * @param pid - pid of item that we expect the children to change, or for the name to change
  */
-sidora.util.RefreshTreeHelper = function(secondsOfWait, pid, onlyRefreshIfNew) {
+sidora.util.RefreshTreeHelper = function(secondsOfWait, pid, onlyRefreshIfNew, jst) {
+  if (typeof(jst) == 'undefined') {
+    jst = jQuery("#forjstree").jstree();
+  }
   
   if (typeof(secondsOfWait) == 'undefined' || secondsOfWait == null) secondsOfWait = .01;
   //Since we are concerned about the children of this and our treeAddition function expects to get the grandparent
   //of newly changed items, find an appropriate parent 
-  var nodeIds = sidora.util.GetTreeNodesByPid(pid);
-  var jst = jQuery("#forjstree").jstree();
+  var nodeIds = sidora.util.GetTreeNodesByPid(pid, jst);
   nodeIds.forEach(function(node, index, arr) {
     var parentNode = jst.get_node(node.parent);
     if (parentNode.id == '#') {
@@ -2928,6 +3060,8 @@ sidora.util.refreshConceptTreeUIDirect = function(pid, tree_html){
     jst.get_node(toUpdateId).a_attr.resourcechildren = ""+number_of_children;
   }
 }
+
+sidora.ProjectSpaces.showOverlayDuringRefresh = false;
 /**
  * Pulls the current project spaces from the backend and adds new ones
  * Does not remove any that the user lost permissions to view
@@ -2940,14 +3074,25 @@ sidora.util.refreshConceptTreeUIDirect = function(pid, tree_html){
  * to get settled and resaved to the DB
  */
 sidora.ProjectSpaces.refreshOptions = function(waitSecondsBeforeCall){
+  if (sidora.ProjectSpaces.showOverlayDuringRefresh) {
+    var overlay = jQuery('<div class="full-screen-overlay"><div id="countdown" style="color:white;margin:30px auto;width:200px;"></div></div>');
+    overlay.appendTo(document.body);
+  } 
+  // if the value of the dropdown does not match what's shown right now, fix it
+  var shownId = jQuery("#forjstree ul li ul li:visible").attr('id');
+  var selectedId = jQuery("#psdd-select").val();
+  if (shownId != selectedId) {
+    jQuery("#psdd-select").change();
+  }
+
   if (typeof(waitSecondsBeforeCall) != 'number') {
-    waitSecondsBeforeCall = 20;
+    waitSecondsBeforeCall = 5;
   }
   setTimeout(function(){
-    sidora.ProjectSpaces.refreshOptionsImmediate();
+    sidora.ProjectSpaces.refreshOptionsImmediate(3);
   }, waitSecondsBeforeCall * 1000)
 }
-sidora.ProjectSpaces.refreshOptionsImmediate = function(){
+sidora.ProjectSpaces.refreshOptionsImmediate = function(refreshesUntilGiveUp){
   jQuery.ajax({
     url: Drupal.settings.basePath+'sidora/ajax_parts/research_spaces_tree/1',
   }).done(function(returnedHtml){
@@ -2960,12 +3105,20 @@ sidora.ProjectSpaces.refreshOptionsImmediate = function(){
     var df = jQuery(returnedHtml);
     var psaList = jQuery(df).children("li").children("ul").children("li").children("a");
     var missingElems = [];
-    psaList.each(function(index,elem){
+    for (var pli = 0; pli < psaList.length; pli++) {
+      var elem = psaList[pli];
       var elemPid = elem.attributes['pid'].value;
-      if (psPids.indexOf(elemPid) == -1) {
+      var ddi = psPids.indexOf(elemPid); 
+      if (ddi == -1) {
         missingElems.push(elem);
       }
-    });
+      else {
+        // check for name change and for icon change
+        var tn = sidora.util.GetTreeNodesByPid(elem.attributes['pid'].value);
+        tn[0].text = elem.innerHTML;
+      }
+    };
+    var changeMade = false;
     for (var ei = 0; ei < missingElems.length; ei++){
       var elem = missingElems[ei];
       var elemAttr = [];
@@ -2977,8 +3130,20 @@ sidora.ProjectSpaces.refreshOptionsImmediate = function(){
       // elemAttr now contains the information to give to jstree for this item
       var newDomId = jst.create_node('j1_1' ,  { "text" : elem.innerHTML,"a_attr": elemAttr}, "last", function(){  console.log("done:"+elem.innerHTML); });
       jQuery("option[value='sep1']").before("<option value='"+newDomId+"'>"+elem.innerHTML+"</option>");
+      jQuery("#psdd-select").val(newDomId);
       sidora.ProjectSpaces.ChangeProjectSpace(jQuery("#psdd-select").val(), true);
+      jQuery("#" + newDomId + " > a").click();
+      changeMade = true;
     };
+    if (!changeMade && refreshesUntilGiveUp > 0) {
+      setTimeout(function(){
+        sidora.ProjectSpaces.refreshOptionsImmediate(refreshesUntilGiveUp-1);
+      }, 1000);
+    }
+    jQuery(".full-screen-overlay").remove();
+    sidora.ProjectSpaces.showOverlayDuringRefresh = false;
+    var jst = jQuery("#forjstree").jstree();
+    jst.redraw(true);
   });
 }
 /*
@@ -3038,7 +3203,7 @@ sidora.concept.DeleteConcept = function(){
 sidora.concept.DeleteConceptSpecified = function(name, pid, conceptChildrenLen, resourceChildrenLen) {
   jQuery('#deleteConceptDialog').remove();
   if ((conceptChildrenLen == null) || (resourceChildrenLen == null)) {
-    jQuery("body").append("<div id='deleteConceptDialog' style='display:none;' title='"+htmlEntities(sidora.display.DELETE_CONCEPT_TITLE)+"'><p>Error getting the child concepts or resources for this concept. Cannot delete this concept</p><p>"+name+" ("+pid+")</p></div>");
+    jQuery("body").append("<div id='deleteConceptDialog' style='display:none;' title='"+htmlEntities(sidora.display.DELETE_CONCEPT_TITLE)+"'><p>Error getting the child folders or resources for this folder. Cannot delete this folder</p><p>"+name+"<span style='display:none'> ("+pid+")</span></p></div>");
     jQuery("#deleteConceptDialog").dialog({
       resizable: false,
       height:250,
@@ -3053,7 +3218,7 @@ sidora.concept.DeleteConceptSpecified = function(name, pid, conceptChildrenLen, 
     return;
   }
   if (conceptChildrenLen + resourceChildrenLen > 0){
-    jQuery("body").append("<div id='deleteConceptDialog' style='display:none;' title='"+htmlEntities(sidora.display.DELETE_CONCEPT_TITLE)+"'><p>This concept has "+conceptChildrenLen+" concept(s) and has "+resourceChildrenLen+" resource(s) as children. It cannot be deleted while it has children.</p><p>"+name+" ("+pid+")</p></div>");
+    jQuery("body").append("<div id='deleteConceptDialog' style='display:none;' title='"+htmlEntities(sidora.display.DELETE_CONCEPT_TITLE)+"'><p>This folder has "+conceptChildrenLen+" folder(s) and has "+resourceChildrenLen+" resource(s) as children. It cannot be deleted while it has children.</p><p>"+name+"<span style='display:none'> ("+pid+")</span></p></div>");
     jQuery("#deleteConceptDialog").dialog({
       resizable: false,
       height:250,
@@ -3067,14 +3232,14 @@ sidora.concept.DeleteConceptSpecified = function(name, pid, conceptChildrenLen, 
     });
     return;
   }
-  jQuery("body").append("<div id='deleteConceptDialog' style='display:none;' title='"+htmlEntities(sidora.display.DELETE_CONCEPT_TITLE)+"'><p>Are you sure you want to delete this concept?</p><p>"+name+" ("+pid+")</p></div>");
+  jQuery("body").append("<div id='deleteConceptDialog' style='display:none;' title='"+htmlEntities(sidora.display.DELETE_CONCEPT_TITLE)+"'><p>Click confirm to delete this folder:</p><p>"+name+"<span style='display:none;'> ("+pid+")</span></p></div>");
   jQuery("#deleteConceptDialog").dialog({
     resizable: false,
     height:205,
     width: 400,
     modal: true,
     buttons: {
-      "Delete concept": function() {
+      "Confirm": function() {
         var toClose = this;
         var onDeleteWorked = sidora.util.createFunctionRefreshTree(pid);
         var onDeleteFailed = function(data){
@@ -3149,22 +3314,22 @@ sidora.resources.DeleteResource = function(pid){
   if (cantRemoveLinksPids.length > 0) {
     removeFromParentTextBlock += "The following will <strong>not</strong> be removed:";
     removeFromParentTextBlock += sidora.resources.UserFriendlyListing(cantRemoveLinksPids);
-    removeFromParentTextBlock += "To remove the correlation between a resource above and this concept, please do one of the following:<br>";
+    removeFromParentTextBlock += "To remove the correlation between a resource above and this folder, please do one of the following:<br>";
     removeFromParentTextBlock += " 1) move the resource to another location<br>";
     removeFromParentTextBlock += " or<br>";
-    removeFromParentTextBlock += " 2) remove all other links to the resource and then you may delete it from this concept.<br><br>";
+    removeFromParentTextBlock += " 2) remove all other links to the resource and then you may delete it from this folder.<br><br>";
   }
   if (cantRemoveLinksPids.length == allPids.length) {
-    informationText += "<strong>Your selection can not be removed. </strong>You've selected only resources that are administered by the current concept that are linked to other concepts. Check the resource's 'Relationships' pane to see these links.<br>";
+    informationText += "<strong>Your selection can not be removed. </strong>You've selected only resources that are administered by the current folder that are linked to other folders. Check the resource's 'Relationships' pane to see these links.<br>";
     informationText += removeFromParentTextBlock;
   }
   else {
     if (cantRemoveLinksPids.length > 0) {
-      informationText += "<strong>Not all of your selections can be removed. </strong> Some of the selected resources are administered by the current concept and are linked to other concepts. Check the resource's 'Relationships' pane to see these links.";
+      informationText += "<strong>Not all of your selections can be removed. </strong> Some of the selected resources are administered by the current folder and are linked to other folders. Check the resource's 'Relationships' pane to see these links.";
       informationText += removeFromParentTextBlock;
     }
     if (removeLinksPids.length > 0) {
-      informationText += "<strong>The following links will be removed from this concept:</strong>";
+      informationText += "<strong>The following links will be removed from this folder:</strong>";
       informationText += sidora.resources.UserFriendlyListing(removeLinksPids);
     }
     if (deletePids.length > 0) {
@@ -3182,7 +3347,7 @@ sidora.resources.DeleteResource = function(pid){
     width: 400,
     modal: true,
     buttons: {
-      "Delete resource": function() {
+      "Confirm": function() {
         var onDeleteWorked = sidora.util.createFunctionRefreshTree(sidora.concept.GetPid());
         var onDeleteFailed = function(data){};
         sidora.resources.DeleteResourceBusinessLogic(sendOutPids, onDeleteWorked, onDeleteFailed);
@@ -3291,6 +3456,7 @@ sidora.resources.EditDetails = function(editPids){
   });
 }
 sidora.resources.UpdateContent = function(resourcePid){
+  jQuery("#addDatastreamDialog").closest("div").remove();
   jQuery("body").append("<div id='addDatastreamDialog' style='display:none;' title='Update Content'><iframe height='1000%' width='100%' style='height:100%;width:100%' src='"+Drupal.settings.basePath+"sidora/manage/"+resourcePid+"/upload_content' frameborder='0' marginwidth='0' marginheight='0' allowfullscreen></iframe></div>");
   jQuery("#addDatastreamDialog").dialog({
      resizable: true,
@@ -3300,7 +3466,7 @@ sidora.resources.UpdateContent = function(resourcePid){
   });
   jQuery("#addDatastreamDialog").css("overflow", "hidden");
 }
-sidora.resources.Vestigial = function(){
+sidora.resources.Vestigial = function(){ // BBB TODO REMOVE TBD
   //The overlay is needed to protect the cursor from being lost to the iframe
   //For example, here's what would happen during a drag toward the iframe:
   //Drag looks like it is going fine, once cursor jumps "inside" the iframe, the drag ends.  Mouse up is not captured by the dragged element, so
@@ -3659,7 +3825,7 @@ sidora.manage.removeDatastream = function(pid,dsid){
     width: 600,
     modal: true,
     buttons: {
-      "Yes, remove": function() {
+      "Confirm": function() {
         sidora.queue.RequestPost("Removed Datastream "+dsid+" from "+pid+" <em>"+sidora.util.FriendlyNameDirect(pid)+"</em>",Drupal.settings.basePath+"sidora/manage/"+pid+"/remove/"+dsid+"/confirm","",
           function(){
             sidora.manage.resetFrame();
@@ -3668,7 +3834,7 @@ sidora.manage.removeDatastream = function(pid,dsid){
         sidora.queue.Next();
         jQuery( this ).dialog( "close" );
       },
-      "No, Do not remove": function() {
+      "Cancel": function() {
         jQuery( this ).dialog( "close" );
       }
     }
@@ -3676,6 +3842,165 @@ sidora.manage.removeDatastream = function(pid,dsid){
   jQuery("#removeDatastreamDialog").css("overflow", "hidden");
   jQuery("#removeDatastreamDialog").closest(".ui-dialog").css("z-index", 1000); //shadowbox is 998
 }
+sidora.util.conceptLinkCreated = function(linkedPid, newParentPid) {
+  // Straight copy the node over, fix href on it and children, remove grandchildren, close it
+  var jst = jQuery("#forjstree").jstree();
+  jst.pureUIChange = true;
+  var exampleNode = sidora.util.GetTreeNodesByPid(linkedPid);
+  var toCopyNode = exampleNode[0];
+  var newParents = sidora.util.GetTreeNodesByPid(newParentPid);
+
+  for (var npi = 0; npi < newParents.length; npi++) {
+    var newParentId = newParents[npi];
+    var newParent = jst.get_node(newParentId);
+    // if the node already exists on the tree here, remove it so we can constsruct one with the proper
+    // updated attributes
+    if (jQuery("#"+newParent.id+" ul li a[pid='"+toCopyNode.a_attr.pid+"']").length > 0){
+      jst.delete_node(jQuery("#"+newParent.id+" ul li a[pid='"+toCopyNode.a_attr.pid+"']").parent().attr('id'));
+    }
+    jst.copy_node(toCopyNode, newParent, "last", function(newNode, newParent, position){
+      var destinationUrl = sidora.util.constructChildUrl(newParent.a_attr.href, linkedPid);
+      newNode.a_attr.href = destinationUrl;
+      newNode.a_attr['is-link'] = 'TRUE';
+      newNode.a_attr['last-parent'] = newParent.a_attr.pid;
+      // remove any children so we have full control over the future content
+      for (var ci = 0; ci < newNode.children.length; ci++){
+        jst.remove_node(jst.get_node(newNode.children[ci]));
+      }
+      for (var ci = 0; typeof(toCopyNode.children) != 'undefined' && ci < toCopyNode.children.length; ci++){
+        var childNode = jst.get_node(toCopyNode.children[ci]);
+        var destinationUrl = sidora.util.constructChildUrl(newNode.a_attr.href, linkedPid);
+        jst.copy_node(childNode, newNode, "last", function(newChild, myCopyParent, position){
+          var destinationUrl = sidora.util.constructChildUrl(myCopyParent.a_attr.href, newChild.a_attr.pid);
+          newChild.a_attr.href = destinationUrl;
+        });
+        jst.close_node(newNode);
+      }
+      setTimeout(function(){
+        jst.redraw(true);
+      },3000);
+    });
+  }
+  jst.pureUIChange = false;
+  jst.redraw(true);
+}
+sidora.util.conceptMovedTreeChange = function(movedPid, oldParentPid, newParentPid){
+  // Find one of the nodes, move it to one of the new parents
+  // delete the nodes of all the other parents
+  // copy the node and its children to the other new parents
+  var jst = jQuery("#forjstree").jstree();
+  var movedNodes = sidora.util.GetTreeNodesByPid(movedPid);
+  var newParents = sidora.util.GetTreeNodesByPid(newParentPid);
+  jst.pureUIChange = true;
+  var movedNode = movedNodes[0];
+  jst.move_node(movedNode, newParents[0], "last", function(newNode, newParent, position){
+    for (var ci = 0; ci < movedNode.children.length; ci++){
+      var childNode = jst.get_node(movedNode.children[ci]);
+      var destinationUrl = sidora.util.constructChildUrl(movedNode.a_attr.href, childNode.a_attr.pid);
+      childNode.a_attr.href = destinationUrl;
+      // Remove the grandchildren, to be reloaded when the node is opened
+      for (var gci = 0; gci < childNode.children.length; gci++) {
+        jst.delete_node(jst.get_node(childNode.children[gci]));
+      }
+    }
+  });
+  // replace the href on the moved node
+  destinationUrl = sidora.util.constructChildUrl(newParents[0].a_attr.href, movedPid);
+  movedNode.a_attr.href = destinationUrl; 
+
+  sidora.util.conceptRemovedTreeChange(oldParentPid, movedPid);
+
+  for (var npi = 1; npi < newParents.length; npi++) {
+    var newParentId = newParents[npi];
+    var newParent = jst.get_node(newParentId);
+    jst.copy_node(movedNode, newParent, "last", function(newNode, newParent, position){
+      var destinationUrl = sidora.util.constructChildUrl(newParent.a_attr.href, movedPid);
+      newNode.a_attr.href = destinationUrl; 
+      for (var ci = 0; ci < movedNode.children.length; ci++){
+        var childNode = jst.get_node(movedNode.children[ci]);
+        jst.copy_node(childNode, newNode, "last", function(newChild, myCopyParent, position){
+          var destinationUrl = sidora.util.constructChildUrl(myCopyParent.a_attr.href, newChild.a_attr.pid);
+          newChild.a_attr.href = destinationUrl;
+        });
+      }
+    });
+    
+  }  
+  jst.pureUIChange = false;
+  jst.redraw(true);
+  // close the node so it will reload it's grandchildren when opened
+  jst.close_node(movedNode);
+}
+sidora.util.constructChildUrl = function(parentHref, childPid) {
+  var childHref = "/sidora/workbench/#" + childPid;
+  if (parentHref.indexOf("=") != -1 && !parentHref.endsWith("?path=")) {
+    childHref += "?path=" + parentHref.substring(parentHref.lastIndexOf("=")+1) + "," + parentHref.substring(parentHref.indexOf("#")+1,parentHref.lastIndexOf("?"));
+  }
+  else if (parentHref.endsWith("?path=")){
+    childHref += "?path=" + parentHref.substring(parentHref.indexOf("#")+1,parentHref.lastIndexOf("?"));
+  }
+  else {
+    childHref += "?path=" + parentHref.substring(parentHref.indexOf("#")+1);
+  }
+  return childHref;
+}
+sidora.util.conceptRemovedTreeChange = function(oldConceptParentPid, removedConceptPid) {
+  var jst = jQuery("#forjstree").jstree();
+  var oldParents = sidora.util.GetTreeNodesByPid(oldConceptParentPid); 
+  for (var opi = 0; opi < oldParents.length; opi++) {
+    var oldParentId = oldParents[opi];
+    var oldParent = jst.get_node(oldParentId);
+    for (var opci = 0; opci < oldParent.children.length; opci++) {
+      var opChild = jst.get_node(oldParent.children[opci]);
+      var opChildPid = opChild.a_attr.pid;
+      if (opChildPid == removedConceptPid) {
+        jst.pureUIChange = true;
+        jst.delete_node(opChild);
+        jst.pureUIChange = false;
+      }
+    }
+  }
+}
+sidora.util.conceptAddedCompletelyNew = function(parentPid, pidOfNewItem, nidOfNewItem, nameOfNewItem) {
+  var jst = jQuery("#forjstree").jstree();
+  var oldParents = sidora.util.GetTreeNodesByPid(parentPid);
+  for (var opi = 0; opi < oldParents.length; opi++) {
+    var oldParentId = oldParents[opi];
+    var oldParent = jst.get_node(oldParentId);
+    // The child should take on its parents permissions, so use the parent's attributes
+    var a_attr_obj = new Object();
+    // take the class from the parent except about if its a project space
+    a_attr_obj.class = oldParent.a_attr.class.replace("is-project-space","");
+    a_attr_obj.permissions = oldParent.a_attr.permissions;
+    a_attr_obj.resourcechildren = "0";
+    a_attr_obj.conceptchildren = "0";
+    a_attr_obj.fullname = nameOfNewItem;
+    a_attr_obj.nid = nidOfNewItem; 
+    a_attr_obj.pid = pidOfNewItem;
+    // calculate and use the new url
+    parentHref = oldParent.a_attr.href;
+    var childHref = "/sidora/workbench/#" + pidOfNewItem;
+    if (parentHref.indexOf("=") != -1 && !parentHref.endsWith("?path=")) {
+      childHref += "?path=" + parentHref.substring(parentHref.lastIndexOf("=")+1) + "," + parentHref.substring(parentHref.indexOf("#")+1,parentHref.lastIndexOf("?"));
+    }
+    else if (parentHref.endsWith("?path=")){
+      childHref += "?path=" + parentHref.substring(parentHref.indexOf("#")+1,parentHref.lastIndexOf("?"));
+    }
+    else {
+      childHref += "?path=" + parentHref.substring(parentHref.indexOf("#")+1);
+    }
+    a_attr_obj.href = childHref;
+    var newNodeId = jQuery("#forjstree").jstree(
+	  "create_node",
+	  oldParent,
+	  { "text" : nameOfNewItem, "a_attr":a_attr_obj },
+	  0,
+	  function(){},
+	  true
+    );
+  }  
+}
+
 jQuery(function () {
   //Check to see that the page has a hash or ends with a '/' so that we will not have to reload the page on first click
   if (
@@ -3729,8 +4054,9 @@ function getNewPid( jsonString ) {
 sidora.reloadPage = function(){
   window.location.reload();
 }
-sidora.util.refreshPidInTree = function(){
-sidora.util.RefreshTree(null,sidora.concept.GetPid());
+sidora.util.refreshPidInTree = function(secondsOfWait){
+  if (typeof(secondsOfWait) == 'undefined') secondsOfWait = null;
+  sidora.util.RefreshTree(secondsOfWait,sidora.concept.GetPid());
 }
 function htmlEntities(str) {
     return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');

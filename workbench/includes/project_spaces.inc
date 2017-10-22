@@ -55,6 +55,22 @@ function sidora_put_into_project_spaces($item_identifier, $project_space_identif
   }
   return TRUE;
 }
+/**
+ * Put the first object in the groups of second object
+ */
+function sidora_put_this_into_their_project_space($add_to_groups_id, $get_groups_from_id) {
+  $atg_info = sidora_get_info($add_to_groups_id, FALSE);
+  $ggf_info = sidora_get_info($get_groups_from_id, FALSE);
+  if (empty($atg_info) || empty($ggf_info)) {
+    return FALSE;
+  }
+  $og_gids = sidora_get_group_nids_membership($ggf_info['nid']);
+  $groups = node_load_multiple($og_gids);
+  foreach($groups as $group) {
+    og_group('node', $group, array('entity_type' => 'node', 'entity' => $atg_info['nid']));
+  }
+  return TRUE;
+}
 
 /**
  * Assume that the passed in item has a node if it should, and put that node into the 
@@ -385,7 +401,7 @@ function sidora_get_project_spaces_from_og_groups($group_nodes, $user, $only_ret
            }
            else {
              // if it's empty then there are permissions groups that point to pids that there is not a node for
-             watchdog('sidora','Permission groups exist for pid: '.$pid.' but no concept node exists for it.');
+             watchdog('sidora','Permission groups exist for pid: '.$pid.' but no folder node exists for it.');
            }
          }
       }
@@ -424,13 +440,13 @@ function sidora_get_groups_for_project_space($pid, $administrative_bookkeeping =
  * Returns a tree based on the research spaces the user has access to, defaults to 4 levels total
  */
 function sidora_project_spaces_tree($root_label = 'Research Space Destinations:', $include_href = FALSE, $permissions = array("create"), $start_open = TRUE, $num_levels = 3){
-  sleep(3);
+  //sleep(3);
   $ignore_pid = filter_input(INPUT_GET, 'ignore_pid', FILTER_SANITIZE_STRING);
   $specify_pids = filter_input(INPUT_GET, 'specify_pids', FILTER_SANITIZE_STRING);
   if (!empty($specify_pids)) {
     $specify_pids = explode(',', $specify_pids);
     if (empty($root_label)) {
-      $root_label = 'Highlight a concept and submit';
+      $root_label = 'Highlight a folder and submit';
     }
   }
   $always_ignore_pids = array('si:root','si:user-projects');
@@ -595,12 +611,13 @@ function sidora_project_space_creation_form($form = array(), &$form_state, $exis
         // Pass the maximum file size in bytes
         'file_validate_size' => array(1 * 1024 * 1024),
         'file_validate_image_resolution' => array('24x24', '1x1'),
+        'sidora_icon_upload_message' => array(),
       ),
       '#upload_location' => 'public://',
       '#attributes' => array('default_image_path' => ''),
   );
   $form['logo_preview'] = array(
-    '#markup' => '<div><a href="#" onclick="doPreview();">Click here</a> to preview with current icon (must be uploaded) and name.<br><div class="logo-preview"></div></div>
+    '#markup' => '<div style="position:relative;top:-25px;"><a href="#" onclick="doPreview();">Click here</a> to preview with current icon (must be uploaded) and name.<br><div class="logo-preview"></div></div>
     <script>
       doPreview=function(){
         myHref = jQuery(".file a").attr("href");
@@ -616,14 +633,20 @@ function sidora_project_space_creation_form($form = array(), &$form_state, $exis
   );
   $form['submit'] = array(
     '#type' => 'submit',
-    '#value' => t('Confirm'),
+    '#value' => t('Submit'),
     '#attributes' => array(
       'onclick' => 'jQuery(body).append("<div class=\"full-screen-overlay\"></div>");',
     ),
   );
+  $form['close'] = array(
+    '#markup' => '<a style="" href="' . $GLOBALS['base_url'] . '/sidora/research_spaces" onclick="if (window.parent.sidora) {window.parent.sidora.ProjectSpaces.refreshOptions(1);} jQuery(body).append(\'<div class=\\\'full-screen-overlay\\\'></div>\');"><input type="button" id="closebottom" name="closebottom" value="Close" class="form-submit"></a>',
+  );
   return $form;
 }
-
+function sidora_icon_upload_message(){
+  drupal_set_message("Submit this form to save the new icon to the research space.", "warning");
+  return array();
+}
 function sidora_project_space_creation_form_validate($form, &$form_state) {
   if (empty($form_state['values']['ps_name'])){ 
     form_set_error('ps_name', 'Enter a name for the research space.');
@@ -648,7 +671,6 @@ function sidora_project_space_creation_form_submit($form, &$form_state) {
       node_save($created_node);
     }
     drupal_set_message("Research Space Edits Saved");
-    return;
   }
   else {
     global $user;
@@ -691,7 +713,11 @@ function sidora_project_space_creation_form_submit($form, &$form_state) {
     }
     node_save($created_node);
     sidora_put_into_proper_project_space($created_node);
-    drupal_goto('sidora/research_spaces');
+
+    // On a create, go to the research_spaces page (which will then close)
+    if (empty($form_state['existing_pid'])) {
+      drupal_goto('sidora/research_spaces', array('query' => array('close' => 'now')));
+    }
   }
   else {
     drupal_set_message("Research Space Editing Failed", "warning");
@@ -788,6 +814,7 @@ function sidora_project_space_transfer_form($form = array(), &$form_state, $pid 
   if (empty($to_username)) {
     $form["username_new"] = array(
       '#type' => 'textfield',
+      '#autocomplete_path' => 'user/autocomplete',
       '#title' => t('Enter the username of the new owner'),
     );
     $form['submit'] = array(
@@ -880,6 +907,14 @@ function sidora_project_spaces_form_submit($form, &$form_state) {
  */
 function sidora_project_spaces_form($form = array(), &$form_state, $uid = NULL) {
   drupal_add_css(drupal_get_path('module','sidora').'/css/workbench_basic_screen.css',array('weight' => '1000000', 'group' => CSS_THEME));
+  drupal_add_js("
+        jQuery(document).ready(function(){
+          if (window.location.href.endsWith('?close=now')) {
+            window.parent.sidora.ProjectSpaces.showOverlayDuringRefresh = true;
+            window.parent.Shadowbox.close();
+          }
+        });
+","inline");
   global $user;
   if (!sidora_is_admin($user) && !empty($uid)){
     $form['info'] = array(
@@ -889,7 +924,10 @@ function sidora_project_spaces_form($form = array(), &$form_state, $uid = NULL) 
   }
   $owned_groups = sidora_get_project_spaces_by_member($uid);
   $form['cnps'] = array(
-    '#markup' => '<a style="float:right" href="research_space_create"><input type="button" id="cnps" name="cnps" value="Create New Research Space" class="form-submit"></a>',
+    '#markup' => '<a style="float:right" href="' . $GLOBALS['base_url'] . '/sidora/research_space_create"><input type="button" id="cnps" name="cnps" value="Create Research Space" class="form-submit"></a>',
+  );
+  $form['autopost'] = array(
+    '#markup' => '<script>jQuery(document).ready(function(){jQuery("[name=\'default_ps\']").click(function(){jQuery.post(\'\',jQuery("#sidora-project-spaces-form").serialize())});});</script>',
   );
   $form['table'] = array(
     '#theme' => 'table',
@@ -908,7 +946,9 @@ function sidora_project_spaces_form($form = array(), &$form_state, $uid = NULL) 
       $obj = sidora_obj($pid);
       if (!empty($obj)) {
         $name_markup = '<span class="rs-listing-rs-name">';
+        $name_markup .= '<a href="/sidora/workbench/#' . $pid . '?path=" onclick="var toChoose = jQuery(\'#forjstree ul li ul li a[pid=\\\'' . $pid . '\\\']\', window.parent.document).parent().attr(\'id\'); jQuery(\'#psdd-select\', window.parent.document).val(toChoose); window.parent.Shadowbox.close();  jQuery(\'#psdd-select\',window.parent.document).change(); return false;" class="">';
         $name_markup .= (empty($owned_group->field_fedora_label[$owned_group->language]))?"(none)":$owned_group->field_fedora_label[$owned_group->language][0]["safe_value"];
+        $name_markup .= '</a>';
         $name_markup .= '</span>';
         $name_markup .= '<br>';
         $name_markup .= '<span class="rs-listing-rs-desc">';
@@ -965,10 +1005,21 @@ function sidora_project_spaces_form($form = array(), &$form_state, $uid = NULL) 
     $form['default_ps'] = array('#type'=>'radio', '#attributes' => array('style' => 'display:none;'));
     if (sidora_is_admin()) { 
       $form['show_all'] = array(
-        '#markup' => '<div>' . l(t('Show All'),'/sidora/research_spaces/all') . '<div>',
+        '#markup' => '<div style="position:relative;top:-30px;height:0px;">' . l(t('Show All'),'/sidora/research_spaces/all') . '</div>',
       );
     }
+  }
+  if ($uid == 'all') {
+    $form['show_mine'] = array(
+      '#markup' => '<div style="margin-bottom:8px;">' . l(t('Show Mine'),'/sidora/research_spaces') . '</div>',
+    );
+  }
+  $form['close'] = array(
+    '#markup' => '<a style="float:left" href="#" onclick="window.parent.Shadowbox.close(); return false;"><input type="button" id="closebottom" name="closebottom" value="Close" class="form-submit"></a>',
+  );
+  if (empty($uid) || $uid == $user->uid){
     $form['submit'] = array(
+      '#attributes' => array('style' => 'display:none'),
       '#type' => 'submit',
       '#value' => t('Submit'),
     );
@@ -994,7 +1045,7 @@ function sidora_sharing_permissions_form($form = array(), &$form_state, $pid) {
   );
   $form['table'] = array(
     '#theme' => 'sidora_sharing_permissions',
-    '#header' => array(t('User'), t('Create'),t('View'),t('Edit'),t('Delete')),
+    '#header' => array(t('User'), t('View'), t('Create'), t('Edit'), t('Delete')),
   );
   $selected_groups = sidora_get_groups_for_project_space($pid);
   $member_to_group_association = sidora_get_member_to_group_association($selected_groups);
@@ -1007,21 +1058,25 @@ function sidora_sharing_permissions_form($form = array(), &$form_state, $pid) {
         "username_$uid" => array(
           '#markup' => $username,
         ),
-        "create_$uid" => array(
-          '#type' =>'checkbox',
-          '#default_value' => FALSE,
-        ),
         "view_$uid" => array(
           '#type' =>'checkbox',
           '#default_value' => FALSE,
+          '#attributes' => array("sidora_option"=>array('view_only')),
+        ),
+        "create_$uid" => array(
+          '#type' =>'checkbox',
+          '#default_value' => FALSE,
+          '#attributes' => array("sidora_option"=>array('require_view')),
         ),
         "edit_$uid" => array(
           '#type' =>'checkbox',
           '#default_value' => FALSE,
+          '#attributes' => array("sidora_option"=>array('require_view')),
         ),
         "delete_$uid" => array(
           '#type' =>'checkbox',
           '#default_value' => FALSE,
+          '#attributes' => array("sidora_option"=>array('require_view')),
         ),
       );
       foreach($groups as $group) {
@@ -1032,23 +1087,28 @@ function sidora_sharing_permissions_form($form = array(), &$form_state, $pid) {
   }
   $row = array(
     "username_new" => array(
+      '#autocomplete_path' => 'user/autocomplete',
       '#type' => 'textfield',
-    ),
-    "create_new" => array(
-      '#type' =>'checkbox',
-      '#default_value' => FALSE,
     ),
     "view_new" => array(
       '#type' =>'checkbox',
       '#default_value' => FALSE,
+      '#attributes' => array("sidora_option"=>array('view_only')),
+    ),
+    "create_new" => array(
+      '#type' =>'checkbox',
+      '#default_value' => FALSE,
+      '#attributes' => array("sidora_option"=>array('require_view')),
     ),
     "edit_new" => array(
       '#type' =>'checkbox',
       '#default_value' => FALSE,
+      '#attributes' => array("sidora_option"=>array('require_view')),
     ),
     "delete_new" => array(
       '#type' =>'checkbox',
       '#default_value' => FALSE,
+      '#attributes' => array("sidora_option"=>array('require_view')),
     ),
   );
   $rows[] = $row;
@@ -1125,6 +1185,25 @@ function sidora_sharing_permissions_form_submit($form, &$form_state) {
  */
 function theme_sidora_sharing_permissions(&$variables){
   drupal_add_css(drupal_get_path('module','sidora').'/css/workbench_basic_screen.css',array('weight' => '1000000', 'group' => CSS_THEME));
+  drupal_add_js("
+jQuery(document).ready(function(){
+
+jQuery('[sidora_option=\'require_view\']').change(function(){ checkViewPermission(this); });
+jQuery('[sidora_option=\'view_only\']').change(function(){ uncheckAllPermission(this); });
+uncheckAllPermission = function(clicked){
+   if (!clicked.checked){
+     var allItem = jQuery(clicked).closest('tr').find('[sidora_option=\'require_view\']');
+     jQuery(allItem).prop('checked','');
+   } 
+}
+checkViewPermission = function(clicked){
+   if (clicked.checked){
+     var viewItem = jQuery(clicked).closest('tr').find('[sidora_option=\'view_only\']');
+     jQuery(viewItem).prop('checked','checked');
+   } 
+}
+
+});  ", 'inline');
   $form = $variables['form'];
   $rows = $form['rows'];
   $header = $form['#header'];
@@ -1143,7 +1222,7 @@ function theme_sidora_sharing_permissions(&$variables){
     // Add the row to the table.
     $content['#rows'][] = $row;
   }
-  return t('Giving a user create, edit, or delete permission will allow the user to view the content, even if view is not checked.') . drupal_render($content);
+  return t('Giving a user create, edit, or delete permission allows the user to view the content.') . drupal_render($content);
 }
 
 /*

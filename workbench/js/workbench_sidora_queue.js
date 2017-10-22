@@ -349,6 +349,10 @@ SidoraQueue.prototype.Done = function(completedItem, ajaxReturn){
       if (sidora.resources.individualPanel.resourceOfInterest != null && sidora.resources.individualPanel.resourceOfInterest.pid == completedItem.pidsBeingProcessed[i]){
         sidora.resources.individualPanel.LoadRelationships();
       }
+      if (completedItem.action == 'editMeta' && sidora.util.GetTreeNodesByPid(completedItem.pidsBeingProcessed[i]).length > 0) {
+        var jst = jQuery("#forjstree").jstree();
+        sidora.util.loadTreeSection(completedItem.pidsBeingProcessed[i], null, null, true, jst); 
+      }
       //Update the tree counts if needed, only valid pids
       if (completedItem.pidsBeingProcessed.indexOf(":") != -1) {
         sidora.util.refreshConceptChildrenNumber(completedItem.pidsBeingProcessed[i]);
@@ -357,17 +361,13 @@ SidoraQueue.prototype.Done = function(completedItem, ajaxReturn){
       //If there was an update to the Pid user is currently looking at then anything may have changed.  Reload it.
       if (sidora.concept.GetPid() == completedItem.pidsBeingProcessed[i]){
         if ((completedItem.action == 'deleteConcept') && !(executeOnceOnly)){
-          parentLocation = sidora.util.getParentHref(window.location.href);
           var jst = jQuery("#forjstree").jstree();
-          var parentLocationFromBasePath = parentLocation.substring(parentLocation.indexOf(Drupal.settings.basePath));
-          var itemSelectorForCurrentItemInTree = 'a[href=\"'+parentLocationFromBasePath+'\"]';
-          var selectThisNode = jst.get_node(itemSelectorForCurrentItemInTree);
-          jst.deselect_all();
-          jst.select_node(selectThisNode);
+          var parentId = sidora.util.getNodeIdByHref(sidora.util.getParentHref());
+          jQuery("#" + parentId + " a").click();
           executeOnceOnly = true;
         }    
         sidora.concept.LoadContent();
-        sidora.util.refreshPidInTree();
+        //sidora.util.refreshPidInTree(5);
         if (processedItemCount != ''){
           var processedResourceCountArray = processedItemCount.split(' of ');
           if ((processedResourceCountArray.length > 1) && (processedResourceCountArray[0] == processedResourceCountArray[1]-1)){

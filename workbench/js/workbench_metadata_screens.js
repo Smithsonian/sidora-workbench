@@ -51,12 +51,17 @@ jQuery().ready(function(){
         }else{
           //If successful, kill itself.
           newPid = data.substring(0,data.indexOf(")"+" has been ingested")).substring(data.substring(0,data.indexOf(")"+" has been ingested")).lastIndexOf("si:"))
-          sidora.util.RefreshTree(null, parentPid);
+          newTitle = data.substring(data.indexOf("dcterms:title")+24, data.indexOf('class="dc-title')-2);
+          newNodeId = data.substring(data.indexOf("node created for new folder --")+31);
+          newNodeId = newNodeId.substring(0,newNodeId.indexOf("--"));
+          sidora.util.conceptAddedCompletelyNew(parentPid, newPid, newNodeId, newTitle);
+
+          //sidora.util.RefreshTree(null, parentPid);
           //Guess at how long it will take for Fedora to update the relationships
           //On dev server it's done before these even get called
-          sidora.util.RefreshTreeIfNew(10, parentPid);
-          sidora.util.RefreshTreeIfNew(30, parentPid);
-          sidora.util.RefreshTreeIfNew(60, parentPid);
+          //sidora.util.RefreshTreeIfNew(10, parentPid);
+          //sidora.util.RefreshTreeIfNew(30, parentPid);
+          //sidora.util.RefreshTreeIfNew(60, parentPid);
         }
     };
     var parentPid = sidora_util.ParentPid();

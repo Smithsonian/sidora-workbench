@@ -92,7 +92,7 @@ function sidora_management_panel($pid, $show_or_save = 'show', $dsid_to_remove =
          data: postData,
          success: function(){
 	 window.parent.jQuery("#addDatastreamDialog").dialog("close");
-	 window.parent.sidora.resources.refreshSelectedResourceThumbnail();
+	 window.parent.sidora.resources.refreshResourceThumbnail("' . $pid . '");
          }
        });
        }
@@ -102,6 +102,7 @@ function sidora_management_panel($pid, $show_or_save = 'show', $dsid_to_remove =
          tableHtml += "</table>";
          //jQuery("#create-resource-upload").append(tableHtml);
          jQuery(".form-submit").remove();
+         jQuery(".non-bulk").remove();
          jQuery("#create-resource-upload").append("<input class=\"form-submit\" value=\"Update Content\" onclick=\"submitIt();\">");
          uploader.bind("FilesAdded", function(up, files) {
            jQuery("#filelist").html("");
