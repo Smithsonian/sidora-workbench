@@ -11,4 +11,10 @@
     opacity: 0.5;
     z-index: 10000;
 }
+td.migration-button {
+    width: 500px;
+}
 
+td.migration-button input[type='text'] {
+    border: 1px solid lightgreen;
+}

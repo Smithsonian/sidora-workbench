@@ -169,7 +169,6 @@ function exhibition_config_get_visibility_page_keys($pid){
   $full_keys = array_merge($page_keys, $storage_keys);
   return $full_keys;
 }
-
 function exhibition_config_ajax_parts($op,$pid,$arg1='',$arg2=''){
   switch ($op) {
     case 'sidebar':

@@ -1426,7 +1426,7 @@ jQuery(document).ready(function() {
  * Returns HTML that is a table containing the parents with removal links (if more than one parent) or
  * HTML indicating it is an orphan.
  */
-function sidora_get_parent_table($pid, $only_basic_table_and_direct_removal_call = FALSE, $include_pid_column = FALSE) {
+function sidora_get_parent_table($pid, $only_basic_table_and_direct_removal_call = FALSE, $include_pid_column = FALSE, $ps_migration_buttons = FALSE) {
   module_load_include('inc', 'sidora', 'includes/utils');
   $output = '';
   if (empty($only_basic_table_and_direct_removal_call)) {
@@ -1442,14 +1442,16 @@ function sidora_get_parent_table($pid, $only_basic_table_and_direct_removal_call
   if ($include_pid_column) {
     $header[] = t('PID');
   }
-  if (sizeof($parents) > 1) $header[] = t('Remove');
+  if (sizeof($parents) > 1) {
+    $header[] = t('Remove');
+  }
   $unassociate_location = $GLOBALS['base_url'].'/sidora/ajax_parts/unassociate/';
+  $unassociate_with_note_location = $GLOBALS['base_url'].'/sidora/ajax_parts/unassociate_with_note/';
   $administering_pid = sidora_get_owning_parent_concept_pid_by_administered_pid($pid);
   if (empty($administering_pid) && !$only_basic_table_and_direct_removal_call) {
     $output .= "<br>" . t("None of this object's parents have been selected as the administration parent.");
   }
   foreach ($parents as $parent) {
-
     $text_link = array(
       '#type' => 'submit',
       '#value' => t('Remove Link'),
@@ -1474,7 +1476,20 @@ function sidora_get_parent_table($pid, $only_basic_table_and_direct_removal_call
        $row[] = array('data' => t('Administering parent'));
       }
       else {
-        $row[] = array('data' => drupal_render($text_link));
+        if ($ps_migration_buttons) {
+          $remove_with_restore = array(
+            '#type' => 'submit',
+            '#value' => t('Remove with note:'),
+            '#attributes' => array("directlink"=>$pid . '-' . $parent['pid'], "ppid"=>$parent['pid'], "use-note"=>'1', "class"=>array('parent-removal')),
+          );
+          $row[] = array(
+            'data' => drupal_render($text_link).drupal_render($remove_with_restore).'<input type="text" name="123restore" value="Restore">',
+            'class' => array('migration-button'),
+          );
+        }
+        else {
+          $row[] = array('data' => drupal_render($text_link));
+        }
       }
     }
     $rows[] = $row;
@@ -1492,12 +1507,17 @@ function sidora_get_parent_table($pid, $only_basic_table_and_direct_removal_call
     var directLink = jQuery(this).attr("directlink");
     var ppid = jQuery(this).attr("ppid");
     var pid = "'.$pid.'";
+    var url = "'.$unassociate_location.'"+ ppid + "/" + pid;
+    if (jQuery(this).attr("use-note") == 1) {
+      var note = jQuery(this).parent().find("[type=\'text\']").val();
+      var url = "'.$unassociate_with_note_location.'"+ ppid + "/" + pid + "/" + encodeURIComponent(note);
+    }
     var clicked = jQuery("input[directlink=\'"+directLink+"\']");
     var cp = clicked.parent();
     cp.children().remove();
     cp.append("<div>Removing...</div>");
     jQuery.ajax({
-      "url" : "'.$unassociate_location.'"+ ppid + "/" + pid
+      "url" : url
     }).done(
       function(data) {
         if (typeof(data) == "string") data = jQuery.parseJSON(data);
@@ -1507,12 +1527,20 @@ function sidora_get_parent_table($pid, $only_basic_table_and_direct_removal_call
         }
         else {
           cp.children().remove();
-          cp.append("<div style=\"background: rgba(111,222,111,0.5);\">Removed</div>");
+          if (typeof(data.note) != "undefined") {
+            cp.append("<div style=\"background: rgba(111,222,111,0.5);\">Removed, note characters written:" + data.note + "</div>");
+          }
+          else {
+            cp.append("<div style=\"background: rgba(111,222,111,0.5);\">Removed</div>");
+          }
         }
       }
     );
   });
-});</script>';
+});
+// Next sourceURL line makes it easier to debug when using Chrome
+//# sourceURL=dynamic_for_' . $pid . '.js
+ </script>';
   }
   else {
     $output .= '<script>jQuery(document).ready(function() {
@@ -1772,11 +1800,11 @@ function sidora_flatten_tree($branch, &$rows,$visibility_settings,$path) {
           $array_index = $path;
         } 
         if ($tree_depth > 0) $array_index = $path.$child_array['pid'];
-	  $rows[$array_index] = array(
+                $rows[$array_index] = array(
            'pid' => $child_array['pid'],
            'type' => $child_array['type'],
-	   'label' => $child_array['label'],
-	   'model' => $child_array['model']);
+                 'label' => $child_array['label'],
+                 'model' => $child_array['model']);
         foreach ($visibility_settings as $setting => $name) {
           if (($child_array['type'] == 'Concept') && (in_array($setting,$concept_visibility_settings))) {
             $visibility_value = (isset($child_array[$setting]))?($child_array[$setting]):'';
@@ -2504,9 +2532,9 @@ function sidora_create_resource_get_metadata_form_html($parent_pid, $model, $for
         'si:datasetCModel' => 'csv',
         'islandora:sp-audioCModel' => 'audio',
         'islandora:sp_videoCModel' => 'video',
-	'si:genericCModel' => 'generic',
-	'si:rawGeneSequenceCModel' => 'rawsequence',
-	'si:assembledGeneSequenceCModel' => 'assembledsequence'
+              'si:genericCModel' => 'generic',
+              'si:rawGeneSequenceCModel' => 'rawsequence',
+              'si:assembledGeneSequenceCModel' => 'assembledsequence'
       );
       $form['resource_model'] = array(
       '#name' => 'resource_model',
@@ -3607,7 +3635,7 @@ function sidora_open_access($info_type, $pid) {
     case 'xsl':
       module_load_include('inc', 'sidora', 'includes/xsl_handling');
       $file = sidora_get_xsl_file_for_object($pid);
-			// empty string means use default xsl, NULL means there is no file
+      // empty string means use default xsl, NULL means there is no file
       if ($file === '') {
         header("Content-type: text/xml");
         print sidora_xsl_string($xsl_file);
@@ -3615,19 +3643,19 @@ function sidora_open_access($info_type, $pid) {
       else {
         if ($file) {
           header("Content-type: text/xml");
-				  if (preg_match('/^.*\/[^\.]*/', $file)) {
-				    $output_info = readfile($file);
-					}
-					else {
+          if (preg_match('/^.*\/[^\.]*/', $file)) {
+            $output_info = readfile($file);
+          }
+          else {
             $xsl_form_definition = db_query("SELECT form_definition FROM {sidora_xsl} WHERE form_name = :form_name", array(':form_name' => $file))->fetchField();
             if ($xsl_form_definition) {
-						  $definition = new DOMDocument();
+              $definition = new DOMDocument();
               $definition->loadXML($xsl_form_definition);
-				      $definition->formatOutput = TRUE;
-				      print $definition->saveXML();  
-					  }
-					}
-				}			
+              $definition->formatOutput = TRUE;
+              print $definition->saveXML();  
+            }
+          }
+        }                                         
       }
       break;
     case 'xsl_config':
@@ -3639,7 +3667,7 @@ function sidora_open_access($info_type, $pid) {
       print json_encode($return_when_encoded);
       break;
     case 'osd':
-			sidora_osd_proxy_version($pid);
+                                          sidora_osd_proxy_version($pid);
       break;
   }
   drupal_exit();
@@ -3672,7 +3700,7 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
   $to_output = '';
   switch ($type) {
     case 'relationships_basic':
-      print sidora_get_parent_table($pid, TRUE, TRUE);
+      print sidora_get_parent_table($pid, TRUE, TRUE, TRUE);
       break;
     case 'relationships':
       print sidora_get_parent_table($pid);
@@ -3688,15 +3716,15 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
           $curr_item = array();
           $new_name = $curr_upload->filename;
           if (sidora_endsWith(strtolower($new_name),'.xsl')) {
-	    if (rename($curr_upload->filepath, drupal_realpath('public://') . '/' . $new_name)) {
-	      $rename_worked = sidora_xsl_file_to_db(drupal_realpath('public://') . '/',$new_name);
+                  if (rename($curr_upload->filepath, drupal_realpath('public://') . '/' . $new_name)) {
+                    $rename_worked = sidora_xsl_file_to_db(drupal_realpath('public://') . '/',$new_name);
               $curr_item['description'] = t('Attempted file write');
               $curr_item['success'] = $rename_worked;
-	    }
-	    else {
-	      $curr_item['success'] = FALSE;
+                  }
+                  else {
+                    $curr_item['success'] = FALSE;
               $curr_item['description'] = t('Unable to move the uploaded file');
-	    }		
+                  }                       
           }
           else {
             $curr_item['success'] = FALSE;
@@ -4755,6 +4783,19 @@ function sidora_ajax_parts($call_type, $param1 = '', $param2 = '', $param3 = '')
   }
   if ($call_type == 'unassociate') {
     return sidora_unassociate($param1, $param2);
+  }
+  if ($call_type == 'unassociate_with_note') {
+    if (sidora_is_admin()){
+      module_load_include('inc', 'sidora', 'includes/ps_migration');
+      $note_added = sidora_migration_unassociate_add_note($param1, $param2, $param3);
+      $to_return = sidora_unassociate($param1, $param2, FALSE);
+      $to_return['note'] = $note_added;
+      print json_encode($to_return);
+      exit();
+    }
+    else {
+      return '';  // No need to give back anything, shouldn't be called by non-admin
+    }
   }
   if ($call_type == 'lock') {
     return sidora_ajax_lock($param1, $param2);
@@ -6103,14 +6144,14 @@ function sidora_get_plupload_html($elements, $button_text = 'Browse'){
     //Firefox gets weird with the flash version between http and https, sometimes http doesnt work
     runtimesBrowserSpecific = "html5,html4";
   }';
-	if ($elements['#extensions'][0] == '*') {
-	  print '
-	    plupload.addFileFilter("excluded_extensions", function(filter, file, cb){
- 	    var self = this;
-	    var permitted = true;
+              if ($elements['#extensions'][0] == '*') {
+                print '
+                  plupload.addFileFilter("excluded_extensions", function(filter, file, cb){
+                  var self = this;
+                  var permitted = true;
             var mimeTypes = this.settings.filters.excluded_extensions[0];
-	    Object.keys(mimeTypes).forEach(function(key){
-	      var exts = mimeTypes[key].split(",");
+                  Object.keys(mimeTypes).forEach(function(key){
+                    var exts = mimeTypes[key].split(",");
               if(exts.length === 1 && exts[0] === "-")
                  permitted = true;
               else
@@ -6134,15 +6175,15 @@ function sidora_get_plupload_html($elements, $button_text = 'Browse'){
             if(permitted)
               cb(true);
           });';
-        }		
-	print '			
-	window.uploader = new plupload.Uploader({
+        }                   
+              print '                                   
+              window.uploader = new plupload.Uploader({
     runtimes : runtimesBrowserSpecific, //No silverlight - gets bad if user does not allow it and it tries to use.
     browse_button : "pickfiles", // you can pass in id...
     container : document.getElementById("container"),'; // ... or DOM Element itself
     if (($drag_and_drop == 'false') || ($elements['#extensions'][0] == '*')) {
       print '
-	max_files : "1",';
+              max_files : "1",';
     }
     print '
      dragdrop : ';
@@ -6210,7 +6251,7 @@ function sidora_get_plupload_html($elements, $button_text = 'Browse'){
         if (uploader.files.length == "0"){
          jQuery("#Next").attr("disabled", true).addClass("form-button-disabled");
          jQuery("#applyBatch").attr("disabled", true).addClass("form-button-disabled");
-	 jQuery(".form-submit").attr("disabled",true).addClass("form-button-disabled");
+               jQuery(".form-submit").attr("disabled",true).addClass("form-button-disabled");
         } 
       },
       Browse: function(up) {
@@ -6227,8 +6268,8 @@ function sidora_get_plupload_html($elements, $button_text = 'Browse'){
         if (typeof(sidoraUploaderFilesAdded) == "function"){ sidoraUploaderFilesAdded(up,files); }
         if ((typeof up.settings.max_files !== "undefined") && (up.settings.max_files !== null) && (up.files.length >= up.settings.max_files)) {
           up.splice(up.settings.max_files);
-	  if (files.length > (up.settings.max_files - up.total.uploaded)) files.splice((up.settings.max_files - up.total.uploaded),(files.length - (up.settings.max_files - up.total.uploaded)));
-	  jQuery(up.settings.browse_button).attr("disabled", true).addClass("form-button-disabled");
+                if (files.length > (up.settings.max_files - up.total.uploaded)) files.splice((up.settings.max_files - up.total.uploaded),(files.length - (up.settings.max_files - up.total.uploaded)));
+                jQuery(up.settings.browse_button).attr("disabled", true).addClass("form-button-disabled");
         }
         if (jQuery("#Next").length > 0)
           document.getElementById("Next").disabled=true;
@@ -6237,7 +6278,7 @@ function sidora_get_plupload_html($elements, $button_text = 'Browse'){
           document.getElementById("applyBatch").disabled=true;
           jQuery("#applyBatch").addClass("form-button-disabled");
           plupload.each(files, function(file) {
-	  var item = jQuery("<li class=\"plupload_view_list plupload_file ui-state-default plupload_file_loading plupload_delete\"></li>");
+                var item = jQuery("<li class=\"plupload_view_list plupload_file ui-state-default plupload_file_loading plupload_delete\"></li>");
           item.attr("id",file.id);
           item.html("<div class=\"plupload_file_name\">"+file.name + "</div><div class=\"plupload_file_size\" style=\"width:100px;\">" + plupload.formatSize(file.size) + "   <b></b></div>" + "<div class=\"plupload_file_action\"><a class=\'remove-file-btn\' href=\'\'><img src=\'' . $path_for_remove_icon . 'minus_small.png\'/></a></div>");
           jQuery("#create-resource-upload_filelist").append(item);
@@ -6248,7 +6289,7 @@ function sidora_get_plupload_html($elements, $button_text = 'Browse'){
             var toDelete = file.name;
             if (up.files.length == "0") jQuery("#Next").attr("disabled", true).addClass("form-button-disabled");
             if (up.files.length == "0") jQuery("#applyBatch").attr("disabled", true).addClass("form-button-disabled");
-	jQuery(up.settings.browse_button).attr("disabled", false).removeClass("form-button-disabled");
+              jQuery(up.settings.browse_button).attr("disabled", false).removeClass("form-button-disabled");
             console.log(toDelete);';
             //TBD TODO Put in a check here to remove the correct file when multiple files have same filename
             
@@ -6274,7 +6315,7 @@ print  '
         if (err.code == -601) document.getElementById("console").innerHTML += "  Usable extensions are:';
   print implode(",",$elements['#extensions']);
   print '";
-			},
+                                          },
       UploadComplete: function(up,files){
         if (typeof(sidoraUploadComplete) == "function"){ sidoraUploadComplete(up,files); }
         if (jQuery("#Next").length > 0)
@@ -7844,7 +7885,7 @@ function sidora_osd_proxy_version($pid, $datastream='OBJ', $version='0') {
   );
   if (strpos($qs,'degraded') !== false) {
     $qs = preg_replace('/svc.region'.'=[^&]+(&|$)/', '', $qs);
-  }		
+  }                         
   $url = variable_get('osd_proxy_resolver_url', '').'?'.$qs;
   if (strpos($qs,'degraded') !== false) {
     $im = imagecreatefromstring(file_get_contents($url));
