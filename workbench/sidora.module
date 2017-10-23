@@ -606,7 +606,10 @@ function sidora_process_object_with_build_id($form_build_id) {
           og_group('node', $parent_group, array('entity_type' => 'node', 'entity' => $concept_node->nid));
         }
         // Update Drupal node of parent
-        drupal_set_message("New node created for new folder --" . $concept_node->nid . "--");
+        // don't show the new folder message for automatically created research spaces, show message otherwise for JS to pick up
+        if (empty($object['SIDORA']) || !sidora_contains($object['SIDORA']->content, '<ontology_location_id>AUTOMATIC_USER_CREATION_FROM_SIDORA_DEFAULT</ontology_location_id>', FALSE)){
+          drupal_set_message("New node created for new folder --" . $concept_node->nid . "--");
+        }
         sidora_update_concept_node_add_child($parent_node, $concept_node->nid);
 
         
