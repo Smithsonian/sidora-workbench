@@ -1423,7 +1423,7 @@ jQuery(document).ready(function() {
  * Returns HTML that is a table containing the parents with removal links (if more than one parent) or
  * HTML indicating it is an orphan.
  */
-function sidora_get_parent_table($pid, $only_basic_table_and_direct_removal_call = FALSE, $include_pid_column = FALSE) {
+function sidora_get_parent_table($pid, $only_basic_table_and_direct_removal_call = FALSE, $include_pid_column = FALSE, $ps_migration_buttons = FALSE) {
   module_load_include('inc', 'sidora', 'includes/utils');
   $output = '';
   if (empty($only_basic_table_and_direct_removal_call)) {
@@ -1439,14 +1439,16 @@ function sidora_get_parent_table($pid, $only_basic_table_and_direct_removal_call
   if ($include_pid_column) {
     $header[] = t('PID');
   }
-  if (sizeof($parents) > 1) $header[] = t('Remove');
+  if (sizeof($parents) > 1) {
+    $header[] = t('Remove');
+  }
   $unassociate_location = $GLOBALS['base_url'].'/sidora/ajax_parts/unassociate/';
+  $unassociate_with_note_location = $GLOBALS['base_url'].'/sidora/ajax_parts/unassociate_with_note/';
   $administering_pid = sidora_get_owning_parent_concept_pid_by_administered_pid($pid);
   if (empty($administering_pid) && !$only_basic_table_and_direct_removal_call) {
     $output .= "<br>" . t("None of this object's parents have been selected as the administration parent.");
   }
   foreach ($parents as $parent) {
-
     $text_link = array(
       '#type' => 'submit',
       '#value' => t('Remove Link'),
@@ -1471,7 +1473,20 @@ function sidora_get_parent_table($pid, $only_basic_table_and_direct_removal_call
        $row[] = array('data' => t('Administering parent'));
       }
       else {
-        $row[] = array('data' => drupal_render($text_link));
+        if ($ps_migration_buttons) {
+          $remove_with_restore = array(
+            '#type' => 'submit',
+            '#value' => t('Remove with note:'),
+            '#attributes' => array("directlink"=>$pid . '-' . $parent['pid'], "ppid"=>$parent['pid'], "use-note"=>'1', "class"=>array('parent-removal')),
+          );
+          $row[] = array(
+            'data' => drupal_render($text_link).drupal_render($remove_with_restore).'<input type="text" name="123restore" value="Restore">',
+            'class' => array('migration-button'),
+          );
+        }
+        else {
+          $row[] = array('data' => drupal_render($text_link));
+        }
       }
     }
     $rows[] = $row;
@@ -1489,12 +1504,17 @@ function sidora_get_parent_table($pid, $only_basic_table_and_direct_removal_call
     var directLink = jQuery(this).attr("directlink");
     var ppid = jQuery(this).attr("ppid");
     var pid = "'.$pid.'";
+    var url = "'.$unassociate_location.'"+ ppid + "/" + pid;
+    if (jQuery(this).attr("use-note") == 1) {
+      var note = jQuery(this).parent().find("[type=\'text\']").val();
+      var url = "'.$unassociate_with_note_location.'"+ ppid + "/" + pid + "/" + encodeURIComponent(note);
+    }
     var clicked = jQuery("input[directlink=\'"+directLink+"\']");
     var cp = clicked.parent();
     cp.children().remove();
     cp.append("<div>Removing...</div>");
     jQuery.ajax({
-      "url" : "'.$unassociate_location.'"+ ppid + "/" + pid
+      "url" : url
     }).done(
       function(data) {
         if (typeof(data) == "string") data = jQuery.parseJSON(data);
@@ -1504,12 +1524,20 @@ function sidora_get_parent_table($pid, $only_basic_table_and_direct_removal_call
         }
         else {
           cp.children().remove();
-          cp.append("<div style=\"background: rgba(111,222,111,0.5);\">Removed</div>");
+          if (typeof(data.note) != "undefined") {
+            cp.append("<div style=\"background: rgba(111,222,111,0.5);\">Removed, note characters written:" + data.note + "</div>");
+          }
+          else {
+            cp.append("<div style=\"background: rgba(111,222,111,0.5);\">Removed</div>");
+          }
         }
       }
     );
   });
-});</script>';
+});
+// Next sourceURL line makes it easier to debug when using Chrome
+//# sourceURL=dynamic_for_' . $pid . '.js
+ </script>';
   }
   else {
     $output .= '<script>jQuery(document).ready(function() {
@@ -3669,7 +3697,7 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
   $to_output = '';
   switch ($type) {
     case 'relationships_basic':
-      print sidora_get_parent_table($pid, TRUE, TRUE);
+      print sidora_get_parent_table($pid, TRUE, TRUE, TRUE);
       break;
     case 'relationships':
       print sidora_get_parent_table($pid);
@@ -4752,6 +4780,19 @@ function sidora_ajax_parts($call_type, $param1 = '', $param2 = '', $param3 = '')
   }
   if ($call_type == 'unassociate') {
     return sidora_unassociate($param1, $param2);
+  }
+  if ($call_type == 'unassociate_with_note') {
+    if (sidora_is_admin()){
+      module_load_include('inc', 'sidora', 'includes/ps_migration');
+      $note_added = sidora_migration_unassociate_add_note($param1, $param2, $param3);
+      $to_return = sidora_unassociate($param1, $param2, FALSE);
+      $to_return['note'] = $note_added;
+      print json_encode($to_return);
+      exit();
+    }
+    else {
+      return '';  // No need to give back anything, shouldn't be called by non-admin
+    }
   }
   if ($call_type == 'lock') {
     return sidora_ajax_lock($param1, $param2);

@@ -86,6 +86,14 @@ convertAFew = function(){
 </script>';
   return $to_return;
 }
+/* 
+ * Migration utility asked for a concept to be unassociated with a URL encoded note, save the note in the file
+ */
+function sidora_migration_unassociate_add_note($parent, $child, $encoded_note) {
+  $note = urldecode($encoded_note);
+  $link_removal_log = drupal_realpath("public://link_removal_log.txt");
+  return file_put_contents($link_removal_log, $parent . "," . $child . ',' . $note."\n", FILE_APPEND);
+}
 /*
  * Give the form to show the incoming link information
  */
