@@ -111,16 +111,34 @@ function sidora_dc_join_and_return_xml($pid) {
     if (sizeof($associations) < 1) {
       return NULL;
     }
-    $transform = $associations[0]['transform'];
-    $transform = xml_form_builder_get_transform_file($transform);
-    $pre_transform_string = $object[$associations[0]['dsid']]->content;
-    $pre_transform_dd = new DOMDocument();
-    $pre_transform_dd->loadXML($pre_transform_string);
-    $post_transform_dd = xml_form_builder_transform_document($transform, $pre_transform_dd);
-    $post_transform_string = $post_transform_dd->saveXML();
-
-    // Place information from the transformed metadata into the old entry
-    $xml_string = sidora_dc_xml_join($insert_data_into, $post_transform_string);
+    if (empty($associations[0])) {
+      // xml_form_builder_get_associations could return a single non-array transform
+      $association = $associations;
+    }
+    else {
+      $association = $associations[0]['transform'];
+    }
+    $transform = xml_form_builder_get_transform_file($association);
+    // If there's not a DC transform set, this is almost certainly a misconfigured form, but maybe not.
+    // Let's not clutter watchdog yet...
+    if ($transform != FALSE) {
+      $pre_transform_string = $object[$association['dsid']]->content;
+      $pre_transform_dd = new DOMDocument();
+      $pre_transform_dd->loadXML($pre_transform_string);
+      $post_transform_dd = xml_form_builder_transform_document($transform, $pre_transform_dd);
+      if ($post_transform_dd == null) {
+        watchdog(
+          'sidora',
+          "DC transform failed! PID: !pid associations !associations transform !transform",
+           array('!pid' => $pid, '!associations' => json_encode($associations), '!transform' => json_encode($transform))
+        );
+      }
+      else {
+        $post_transform_string = $post_transform_dd->saveXML();
+        // Place information from the transformed metadata into the old entry
+        $xml_string = sidora_dc_xml_join($insert_data_into, $post_transform_string);
+      }
+    }
   }
   else {
     // Not enough versions or it's not versionable
