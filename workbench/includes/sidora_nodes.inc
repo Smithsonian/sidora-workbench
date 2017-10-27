@@ -214,6 +214,25 @@ function sidora_get_pids_in_tree_from_nodes_by_node_id($node_id, &$nids, &$pids,
   entity_get_controller('node')->resetCache(array($node_id));
   return sizeof($nids) <= $max_pids;
 }
+/**
+ * returns an array of the form
+ * o and t indexes are legacy leftovers, have no special meaning but has not been refactored away
+ * 
+ * array(
+ *   'o' => pid,
+ *   't' => label
+ *   'crud' => permissions array ('c' => 1, 'r' => 1, 'u' => 0, 'd' => 0)
+ *   'nid' => node id
+ *   'isAdministeredBy' => owning parent pid
+ *   'owner' => user name
+ *   'children' => array(
+ *     array(
+ *       'o' => child1pid
+ *       't' => label
+ *       ...
+ *     )
+ *    )
+ */
 function sidora_build_tree_from_nodes_by_pid($pid, $max_depth = 3, $preload_nodes = TRUE){
   $nid = sidora_get_concept_node_id($pid);
   if (empty($nid)){
@@ -224,6 +243,25 @@ function sidora_build_tree_from_nodes_by_pid($pid, $max_depth = 3, $preload_node
   $to_return[] = sidora_build_tree_from_nodes($nid, $max_depth, 0, TRUE, $preload_nodes);
   return $to_return;
 }
+/**
+ * returns an array of the form
+ * o and t indexes are legacy leftovers, have no special meaning but has not been refactored away
+ * 
+ * array(
+ *   'o' => pid,
+ *   't' => label
+ *   'crud' => permissions array ('c' => 1, 'r' => 1, 'u' => 0, 'd' => 0)
+ *   'nid' => node id
+ *   'isAdministeredBy' => owning parent pid
+ *   'owner' => user name
+ *   'children' => array(
+ *     array(
+ *       'o' => child1pid
+ *       't' => label
+ *       ...
+ *     )
+ *    )
+ */
 function sidora_build_tree_from_nodes($root_node_id, $max_depth = 3, $current_depth = 0, $resync_nodes_if_needed = TRUE, $preload_nodes = TRUE){
   $to_return = array();
   $node = node_load($root_node_id);
@@ -265,7 +303,7 @@ function sidora_build_tree_from_nodes($root_node_id, $max_depth = 3, $current_de
     // sidora_get_owning_parent_concept_by_administered_pid($pid)
     // if it's in more than 4 groups then ask what its administered by to see if it's a link
     $parent_array = sidora_get_owning_parent_concept_by_administered_pid($pid);
-    $parent_pid = 'BBB';
+    $parent_pid = '';
     if (!empty($parent_array)) {
       foreach($parent_array as $pid => $parent_obj) { 
         $parent_pid = $pid;
@@ -309,6 +347,12 @@ function sidora_build_tree_from_nodes($root_node_id, $max_depth = 3, $current_de
   }
   return $to_return;
 }
+/*
+ * Dan was looking for something to tell the system to update a pid but from an outside source that may be automated
+ * The idea is something like we did a Camera Trap import directly to Fedora and we want to tell workbench to 
+ * update its data so the data is ready when the user logs in rather than having the time to update occur
+ * when the first user logs in that wants to look at that data
+ */
 function sidora_fedora_queue_sync_external_call($csv_pids = NULL) {
   $stes = variable_get("sidora_trusted_external_servers","");
   $allowed = array_map('trim' , explode(',' , $stes));
@@ -331,7 +375,9 @@ function sidora_fedora_queue_sync_external_call($csv_pids = NULL) {
     return MENU_NOT_FOUND;
   }
 }
-
+/*
+ * Tell Workbench it should update information from Fedora before the next time it displays the node information
+ */
 function sidora_fedora_queue_sync($pid_or_nid) {
   $nid = $pid_or_nid;
   if (sidora_contains($pid_or_nid,':')){
@@ -364,6 +410,9 @@ function sidora_fedora_create_partial_node_set(
   );
   return $root_node; 
 }
+/*
+ * Update information from Fedora based on the form data input
+ */
 function sidora_fedora_sync() {
   $nid = filter_input(INPUT_GET, 'nid');
   $command = filter_input(INPUT_GET, 'command');
@@ -532,6 +581,9 @@ function sidora_fedora_sync() {
   $to_return .= '<p class="buffer-so-you-dont-click-on-resync-from-fedora-accident" style="height:100px"></p>';
   return $to_return;
 }
+/*
+ * Check to see if the node should be updated
+ */
 function sidora_is_node_synced_with_fedora($node) {
   if (!empty($node->field_sidora_fedora_sync)) {
     // Currently based on the design that if we need to have it updated, this value gets cleared
@@ -636,6 +688,21 @@ function sidora_quick_pid_to_node_id($pid, $node_id = '', $add_to_request_memory
     $ptn[$pid] = $node_id;
   }
 }
+/*
+ * Based on any of the common ways to look up a Fedora object representation, give back information 
+ * on the other representations for the data
+ * $load_from_fedora - if TRUE will ask Islandora to look up the information from Fedora to give
+ *   back the Islandora representation.  If looking for a nid/node -> pid or pid -> nid/node you don't 
+ *   want to incur that cost so don't
+ * returns
+  $to_return = array(
+    'node' => $node,
+    'nid' => $nid,
+    'obj' => $obj,
+    'pid' => $pid,
+    'description' => $description, // this is the description from the node. This info is NOT in Fedora
+  );
+ */
 function sidora_get_info($pid_or_fedora_obj_or_nid_or_node, $load_from_fedora = TRUE){
   $node = FALSE;
   $nid = '';

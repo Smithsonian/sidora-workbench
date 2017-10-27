@@ -930,7 +930,7 @@ sidora.ProjectSpaces.DuplicateOrTransfer = function(type, conceptsOrResources, s
       );
     }
   }
-  sidora.ProjectSpaces.ShowWhereToForm(intro, pids, ignoredDestination, specificDestination, onSubmit, specifiedDepth, myTitle);
+  sidora.ProjectSpaces.ShowWhereToForm(intro, pids, ignoredDestination, specificDestination, (conceptsOrResources != 'resources'), onSubmit, specifiedDepth, myTitle);
 }
 sidora.ProjectSpaces.DuplicateOrTransferHtml = function(selectionIntroHtml){
   var toReturn = "<div style='height:100%'>";
@@ -941,7 +941,7 @@ sidora.ProjectSpaces.DuplicateOrTransferHtml = function(selectionIntroHtml){
   toReturn += '<input id="closer" class="form-submit" style="float:left; width:100px;" value="Close" />';
   return toReturn;
 }
-sidora.ProjectSpaces.ShowWhereToForm = function(selectionIntro, pids, ignorePid, specifyPids, onSubmit, specifiedDepth, myTitle){
+sidora.ProjectSpaces.ShowWhereToForm = function(selectionIntro, pids, ignorePid, specifyPids, allowResearchSpacesAsDestinations, onSubmit, specifiedDepth, myTitle){
   var params = {
   };
   if (typeof(ignorePid) == 'string' && ignorePid != '') {
@@ -975,7 +975,8 @@ sidora.ProjectSpaces.ShowWhereToForm = function(selectionIntro, pids, ignorePid,
               jQuery("#destination-tree").bind('select_node.jstree', function(){ 
                 var destree = jQuery("#destination-tree").jstree();
                 var destPid = jQuery("#"+destree.get_selected()).children("a").attr("pid");
-                if (typeof(destPid) != 'undefined') {
+                var isResearchSpace = jQuery("#"+destree.get_selected()).children("a").hasClass("is-project-space");
+                if (typeof(destPid) != 'undefined' && (!isResearchSpace || allowResearchSpacesAsDestinations)) {
                   jQuery("#destination-chosen").removeAttr("disabled").removeClass("form-button-disabled");
                 }
                 else {
