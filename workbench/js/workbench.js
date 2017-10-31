@@ -181,8 +181,9 @@ sidora.concept.LoadContentHelp.Resources.TableLoad = function(conceptOfInterest)
     sidora.resources.bulkActionSelectAction();
     document.getSelection().removeAllRanges();
   });
-  setTimeout(function(){
-    jQuery("#res_table td:nth-child(1), #res_table td:nth-child(3), #res_table td:nth-child(4), #res_table td:nth-child(5), #res_table td:nth-child(6)").click(
+}
+sidora.concept.addClickEvents = function(){
+    jQuery("#res_table td:nth-child(1):not(.sidora-click-added), #res_table td:nth-child(3):not(.sidora-click-added), #res_table td:nth-child(4):not(.sidora-click-added), #res_table td:nth-child(5):not(.sidora-click-added), #res_table td:nth-child(6):not(.sidora-click-added)").click(
       function (e) {
         var row = jQuery(this).parent();
         // Use these columns only for the selections
@@ -200,9 +201,9 @@ sidora.concept.LoadContentHelp.Resources.TableLoad = function(conceptOfInterest)
         }
         sidora.resources.bulkActionSelectAction();
       }
-    ); //End onclick
+    ).addClass("sidora-click-added");
     // Add the overlay for the resource viewer
-    jQuery("#res_table td:nth-child(2)").click(function(){
+    jQuery("#res_table td:nth-child(2):not(.sidora-click-added)").click(function(){
       var pid = jQuery(this).parent().attr("id");
       var url = Drupal.settings.basePath+"sidora/resource_viewer/"+pid;
       Shadowbox.close();
@@ -216,8 +217,7 @@ sidora.concept.LoadContentHelp.Resources.TableLoad = function(conceptOfInterest)
           }
         });
       },100);
-    });
-  },4000);
+    }).addClass("sidora-click-added");
 }
 sidora.resources.bulkActionSelectAction = function(){
   if (jQuery("tr.selected").length == 0) {
@@ -2241,7 +2241,6 @@ sidora.resources.performCopyOrMoveFedoraActions = function(action, fromParent, d
     droppedPid = pids[i];
     var userFriendlyName = sidora.display.UNKNOWN_ACTION;
     var pidList = null;
-    var onSuccess = null;
     if (action != 'copy'){
       pidListForRequest = [fromParent,droppedOn,droppedPid];
       jQuery(jq(pids[i])).addClass("is-being-moved");
@@ -2469,6 +2468,13 @@ sidora.CloseIFrame = function(info, typeOfClosure){
       }
     }
   }
+}
+/*
+ * Temporary method to keep the table clicks functioning
+ */
+sidora.util.keepUp = function(){
+  sidora.concept.addClickEvents();
+  setTimeout(sidora.util.keepUp, 1000); 
 }
 /*
  * Keep checking for 100 minutes.  
@@ -4032,6 +4038,7 @@ jQuery(window).resize(function() {
  */
 if (typeof(window.console) == 'undefined'||typeof(window.console.log)=='undefined'){window.console = {log:function(){}};}
 setTimeout(sidora.util.constantCheck,4000); //All polling links in to this function, give 4 seconds for Drupal javascripts to set up
+sidora.util.keepUp();
 
 
 /**
