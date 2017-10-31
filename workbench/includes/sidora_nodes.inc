@@ -905,6 +905,19 @@ function sidora_get_update_or_create_concept_node($pid, $info = NULL, $set_fedor
   }
 }
 /*
+ * return the number of resource children from this node / nid / pid / obj
+ */
+function sidora_node_get_num_resource_children($identifier) {
+  $info = sidora_get_info($identifier, FALSE);
+  $node = $info['node'];
+  if (!sidora_is_node_synced_with_fedora($node)) {
+    sidora_update_node_from_fedora($node);
+  }
+  $node_wrapper = entity_metadata_wrapper('node', $node);
+  $existing_resource_children = $node_wrapper->field_sidora_resource_child_coun->value();
+  return $existing_resource_children;
+}
+/*
  * Removes a child to the from the child list
  * If no child_node_id is entered, assumes the thing removed was a resource
  * returns the node that was input

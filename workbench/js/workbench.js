@@ -2242,7 +2242,6 @@ sidora.resources.performCopyOrMoveFedoraActions = function(action, fromParent, d
     droppedPid = pids[i];
     var userFriendlyName = sidora.display.UNKNOWN_ACTION;
     var pidList = null;
-    var onSuccess = null;
     if (action != 'copy'){
       pidListForRequest = [fromParent,droppedOn,droppedPid];
       jQuery(jq(pids[i])).addClass("is-being-moved");
