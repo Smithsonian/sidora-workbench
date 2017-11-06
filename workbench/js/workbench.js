@@ -360,7 +360,7 @@ sidora.concept.LoadContentHelp.Resources.TableActionsSetup = function(){
         'obj' : jQuery(this), 
         'nodes' : [{ id : true, text: jQuery(this).text() }] 
       }, 
-      '<div id="jstree-dnd" class="jstree-default"><i class="jstree-icon jstree-er"></i>' + jQuery(this).text() + '<span class="fakejstree-copy" style="'+displayPlusToIndicateCopy+'">+</span></div>'
+      '<div id="jstree-dnd" class="jstree-default"><i class="jstree-icon jstree-er"></i>' + jQuery(this).find('.resource-list-label').text() + '<span class="fakejstree-copy" style="'+displayPlusToIndicateCopy+'">+</span></div>'
     );
   });
   var dlHtml = ' of type <select id=\"sidora-resource-type-dropdown\" class="form-select" name=\"search\">';
@@ -1566,6 +1566,9 @@ sidora.InitiateJSTree = function(){
           if (typeof(jst.pureUIChange) != 'undefined' && jst.pureUIChange) return true; //don't want a Fedora change
           if (sidora.util.userConfirmedMove){
             return true;
+          }
+          if (dragStatus.ref.a_attr.class.split(' ').indexOf("is-project-space") >= 0) {
+            return false;
           }
           if (dragStatus.core){
             var parentPid = jQuery("#"+mouseOverObject.id).children("a").attr("pid");
