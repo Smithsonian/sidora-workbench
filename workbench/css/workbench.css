@@ -331,6 +331,12 @@ tr.selected i.holder {
 .dataTables_wrapper{
   width:50%;
 }
+@media screen and (max-width: 640px) {
+  .dataTables_wrapper .dataTables_length, .dataTables_wrapper .dataTables_filter {
+    float: left;
+    text-align: left;
+  }
+}
 .dataTables_info {
   margin-top: 7px;
 }

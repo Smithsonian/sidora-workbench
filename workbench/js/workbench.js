@@ -1778,13 +1778,6 @@ sidora.ResizeTree = function (e, ui)
     jQuery('#resourceInformationPane').outerWidth(resourceDivWidth+'px');
     jQuery('#res_table_wrapper').outerWidth(parseInt(jQuery('#concept_tabs').width()) - parseInt(jQuery('#resourceInformationPane').outerWidth()) - 15 + 'px');
   }   
-  //Move items around to fit the menu in the best place
-  if (jQuery("#res_table_wrapper").width() < 470){
-    jQuery("#res_table_wrapper").css("margin-top","83px");
-    jQuery("#sidora-resources-button-row").css("top","90px").css("left","20px");
-  }else{
-    jQuery("#sidora-resources-button-row").css("top","").css("left","");
-  }
 };
 /*
  * Resizes items on the resources pane once the user (or program) is done with dragging the splitter bar between the table and viewer
@@ -3728,15 +3721,6 @@ sidora.resources.individualPanel.ResizeIt = function (e, ui)
   var newMinHeight = Math.max(600,jQuery("#resourceResizable").height(),jQuery("#res_table_wrapper").height(), jQuery("#resource-meta").height()+jQuery("#resourceResizable ul").height()+10);
   //Protect the cursor input from being taken into the iframe by making the overlay displayable
   jQuery("#iframeOverlay").show();
-  
-  //Move items around to fit the menu in the best place
-  if (jQuery("#res_table_wrapper").width() < 470){
-    jQuery("#res_table_wrapper").css("margin-top","83px");
-    jQuery("#sidora-resources-button-row").css("top","90px").css("left","20px");
-  }else{
-    jQuery("#sidora-resources-button-row").css("top","").css("left","");
-  }
-  
 };
 /*
  * Resizes items on the resources pane once the user (or program) is done with dragging the splitter bar between the table and viewer
