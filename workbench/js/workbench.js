@@ -750,6 +750,9 @@ sidora.util.loadTreeSectionsIfNeeded = function(data, doFast, jst){
 sidora.ProjectSpaces.currentPid = function() {
   return jQuery("#" + jQuery("#psdd-select").val()).children("a").attr("pid");
 }
+sidora.ProjectSpaces.currentTreeId = function(){
+  return jQuery("#psdd-select").val();
+}
 sidora.ProjectSpaces.writableProjectSpaces = function() {
   var toReturn = [];
   var domIdsOfProjectSpaces = jQuery("#psdd-select option").map(function(){return jQuery(this).val()});
@@ -793,17 +796,23 @@ sidora.ProjectSpaces.ChangeProjectSpace = function(selectedValue, suppressClick)
   return true;
 }
 sidora.ProjectSpaces.DuplicateOrTransferIntro = function(type, pids) {
-  var intro = "<p>";
+  var intro = "";
   if (type == "duplicate") {
-    intro = "Copy will create entirely new objects.<br> New objects will be duplicates and changes made to them will not affect the original objects.<br>You selected the following to be copied:";
+    intro += "Copy will create entirely new objects.<br> ";
+    intro += "New objects will be duplicates and changes made to them will not affect the original objects.<br>";
+    intro += "You selected the following to be copied:";
   }
   if (type == "transfer") {
-    intro = "You selected the following to be moved:";
+    //var jst = jQuery("#forjstree").jstree();
+    //var allOnSame = false;
+    //intro += "These objects are currently owned by the Research Space <b>" + jst.get_node(sidora.ProjectSpaces.currentTreeId()).a_attr.fullname + "</b>";
+    intro += "Moving objects to another Research Space will transfer ownership to the destination Research Space.";
+    intro += "<br>You selected the following to be moved:";
   }
   if (type == "link") {
-    intro = "Links will not create a new object.<br> Any changes made while using the link directly affect the original.<br> You selected for links to be created to the following:";
+    intro += "Links will not create a new object.<br> Any changes made while using the link directly affect the original.<br> You selected for links to be created to the following:";
   }
-  intro += "</p><ul>";
+  intro += "<ul>";
   for(var pidIndex = 0; pidIndex < pids.length; pidIndex++) {
     intro += '<li>';
     intro += sidora.util.FriendlyNameDirect(pids[pidIndex]);
@@ -950,7 +959,7 @@ sidora.ProjectSpaces.ShowWhereToForm = function(selectionIntro, pids, ignorePid,
   if (typeof(specifyPids) == 'string' && specifyPids != '') {
     params['specify_pids'] = specifyPids;
   }
-  params['doFast'] = 'true';
+  params['create'] = 'true';
   var query = jQuery.param(params);
   if (query != '') {
     query = '?' + query;
@@ -1439,7 +1448,9 @@ sidora.InitiateJSTree = function(){
                 });  
               }else{
                 //is a move
-                var showText = sidora.display.MOVE_RESOURCES_TO_DESTINATION + jQuery("#"+mouseOverObject.id).children("a").attr("fullname")+" ("+jQuery("#"+mouseOverObject.id).children("a").attr("pid")+"):";
+                var showText = sidora.display.MOVE_RESOURCES_TO_DESTINATION;
+                showText += jQuery("#"+mouseOverObject.id).children("a").attr("fullname");
+                showText += " ("+jQuery("#"+mouseOverObject.id).children("a").attr("pid")+"):";
                 showText += "<ul>";
                 var showTextForUnassociate = sidora.display.RESOURCES_EXISTED_AT_TARGET_WILL_REMOVE_FROM_SOURCE + "<ul>";
                 jQuery.ajax({
@@ -1456,7 +1467,7 @@ sidora.InitiateJSTree = function(){
                         resourcesToUnassociate.push(sidora.util.dragResources[i]);
                       }else{
                         showText += "<li>"+jQuery(jq(sidora.util.dragResources[i])).find(".resource-list-label").text();
-                        showText += " ("+sidora.util.dragResources[i]+")";
+                        showText += " ("+sidora.util.dragResources[i]+")</li>";
                         resourcesToMoveOver.push(sidora.util.dragResources[i]);
                       }  
                     }
@@ -1567,7 +1578,13 @@ sidora.InitiateJSTree = function(){
           if (sidora.util.userConfirmedMove){
             return true;
           }
+          if (typeof(dragStatus.ref) == 'undefined') {
+            return false;
+          }
           if (dragStatus.ref.a_attr.class.split(' ').indexOf("is-project-space") >= 0) {
+            return false;
+          }
+          if (dragStatus.ref.a_attr.permissions.indexOf('c') == -1) {
             return false;
           }
           if (dragStatus.core){
@@ -2471,7 +2488,15 @@ sidora.CloseIFrame = function(info, typeOfClosure){
  */
 sidora.util.keepUp = function(){
   sidora.concept.addClickEvents();
-  setTimeout(sidora.util.keepUp, 1000); 
+  var jst = jQuery("#forjstree").jstree();
+  if (
+    (typeof(jst.get_node) == 'function') &&
+    (typeof(jst.get_node(jQuery("#psdd-select").val()).children) != 'undefined') && 
+    (typeof(jst.get_node(jQuery("#psdd-select").val()).children.length) != 'undefined')
+  ){
+    jQuery("#link-to-another-concept").toggle(jst.get_node(jQuery("#psdd-select").val()).children.length > 1);
+  }
+  setTimeout(sidora.util.keepUp, 2000); 
 }
 /*
  * Keep checking for 100 minutes.  
@@ -2510,21 +2535,21 @@ sidora.util.constantCheck = function(){
  * if multiple users are changing the number of resources
  */
 sidora.util.checkRecentChanges = function(){
-    if (typeof(sidora.util.init_time.server) != 'undefined') {
-      if (typeof(sidora.util.lastUpdateTime) == 'undefined') sidora.util.lastUpdateTime = 0;
-      jQuery.ajax({
-        url: Drupal.settings.basePath+'sidora/ajax_parts/recent_changes/'+sidora.util.lastUpdateTime,
-      }).done(function(pids_csv){
-        var d = new Date();
-        var offsetBetweenLocalAndServer = sidora.util.init_time.server - sidora.util.init_time.local;
-        var current_local_minute = Math.floor(d.getTime() / 60000);
-        sidora.util.lastUpdateTime = current_local_minute + offsetBetweenLocalAndServer;
-        var pids = pids_csv.split(", ");
-        for (var pindex = 0; pindex < pids.length; pindex++) {
-          sidora.util.refreshConceptChildrenNumber(pids[pindex]); 
-        }
-      }).fail(function(failure_obj){
-        sidora.recentAjaxFailure(failure_obj);
+  if (typeof(sidora.util.init_time.server) != 'undefined') {
+    if (typeof(sidora.util.lastUpdateTime) == 'undefined') sidora.util.lastUpdateTime = 0;
+    jQuery.ajax({
+      url: Drupal.settings.basePath+'sidora/ajax_parts/recent_changes/'+sidora.util.lastUpdateTime,
+    }).done(function(pids_csv){
+      var d = new Date();
+      var offsetBetweenLocalAndServer = sidora.util.init_time.server - sidora.util.init_time.local;
+      var current_local_minute = Math.floor(d.getTime() / 60000);
+      sidora.util.lastUpdateTime = current_local_minute + offsetBetweenLocalAndServer;
+      var pids = pids_csv.split(", ");
+      for (var pindex = 0; pindex < pids.length; pindex++) {
+        sidora.util.refreshConceptChildrenNumber(pids[pindex]); 
+      }
+    }).fail(function(failure_obj){
+      sidora.recentAjaxFailure(failure_obj);
     });
   }
 }

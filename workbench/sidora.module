@@ -3984,7 +3984,13 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
             $resource_actions .= '<a href="" onclick="sidora.resources.download(\'' . $element_pid . '\'); return false;" class="sidora-ui-link" title="Download"><i class="material-icons">file_download</i></a> ';
             $resource_actions .= '<a href="" onclick="sidora.resources.DeleteResource(\'' . $element_pid . '\'); return false;" class="sidora-ui-link" title="Delete"><i class="material-icons">delete</i></a>';
            
-            $thumbnail_html = '<div class="sidora-info-holder" administered-by-pid="'.$element['administeredBy']['value'].'" num-links="'.$element['incomingLinks']['value'].'"></div>';
+            $thumbnail_html = '<div ';
+            $thumbnail_html .= 'class="sidora-info-holder" ';
+            $thumbnail_html .= 'administered-by-pid="'.$element['administeredBy']['value'].'" ';
+            $thumbnail_html .= 'num-links="'.$element['incomingLinks']['value'].'" ';
+            module_load_include('inc', 'sidora', 'includes/project_spaces');
+            $thumbnail_html .= 'rspids="' . implode(' ', sidora_get_project_space_pids_for_pid($element_pid)) . '" ';
+            $thumbnail_html .= '></div>';
             $thumbnail_html .= '<div class="resource-list-tn">';
             if ($pid != $element['administeredBy']['value']) {
               $thumbnail_html .= $linked_resources; 
@@ -4726,18 +4732,20 @@ function sidora_ajax_parts($call_type, $param1 = '', $param2 = '', $param3 = '')
   if ($call_type == 'research_spaces_tree') {
     module_load_include('inc', 'sidora', 'includes/project_spaces');
     if (!empty($param1)) {
-      if (empty($_GET['doFast'])) {
-        //sidora_project_spaces_tree("",TRUE, array("view"), TRUE, $param1);
-        //sleep(10);
+      if (empty($_GET['create'])) {
+        print sidora_project_spaces_tree("",TRUE, array("view"), TRUE, $param1);
       }
-      print sidora_project_spaces_tree("",TRUE, array("view"), TRUE, $param1);
+      else {
+        print sidora_project_spaces_tree("",TRUE, array("create"), TRUE, $param1);
+      }
     }
     else {
-      if (empty($_GET['doFast'])) {
-        //sidora_project_spaces_tree();
-        //sleep(10);
+      if (empty($_GET['create'])) {
+        print sidora_project_spaces_tree('Research Space Destinations:',FALSE, array("create"), TRUE);
       }
-      print sidora_project_spaces_tree();
+      else {
+        print sidora_project_spaces_tree();
+      }
     }
     drupal_exit();
   }
@@ -5922,6 +5930,7 @@ function sidora_html_tree_from_given_pid($root_pid = '', $root = NULL, $num_leve
   // Count concept children
   $cr = _sidora_get_child_results_cache($root_pid);
   $to_return .= ' conceptchildren="'.sizeof($cr).'"';
+  $to_return .= ' rspids="' . implode(' ', sidora_get_project_space_pids_for_pid($root_pid)) . '"';
   $info = sidora_get_info($root_pid);
   $node_wrapper = entity_metadata_wrapper('node', $info['node']);
   $to_return .= ' resourcechildren="'.$node_wrapper->field_sidora_resource_child_coun->value().'"';
@@ -6668,6 +6677,7 @@ function sidora_html_tree_from_query_results_tree($query_result_tree, $input_pat
         $to_return .= $dom_type . $href;
         $to_return .= ' pid="' . $pid . '" fullname="' . $html_escaped_name . '"';
         $to_return .= ' conceptchildren="' . count($t_element['children']) . '"';
+        $to_return .= ' rspids="' . implode(' ', sidora_get_project_space_pids_for_pid($pid)) . '"';
         $to_return .= ' resourcechildren="' . $resource_children_num . '"';
         $to_return .= ' class="' . $all_classes . '" permissions="' . $permissions . '"';
         $to_return .= $nid_info . $owner_info . $administeredBy;
