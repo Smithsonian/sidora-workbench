@@ -5896,24 +5896,8 @@ function sidora_html_tree_from_given_pid($root_pid = '', $root = NULL, $num_leve
     if (!empty($children_resources)) {
       $root_suffix = " (" . sizeof($children_resources) . ")";
     }
-    /*
-    $results = _sidora_get_child_results_cache($root_pid);
-    $root_children_pids = array();
-    $filled = sidora_fill_concepts_children($results, array(), $root_children_pids); 
-    /* */ 
     $filled = sidora_build_tree_from_nodes_by_pid($root_pid, $num_levels);
-    // Check that the thing we're checking on has the right number of child concepts in the tree vs. the RELS-EXT
-    // This is because the resource index can return early with bad info
-    $actual_num_child_concepts = empty($filled[0])?0:sizeof($filled[0]['children']);
-    $attempts = 1;
-    while ($attempts < 3 && (empty($filled[0]))){ // || ($actual_num_child_concepts != $expected_num_child_concepts && !empty($expected_num_child_concepts)))) {
-      // Nodes, Resource Index, and Fedora may not be in sync for a bit
-      // Wait a bit to see if they sync up and try again
-      sleep(10);
-      $filled = sidora_build_tree_from_nodes_by_pid($root_pid, $num_levels);
-      $actual_num_child_concepts = empty($filled[0])?0:sizeof($filled[0]['children']);
-      $attempts++;
-    }
+
     if (empty($filled[0])) {
       return 'Invalid';
     }
@@ -7986,6 +7970,16 @@ function sidora_video_view_object($pid) {
  * Recap: 'object_issues','relationship_issues','other_issues' each with own structure
  */
 function sidora_add_fedora_assumption_problem($type, $problem, $pid = '') {
+  // Only record assumption problems when people are going to be looking at the log
+  // Otherwise we could do lots of recording which slows the system and grows the 
+  // database but get no benefit from it
+  $stop_milli = variable_get('sidora_log_assumption_stop',0);
+  if (empty($stop_milli)) {
+    return;
+  }
+  if ($stop_milli < microtime(true)) {
+    return;
+  }
   $assumption_problems = variable_get('sidora_assumption_problems',array(
     'object_issues' => array(),
     'relationship_issues' => array(),

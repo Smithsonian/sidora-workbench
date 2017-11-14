@@ -1180,8 +1180,14 @@ function sidora_get_default_owner_id_under_pid($pid){
  * Creates a node type for concepts if one doesn't exist, and returns the "machine name" for the type
  */
 function sidora_get_concept_content_type(){
+  static $to_return = NULL;
+  if (!empty($to_return)) {
+    return $to_return;
+  }
   $type_name = 'sidora_concept';
-  if ( in_array( $type_name, node_type_get_names() ) ) {
+  $ntgn = node_type_get_names();
+  if ( in_array( $type_name, array_keys($ntgn) ) ) {
+    $to_return = $type_name;
     return $type_name;
   }
   $concept_type = array(
@@ -1197,6 +1203,7 @@ function sidora_get_concept_content_type(){
   node_type_save( $type );
   //  Add a body field.
   node_add_body_field( $type );
+  $to_return = $type_name;
   return $type_name;
 }
 

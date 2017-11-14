@@ -428,6 +428,7 @@ function sidora_settings_import($object, $settings = array(), $dry_run = TRUE) {
  * Downloads the current SIdora Fedora object issues or shows a form to view the issues
  */
 function sidora_fedora_object_issues($direct_download = "") {
+
   $download_filename = 'object_issues.json';
   if ($direct_download == $download_filename) {
     header("Content-type: application/json");
@@ -448,6 +449,7 @@ function sidora_fedora_object_issues($direct_download = "") {
  * Form for displaying SIdora Fedora object issues
  */
 function sidora_fedora_object_issues_form($form, &$form_state) {
+  
   $assumption_problems = variable_get('sidora_assumption_problems',array(
     'object_issues' => array(),
     'relationship_issues' => array(),
@@ -511,7 +513,13 @@ function sidora_fedora_object_issues_form($form, &$form_state) {
   }
   $table_attributes = array('id' => 'sidora_other_issues');
   $output .= theme('table', array('header'=>$header, 'rows'=>$rows, 'attributes'=>$table_attributes));
-
+  $stop_milli = variable_get('sidora_log_assumption_stop',0);
+  $form['log_assumption_stop'] = array(
+    '#title' => 'Log assumption issues for the following number of seconds:', 
+    '#description' => '86400 = day, 604800 = week.',
+    '#type' => 'textfield',
+    '#default_value' => max(0,(int)($stop_milli - microtime(true))),
+  );
 
   $form['clear_pids'] = array(
     '#type' => 'textarea',
@@ -537,6 +545,8 @@ function sidora_fedora_object_issues_form_submit($form, &$form_state) {
     'relationship_issues' => array(),
     'other_issues' => array(),
   );
+  variable_set('sidora_log_assumption_stop',(int)microtime(true) + (int)$form_state['values']['log_assumption_stop']);
+
   if ($form_state['values']['clear_pids'] == 'ALL') {
     variable_set('sidora_assumption_problems',$empty_problems);
     drupal_set_message(t('The Fedora object issues list has been emptied'));
