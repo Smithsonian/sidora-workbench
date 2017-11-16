@@ -2293,56 +2293,59 @@ function exhibition_config_get_pid_tree($pid,&$pid_list = array(),$parent = '',$
   return $to_return;
 }
 function exhibition_config_generate_checkboxes($branch,&$rows,$visibility_settings,$path){
+  global $user;
   if (isset($branch) && sizeof($branch)) {
     foreach ($branch as $child_array) {
-      $tree_depth = substr_count($path,'/');
-      $indent = '';
-      for ($ctr=0;$ctr < $tree_depth; $ctr++) {
-        $indent .= '<span class="tree-indent ui-selectee"></span>';
-      } 
-      if ($child_array['type'] == 'Resource') {
-        //$indent .= '<span class="tree-indent ui-selectee"></span>';
+      if (sidora_allow($user, $child_array['pid'], 'view')){
+        $tree_depth = substr_count($path,'/');
+        $indent = '';
+        for ($ctr=0;$ctr < $tree_depth; $ctr++) {
+          $indent .= '<span class="tree-indent ui-selectee"></span>';
+        } 
+        if ($child_array['type'] == 'Resource') {
+          //$indent .= '<span class="tree-indent ui-selectee"></span>';
+        }
+        if ($path == '') {
+          $array_index = $child_array['pid'];
+        }else{  
+          $array_index = $path;
+        } 
+        if ($tree_depth > 0) $array_index = $path.$child_array['pid'];
+        $html = '<li class="visibility-row full-browser" id="' . $child_array['pid'] . '" depth="' . $array_index . '" name="' . $child_array['title'] . '">';
+        //$html = '<tr class="visibility-row full-browser" id="' . $child_array['pid'] . '" depth="' . $array_index . '" name="' . $child_array['title'] . '">';
+        $html .= '<div class="visibility-name">'.$indent;
+        //$html .= '<td class="visibility-name">'.$indent;
+        $html .= '<span class ="' . $child_array['type'] . ' ui-selectee"></span>';
+        $html .=  $child_array['title'].'</div>';
+        //$html .=  $child_array['title'].'</td>';
+        $html .= '<div class="visibility-type" style="width:6%;">'.$child_array['type'].'</div>';
+        $html .= '<div class="visibility-path">'.$child_array['relationship'].'</div>';
+        //$html .= '<td class="visibility-type" style="width:6%;">'.$child_array['type'].'</td>';
+        //$html .= '<td class="visibility-path">'.$child_array['relationship'].'</td>';
+        $checkboxes_array = array();
+        foreach ($visibility_settings as $setting => $name) {
+          $checkboxes_array[$setting] = '';
+        } 
+        $rows[$array_index] = array(
+          'pid' => $child_array['pid'],
+          'type' => $child_array['type'],
+          'label' => $child_array['title'],
+          'model' =>  (($child_array['type'] == 'Resource')?$child_array['model']:''),
+          'prefix' => $html,
+          'suffix' => '</li>',
+          //'suffix' => '</tr>',
+          'checkboxes' => $checkboxes_array
+        );
+        if ((isset($child_array['children'])) && (sizeof($child_array['children']) > 0)) {
+          $rows[$array_index]['suffix'] .= '<ul class="visibility-list-table" id="' . $array_index . '">';
+          //$rows[$array_index]['suffix'] .= '<table class="visibility-list-table" id="' . $array_index . '">';
+          exhibition_config_generate_checkboxes($child_array['children'],$rows,$visibility_settings,$array_index.'/');
+          $all_keys = array_keys($rows);
+          $key = end($all_keys);
+          $rows[$key]['suffix'] .= '</ul>';
+        }
       }
-      if ($path == '') {
-        $array_index = $child_array['pid'];
-      }else{  
-        $array_index = $path;
-      } 
-      if ($tree_depth > 0) $array_index = $path.$child_array['pid'];
-      $html = '<li class="visibility-row full-browser" id="' . $child_array['pid'] . '" depth="' . $array_index . '" name="' . $child_array['title'] . '">';
-      //$html = '<tr class="visibility-row full-browser" id="' . $child_array['pid'] . '" depth="' . $array_index . '" name="' . $child_array['title'] . '">';
-      $html .= '<div class="visibility-name">'.$indent;
-      //$html .= '<td class="visibility-name">'.$indent;
-      $html .= '<span class ="' . $child_array['type'] . ' ui-selectee"></span>';
-      $html .=  $child_array['title'].'</div>';
-      //$html .=  $child_array['title'].'</td>';
-      $html .= '<div class="visibility-type" style="width:6%;">'.$child_array['type'].'</div>';
-      $html .= '<div class="visibility-path">'.$child_array['relationship'].'</div>';
-      //$html .= '<td class="visibility-type" style="width:6%;">'.$child_array['type'].'</td>';
-      //$html .= '<td class="visibility-path">'.$child_array['relationship'].'</td>';
-      $checkboxes_array = array();
-      foreach ($visibility_settings as $setting => $name) {
-        $checkboxes_array[$setting] = '';
-      } 
-      $rows[$array_index] = array(
-        'pid' => $child_array['pid'],
-        'type' => $child_array['type'],
-        'label' => $child_array['title'],
-        'model' =>  (($child_array['type'] == 'Resource')?$child_array['model']:''),
-        'prefix' => $html,
-        'suffix' => '</li>',
-        //'suffix' => '</tr>',
-        'checkboxes' => $checkboxes_array
-      );
-      if ((isset($child_array['children'])) && (sizeof($child_array['children']) > 0)) {
-        $rows[$array_index]['suffix'] .= '<ul class="visibility-list-table" id="' . $array_index . '">';
-        //$rows[$array_index]['suffix'] .= '<table class="visibility-list-table" id="' . $array_index . '">';
-        exhibition_config_generate_checkboxes($child_array['children'],$rows,$visibility_settings,$array_index.'/');
-        $all_keys = array_keys($rows);
-        $key = end($all_keys);
-        $rows[$key]['suffix'] .= '</ul>';
-      }
-    } 
+    }
   } 
 }
 function exhibition_config_flatten_tree($branch, &$rows,$visibility_settings,$path) {
@@ -3346,7 +3349,7 @@ function exhibition_config_update_visibility($checkbox_rows,$existing_visibility
   return $to_return;
 }
 function exhibition_config_create_page_links($checkbox_rows,$page_number = 1, $objects_per_page) {
-  $navigation_html = '<div style="float:right;display: inline;width: 42%;height:60%;"><div id="sidora-resources-button-row" style="left: 50px;width: 100%;height:100%">';
+  $navigation_html = '<div style="float:right;display: inline;width: 300px;height:60%;"><div id="sidora-resources-button-row" style="left: 50px;width: 100%;height:100%">';
   $navigation_html .= '<div id="sidora-resources-button-first" class="sidora-resources-icon" style="background-position: -306px -44px;cursor:pointer;"></div><div id="sidora-resources-button-prev" class="sidora-resources-icon" style="background-position: -231px -4px;cursor:pointer;"></div>';
   $navigation_html .= '<div style="display:inline-block;top:0;vertical-align:top; height:36px;"><input id="sidora-resources-page-number" type="text" size="4" class="form-text" value="' . $page_number . '" style="width:25px;vertical-align:top;"> Of <div id="sidora-resources-page-count" style="display:inline-block;vertical-align:top;">' . ceil(count($checkbox_rows) / $objects_per_page) . '</div><div class="action-button"><a href="javascript:void(0);" class="button" id="visibility-page-number">Go</a></div></div>';
   $navigation_html .= '<div id="sidora-resources-button-next" class="sidora-resources-icon" style="background-position: -270px -4px;cursor:pointer;"></div><div id="sidora-resources-button-last" class="sidora-resources-icon" style="background-position: -346px -44px;cursor:pointer;"></div>';
