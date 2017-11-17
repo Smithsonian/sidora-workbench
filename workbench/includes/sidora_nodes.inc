@@ -395,10 +395,10 @@ function sidora_fedora_create_partial_node_set(
   $root_label,
   $root_num_resources,
   $owner_username,
+  &$updated_set,
   $max_depth = 999999,
   $max_count = 999999999
 ){
-  $updated_set = array();
   $root_node = sidora_create_full_node_set(
     $root_pid,
     $root_label,
@@ -446,7 +446,8 @@ function sidora_fedora_sync() {
     $table_html = '';
     $date = date('Y-m-d H:i:s');
     print $date . "\n";
-    $root_node =  sidora_fedora_create_partial_node_set($root_pid,$root_label,$root_resource_count,NULL,$max_depth,$max_count);
+    $updated_set = array();
+    $root_node =  sidora_fedora_create_partial_node_set($root_pid,$root_label,$root_resource_count,NULL,$updated_set,$max_depth,$max_count);
     print "Root Node:\n";
     var_dump($root_node);
     print "Full Set of Updated Items:\n";
@@ -651,12 +652,15 @@ function sidora_create_full_node_set($pid, $label, $num_resources, $owner_userna
     print "\n========= $pid is leaf";
   }
   print "\nPID: $pid owned by: $owner_username Count: " . count($already_updated) ."\n";
+  print '==';
   $info = array(
     'label' => $label,
     'concept_children' => implode(',',$child_nids),
     'resource_children' => $num_resources,
     'owner' => $owner_username,
   );
+  print '--';
+  print json_encode($info);
   $node = sidora_get_update_or_create_concept_node($pid, $info, TRUE);
   /*
   if ($self_child) {
@@ -883,7 +887,7 @@ function sidora_get_update_or_create_concept_node($pid, $info = NULL, $set_fedor
     $object = sidora_obj($pid);
     if (!empty($object)){
       $is_concept = sidora_is_concept($object);
-      if ($is_concept) {
+      if ($is_concept || $pid == 'si:root') {
         watchdog('sidora', "Create:<pre>" . sidora_debug_string_backtrace()."</pre>info:".json_encode($info));
         return sidora_create_concept_node($pid, $info, $set_fedora_sync);
       }
