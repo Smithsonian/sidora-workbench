@@ -3178,7 +3178,13 @@ sidora.ProjectSpaces.refreshOptionsImmediate = function(refreshesUntilGiveUp){
       else {
         // check for name change and for icon change
         var tn = sidora.util.GetTreeNodesByPid(elem.attributes['pid'].value);
-        tn[0].text = elem.innerHTML;
+        jst.rename_node(tn[0], elem.innerHTML);
+        tn[0].a_attr.fullname = elem.innerHTML;
+        var optionInDropdown = jQuery("#psdd-select").find("[value='"+tn[0].id+"']");
+        optionInDropdown[0].innerHTML = elem.innerHTML;
+        if (elem.attributes['pid'].value == sidora.concept.GetPid()) {
+          sidora.UpdateTitleDirect(elem.innerHTML);
+        }
       }
     };
     var changeMade = false;
