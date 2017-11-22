@@ -3930,6 +3930,13 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
       }
       break;
     case 'resources':
+      $permissions = array();
+      $permissions['v'] = sidora_allow(NULL, $pid, 'view');
+      $permissions['u'] = sidora_allow(NULL, $pid, 'update');
+      $permissions['d'] = sidora_allow(NULL, $pid, 'delete');
+      if (!$permissions['v']) {
+        return '';
+      }
       $resource_types = sidora_get_resource_types();
       if ($download == 'browser' && $formatted == 'dataTableServerSideProcessing') {
         $jsdt_title_and_type_search_val = filter_var($_GET['search']['value'], FILTER_SANITIZE_STRING);
@@ -3955,6 +3962,7 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
         else {
           $resources = sidora_concept_resource_listing($pid,$resource_types,$limit,$offset, $jsdt_search_val, $jsdt_title_search_val, $jsdt_order_on, $jsdt_order_by);
         }
+
         $jsdt_response = array();
         $jsdt_response['draw'] = $jsdt_draw;
         $jsdt_response['recordsTotal'] = $resources_count;
@@ -3989,19 +3997,25 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
             $type = sidora_model_to_user_language($element['model']['value']);
             $creation_date = date_parse($element['created']['value']);
             $operations = '<a href="" onclick="sidora.resources.ShowDetails(\'' . $element_pid . '\'); return false;" class="sidora-ui-link">Details</a> ';
-            $operations .= '<a href="" onclick="sidora.resources.EditDetails(\'' . $element_pid . '\'); return false;" class="sidora-ui-link">Edit</a> ';
-            $operations .= '<a href="" onclick="sidora.resources.UpdateContent(\'' . $element_pid . '\'); return false;" class="sidora-ui-link">Update Content</a>';
+            if ($permissions['u']) {
+              $operations .= '<a href="" onclick="sidora.resources.EditDetails(\'' . $element_pid . '\'); return false;" class="sidora-ui-link">Edit</a> ';
+              $operations .= '<a href="" onclick="sidora.resources.UpdateContent(\'' . $element_pid . '\'); return false;" class="sidora-ui-link">Update Content</a>';
+            }
             $operations .= '<br/>';
             $operations .= '<a href="" onclick="sidora.ProjectSpaces.DuplicateOrTransfer(\'link\', \'resources\',\'' . $element_pid . '\',Drupal.t(\'Link Resources\')); return false;" class="sidora-ui-link">Link</a> ';
             $operations .= '<a href="" onclick="sidora.ProjectSpaces.DuplicateOrTransfer(\'duplicate\',\'resources\',\'' . $element_pid . '\',Drupal.t(\'Copy Resources\')); return false;" class="sidora-ui-link">Copy</a> ';
-            $operations .= '<a href="" onclick="sidora.ProjectSpaces.DuplicateOrTransfer(\'transfer\',\'resources\',\'' . $element_pid . '\',Drupal.t(\'Move Resources\')); return false;" class="sidora-ui-link">Move</a>';
+            if ($permissions['d']) {
+              $operations .= '<a href="" onclick="sidora.ProjectSpaces.DuplicateOrTransfer(\'transfer\',\'resources\',\'' . $element_pid . '\',Drupal.t(\'Move Resources\')); return false;" class="sidora-ui-link">Move</a>';
+            }
             if (sidora_is_admin()) {
               $operations .= '<br/>';
               $operations .= '<a href="" onclick="sidora.manage.Open(\'' . $element_pid . '\', \'\', \'Manage Resource\', \'Update resource information\'); return false;" class="sidora-ui-link">Manage</a> ';
             }
             $resource_actions = '<a href="" onclick="sidora.resources.openInNewWindow(\'' . $element_pid . '\'); return false;" class="sidora-ui-link" title="Open in New Window"><i class="material-icons">filter</i></a> ';
             $resource_actions .= '<a href="" onclick="sidora.resources.download(\'' . $element_pid . '\'); return false;" class="sidora-ui-link" title="Download"><i class="material-icons">file_download</i></a> ';
-            $resource_actions .= '<a href="" onclick="sidora.resources.DeleteResource(\'' . $element_pid . '\'); return false;" class="sidora-ui-link" title="Delete"><i class="material-icons">delete</i></a>';
+            if ($permissions['d']) {
+              $resource_actions .= '<a href="" onclick="sidora.resources.DeleteResource(\'' . $element_pid . '\'); return false;" class="sidora-ui-link" title="Delete"><i class="material-icons">delete</i></a>';
+            }
            
             $thumbnail_html = '<div ';
             $thumbnail_html .= 'class="sidora-info-holder" ';
