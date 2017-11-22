@@ -458,6 +458,7 @@ sidora.concept.LoadContentHelp.Permissions = function(conceptOfInterest){
        
       //jQuery("#sharing-permissions").toggle(jQuery("#j1_1 >a").attr("pid") == sidora.concept.loadedContentPid);
       //jQuery("#concept-create").toggle(permissions.create);
+      jQuery("#move-to-another-space").toggle(permissions.delete);
       jQuery("#deleteConcept").toggle(permissions.delete);
       jQuery("#editMetadataConcept").toggle(permissions.update); 
       //jQuery("#editPermissionsConcept").toggle(permissions.permission); 
@@ -1089,6 +1090,9 @@ sidora.contextMenu.SetUp = function(){
       return true;
     }
     if (key == 'moveConcept' && !sidora.concept.permissions.delete) {
+      return true;
+    }
+    if (key == 'deleteConcept' && !sidora.concept.permissions.delete) {
       return true;
     }
     return jQuery(opt.$trigger).hasClass("is-project-space");
@@ -2341,6 +2345,9 @@ sidora.concept.CopyNode = function(data) {
   //Copy node
   var toMovePid = data.node.a_attr.pid;
   var moveToPid = jQuery("#"+data.parent+" a").attr('pid');
+  if (typeof(moveToPid) == 'undefined'){
+    moveToPid = data.moveToPid;
+  }
   var actionUrl = Drupal.settings.basePath+'sidora/ajax_parts/copy/'+moveToPid+'/'+toMovePid
   if (typeof(toMovePid) == 'undefined'){
     //Both types of resource drags are interpreted as "copy_node"
@@ -2348,9 +2355,6 @@ sidora.concept.CopyNode = function(data) {
     //console.log("resource copy/move");
     jQuery("#forjstree").jstree("delete_node",data.node);
     return; //resource actions are handled by the 'dnd_stop.vakata' event
-  }
-  if (typeof(moveToPid) == 'undefined') {
-    moveToPid = data.moveToPid;
   }
   var jst = jQuery("#forjstree").jstree(true);
   var newParentExistingChildConceptsNumber = parseInt(jQuery("#"+data.parent).children("a").attr("conceptchildren"));
@@ -3181,9 +3185,9 @@ sidora.ProjectSpaces.refreshOptionsImmediate = function(refreshesUntilGiveUp){
         jst.rename_node(tn[0], elem.innerHTML);
         tn[0].a_attr.fullname = elem.innerHTML;
         var optionInDropdown = jQuery("#psdd-select").find("[value='"+tn[0].id+"']");
-        optionInDropdown[0].innerHTML = elem.innerHTML;
+        optionInDropdown[0].innerHTML = elem.innerText;
         if (elem.attributes['pid'].value == sidora.concept.GetPid()) {
-          sidora.UpdateTitleDirect(elem.innerHTML);
+          sidora.UpdateTitleDirect(elem.innerText);
         }
       }
     };

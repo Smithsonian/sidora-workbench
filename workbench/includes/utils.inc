@@ -1408,11 +1408,11 @@ function sidora_array_to_xml( $data, &$xml_data, &$domtree ) {
     }
     if( is_array($value) ) {
       $subnode = $domtree->createElement($key);
-			$subnode = $xml_data->appendChild($subnode);
+      $subnode = $xml_data->appendChild($subnode);
       sidora_array_to_xml($value, $subnode,$domtree);
     } else {
-       $subnode = $domtree->createElement("$key",htmlspecialchars("$value"));
-			 $xml_data->appendChild($subnode);
+      $subnode = $domtree->createElement("$key",htmlspecialchars("$value"));
+      $xml_data->appendChild($subnode);
     }
   }
 

@@ -1409,7 +1409,7 @@ jQuery(document).ready(function() {
   jQuery("input.codebook-edit").click(function() {
     id = jQuery(this).attr("cbid");
     Shadowbox.open({
-        content:    "../edit_metadata/"+id+"",
+        content:    Drupal.settings.basePath + "sidora/edit_metadata/"+id+"",
         player:     "iframe",
         title:      "Edit Metadata",
         options: {
@@ -2556,7 +2556,7 @@ function sidora_create_resource_get_metadata_form_html($parent_pid, $model, $for
  * Initial screen shown when user chooses to upload tabular data,
  * Is a form to choose from their existing codebooks or to upload a new example data file to use
  */
-function sidora_codebook_upload_form($form, &$form_state) {
+function sidora_codebook_upload_form($form, &$form_state, $parent_pid) {
   $form['gen-codebook'] = array(
     '#type' => 'fieldset',
     '#title' => t('Generate Codebook From Example File'),
@@ -2604,6 +2604,24 @@ function sidora_codebook_upload_form($form, &$form_state) {
   );
   module_load_include('inc', 'sidora', 'includes/utils');
   $codebook_options = array();
+  module_load_include('inc', 'sidora', 'includes/project_spaces');
+  $ps_pids = sidora_get_project_space_pids_for_pid($parent_pid);
+  $codebook_options = array();
+  if (sizeof($ps_pids) > 0) {
+    $cb_holder = sidora_obj($ps_pids[0]);
+    if (!empty($cb_holder)) {
+      $codebooks = $cb_holder->relationships->get(FEDORA_RELS_EXT_URI, 'managesCodebook');
+      foreach ($codebooks as $codebook_info) {
+        $codebook_pid = ($codebook_info['object']['value']);
+        $codebook = sidora_obj($codebook_pid);
+        if (!empty($codebook) && !empty($codebook->label)) {
+          $codebook_options[$codebook_pid] = $codebook->label;
+        }
+      }
+      $codebook_options = array_reverse($codebook_options);
+    }
+  }
+  /*
   $user_pid = sidora_get_user_object();
   $user_obj = sidora_obj($user_pid);
   // Load up the Fedora Commons object for the user
@@ -2617,6 +2635,7 @@ function sidora_codebook_upload_form($form, &$form_state) {
     }
     $codebook_options = array_reverse($codebook_options);
   }
+  */
   $form['existing-codebook'] = array(
     '#type' => 'fieldset',
     '#title' => t('Choose From Your Existing Codebooks'),
@@ -2928,7 +2947,7 @@ jQuery(document).ready(function() {
 </script>';
       // First step for codebook is the upload or choose step (SID-243)
       $to_return .= '<div style="display:none">Tabular data files require a codebook which describes the contents of the data.  You can choose to automatically generate a codebook based on one of your files, or choose an existing codebook that describes your data.  Use one of the two options below, clicking one of the buttons to make your choice.</div>';
-      $form = drupal_get_form('sidora_codebook_upload_form');
+      $form = drupal_get_form('sidora_codebook_upload_form', $parent_pid);
       $to_return .= drupal_render($form);
       $show_form = FALSE;
     }
@@ -8500,6 +8519,13 @@ function sidora_create_association_xml($batch_id,$association) {
   $domtree->formatOutput = TRUE;
   $batch_tag = $domtree->createElement('association');
   $batch_tag = $domtree->appendChild($batch_tag);
+  if (!empty($association['transform']) && (FALSE === strpos($association['transform'], 'http'))){
+    global $base_url;
+    global $base_path;
+    $prepend = $base_url . $base_path . 'sites/all/modules/sidora_specific/transforms/';
+    $association['transform'] = $prepend . $association['transform'];
+  }
+//  dsm($association);
   sidora_array_to_xml($association,$batch_tag,$domtree);
   $domtree->save('public://' . 'association_' . $batch_id . '.xml');
   return 1;
