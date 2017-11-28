@@ -503,6 +503,7 @@ function sidora_fedora_sync() {
       sidora_fedora_queue_sync($nid);
     }
   }
+  $tr_count = 1;
   if (!empty($show_table)) {
     $query = new EntityFieldQuery();
     $query->entityCondition('entity_type', 'node')
@@ -568,15 +569,17 @@ function sidora_fedora_sync() {
     }
     $pager .= $page;
   }
-  
-  $to_return = 'Nodes: '.$tr_count;
-  $to_return .= "<br/>Page: $pager";
-  $to_return .= $table_html;
+  $to_return = ''; 
+  if (!empty($show_table)) {
+    $to_return = 'Nodes: '.$tr_count;
+    $to_return .= "<br/>Page: $pager";
+    $to_return .= $table_html;
+  }
   $to_return .= '<a href="?show_table=1">Show table of nodes</a>';
   $to_return .= '<h1>BATCH COMMANDS</h1><ul>';
   $to_return .= '<li><a href="?command=update_and_create_nodes_from_queries">Create / Update Nodes from Sparql queries</a></li>';
   $to_return .= '<li><a href="?command=queue&nid=ALL&batch_start=1&batch_end=999999&show_table=1">Queue ALL</a> This will cause the tree to load them when a user opens the tree for the first time</li>';
-  $to_return .= '<li><a href="'.url('sidora/ajax_parts/tree/si:root/2').'" target="_blank">Load the initial administrator tree in a separate window</a></li>';
+  $to_return .= '<li><a href="'.url('sidora/ajax_parts/tree/si:user-projects/2').'" target="_blank">Load the initial research spaces tree in a separate window</a></li>';
   $to_return .= '<li style="margin-top:20px"><a href="?command=resync&nid=ALL&batch_start=1&batch_end=999999&show_table=1">Resync ALL NOW from Fedora</a> This will take a LONG time </li>';
   $to_return .= '</ul>';
   $to_return .= '<p class="buffer-so-you-dont-click-on-resync-from-fedora-accident" style="height:100px"></p>';
