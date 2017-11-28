@@ -2224,8 +2224,8 @@ function sidora_create_resource_get_upload_form_html($model, $form_name, $ontolo
     'si:fieldbookCModel' => array('pdf'),
     'islandora:sp-audioCModel' => array('mp3','aiff','wav'),
     'islandora:sp_videoCModel' => array('ogg','mp4','mov','qt', 'm4a', 'm4v', 'avi', 'mkv'),
-    'si:rawGeneSequenceCModel' => array('fasta','fa','fas','fsn','fna','faa'),
-    'si:assembledGeneSequenceCModel' => array('fasta','fa','fas','fsn','fna','faa'),
+    'si:rawGeneSequenceCModel' => array('fastq','fq','fasta','fa','fas','fsn','fna','faa'),
+    'si:assembledGeneSequenceCModel' => array('fastq','fq','fasta','fa','fas','fsn','fna','faa'),
     'si:genericCModel' => array('*'),
     '*' => array('*')
   );
