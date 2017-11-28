@@ -496,18 +496,16 @@ function sidora_project_space_convert_concept($original_pid, $pattern = '/(.+)/'
       sidora_copy($ps_pid, $child_pid, FALSE);
       sidora_unassociate($original_pid, $child_pid, FALSE);
     }
-    // add the original to the project space
+
+    // Move codebooks to the new research space
     sidora_copy($ps_pid, $original_pid, FALSE);
-    /*
-    as of 2017-06-19 Dan said not to put resources on project spaces. Remove this code in future commit, keeping temporarily as comment
-    // just the resources
-    $resource_rels = $original->relationships->get(FEDORA_RELS_EXT_URI, 'hasResource');
+    $resource_rels = $original->relationships->get(FEDORA_RELS_EXT_URI, 'managesCodebook');
     foreach($resource_rels as $resource_rel) {
       $resource_pid = $resource_rel['object']['value'];
       sidora_copy($ps_pid, $resource_pid, FALSE);
       sidora_unassociate($original_pid, $resource_pid, FALSE);
     }
-    */
+
     $new_label = preg_replace($pattern, $replacement, $original->label, 1);
     if (empty($new_label) || $new_label == $original->label) {
       $new_label = preg_replace('/(.+)/', $unmatched_replacement, $original->label, 1);
