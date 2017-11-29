@@ -1700,6 +1700,7 @@ function sidora_check_user_projects() {
   $rows_users_with_invalid_pids = array();
   $rows_overused_pids = array();
   $rows_unused_pids = array();
+  $rows_research_spaces = array();
   $in_use_pids = array();
   $overused_pids = array();
   foreach ($users as $account) {
@@ -1739,7 +1740,13 @@ function sidora_check_user_projects() {
   foreach ($cr as $child) {
     $pid = $child['o']['value'];
     if (empty($in_use_pids[$pid])) {
-      $rows_unused_pids[] =  array('No User Found', $pid , $child['t']['value']);
+      module_load_include('inc', 'sidora', 'includes/project_spaces');
+      if (sidora_is_project_space($pid)) {
+        $rows_research_spaces[] =  array('Research Space', $pid , $child['t']['value']);
+      }
+      else {
+        $rows_unused_pids[] =  array('No User Found', $pid , $child['t']['value']);
+      }
     }
   }
   $to_return = t('Configured Users') . theme('table',array('header' => $header, 'rows' => $rows_proper_users));
@@ -1747,6 +1754,7 @@ function sidora_check_user_projects() {
   $to_return .= t('Users with Invalid Pids') . theme('table',array('header' => $header, 'rows' => $rows_users_with_invalid_pids));
   $to_return .= t('Overused Pids') . theme('table',array('header' => $header, 'rows' => $rows_overused_pids));
   $to_return .= t('Unused Pids in si:user-projects') . theme('table',array('header' => $header, 'rows' => $rows_unused_pids));
+  $to_return .= t('Research Spaces si:user-projects') . theme('table',array('header' => $header, 'rows' => $rows_research_spaces));
   return $to_return;
 }
 
