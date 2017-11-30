@@ -803,3 +803,6 @@ li.sidora-not-available a {
   color: gray;
   cursor: default;
 }
+#destination-tree > ul > li > a, #destination-tree > ul > li > i {
+  display:none;
+}

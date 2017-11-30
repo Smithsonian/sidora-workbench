@@ -6673,6 +6673,12 @@ function sidora_html_tree_from_query_results_tree($query_result_tree, $input_pat
         $to_return .= $t_element['t']['value'];
         if ($resource_children_num > 0) $to_return .= ' ('.$resource_children_num.')';
         $to_return .= "</$dom_type>";
+//BBB
+        if ($pid == 'si:117442'){
+          $to_return .= '<ul><li><' . $dom_type . ' href="#" fullname="Linky no view" ownedbyrs="MyOwningRSLabel" ownerforrs="Bob Ownings" conceptchildren="0">Linky no view</' . $dom_type . '></li></ul>';
+        }
+
+//BBB
         if (array_key_exists('children',$t_element)){
           $to_return .= '<ul>';
           $to_return .= sidora_html_tree_from_query_results_tree($t_element['children'], $current_path, $num_levels - 1, $url_params, $dom_type, $include_href, $include_permission_types, $pid);

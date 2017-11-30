@@ -618,6 +618,7 @@ sidora.concept.LoadContent = function(leaveContentIfAlreadyLoaded){
   sidora.concept.LoadContentHelp.Permissions(conceptOfInterest);
   sidora.concept.LoadContentHelp.Exhibition_view(conceptOfInterest);
   sidora.concept.LoadContentHelp.Metadata(conceptOfInterest);
+  // Next line turns on / off visibility of resources tab chooser on the main panel
   jQuery("a[href='#concept-resource-list']").parent().toggle(!irs);
   jQuery("#concept_tabs").children("ul").toggle(!irs);
   if (!irs) {
@@ -860,9 +861,9 @@ sidora.ProjectSpaces.DuplicateOrTransfer = function(type, conceptsOrResources, s
   var specifiedDepth = null;
   if (type == 'link') {
     // Only allow links within the current research space
-    specificDestination = sidora.ProjectSpaces.currentPid();
+    //specificDestination = sidora.ProjectSpaces.currentPid();
     ignoredDestination = '';
-    specifiedDepth = 10;
+    specifiedDepth = 3;
   }
 
   var intro = sidora.ProjectSpaces.DuplicateOrTransferIntro(type, pids);
@@ -1269,9 +1270,36 @@ sidora.InitiateJSTree = function(){
     jQuery('#forjstree').bind('select_node.jstree', function(e,data) {
       var jst = jQuery("#forjstree").jstree();
       window.location = jQuery('#'+data.selected[0]).children('a').attr('href');
-      sidora.UpdateTitleBasedOnNameInTree(jQuery(jQuery('#'+data.selected[0]).find("a")[0]).text());
-      sidora.concept.LoadContent();
-      sidora.util.loadTreeSectionsIfNeeded(data, true);
+      if (typeof(jst.get_node(data.selected[0]).a_attr.permissions) != 'undefined'){
+        jQuery("#configureExhibition a#configexaremove").remove();
+        jQuery("#configureExhibition a").show();
+        jQuery("#configureExhibition").removeClass('sidora-not-available');
+        sidora.UpdateTitleBasedOnNameInTree();
+        sidora.concept.LoadContent();
+        sidora.util.loadTreeSectionsIfNeeded(data, true);
+      }
+      else {
+        sidora.UpdateTitleDirect(jst.get_node(data.selected[0]).a_attr.fullname);
+        jQuery("#concept-menu-edit-concept").addClass('sidora-not-available');
+        jQuery("#concept-menu-edit-space").addClass('sidora-not-available');
+
+        jQuery("#sharing-permissions").toggle(false);
+        jQuery("#concept-create").toggle(false);
+        jQuery("#deleteConcept").toggle(false);
+        jQuery("#editMetadataConcept").toggle(false);
+        jQuery("#editPermissionsConcept").toggle(false);
+        jQuery("#manageConcept").toggle(false);
+        jQuery("#exhibitConcept").children('a').toggleClass('ui-state-disabled',true);
+        jQuery("#concept-resource-list").toggle(false);
+        jQuery("#concept-meta-link").click();
+        jQuery("a[href='#concept-resource-list']").parent().toggle(false);
+        jQuery("#concept_tabs").children("ul").toggle(false);
+        jQuery("#configureExhibition").addClass('sidora-not-available');
+        jQuery("#configureExhibition a").hide();
+        jQuery("#configureExhibition").append("<a id='configexaremove' href='#' onclick='return false;'>" + jQuery("#configureExhibition a")[0].innerHTML + "</a>");
+        jQuery(".metadata-table").html("Your user does not have the permissions to view this folder's information. Your user needs view permission to the '"+jst.get_node(data.selected[0]).a_attr.ownedbyrs+"' owned by the user '"+jst.get_node(data.selected[0]).a_attr.ownerforrs+"'");
+        
+      }
     });
     jQuery("#forjstree").unbind('copy_node.jstree');
     jQuery('#forjstree').bind('copy_node.jstree', function (e, data) {
@@ -2445,12 +2473,18 @@ sidora.concept.GetName = function(suggestedName){
   return suggestedName;
 }
 /*
- * Rename the in-page name to reflect the new conceptName passed in
+ * Rename the in-page name to passed in string
  */
-sidora.UpdateTitleBasedOnNameInTree = function(conceptName){
-  var newTitle = sidora.concept.GetName();
+sidora.UpdateTitleDirect = function(newTitle){
   if (newTitle == "") return; //If there's no concept selected leave it as "Sidora Workbench" (the default)
   jQuery(".page-title").text(newTitle);
+}
+/*
+ * Rename the in-page name to reflect the current concept (if it exists and has been set as sidora.concept)
+ */
+sidora.UpdateTitleBasedOnNameInTree = function(){
+  var newTitle = sidora.concept.GetName();
+  sidora.UpdateTitleDirect(newTitle);
 }
 /*
  * Generally used as a callback from iframes to close the shadowbox they are contained in
@@ -2489,6 +2523,7 @@ sidora.CloseIFrame = function(info, typeOfClosure){
 sidora.util.keepUp = function(){
   sidora.concept.addClickEvents();
   var jst = jQuery("#forjstree").jstree();
+/*
   if (
     (typeof(jst.get_node) == 'function') &&
     (typeof(jst.get_node(jQuery("#psdd-select").val()).children) != 'undefined') && 
@@ -2496,6 +2531,7 @@ sidora.util.keepUp = function(){
   ){
     jQuery("#link-to-another-concept").toggle(jst.get_node(jQuery("#psdd-select").val()).children.length > 1);
   }
+*/
   setTimeout(sidora.util.keepUp, 2000); 
 }
 /*
