@@ -11,6 +11,11 @@ function sidora_drush_command() {
      'type' => 'Node type to look for, valid options: sidora_concept, og_crud_node, both. default: sidora_concept',
      'force' => 'Do not ask for a confirmation after presenting the user with the number of nodes that are about to be removed'
    ),
+   'examples' => array(
+     'drush sidora-clear-nodes --start-date="2017-11-6" --end-date="2017-12-15" --type="sidora_concept" --dry-run --force' => 'See what would happen if you wanted to delete sidora_concept nodes between the two dates in a script, but do not actually do it (dry-run).',
+     'drush sidora-clear-nodes' => 'Delete all the sidora_concept nodes, and require a confirmation (y) before doing it."',
+     'drush sidora-clear-nodes --start-date="2017-12-15" --force' => 'Delete all the sidora_concept nodes after 12/15/2017 immediately.',
+   ),
  );
  $items['sidora-administer-child'] = array(
    'callback' => 'drush_sidora_administer_child',
