@@ -378,6 +378,14 @@ function sidora_menu() {
       'file' => 'includes/xsl_handling.inc',
       'type' => MENU_CALLBACK,
     ),
+    'admin/sidora/concept_review' => array(
+      'title' => 'Concept clean up',
+      'description' => 'Perform certain clean up procedures for concept nodes',
+      'page callback' => 'sidora_concept_node_maintenance',
+      'access arguments' => array('administer site configuration'),
+      'file' => 'includes/sidora_nodes.inc',
+      'type' => MENU_CALLBACK,
+    ),
   );
 }
 
