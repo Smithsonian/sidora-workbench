@@ -581,7 +581,7 @@ function sidora_process_object_with_build_id($form_build_id) {
 <initial_dsid>'.$creation_info['dsid'].'</initial_dsid>
 <original_parent>'.$parent_pid.'</original_parent>
 <original_creator>'.$user->name.'</original_creator>
-</sidora>', 'SIDORA');
+</sidora>', 'SIDORA', NULL, NULL, 'X');
     }
     sidora_object_creation_info($form_build_id,'added_sidora_ds',TRUE);
   }
