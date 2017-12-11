@@ -722,13 +722,13 @@ function sidora_concept_node_maintenance_search($options) {
   $query = new EntityFieldQuery();
   if ($type != 'both'){
     $query->entityCondition('entity_type', 'node')
-      ->propertyCondition('changed', strtotime($before_date), '<')
+      ->propertyCondition('changed', strtotime($before_date . ' +1 day'), '<')
       ->propertyCondition('changed', strtotime($after_date), '>')
       ->propertyCondition('type', $type);
   }
   else {
     $query->entityCondition('entity_type', 'node')
-      ->propertyCondition('changed', strtotime($before_date), '<')
+      ->propertyCondition('changed', strtotime($before_date . ' +1 day'), '<')
       ->propertyCondition('changed', strtotime($after_date), '>')
       ->propertyCondition('type', array('sidora_concept','og_crud_group'), 'IN');
   }
