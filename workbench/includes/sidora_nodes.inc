@@ -745,7 +745,18 @@ function sidora_concept_node_maintenance_delete($options) {
   // take a long time to reclaim the space (or never).  If you need that
   // space dump the DB, drop and recreate
   $result_nids = array_keys($result['node']);
-  node_delete_multiple($result_nids);
+  $batch_size = 1000;
+  $current_start = 0;
+  $current_end = $batch_size;
+  do {
+    $to_delete = array_slice($result_nids, $current_start, $batch_size);
+    $current_start += $batch_size;
+    $current_end += $batch_size;
+    node_delete_multiple($to_delete);
+    // Cycling thru to delete everything resulted in timeouts,
+    // just do the first set and change UI to let user know
+    return $to_delete;
+  } while($current_end < sizeof($result_nids));
   return $result_nids;
 }
 /**
@@ -779,7 +790,8 @@ function sidora_concept_node_maintenance($options = array()){
     $to_return .= theme('table', array('header' => $header, 'rows' => $rows));
     $to_return .= '<input type="submit" id="clear-nodes-button" name="clear-nodes" value="Delete Nodes" class="form-submit" onclick="deleteNodes(); return false;">';
     $to_return .= '<script>';
-    $to_return .= '
+    if (count($avs) <= 1000) {
+      $to_return .= '
 deleteNodes = function(){
   if (confirm("Delete all ' . count($avs) . ' nodes?")) {
     jQuery.ajax({
@@ -790,6 +802,20 @@ deleteNodes = function(){
   }
 }
 ';
+    }
+    else {
+      $to_return .= '
+deleteNodes = function(){
+  if (confirm("Too many to delete all. Delete 1000 nodes?")) {
+    jQuery.ajax({
+      type: "POST",
+      data: "action=delete&type=' . $options['type'] . '&before_date=' . $options['before_date'] . '&after_date=' . $options['after_date'] . '",
+      success: function(){location.reload()}
+    });
+  }
+}
+';
+    }
     $to_return .= '</script>';
   }
   return $to_return;
