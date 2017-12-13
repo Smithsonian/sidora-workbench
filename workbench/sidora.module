@@ -1765,7 +1765,38 @@ function sidora_check_user_projects() {
   $to_return .= t('Research Spaces si:user-projects') . theme('table',array('header' => $header, 'rows' => $rows_research_spaces));
   return $to_return;
 }
-
+function sidora_get_crumbtrails($pid, $current_path) {
+  $current_path[] = $pid;
+  // if this is si:root then we're done, return the path
+  if ($pid == 'si:root') {
+    return array($current_path);
+  }
+  // if this is not si:root, check if it has parents
+  module_load_include('inc', 'sidora', 'includes/utils');
+  $parents = sidora_get_parent_concepts_by_pid($pid);
+  if (sizeof($parents) == 0) {
+    // Dead end, go ahead and return what you've got
+    return array($current_path);
+  }
+  // return as many arrays as parents
+  $to_return = array();
+  foreach ($parents as $parent_pid => $parent) {
+    // if the parent is already used, then return that it's a cycle:
+    if (in_array($parent_pid, $current_path)) {
+      $copy_path = $current_path;
+      $copy_path[] = "-Cycle:" . $parent_pid;
+      $to_return[] = $copy_path;
+    }
+    else {
+      // get this parent's paths to si:root
+      $ppaths = sidora_get_crumbtrails($parent_pid, $current_path);
+      foreach($ppaths as $pipath) {
+        $to_return[] = $pipath;
+      }
+    }
+  }
+  return $to_return;
+}
 /**
  * Used only for testing purposes.  Should not be called by the main application
  */
@@ -1778,6 +1809,13 @@ function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $ex
   if ($one == 'node_dump') {
     $node = node_load($two);
     var_dump($node);
+    exit();
+  }
+  if ($one == 'crumbtrail') {
+    $pid = $two;
+    $current_path = array($pid);
+    $paths = sidora_get_crumbtrails($pid, $current_path);
+    var_dump($paths);
     exit();
   }
   if ($one == 'clearcache') {
