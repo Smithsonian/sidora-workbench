@@ -26,6 +26,10 @@ function sidora_drush_command() {
      'force' => 'Put the isAdministeredBy relationship on the child even if the parent does not exist and even if it already has an isAdministeredBy relationship, possibly giving it multiple isAdministeredBy relationships',
    ),
  );
+ $items['sidora-get-crumbtrail'] = array(
+   'callback' => 'drush_sidora_get_crumbtrail',
+   'description' => 'Prints out the different crumbtrails through parents of the specified pid',
+ );
  $items['sidora-administer-tree'] = array(
    'callback' => 'drush_sidora_administer_tree',
    'description' => 'Adds a single isAdministeredBy relationship, use: drush sidora-administer-child parent_pid child_pid',
@@ -50,6 +54,31 @@ function sidora_drush_test() {
   var_dump($obj);
   print 'ending.';
   drush_print('ok');
+}
+function drush_sidora_get_crumbtrail($pid) {
+  $current_pids_path = array();
+  $current_path = array();
+  $sobj = sidora_obj($pid);
+  if (empty($sobj)) {
+    drush_print('Could not find object with that pid');
+    drush_exit();
+  }
+  $paths = sidora_get_crumbtrails($pid, $sobj->label, $current_path, $current_pids_path);
+  foreach($paths as $path) {
+    drush_print("==========");
+    $to_print = ($path);
+    $trail = "";
+    $preTrail = "";
+    foreach($to_print as $entry) {
+      if (!empty($preTrail)){
+        $trail .= "\n";
+      }
+      $trail .= $preTrail . json_encode($entry);
+      $preTrail .= "  ";
+    }
+    drush_print($trail);
+  }
+  drush_print( "End\n");
 }
 function drush_sidora_clear_nodes() {
   $options = array();

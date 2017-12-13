@@ -59,10 +59,18 @@ function sidora_migration_options($one = '', $two = '') {
   }
   $to_return =  '<input type="submit" id="cup-submit" name="cup" value="Convert a few" class="form-submit" onclick="convertAFew()"> Convert a limited number of concepts <input id="cup-val" style="border:darkseagreen solid" type="text" name="number" size="2" value="2"/> into research spaces that are under si:user-projects<br><br><br>';
   $to_return .= '<input type="submit" id="cs-submit" name="cs" value="Convert Specific" class="form-submit" onclick="convertSpecific()"> Convert a specific concept <input id="cs-val" style="border:darkseagreen solid" type="text" name="number" size="20" value="si:1234567"/> to a research space<br><br><br>';
+  $to_return .= '<input type="submit" id="pidil-submit" name="pidil" value="Load Specific Pid for Migration Table" class="form-submit" onclick="specificPidil()"> Load the migration table only for the specified pid: <input id="pidil-val" style="border:darkseagreen solid" type="text" name="number" size="20" value="si:121909"/><br><br><br>';
   $to_return .= '<a href="'.base_path().'sidora/ps_migration/incoming_links">Incoming links table</a> Show a table of objects and how many hasConcept / hasResource links come to them<br>';
   $to_return .= '
 <script>
 stopAdditionalCalls = false;
+specificPidil = function(){
+  if (stopAdditionalCalls) return;
+  var goTo = "'.base_path().'sidora/ps_migration/incoming_links?pid=";
+  goTo += jQuery("#pidil-val").val();
+  stopAdditionalCalls = true;
+  window.location = goTo;
+}
 convertSpecific = function(){
   if (stopAdditionalCalls) return;
   var goTo = window.location.href;
@@ -98,6 +106,7 @@ function sidora_migration_unassociate_add_note($parent, $child, $encoded_note) {
  * Give the form to show the incoming link information
  */
 function sidora_incoming_links_form($form = array(), &$form_state = NULL) {
+  $specific_pid = filter_input(INPUT_GET, 'pid', FILTER_SANITIZE_STRING);
   if (!empty($_GET['auto_add']) || !empty($_POST['auto_add'])) {
     sidora_incoming_links_auto_add();
   }
@@ -178,9 +187,23 @@ select ?object ?incomingLink from <#ri> where {
     VALUES ?relationship { <info:fedora/fedora-system:def/relations-external#hasConcept> <info:fedora/fedora-system:def/relations-external#hasResource> }
 }
 ';
+    $specific_pid_query = '
+select ?object ?title (count(distinct ?incomingLink) as ?incomingLinks) from <#ri> where {
+    ?object <info:fedora/fedora-system:def/model#label> ?title .
+    ?incomingLink ?relationship ?object .
+    VALUES ?object { <info:fedora/' . $specific_pid . '> } .
+    VALUES ?relationship { <info:fedora/fedora-system:def/relations-external#hasConcept> <info:fedora/fedora-system:def/relations-external#hasResource> }
+}
+Group BY ?object ?title
+';
+
     $query = $pids_from_all_that_need_administered_by_with_num_incoming_links;
     if (!empty($_GET['multiparent'])) {
       $query = $pids_with_more_than_one_incoming_link_query;
+    }
+    // Still want the specific pid query if the pid accidentally went blank (url ends like '?pid=' )
+    if ($specific_pid !== NULL) {
+       $query = $specific_pid_query;
     }
 //    $query = $pids_with_administered_by;
     $tuque = islandora_get_tuque_connection();
@@ -212,7 +235,7 @@ select ?object ?incomingLink from <#ri> where {
       $pid_table .= '<tr class="before-' . $pid_with_replacement_dash . ' ' . $row_class[$row_num++%2]  . '"><td>' . $pid . '</td><td>' . $result['title']['value'] . '</td><td>' . $result['incomingLinks']['value'] . '</td>';
       $table_pids[] = $result['object']['value'];
       $pid_table .= '<td>';
-      if (intval($result['incomingLinks']['value']) > 1) {
+      if (intval($result['incomingLinks']['value']) > 1 || !empty($specific_pid)) {
         $pid_table .= '<input id="load-' . $pid_with_replacement_dash . '" pid="' . $pid . '" onclick="loadParents(\'load-' . $pid_with_replacement_dash . '\', \'' . $pid . '\');" type="submit" value="Load Parent Table" class="form-submit">';
       }
       else {
@@ -249,7 +272,36 @@ select ?object ?incomingLink from <#ri> where {
   $form["pid_table"] = array(
     '#markup' => $pid_table,
   );
-  $form['results_limit'] = array(
+  $form['sp_holder'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Single Pid'),
+    '#collapsible' => TRUE, // Added
+    '#collapsed' => FALSE,  // Added
+  );
+  $form['sp_holder']['single_pid'] = array(
+    '#type' => 'textfield',
+    '#value' => (empty($specific_pid)?'si:121909':$specific_pid),
+    '#description' => t('Load only this pid (click load a single pid)'), 
+    '#attributes' => array(
+      'id' => 'specific-pid',
+    ),
+  );
+  $form['sp_holder']['show_single_pid'] = array(
+    '#type' => 'submit',
+    '#value' => t('Load a single pid'),
+    '#description' => t('Reloads the page with only the specific pid loaded'),
+    '#attributes' => array(
+      'id' => 'load-specific-pid',
+      'onclick' => 'loadSinglePid();',
+    ),
+  );
+  $form['normal_search_holder'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Table Loader'),
+    '#collapsible' => TRUE, // Added
+    '#collapsed' => FALSE,  // Added
+  );
+  $form['normal_search_holder']['results_limit'] = array(
     '#type' => 'textfield',
     '#value' => 100,
     '#description' => t('Maximum number of items in table for the next load'), 
@@ -257,7 +309,7 @@ select ?object ?incomingLink from <#ri> where {
       'id' => 'results-limit',
     ),
   );
-  $form['results_offset'] = array(
+  $form['normal_search_holder']['results_offset'] = array(
     '#type' => 'textfield',
     '#value' => 0,
     '#description' => t('Results Offset (not recommended)'), 
@@ -265,7 +317,7 @@ select ?object ?incomingLink from <#ri> where {
       'id' => 'results-offset',
     ),
   );
-  $form['show_basic_table'] = array(
+  $form['normal_search_holder']['show_basic_table'] = array(
     '#type' => 'submit',
     '#value' => t('Load the basic table'),
     '#description' => t('Reloads the page with the basic table information'),
@@ -274,7 +326,7 @@ select ?object ?incomingLink from <#ri> where {
       'onclick' => 'loadBasic();',
     ),
   );
-  $form['show_only_multiparent'] = array(
+  $form['normal_search_holder']['show_only_multiparent'] = array(
     '#type' => 'submit',
     '#value' => t('Load only multiparent'),
     '#description' => t('Reloads the page with the table only listing items with multiple hasConcept / hasResource parents'),
@@ -283,7 +335,14 @@ select ?object ?incomingLink from <#ri> where {
       'onclick' => 'loadMultiparent();',
     ),
   );
-  $form['batch_size'] = array(
+  $form['batch_holder']  = array(
+    '#type' => 'fieldset',
+    '#title' => t('Batch Setting of isAdministeredBy'),
+    '#collapsible' => TRUE, // Added
+    '#collapsed' => FALSE,  // Added
+  );
+
+  $form['batch_holder']['batch_size'] = array(
     '#type' => 'textfield',
     '#value' => 10,
     '#description' => t('Batch size for automatic add'), 
@@ -291,7 +350,7 @@ select ?object ?incomingLink from <#ri> where {
       'id' => 'batch-size',
     ),
   );
-  $form['submit'] = array(
+  $form['batch_holder']['submit'] = array(
     '#type' => 'submit',
     '#value' => t('Automatically add where appropriate'),
     '#description' => t('Will only add isAdministeredBy to items with a single hasConcept / hasResource incoming link'),
@@ -300,7 +359,7 @@ select ?object ?incomingLink from <#ri> where {
       'onclick' => 'incomingLinksAddAppropriate();',
     ),
   );
-  $form['stop-it'] = array(
+  $form['batch_holder']['stop-it'] = array(
     '#type' => 'submit',
     '#value' => t('STOP before next call'),
     '#description' => t(''),

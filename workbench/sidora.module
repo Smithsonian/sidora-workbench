@@ -1509,6 +1509,28 @@ function sidora_get_parent_table($pid, $only_basic_table_and_direct_removal_call
   else {
     $output .= '<div>'.t('This is an orphan.').'</div>';
   }
+  if ($ps_migration_buttons) {
+    $trailRows = array();
+    $current_pids_path = array();
+    $current_path = array();
+    $sobj = sidora_obj($pid);
+    $paths = sidora_get_crumbtrails($pid, $sobj->label, $current_path, $current_pids_path);
+    $rows = array();
+    foreach($paths as $path) {
+      $to_print = ($path);
+      $trail = "";
+      $preTrail = "";
+      foreach($to_print as $entry) {
+        if (!empty($preTrail)){
+          $trail .= '<br>';
+        }
+        $trail .= $preTrail . json_encode($entry);
+        $preTrail .= "&nbsp;&nbsp;";
+      }
+      $trailRows[] = array(array('data' => ($trail)));
+    }
+    $output .= theme('table', array('header'=>array("Crumbtrails"), 'rows'=>$trailRows, 'attributes'=>$table_attributes));
+  }
   if ($only_basic_table_and_direct_removal_call) {
     $output .= '<script>jQuery(document).ready(function() {
   jQuery("input.parent-removal").click(function() {
@@ -1765,8 +1787,9 @@ function sidora_check_user_projects() {
   $to_return .= t('Research Spaces si:user-projects') . theme('table',array('header' => $header, 'rows' => $rows_research_spaces));
   return $to_return;
 }
-function sidora_get_crumbtrails($pid, $current_path) {
-  $current_path[] = $pid;
+function sidora_get_crumbtrails($pid, $label, $current_path, $current_pids_path) {
+  $current_path[] = array($pid, $label);
+  $current_pids_path[] = $pid;
   // if this is si:root then we're done, return the path
   if ($pid == 'si:root') {
     return array($current_path);
@@ -1781,15 +1804,16 @@ function sidora_get_crumbtrails($pid, $current_path) {
   // return as many arrays as parents
   $to_return = array();
   foreach ($parents as $parent_pid => $parent) {
+    $plabel = $parent['label'];
     // if the parent is already used, then return that it's a cycle:
-    if (in_array($parent_pid, $current_path)) {
+    if (in_array($parent_pid, $current_pids_path)) {
       $copy_path = $current_path;
-      $copy_path[] = "-Cycle:" . $parent_pid;
+      $copy_path[] = array($parent_pid, "CYCLE FOR:" . $plabel);
       $to_return[] = $copy_path;
     }
     else {
       // get this parent's paths to si:root
-      $ppaths = sidora_get_crumbtrails($parent_pid, $current_path);
+      $ppaths = sidora_get_crumbtrails($parent_pid, $plabel, $current_path, $current_pids_path);
       foreach($ppaths as $pipath) {
         $to_return[] = $pipath;
       }
@@ -1812,10 +1836,21 @@ function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $ex
     exit();
   }
   if ($one == 'crumbtrail') {
+    print "CT start<br>";
     $pid = $two;
-    $current_path = array($pid);
-    $paths = sidora_get_crumbtrails($pid, $current_path);
-    var_dump($paths);
+    $current_path = array();
+    $current_pids_path = array();
+    $paths = sidora_get_crumbtrails($pid, "origin", $current_path, $current_pids_path);
+    foreach($paths as $path) {
+      print "<br>";
+      $to_print = array_reverse($path);
+      foreach($to_print as $entry) {
+        if ($entry != 'si:root') {
+          print ' - ';
+        }
+        print json_encode($entry);
+      }
+    }
     exit();
   }
   if ($one == 'clearcache') {
