@@ -603,6 +603,10 @@ function sidora_concept_review_form($form, &$form_state) {
   if (!empty($_SESSION['concept_node_maintenance_values'])) {
     $options = $_SESSION['concept_node_maintenance_values'];
   }
+  $form['help_info'] = array(
+    '#markup' => 'The following search will return a set of nodes. After looking at the result set you can decide if you want to remove these nodes from the database. The search itself will not delete nodes.',
+    
+  );
   $form['type_selector'] = array(
     '#type' => 'select',
     '#description' => 'Select the type of node you are looking for.  Reminder that removing the og_crud_groups will make it so that a node is no longer a research space',
