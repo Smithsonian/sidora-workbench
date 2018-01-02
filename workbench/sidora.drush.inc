@@ -61,7 +61,7 @@ function drush_sidora_get_crumbtrail($pid) {
   $sobj = sidora_obj($pid);
   if (empty($sobj)) {
     drush_print('Could not find object with that pid');
-    drush_exit();
+    drupal_exit();
   }
   $paths = sidora_get_crumbtrails($pid, $sobj->label, $current_path, $current_pids_path);
   foreach($paths as $path) {
