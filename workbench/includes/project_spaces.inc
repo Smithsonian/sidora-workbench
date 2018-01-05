@@ -1317,6 +1317,10 @@ function sidora_create_personal_project_space($account = NULL, $info = NULL) {
 
   // Create the concept
   islandora_add_object($user_ps_object);
+  $created_node = sidora_create_groups_for_pid($user_ps_object, $owner, $info);
+  return $created_node;
+}
+function sidora_create_groups_for_pid($user_ps_object, $owner, $info = array()){
   $concept_pid = $user_ps_object->id;
   if (empty($info)) {
     $info = array();

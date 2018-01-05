@@ -39,10 +39,25 @@ function sidora_migration_options($one = '', $two = '') {
     sidora_project_space_convert_all_under_siuserprojects($two);
     exit();
   }
+  if ($one == 'convert_concept_t') {
+    print 'converting...';
+    module_load_include('inc', 'sidora', 'includes/ps_migration');
+    $converted = sidora_project_space_convert_concept($two, '/(.+)/', '$1', '$1', FALSE, TRUE);
+    //$converted = sidora_project_space_convert_concept($two);
+    if ($converted) {
+      print 'Converted';
+    }
+    else {
+      print 'Error or object not found';
+    }
+    exit();
+  }
   if ($one == 'convert_concept') {
     print 'converting...';
     module_load_include('inc', 'sidora', 'includes/ps_migration');
-    $converted = sidora_project_space_convert_concept($two);
+    //$converted = sidora_project_space_convert_concept($two, '/(.+)/', 'Metadata for $1', 'Metadata for $1', FALSE, TRUE);
+    $converted = sidora_project_space_convert_concept($two, '/(.+)/', 'Metadata for $1', 'Metadata for $1', TRUE);
+
     if ($converted) {
       print 'Converted';
     }
@@ -58,7 +73,8 @@ function sidora_migration_options($one = '', $two = '') {
     drupal_exit();
   }
   $to_return =  '<input type="submit" id="cup-submit" name="cup" value="Convert a few" class="form-submit" onclick="convertAFew()"> Convert a limited number of concepts <input id="cup-val" style="border:darkseagreen solid" type="text" name="number" size="2" value="2"/> into research spaces that are under si:user-projects<br><br><br>';
-  $to_return .= '<input type="submit" id="cs-submit" name="cs" value="Convert Specific" class="form-submit" onclick="convertSpecific()"> Convert a specific concept <input id="cs-val" style="border:darkseagreen solid" type="text" name="number" size="20" value="si:1234567"/> to a research space<br><br><br>';
+  $to_return .= '<input type="submit" id="cso-submit" name="cso" value="Convert By Creating New Object" class="form-submit" onclick="convertSpecificO()"> Convert a specific concept <input id="cso-val" style="border:darkseagreen solid" type="text" name="number" size="20" value="si:1234567"/> to a research space. The original object will be renamed and be placed under the project space.<br><br><br>';
+  $to_return .= '<input type="submit" id="cst-submit" name="cst" value="Convert By Altering Existing Object" class="form-submit" onclick="convertSpecificT()"> Convert a specific concept <input id="cst-val" style="border:darkseagreen solid" type="text" name="number" size="20" value="si:1234567"/> to a research space. The object will likely either lose its metadata or the ability to edit the metadata.<br><br><br>';
   $to_return .= '<input type="submit" id="pidil-submit" name="pidil" value="Load Specific Pid for Migration Table" class="form-submit" onclick="specificPidil()"> Load the migration table only for the specified pid: <input id="pidil-val" style="border:darkseagreen solid" type="text" name="number" size="20" value="si:121909"/><br><br><br>';
   $to_return .= '<a href="'.base_path().'sidora/ps_migration/incoming_links">Incoming links table</a> Show a table of objects and how many hasConcept / hasResource links come to them<br><br><br>';
   $to_return .= '<a href="'.base_path().'admin/sidora/concept_review">Remove Existing Nodes from Drupal Database</a> Clear out the nodes information 1000 nodes at a time based on search results.<br>';
@@ -72,12 +88,22 @@ specificPidil = function(){
   stopAdditionalCalls = true;
   window.location = goTo;
 }
-convertSpecific = function(){
+convertSpecificO = function(){
   if (stopAdditionalCalls) return;
   var goTo = window.location.href;
   // a hack to append but good enough for our admins
   if (goTo.slice(-1) != "/") goTo += "/";
-  goTo += "convert_concept/" + jQuery("#cs-val").val();
+  goTo += "convert_concept/" + jQuery("#cso-val").val();
+  jQuery("input").attr("disabled","disabled");
+  stopAdditionalCalls = true;
+  window.location = goTo;
+}
+convertSpecificT = function(){
+  if (stopAdditionalCalls) return;
+  var goTo = window.location.href;
+  // a hack to append but good enough for our admins
+  if (goTo.slice(-1) != "/") goTo += "/";
+  goTo += "convert_concept_t/" + jQuery("#cst-val").val();
   jQuery("input").attr("disabled","disabled");
   stopAdditionalCalls = true;
   window.location = goTo;
@@ -529,7 +555,14 @@ function sidora_incoming_links_list_parents($pids) {
  * Creates a new project space and copies information from the concept to the new project space.
  * Within the project space there will be the original concept, renamed "Metadata for <name>"
  */
-function sidora_project_space_convert_concept($original_pid, $pattern = '/(.+)/', $replacement = 'Metadata for $1', $unmatched_replacement = 'Metadata for $1') {
+function sidora_project_space_convert_concept(
+  $original_pid,
+  $pattern = '/(.+)/',
+  $replacement = 'Metadata for $1',
+  $unmatched_replacement = 'Metadata for $1',
+  $move_child_isAdministeredBy = FALSE,
+  $change_models_of_existing_obj = FALSE
+) {
   module_load_include('inc', 'sidora', 'includes/project_spaces');
   $original = sidora_obj($original_pid);
   if (!empty($original)) {
@@ -539,40 +572,61 @@ function sidora_project_space_convert_concept($original_pid, $pattern = '/(.+)/'
     if (empty($owner)) {
       $owner = sidora_get_drupal_user();
     }
-
-    $ps_node = sidora_create_personal_project_space(
-      $owner->name,
-      array("label"=>$original->label,"description"=>"Project Space conversion from legacy object")
-    );
-    $ps_pid = '';
-    if (!empty($ps_node->field_fedora_pid) && array_key_exists($ps_node->language, $ps_node->field_fedora_pid)) {
-      $ps_pid = $ps_node->field_fedora_pid[$ps_node->language][0]['value'];
+    if ($change_models_of_existing_obj) {
+      $obj_info = sidora_get_info($original_pid);
+      $ps_pid = $original_pid;
+      $ps_obj = $obj_info['obj'];
+      $ps_node = $obj_info['node'];
+      $owner_for_groups = user_load_by_name($ps_obj->owner);
+      sidora_create_groups_for_pid($ps_obj, $owner_for_groups);
+      // Set the models (these are also set in sidora_create_personal_project_space
+      $ps_obj->models = array('si:conceptCModel', variable_get('sidora_automatic_person_model', 'si:HierarchyObject'));
     }
+    else {
+      $ps_node = sidora_create_personal_project_space(
+        $owner->name,
+        array("label"=>$original->label,"description"=>"Project Space conversion from legacy object")
+      );
+      $ps_pid = '';
+      if (!empty($ps_node->field_fedora_pid) && array_key_exists($ps_node->language, $ps_node->field_fedora_pid)) {
+        $ps_pid = $ps_node->field_fedora_pid[$ps_node->language][0]['value'];
+      }
 
-    // just the concepts
-    $cr =  _sidora_get_child_results_cache($original_pid);
-    foreach ($cr as $child) {
-      $child_pid = $child['o']['value'];
-      sidora_copy($ps_pid, $child_pid, FALSE);
-      sidora_unassociate($original_pid, $child_pid, FALSE);
-    }
+      // just the concepts
+      $cr =  _sidora_get_child_results_cache($original_pid);
+      foreach ($cr as $child) {
+        $child_pid = $child['o']['value'];
+        if ($move_child_isAdministeredBy) {
+          sidora_move($original_pid, $ps_pid, $child_pid, FALSE);
+        }
+        else {
+          sidora_copy($ps_pid, $child_pid, FALSE);
+          sidora_unassociate($original_pid, $child_pid, FALSE);
+        }
+      }
 
-    // Move codebooks to the new research space
-    sidora_copy($ps_pid, $original_pid, FALSE);
-    $resource_rels = $original->relationships->get(FEDORA_RELS_EXT_URI, 'managesCodebook');
-    foreach($resource_rels as $resource_rel) {
-      $resource_pid = $resource_rel['object']['value'];
-      sidora_copy($ps_pid, $resource_pid, FALSE);
-      sidora_unassociate($original_pid, $resource_pid, FALSE);
-    }
+      // Move codebooks to the new research space
+      sidora_copy($ps_pid, $original_pid, FALSE);
+      $resource_rels = $original->relationships->get(FEDORA_RELS_EXT_URI, 'managesCodebook');
+      foreach($resource_rels as $resource_rel) {
+        $resource_pid = $resource_rel['object']['value'];
+        if ($move_child_isAdministeredBy) {
+          sidora_move($original_pid, $ps_pid, $resource_pid, FALSE);
+        }
+        else {
+          sidora_copy($ps_pid, $resource_pid, FALSE);
+          sidora_unassociate($original_pid, $resource_pid, FALSE);
+        }
+      }
 
-    $new_label = preg_replace($pattern, $replacement, $original->label, 1);
-    if (empty($new_label) || $new_label == $original->label) {
-      $new_label = preg_replace('/(.+)/', $unmatched_replacement, $original->label, 1);
+      $new_label = preg_replace($pattern, $replacement, $original->label, 1);
+      if (empty($new_label) || $new_label == $original->label) {
+        $new_label = preg_replace('/(.+)/', $unmatched_replacement, $original->label, 1);
+      }
+      $original->label = $new_label;
+      $original->relationships->registerNamespace("sidora", SI_RELS_EXT_URI);
+      $original->relationships->add(SI_RELS_EXT_URI, 'isAdministeredBy', $ps_pid);
     }
-    $original->label = $new_label;
-    $original->relationships->registerNamespace("sidora", SI_RELS_EXT_URI);
-    $original->relationships->add(SI_RELS_EXT_URI, 'isAdministeredBy', $ps_pid);
     return TRUE;
   }
   else {
