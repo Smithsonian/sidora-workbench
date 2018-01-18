@@ -56,11 +56,20 @@ stopAddCalls = function(){
     jQuery("#stop-button").addClass("form-button-disabled");
   }
 }
+loadSinglePid = function() {
+  myUrl = new URL(location.href);
+  myUrl.searchParams.set("pid",jQuery("#specific-pid").val());
+  myUrl.searchParams.delete("limit");
+  myUrl.searchParams.delete("offset");
+  myUrl.searchParams.delete("multiparent");
+  location = myUrl.toString();
+}
 loadBasic = function() {
   myUrl = new URL(location.href);
   myUrl.searchParams.set("limit",jQuery("#results-limit").val());
   myUrl.searchParams.set("offset",jQuery("#results-offset").val());
   myUrl.searchParams.delete("multiparent");
+  myUrl.searchParams.delete("pid");
   location = myUrl.toString();
 }
 loadMultiparent = function() {
@@ -68,6 +77,7 @@ loadMultiparent = function() {
   myUrl.searchParams.set("limit",jQuery("#results-limit").val());
   myUrl.searchParams.set("offset",jQuery("#results-offset").val());
   myUrl.searchParams.set("multiparent","true");
+  myUrl.searchParams.delete("pid");
   location = myUrl.toString();
 }
 loadParents = function(clickedChoice, pid) {

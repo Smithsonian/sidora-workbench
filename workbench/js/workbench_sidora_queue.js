@@ -290,7 +290,7 @@ SidoraQueue.prototype.Done = function(completedItem, ajaxReturn){
 	    }else{
 	      if (batchStatus.status.toLowerCase().indexOf('error') == -1) {
 	        sidora.queue.NotificationWindow.Show("Status for batch request started at " + timestamp + " : " + "<br>" + batchStatus.message,true);
-	        setTimeout(function() {poll(requestID,batch_id,timestamp)}, 2000);
+	        setTimeout(function() {poll(requestID,batch_id,timestamp)}, 6000);
 	      }else{
 	       // Even when the batch status returned an unexpected response, it might still be running in the backend 
 	        parentPid = batchStatus.parent;
@@ -327,9 +327,9 @@ SidoraQueue.prototype.Done = function(completedItem, ajaxReturn){
 		     }
 		   },15000); 
 		})(parentPid,uiChildResourcesCount);
-	      }	 
+	      }
 	    }
-	  }			
+	  }
         },
        dataType: "json",
        //timeout: 5000

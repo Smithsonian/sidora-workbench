@@ -1,6 +1,22 @@
 <?php
 function sidora_drush_command() {
  $items = array();
+ $items['sidora-clear-nodes'] = array(
+   'callback' => 'drush_sidora_clear_nodes',
+   'description' => 'Deletes nodes from the database based on type and/or modification dates. Only deletes the concept nodes or the organic group nodes.',
+   'options' => array(
+     'dry-run' => 'Perform a check and tell the user what would happen, but make no changes in Drupal',
+     'start-date' => 'Start the search at first second of this day. default: 1980-1-1',
+     'end-date' => 'Stop the search at the first second of this day. default: 2050-1-1',
+     'type' => 'Node type to look for, valid options: sidora_concept, og_crud_node, both. default: sidora_concept',
+     'force' => 'Do not ask for a confirmation after presenting the user with the number of nodes that are about to be removed'
+   ),
+   'examples' => array(
+     'drush sidora-clear-nodes --start-date="2017-11-6" --end-date="2017-12-15" --type="sidora_concept" --dry-run --force' => 'See what would happen if you wanted to delete sidora_concept nodes between the two dates in a script, but do not actually do it (dry-run).',
+     'drush sidora-clear-nodes' => 'Delete all the sidora_concept nodes, and require a confirmation (y) before doing it."',
+     'drush sidora-clear-nodes --start-date="2017-12-15" --force' => 'Delete all the sidora_concept nodes after 12/15/2017 immediately.',
+   ),
+ );
  $items['sidora-administer-child'] = array(
    'callback' => 'drush_sidora_administer_child',
    'description' => 'Adds a single isAdministeredBy relationship, use: drush sidora-administer-child parent_pid child_pid',
@@ -9,6 +25,10 @@ function sidora_drush_command() {
      'replace' => 'Remove all existing isAdministeredBy relationships and add the one input by the user',
      'force' => 'Put the isAdministeredBy relationship on the child even if the parent does not exist and even if it already has an isAdministeredBy relationship, possibly giving it multiple isAdministeredBy relationships',
    ),
+ );
+ $items['sidora-get-crumbtrail'] = array(
+   'callback' => 'drush_sidora_get_crumbtrail',
+   'description' => 'Prints out the different crumbtrails through parents of the specified pid',
  );
  $items['sidora-administer-tree'] = array(
    'callback' => 'drush_sidora_administer_tree',
@@ -34,6 +54,55 @@ function sidora_drush_test() {
   var_dump($obj);
   print 'ending.';
   drush_print('ok');
+}
+function drush_sidora_get_crumbtrail($pid) {
+  $current_pids_path = array();
+  $current_path = array();
+  $sobj = sidora_obj($pid);
+  if (empty($sobj)) {
+    drush_print('Could not find object with that pid');
+    drush_exit();
+  }
+  $paths = sidora_get_crumbtrails($pid, $sobj->label, $current_path, $current_pids_path);
+  foreach($paths as $path) {
+    drush_print("==========");
+    $to_print = ($path);
+    $trail = "";
+    $preTrail = "";
+    foreach($to_print as $entry) {
+      if (!empty($preTrail)){
+        $trail .= "\n";
+      }
+      $trail .= $preTrail . json_encode($entry);
+      $preTrail .= "  ";
+    }
+    drush_print($trail);
+  }
+  drush_print( "End\n");
+}
+function drush_sidora_clear_nodes() {
+  $options = array();
+  $options['type'] = drush_get_option("type",'sidora_concept');
+  $options['before_date'] = drush_get_option("end-date",'2050-1-1');
+  $options['after_date'] = drush_get_option("start-date",'1980-1-1');
+  $options['action'] = 'delete';
+  drush_print("Delete nodes that were modified from: " . $options['after_date'] . " until: " . $options['before_date'] . " of type: " . $options['type'] . "\n");
+  $result = sidora_concept_node_maintenance_search($options);
+  if (count($result['node']) == 0) {
+    drush_print("No nodes found in the search.\n");
+  }
+  else if (drush_get_option("force") || drush_confirm('Delete ' . count($result['node']) . ' nodes?')) {
+    if (drush_get_option("dry-run")) {
+      drush_print("Dry run no actions taken. Would have deleted: " . count($result['node']) . " nodes.\n");
+    }
+    else {
+      $deleted_items = sidora_concept_node_maintenance_delete($options);
+      drush_print("Deleted " . count($deleted_items) . " nodes.\n");
+    }
+  }
+  else {
+    drush_print("No change\n");
+  }
 }
 function drush_sidora_administer_tree($root_pid) {
   drush_print("Root: $root_pid");

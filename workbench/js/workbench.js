@@ -458,6 +458,7 @@ sidora.concept.LoadContentHelp.Permissions = function(conceptOfInterest){
        
       //jQuery("#sharing-permissions").toggle(jQuery("#j1_1 >a").attr("pid") == sidora.concept.loadedContentPid);
       //jQuery("#concept-create").toggle(permissions.create);
+      jQuery("#move-to-another-space").toggle(permissions.delete);
       jQuery("#deleteConcept").toggle(permissions.delete);
       jQuery("#editMetadataConcept").toggle(permissions.update); 
       //jQuery("#editPermissionsConcept").toggle(permissions.permission); 
@@ -1089,6 +1090,9 @@ sidora.contextMenu.SetUp = function(){
       return true;
     }
     if (key == 'moveConcept' && !sidora.concept.permissions.delete) {
+      return true;
+    }
+    if (key == 'deleteConcept' && !sidora.concept.permissions.delete) {
       return true;
     }
     return jQuery(opt.$trigger).hasClass("is-project-space");
@@ -1770,24 +1774,6 @@ sidora.RelocateTreeOnPage = function(){
   sidora.ResizeToBrowser();
   sidora.ResizeTree(null,{element:jQuery("#conceptResizable")});
   sidora.stopResizeTree();
-  sidora.testColoring();
-}
-sidora.testColoring = function()  // TBD BBB TODO REMOVE
-{
-      var sp = new URLSearchParams(location.search);
-      var currentRoot = sp.get("nr");
-      if (currentRoot == null) return;
-  var jstreeIdSelected = null;
-  var jst = jQuery("#forjstree").jstree();
-  var existingTreeNodes = jst.get_json('#', {flat:true});
-  jQuery.each(existingTreeNodes,function(i,obj){
-    if (i % 3 < 2) {
-      obj.a_attr.class = "bright-green";
-    } else {
-      obj.a_attr.class = "bright-yellow";
-    }
-  });
-  jQuery("#forjstree a").addClass("bright-green")
 }
 sidora.ResizeTree = function (e, ui)
 {
@@ -2341,6 +2327,9 @@ sidora.concept.CopyNode = function(data) {
   //Copy node
   var toMovePid = data.node.a_attr.pid;
   var moveToPid = jQuery("#"+data.parent+" a").attr('pid');
+  if (typeof(moveToPid) == 'undefined'){
+    moveToPid = data.moveToPid;
+  }
   var actionUrl = Drupal.settings.basePath+'sidora/ajax_parts/copy/'+moveToPid+'/'+toMovePid
   if (typeof(toMovePid) == 'undefined'){
     //Both types of resource drags are interpreted as "copy_node"
@@ -2348,9 +2337,6 @@ sidora.concept.CopyNode = function(data) {
     //console.log("resource copy/move");
     jQuery("#forjstree").jstree("delete_node",data.node);
     return; //resource actions are handled by the 'dnd_stop.vakata' event
-  }
-  if (typeof(moveToPid) == 'undefined') {
-    moveToPid = data.moveToPid;
   }
   var jst = jQuery("#forjstree").jstree(true);
   var newParentExistingChildConceptsNumber = parseInt(jQuery("#"+data.parent).children("a").attr("conceptchildren"));
@@ -2523,15 +2509,6 @@ sidora.CloseIFrame = function(info, typeOfClosure){
 sidora.util.keepUp = function(){
   sidora.concept.addClickEvents();
   var jst = jQuery("#forjstree").jstree();
-/*
-  if (
-    (typeof(jst.get_node) == 'function') &&
-    (typeof(jst.get_node(jQuery("#psdd-select").val()).children) != 'undefined') && 
-    (typeof(jst.get_node(jQuery("#psdd-select").val()).children.length) != 'undefined')
-  ){
-    jQuery("#link-to-another-concept").toggle(jst.get_node(jQuery("#psdd-select").val()).children.length > 1);
-  }
-*/
   setTimeout(sidora.util.keepUp, 2000); 
 }
 /*
@@ -3187,7 +3164,13 @@ sidora.ProjectSpaces.refreshOptionsImmediate = function(refreshesUntilGiveUp){
       else {
         // check for name change and for icon change
         var tn = sidora.util.GetTreeNodesByPid(elem.attributes['pid'].value);
-        tn[0].text = elem.innerHTML;
+        jst.rename_node(tn[0], elem.innerHTML);
+        tn[0].a_attr.fullname = elem.innerHTML;
+        var optionInDropdown = jQuery("#psdd-select").find("[value='"+tn[0].id+"']");
+        optionInDropdown[0].innerHTML = elem.innerText;
+        if (elem.attributes['pid'].value == sidora.concept.GetPid()) {
+          sidora.UpdateTitleDirect(elem.innerText);
+        }
       }
     };
     var changeMade = false;
@@ -3537,18 +3520,6 @@ sidora.resources.UpdateContent = function(resourcePid){
      modal: true,
   });
   jQuery("#addDatastreamDialog").css("overflow", "hidden");
-}
-sidora.resources.Vestigial = function(){ // BBB TODO REMOVE TBD
-  //The overlay is needed to protect the cursor from being lost to the iframe
-  //For example, here's what would happen during a drag toward the iframe:
-  //Drag looks like it is going fine, once cursor jumps "inside" the iframe, the drag ends.  Mouse up is not captured by the dragged element, so
-  //when coming back out of the iframe, the dragged element is "stuck" to the cursor, requiring a click to "drop" it
-  jQuery('#resourceInformationPane').resizable({
-    autoHide: true,
-    handles: 'w',
-    resize: this.ResizeIt,
-    stop: this.StopIt
-  });
 }
 /*
  * Store information about this ajax object so that we can use the console to determine more information about why the error occurred

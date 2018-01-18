@@ -806,3 +806,7 @@ li.sidora-not-available a {
 #destination-tree > ul > li > a, #destination-tree > ul > li > i {
   display:none;
 }
+.notification-window-message {
+  overflow: auto;
+  max-height: 500px;
+}

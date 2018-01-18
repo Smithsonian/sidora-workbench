@@ -1300,7 +1300,7 @@ function sidora_create_personal_project_space($account = NULL, $info = NULL) {
 <ontology_location_id>'.$ontology_location.'</ontology_location_id>
 <meta_requirements_fulfilled>TRUE</meta_requirements_fulfilled>
 <initial_dsid>'.$associations[0]['dsid'].'</initial_dsid>
-</sidora>', 'SIDORA');
+</sidora>', 'SIDORA',NULL,NULL,'X');
   }else{
     $dsid = variable_get('sidora_automatic_person_dsid', 'DESCMETA');
     sidora_update_datastream($user_ps_object, '<sidora>
@@ -1309,8 +1309,8 @@ function sidora_create_personal_project_space($account = NULL, $info = NULL) {
 <ontology_location_id>AUTOMATIC_USER_CREATION_FROM_SIDORA_DEFAULT</ontology_location_id>
 <meta_requirements_fulfilled>FALSE</meta_requirements_fulfilled>
 <initial_dsid>'.$dsid.'</initial_dsid>
-</sidora>', 'SIDORA');
-    if (empty($user_ps_object[$dsid])) sidora_update_datastream($user_ps_object, '<xml></xml>', $dsid);
+</sidora>', 'SIDORA',NULL,NULL,'X');
+    if (empty($user_ps_object[$dsid])) sidora_update_datastream($user_ps_object, '<xml></xml>', $dsid, NULL, NULL, 'X');
   }
 
   sidora_add_child($user_projects, $user_ps_object);

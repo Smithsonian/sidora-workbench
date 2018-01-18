@@ -503,6 +503,7 @@ function sidora_fedora_sync() {
       sidora_fedora_queue_sync($nid);
     }
   }
+  $tr_count = 1;
   if (!empty($show_table)) {
     $query = new EntityFieldQuery();
     $query->entityCondition('entity_type', 'node')
@@ -568,15 +569,17 @@ function sidora_fedora_sync() {
     }
     $pager .= $page;
   }
-  
-  $to_return = 'Nodes: '.$tr_count;
-  $to_return .= "<br/>Page: $pager";
-  $to_return .= $table_html;
+  $to_return = ''; 
+  if (!empty($show_table)) {
+    $to_return = 'Nodes: '.$tr_count;
+    $to_return .= "<br/>Page: $pager";
+    $to_return .= $table_html;
+  }
   $to_return .= '<a href="?show_table=1">Show table of nodes</a>';
   $to_return .= '<h1>BATCH COMMANDS</h1><ul>';
   $to_return .= '<li><a href="?command=update_and_create_nodes_from_queries">Create / Update Nodes from Sparql queries</a></li>';
   $to_return .= '<li><a href="?command=queue&nid=ALL&batch_start=1&batch_end=999999&show_table=1">Queue ALL</a> This will cause the tree to load them when a user opens the tree for the first time</li>';
-  $to_return .= '<li><a href="'.url('sidora/ajax_parts/tree/si:root/2').'" target="_blank">Load the initial administrator tree in a separate window</a></li>';
+  $to_return .= '<li><a href="'.url('sidora/ajax_parts/tree/si:user-projects/2').'" target="_blank">Load the initial research spaces tree in a separate window</a></li>';
   $to_return .= '<li style="margin-top:20px"><a href="?command=resync&nid=ALL&batch_start=1&batch_end=999999&show_table=1">Resync ALL NOW from Fedora</a> This will take a LONG time </li>';
   $to_return .= '</ul>';
   $to_return .= '<p class="buffer-so-you-dont-click-on-resync-from-fedora-accident" style="height:100px"></p>';
@@ -591,6 +594,231 @@ function sidora_is_node_synced_with_fedora($node) {
     return !empty($node->field_sidora_fedora_sync[$node->language][0]['value']);
   }
   return FALSE;
+}
+/**
+ * Create the form to use on the con9cept review page, will show Drupal errors
+ * if the options array has weird data in it (as in dates are not in Y-m-d format)
+ */
+function sidora_concept_review_form($form, &$form_state) {
+  if (!empty($_SESSION['concept_node_maintenance_values'])) {
+    $options = $_SESSION['concept_node_maintenance_values'];
+  }
+  $form['type_selector'] = array(
+    '#type' => 'select',
+    '#description' => 'Select the type of node you are looking for.  Reminder that removing the og_crud_groups will make it so that a node is no longer a research space',
+    '#options' => array('og_crud_group' => t('og_crud_group (Permission groups)'),'sidora_concept' => t('sidora_concept (concept node)'),'both'=>t('Both')),
+    '#default_value' => empty($options['type'])?'sidora_concept':$options['type'],
+    '#title' => t('Search for:'),
+  );
+  $form['date_range'] = array(
+    '#type' => 'fieldset',
+    '#title' => 'Last modified during date range',
+  );
+  $dp = NULL;
+  if (!empty($options['after_date'])) {
+    $dp = explode('-',$options['after_date']);
+  }
+  $form['date_range']['after_date'] = array(
+    '#type' => 'date',
+    '#title' => t('Start'),
+    '#default_value' => empty($options)?NULL:array('year' => $dp[0], 'month' => $dp[1], 'day' => $dp[2]),
+  );
+  $dp = NULL;
+  if (!empty($options['before_date'])) {
+    $dp = explode('-',$options['before_date']);
+  }
+  $form['date_range']['before_date'] = array(
+    '#type' => 'date',
+    '#title' => t('End'),
+    '#default_value' => empty($options)?NULL:array('year' => $dp[0], 'month' => $dp[1], 'day' => $dp[2]),
+  );
+  $form['clear_button'] = array(
+    '#type' => 'submit',
+    '#value' => t('Clear'),
+  );
+  $form['submit_button'] = array(
+    '#type' => 'submit',
+    '#value' => t('Submit'),
+  );
+  return $form;
+}
+/**
+ * Converts the form submission from the concept review form into the $options array for a maintenance search and
+ * saves that in the session so it can be used as the options for the next concept_review display
+ */
+function sidora_concept_review_form_submit($form, &$form_state) {
+  if ($form_state['values']['op'] == 'Submit') {
+    $options = array();
+    $options['type'] = $form_state['values']['type_selector']; 
+    $options['before_date'] = $form_state['values']['before_date']['year'] . '-' . $form_state['values']['before_date']['month'] . '-' . $form_state['values']['before_date']['day']; 
+    $options['after_date'] = $form_state['values']['after_date']['year'] . '-' . $form_state['values']['after_date']['month'] . '-' . $form_state['values']['after_date']['day']; 
+    $_SESSION['concept_node_maintenance_values'] = $options;
+  }
+  else if ($form_state['values']['op'] == 'Clear') {
+    unset($_SESSION['concept_node_maintenance_values']);
+  }
+}
+/**
+ * Creates a search options array from various sources
+ */
+function sidora_concept_node_maintenance_generate_options(&$options) {
+  if (empty($options['type'])) {
+    $get_from = INPUT_GET;
+    $options = array();
+    $options['type'] = filter_input($get_from, 'type');
+    $options['before_date'] = filter_input($get_from, 'before_date');
+    $options['after_date'] = filter_input($get_from, 'after_date');
+    $options['action'] = filter_input($get_from, 'action');
+  }  
+  if (empty($options['type'])) {
+    $get_from = INPUT_POST;
+    $options = array();
+    $options['type'] = filter_input($get_from, 'type');
+    $options['before_date'] = filter_input($get_from, 'before_date');
+    $options['after_date'] = filter_input($get_from, 'after_date');
+    $options['action'] = filter_input($get_from, 'action');
+    
+  }
+  // Pull the information from the last submit
+  if (empty($options['type'])) {
+    if (!empty($_SESSION['concept_node_maintenance_values'])) {
+      $options = $_SESSION['concept_node_maintenance_values'];
+    }
+  }
+}
+/**
+ * Search for nodes that are important to SIdora, if nothing passed in and nothing
+ * saved in the session, then it tries
+ * to pull information from GET parameters and then from POST parameters
+ *
+ * $options - array of options that can have the following keys:
+ *    'type' - type of node, 'sidora_concept', 'og_crud_group', or 'both'
+ *    'before_date' - only nodes modified before this day, string in Y-m-d
+ *    'after_date' - only nodes modified on or after this day, string in Y-m-d
+ * returns
+ *   array where the node id is the array key and the value is
+ *   an array of the type:
+ *    array('nid' => node id, 'vid' => version id, 'type' => node type)
+ */
+function sidora_concept_node_maintenance_search($options) {
+  $type = 'sidora_concept';
+  $before_date = '1980-01-01';
+  $after_date = '1980-01-01';
+  if(!empty($options['type'])) { 
+    $type = $options['type'];
+  }
+  if(!empty($options['before_date'])) { 
+    $before_date = $options['before_date'];
+  }
+  if(!empty($options['after_date'])) { 
+    $after_date = $options['after_date'];
+  }
+  // What do I care about?
+  // Clear out concept nodes that have not been updated in X days
+  // Clear out organic group nodes that have not been updated in X days
+  //
+  // Check what type, sidora_concept or og_crud_group
+  drupal_set_time_limit(60);
+  $query = new EntityFieldQuery();
+  if ($type != 'both'){
+    $query->entityCondition('entity_type', 'node')
+      ->propertyCondition('changed', strtotime($before_date . ' +1 day'), '<')
+      ->propertyCondition('changed', strtotime($after_date), '>')
+      ->propertyCondition('type', $type);
+  }
+  else {
+    $query->entityCondition('entity_type', 'node')
+      ->propertyCondition('changed', strtotime($before_date . ' +1 day'), '<')
+      ->propertyCondition('changed', strtotime($after_date), '>')
+      ->propertyCondition('type', array('sidora_concept','og_crud_group'), 'IN');
+  }
+  $result = $query->execute();
+  return $result;
+}
+/**
+ * Delete the nodes found by the search options listed
+ */
+function sidora_concept_node_maintenance_delete($options) {
+  $result = sidora_concept_node_maintenance_search($options);
+  // Suggested to only delete 500 at a time
+  // after deleting a mass number of nodes the MySQL DB may
+  // take a long time to reclaim the space (or never).  If you need that
+  // space dump the DB, drop and recreate
+  $result_nids = array_keys($result['node']);
+  $batch_size = 1000;
+  $current_start = 0;
+  $current_end = $batch_size;
+  do {
+    $to_delete = array_slice($result_nids, $current_start, $batch_size);
+    $current_start += $batch_size;
+    $current_end += $batch_size;
+    node_delete_multiple($to_delete);
+    // Cycling thru to delete everything resulted in timeouts,
+    // just do the first set and change UI to let user know
+    return $to_delete;
+  } while($current_end < sizeof($result_nids));
+  return $result_nids;
+}
+/**
+ * Remove a set of nodes based on a search
+ */
+function sidora_concept_node_maintenance($options = array()){
+  sidora_concept_node_maintenance_generate_options($options);
+  if (!empty($options['action'])) {
+    if ($options['action'] == 'delete') {
+      $result_nids = sidora_concept_node_maintenance_delete($options);
+      $message = "Deleted " . count($result_nids)  . " nodes";
+      print $message;
+      drupal_set_message($message);
+      drupal_exit();
+    }
+  }
+  $result = sidora_concept_node_maintenance_search($options);
+  $form = drupal_get_form('sidora_concept_review_form');
+  $to_return = drupal_render($form);
+  if (!$result) {
+    $to_return .= "Nodes found: NONE";
+  }
+  else {
+    $avs = array_values($result['node']);
+    $to_return .= "Nodes found: " . count($avs);
+    $header = array('NID','Type');
+    $rows = array();
+    foreach($avs as $avn => $av) {
+      $rows[] = array(l($av->nid, 'node/' . $av->nid), $av->type);
+    }
+    $to_return .= theme('table', array('header' => $header, 'rows' => $rows));
+    $to_return .= '<input type="submit" id="clear-nodes-button" name="clear-nodes" value="Delete Nodes" class="form-submit" onclick="deleteNodes(); return false;">';
+    $to_return .= '<script>';
+    if (count($avs) <= 1000) {
+      $to_return .= '
+deleteNodes = function(){
+  if (confirm("Delete all ' . count($avs) . ' nodes?")) {
+    jQuery.ajax({
+      type: "POST",
+      data: "action=delete&type=' . $options['type'] . '&before_date=' . $options['before_date'] . '&after_date=' . $options['after_date'] . '",
+      success: function(){location.reload()}
+    });
+  }
+}
+';
+    }
+    else {
+      $to_return .= '
+deleteNodes = function(){
+  if (confirm("Too many to delete all. Delete 1000 nodes?")) {
+    jQuery.ajax({
+      type: "POST",
+      data: "action=delete&type=' . $options['type'] . '&before_date=' . $options['before_date'] . '&after_date=' . $options['after_date'] . '",
+      success: function(){location.reload()}
+    });
+  }
+}
+';
+    }
+    $to_return .= '</script>';
+  }
+  return $to_return;
 }
 /**
  * Recursively create the tree based on the query information returned

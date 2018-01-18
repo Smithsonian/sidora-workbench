@@ -378,6 +378,14 @@ function sidora_menu() {
       'file' => 'includes/xsl_handling.inc',
       'type' => MENU_CALLBACK,
     ),
+    'admin/sidora/concept_review' => array(
+      'title' => 'Concept clean up',
+      'description' => 'Perform certain clean up procedures for concept nodes',
+      'page callback' => 'sidora_concept_node_maintenance',
+      'access arguments' => array('administer site configuration'),
+      'file' => 'includes/sidora_nodes.inc',
+      'type' => MENU_CALLBACK,
+    ),
   );
 }
 
@@ -573,7 +581,7 @@ function sidora_process_object_with_build_id($form_build_id) {
 <initial_dsid>'.$creation_info['dsid'].'</initial_dsid>
 <original_parent>'.$parent_pid.'</original_parent>
 <original_creator>'.$user->name.'</original_creator>
-</sidora>', 'SIDORA');
+</sidora>', 'SIDORA', NULL, NULL, 'X');
     }
     sidora_object_creation_info($form_build_id,'added_sidora_ds',TRUE);
   }
@@ -1409,7 +1417,7 @@ jQuery(document).ready(function() {
   jQuery("input.codebook-edit").click(function() {
     id = jQuery(this).attr("cbid");
     Shadowbox.open({
-        content:    "../edit_metadata/"+id+"",
+        content:    Drupal.settings.basePath + "sidora/edit_metadata/"+id+"",
         player:     "iframe",
         title:      "Edit Metadata",
         options: {
@@ -1500,6 +1508,28 @@ function sidora_get_parent_table($pid, $only_basic_table_and_direct_removal_call
   }
   else {
     $output .= '<div>'.t('This is an orphan.').'</div>';
+  }
+  if ($ps_migration_buttons) {
+    $trailRows = array();
+    $current_pids_path = array();
+    $current_path = array();
+    $sobj = sidora_obj($pid);
+    $paths = sidora_get_crumbtrails($pid, $sobj->label, $current_path, $current_pids_path);
+    $rows = array();
+    foreach($paths as $path) {
+      $to_print = ($path);
+      $trail = "";
+      $preTrail = "";
+      foreach($to_print as $entry) {
+        if (!empty($preTrail)){
+          $trail .= '<br>';
+        }
+        $trail .= $preTrail . json_encode($entry);
+        $preTrail .= "&nbsp;&nbsp;";
+      }
+      $trailRows[] = array(array('data' => ($trail)));
+    }
+    $output .= theme('table', array('header'=>array("Crumbtrails"), 'rows'=>$trailRows, 'attributes'=>$table_attributes));
   }
   if ($only_basic_table_and_direct_removal_call) {
     $output .= '<script>jQuery(document).ready(function() {
@@ -1700,6 +1730,7 @@ function sidora_check_user_projects() {
   $rows_users_with_invalid_pids = array();
   $rows_overused_pids = array();
   $rows_unused_pids = array();
+  $rows_research_spaces = array();
   $in_use_pids = array();
   $overused_pids = array();
   foreach ($users as $account) {
@@ -1739,7 +1770,13 @@ function sidora_check_user_projects() {
   foreach ($cr as $child) {
     $pid = $child['o']['value'];
     if (empty($in_use_pids[$pid])) {
-      $rows_unused_pids[] =  array('No User Found', $pid , $child['t']['value']);
+      module_load_include('inc', 'sidora', 'includes/project_spaces');
+      if (sidora_is_project_space($pid)) {
+        $rows_research_spaces[] =  array('Research Space', $pid , $child['t']['value']);
+      }
+      else {
+        $rows_unused_pids[] =  array('No User Found', $pid , $child['t']['value']);
+      }
     }
   }
   $to_return = t('Configured Users') . theme('table',array('header' => $header, 'rows' => $rows_proper_users));
@@ -1747,9 +1784,43 @@ function sidora_check_user_projects() {
   $to_return .= t('Users with Invalid Pids') . theme('table',array('header' => $header, 'rows' => $rows_users_with_invalid_pids));
   $to_return .= t('Overused Pids') . theme('table',array('header' => $header, 'rows' => $rows_overused_pids));
   $to_return .= t('Unused Pids in si:user-projects') . theme('table',array('header' => $header, 'rows' => $rows_unused_pids));
+  $to_return .= t('Research Spaces si:user-projects') . theme('table',array('header' => $header, 'rows' => $rows_research_spaces));
   return $to_return;
 }
-
+function sidora_get_crumbtrails($pid, $label, $current_path, $current_pids_path) {
+  $current_path[] = array($pid, $label);
+  $current_pids_path[] = $pid;
+  // if this is si:root then we're done, return the path
+  if ($pid == 'si:root') {
+    return array($current_path);
+  }
+  // if this is not si:root, check if it has parents
+  module_load_include('inc', 'sidora', 'includes/utils');
+  $parents = sidora_get_parent_concepts_by_pid($pid);
+  if (sizeof($parents) == 0) {
+    // Dead end, go ahead and return what you've got
+    return array($current_path);
+  }
+  // return as many arrays as parents
+  $to_return = array();
+  foreach ($parents as $parent_pid => $parent) {
+    $plabel = $parent['label'];
+    // if the parent is already used, then return that it's a cycle:
+    if (in_array($parent_pid, $current_pids_path)) {
+      $copy_path = $current_path;
+      $copy_path[] = array($parent_pid, "CYCLE FOR:" . $plabel);
+      $to_return[] = $copy_path;
+    }
+    else {
+      // get this parent's paths to si:root
+      $ppaths = sidora_get_crumbtrails($parent_pid, $plabel, $current_path, $current_pids_path);
+      foreach($ppaths as $pipath) {
+        $to_return[] = $pipath;
+      }
+    }
+  }
+  return $to_return;
+}
 /**
  * Used only for testing purposes.  Should not be called by the main application
  */
@@ -1762,6 +1833,24 @@ function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $ex
   if ($one == 'node_dump') {
     $node = node_load($two);
     var_dump($node);
+    exit();
+  }
+  if ($one == 'crumbtrail') {
+    print "CT start<br>";
+    $pid = $two;
+    $current_path = array();
+    $current_pids_path = array();
+    $paths = sidora_get_crumbtrails($pid, "origin", $current_path, $current_pids_path);
+    foreach($paths as $path) {
+      print "<br>";
+      $to_print = array_reverse($path);
+      foreach($to_print as $entry) {
+        if ($entry != 'si:root') {
+          print ' - ';
+        }
+        print json_encode($entry);
+      }
+    }
     exit();
   }
   if ($one == 'clearcache') {
@@ -2224,8 +2313,8 @@ function sidora_create_resource_get_upload_form_html($model, $form_name, $ontolo
     'si:fieldbookCModel' => array('pdf'),
     'islandora:sp-audioCModel' => array('mp3','aiff','wav'),
     'islandora:sp_videoCModel' => array('ogg','mp4','mov','qt', 'm4a', 'm4v', 'avi', 'mkv'),
-    'si:rawGeneSequenceCModel' => array('fasta','fa','fas','fsn','fna','faa'),
-    'si:assembledGeneSequenceCModel' => array('fasta','fa','fas','fsn','fna','faa'),
+    'si:rawGeneSequenceCModel' => array('fastq','fq','fasta','fa','fas','fsn','fna','faa'),
+    'si:assembledGeneSequenceCModel' => array('fastq','fq','fasta','fa','fas','fsn','fna','faa'),
     'si:genericCModel' => array('*'),
     '*' => array('*')
   );
@@ -2556,7 +2645,7 @@ function sidora_create_resource_get_metadata_form_html($parent_pid, $model, $for
  * Initial screen shown when user chooses to upload tabular data,
  * Is a form to choose from their existing codebooks or to upload a new example data file to use
  */
-function sidora_codebook_upload_form($form, &$form_state) {
+function sidora_codebook_upload_form($form, &$form_state, $parent_pid) {
   $form['gen-codebook'] = array(
     '#type' => 'fieldset',
     '#title' => t('Generate Codebook From Example File'),
@@ -2604,6 +2693,24 @@ function sidora_codebook_upload_form($form, &$form_state) {
   );
   module_load_include('inc', 'sidora', 'includes/utils');
   $codebook_options = array();
+  module_load_include('inc', 'sidora', 'includes/project_spaces');
+  $ps_pids = sidora_get_project_space_pids_for_pid($parent_pid);
+  $codebook_options = array();
+  if (sizeof($ps_pids) > 0) {
+    $cb_holder = sidora_obj($ps_pids[0]);
+    if (!empty($cb_holder)) {
+      $codebooks = $cb_holder->relationships->get(FEDORA_RELS_EXT_URI, 'managesCodebook');
+      foreach ($codebooks as $codebook_info) {
+        $codebook_pid = ($codebook_info['object']['value']);
+        $codebook = sidora_obj($codebook_pid);
+        if (!empty($codebook) && !empty($codebook->label)) {
+          $codebook_options[$codebook_pid] = $codebook->label;
+        }
+      }
+      $codebook_options = array_reverse($codebook_options);
+    }
+  }
+  /*
   $user_pid = sidora_get_user_object();
   $user_obj = sidora_obj($user_pid);
   // Load up the Fedora Commons object for the user
@@ -2617,6 +2724,7 @@ function sidora_codebook_upload_form($form, &$form_state) {
     }
     $codebook_options = array_reverse($codebook_options);
   }
+  */
   $form['existing-codebook'] = array(
     '#type' => 'fieldset',
     '#title' => t('Choose From Your Existing Codebooks'),
@@ -2928,7 +3036,7 @@ jQuery(document).ready(function() {
 </script>';
       // First step for codebook is the upload or choose step (SID-243)
       $to_return .= '<div style="display:none">Tabular data files require a codebook which describes the contents of the data.  You can choose to automatically generate a codebook based on one of your files, or choose an existing codebook that describes your data.  Use one of the two options below, clicking one of the buttons to make your choice.</div>';
-      $form = drupal_get_form('sidora_codebook_upload_form');
+      $form = drupal_get_form('sidora_codebook_upload_form', $parent_pid);
       $to_return .= drupal_render($form);
       $show_form = FALSE;
     }
@@ -3911,6 +4019,13 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
       }
       break;
     case 'resources':
+      $permissions = array();
+      $permissions['v'] = sidora_allow(NULL, $pid, 'view');
+      $permissions['u'] = sidora_allow(NULL, $pid, 'update');
+      $permissions['d'] = sidora_allow(NULL, $pid, 'delete');
+      if (!$permissions['v']) {
+        return '';
+      }
       $resource_types = sidora_get_resource_types();
       if ($download == 'browser' && $formatted == 'dataTableServerSideProcessing') {
         $jsdt_title_and_type_search_val = filter_var($_GET['search']['value'], FILTER_SANITIZE_STRING);
@@ -3936,6 +4051,7 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
         else {
           $resources = sidora_concept_resource_listing($pid,$resource_types,$limit,$offset, $jsdt_search_val, $jsdt_title_search_val, $jsdt_order_on, $jsdt_order_by);
         }
+
         $jsdt_response = array();
         $jsdt_response['draw'] = $jsdt_draw;
         $jsdt_response['recordsTotal'] = $resources_count;
@@ -3970,19 +4086,25 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
             $type = sidora_model_to_user_language($element['model']['value']);
             $creation_date = date_parse($element['created']['value']);
             $operations = '<a href="" onclick="sidora.resources.ShowDetails(\'' . $element_pid . '\'); return false;" class="sidora-ui-link">Details</a> ';
-            $operations .= '<a href="" onclick="sidora.resources.EditDetails(\'' . $element_pid . '\'); return false;" class="sidora-ui-link">Edit</a> ';
-            $operations .= '<a href="" onclick="sidora.resources.UpdateContent(\'' . $element_pid . '\'); return false;" class="sidora-ui-link">Update Content</a>';
+            if ($permissions['u']) {
+              $operations .= '<a href="" onclick="sidora.resources.EditDetails(\'' . $element_pid . '\'); return false;" class="sidora-ui-link">Edit</a> ';
+              $operations .= '<a href="" onclick="sidora.resources.UpdateContent(\'' . $element_pid . '\'); return false;" class="sidora-ui-link">Update Content</a>';
+            }
             $operations .= '<br/>';
             $operations .= '<a href="" onclick="sidora.ProjectSpaces.DuplicateOrTransfer(\'link\', \'resources\',\'' . $element_pid . '\',Drupal.t(\'Link Resources\')); return false;" class="sidora-ui-link">Link</a> ';
             $operations .= '<a href="" onclick="sidora.ProjectSpaces.DuplicateOrTransfer(\'duplicate\',\'resources\',\'' . $element_pid . '\',Drupal.t(\'Copy Resources\')); return false;" class="sidora-ui-link">Copy</a> ';
-            $operations .= '<a href="" onclick="sidora.ProjectSpaces.DuplicateOrTransfer(\'transfer\',\'resources\',\'' . $element_pid . '\',Drupal.t(\'Move Resources\')); return false;" class="sidora-ui-link">Move</a>';
+            if ($permissions['d']) {
+              $operations .= '<a href="" onclick="sidora.ProjectSpaces.DuplicateOrTransfer(\'transfer\',\'resources\',\'' . $element_pid . '\',Drupal.t(\'Move Resources\')); return false;" class="sidora-ui-link">Move</a>';
+            }
             if (sidora_is_admin()) {
               $operations .= '<br/>';
               $operations .= '<a href="" onclick="sidora.manage.Open(\'' . $element_pid . '\', \'\', \'Manage Resource\', \'Update resource information\'); return false;" class="sidora-ui-link">Manage</a> ';
             }
             $resource_actions = '<a href="" onclick="sidora.resources.openInNewWindow(\'' . $element_pid . '\'); return false;" class="sidora-ui-link" title="Open in New Window"><i class="material-icons">filter</i></a> ';
             $resource_actions .= '<a href="" onclick="sidora.resources.download(\'' . $element_pid . '\'); return false;" class="sidora-ui-link" title="Download"><i class="material-icons">file_download</i></a> ';
-            $resource_actions .= '<a href="" onclick="sidora.resources.DeleteResource(\'' . $element_pid . '\'); return false;" class="sidora-ui-link" title="Delete"><i class="material-icons">delete</i></a>';
+            if ($permissions['d']) {
+              $resource_actions .= '<a href="" onclick="sidora.resources.DeleteResource(\'' . $element_pid . '\'); return false;" class="sidora-ui-link" title="Delete"><i class="material-icons">delete</i></a>';
+            }
            
             $thumbnail_html = '<div ';
             $thumbnail_html .= 'class="sidora-info-holder" ';
@@ -8506,6 +8628,13 @@ function sidora_create_association_xml($batch_id,$association) {
   $domtree->formatOutput = TRUE;
   $batch_tag = $domtree->createElement('association');
   $batch_tag = $domtree->appendChild($batch_tag);
+  if (!empty($association['transform']) && (FALSE === strpos($association['transform'], 'http'))){
+    global $base_url;
+    global $base_path;
+    $prepend = $base_url . $base_path . 'sites/all/modules/sidora_specific/transforms/';
+    $association['transform'] = $prepend . $association['transform'];
+  }
+//  dsm($association);
   sidora_array_to_xml($association,$batch_tag,$domtree);
   $domtree->save('public://' . 'association_' . $batch_id . '.xml');
   return 1;
