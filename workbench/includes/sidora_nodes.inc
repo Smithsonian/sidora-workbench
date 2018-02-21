@@ -603,6 +603,10 @@ function sidora_concept_review_form($form, &$form_state) {
   if (!empty($_SESSION['concept_node_maintenance_values'])) {
     $options = $_SESSION['concept_node_maintenance_values'];
   }
+  $form['help_info'] = array(
+    '#markup' => 'The following search will return a set of nodes. After looking at the result set you can decide if you want to remove these nodes from the database. The search itself will not delete nodes.',
+    
+  );
   $form['type_selector'] = array(
     '#type' => 'select',
     '#description' => 'Select the type of node you are looking for.  Reminder that removing the og_crud_groups will make it so that a node is no longer a research space',
@@ -1272,19 +1276,24 @@ function sidora_get_concept_nodes($pid) {
   if (is_string($pid)){
     $pid_array = array($pid);
   }
-  $query = new EntityFieldQuery();
-  $query->entityCondition('entity_type', 'node')
-    ->entityCondition('bundle',  sidora_get_concept_content_type())
-    ->propertyCondition('status', 1)
-    ->fieldCondition('field_fedora_pid', 'value', $pid_array, 'IN')
-    ->addMetaData('account', user_load(1)); // Run the query as user 1.
-  $result = $query->execute();
-  if (sizeof($result) === 0){
-    return NULL;
+  try {
+    $query = new EntityFieldQuery();
+    $query->entityCondition('entity_type', 'node')
+      ->entityCondition('bundle',  sidora_get_concept_content_type())
+      ->propertyCondition('status', 1)
+      ->fieldCondition('field_fedora_pid', 'value', $pid_array, 'IN')
+      ->addMetaData('account', user_load(1)); // Run the query as user 1.
+    $result = $query->execute();
+    if (sizeof($result) === 0){
+      return NULL;
+    }
+    $to_load = array();
+    foreach($result["node"] as $nid => $obj){
+      $to_load[] = $nid;
+    }
   }
-  $to_load = array();
-  foreach($result["node"] as $nid => $obj){
-    $to_load[] = $nid;
+  catch (EntityFieldQueryException $exception) {
+    return NULL;
   }
   return node_load_multiple($to_load);
 }
@@ -1296,24 +1305,29 @@ function sidora_get_concept_node_id($pid) {
   if (is_string($pid)){
     $pid_array = array($pid);
   }
-  $query = new EntityFieldQuery();
-  $query->entityCondition('entity_type', 'node')
-    ->entityCondition('bundle',  sidora_get_concept_content_type())
-    ->propertyCondition('status', 1)
-    ->fieldCondition('field_fedora_pid', 'value', $pid_array, 'IN')
-    ->addMetaData('account', user_load(1)); // Run the query as user 1.
-  $result = $query->execute();
-  if (sizeof($result) === 0){
-    return NULL;
-  }
-  $to_return = array();
-  foreach($result["node"] as $nid => $obj){
-    $to_return[] = $nid;
-  }
-  if (is_string($pid)){
-    if (sizeof($to_return) == 1){
-      return $to_return[0];
+  try{
+    $query = new EntityFieldQuery();
+    $query->entityCondition('entity_type', 'node')
+      ->entityCondition('bundle',  sidora_get_concept_content_type())
+      ->propertyCondition('status', 1)
+      ->fieldCondition('field_fedora_pid', 'value', $pid_array, 'IN')
+      ->addMetaData('account', user_load(1)); // Run the query as user 1.
+    $result = $query->execute();
+    if (sizeof($result) === 0){
+      return NULL;
     }
+    $to_return = array();
+    foreach($result["node"] as $nid => $obj){
+      $to_return[] = $nid;
+    }
+    if (is_string($pid)){
+      if (sizeof($to_return) == 1){
+        return $to_return[0];
+      }
+    }
+  }
+  catch (EntityFieldQueryException $exception) {
+    return NULL;
   }
   return $to_return;
 }
