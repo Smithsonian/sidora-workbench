@@ -4842,6 +4842,42 @@ function sidora_duplicate($destination, $to_duplicate, $show_output = TRUE) {
  */
 function sidora_ajax_parts($call_type, $param1 = '', $param2 = '', $param3 = '') {
   global $user;
+  if ($call_type == 'create_ps' && sidora_is_admin()){
+    module_load_include('inc', 'sidora', 'includes/project_spaces');
+    module_load_include('inc', 'islandora', 'includes/utilities');
+    if (empty($_GET['label']) || empty($_GET['desc'])){
+      print 'Requires label and desc as GET params';
+      drupal_exit();
+    }
+    if (!empty($_GET['user'])) {
+      $user = user_load_by_name($_GET['user']);
+      if ($user == null) {
+        print 'User not found';
+        drupal_exit();
+      }
+    }
+    $label = $_GET['label'];
+    $desc = $_GET['desc'];
+    try{
+      $created_node = sidora_create_personal_project_space($user, array('label' => $label, 'description' => $desc));
+      if (!empty($created_node)) {
+        // Load the information into the node from Fedora
+        sidora_update_node_from_fedora($created_node);
+        sidora_put_into_proper_project_space($created_node);
+        $info = sidora_get_info($created_node, FALSE);
+        echo $info['pid'];
+      }
+      else {
+        print 'Could not create research space node';
+        drupal_exit();
+      }
+      drupal_exit();
+    }catch(Exception $e){
+       echo $e->getTraceAsString();
+       echo $e;
+       exit();
+    }
+  }
   if ($call_type == 'transfer_ps'){
     module_load_include('inc', 'sidora', 'includes/project_spaces');
     $worked = sidora_transfer_project_space($param1, $param2); 

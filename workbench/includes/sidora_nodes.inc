@@ -1222,11 +1222,11 @@ function sidora_update_concept_node($node, $info, $set_fedora_sync = FALSE) {
   if (array_key_exists('resource_children',$info)) {
     $node_wrapper->field_sidora_resource_child_coun->set($info['resource_children']);
   }
+  else {
+    $node_wrapper->field_sidora_resource_child_coun->set(0);
+  }
   if (array_key_exists('description',$info)) {
     $node_wrapper->body->set(array('value' => $info['description']));
-  }
-  if (array_key_exists('resource_children',$info)) {
-    $node_wrapper->field_sidora_resource_child_coun->set($info['resource_children']);
   }
   if ($set_fedora_sync) {
     $node_wrapper->field_sidora_fedora_sync->set(strtotime("now"));
@@ -1354,8 +1354,19 @@ function sidora_create_concept_node($pid, $info = NULL, $set_fedora_sync = FALSE
   $newNode->field_fedora_pid[$newNode->language][]['value'] = $pid;
   if (!empty($info)){
     $newNode->field_fedora_label[$newNode->language][]['value'] = $info['label'];
-    $newNode->field_sidora_concept_children[$newNode->language][]['value'] = $info['concept_children'];
-    $newNode->field_sidora_resource_child_coun[$newNode->language][]['value'] = $info['resource_children'];
+    if (array_key_exists('concept_children',$info)) {
+      $newNode->field_sidora_concept_children[$newNode->language][]['value'] = $info['concept_children'];
+    }
+    else {
+      $newNode->field_sidora_concept_children[$newNode->language][]['value'] = '';
+    }
+    if (array_key_exists('resource_children',$info)) {
+      $newNode->field_sidora_resource_child_coun[$newNode->language][]['value'] = $info['resource_children'];
+    }
+    else {
+      $newNode->field_sidora_resource_child_coun[$newNode->language][]['value'] = 0;
+    }
+
     $newNode->body[$newNode->language][]['value'] = empty($info['description'])?"":$info['description'];
     // overwrite the owner info if there is a valid owner listed in the info
     if (!empty($info['owner'])) {

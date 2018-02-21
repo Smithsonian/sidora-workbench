@@ -675,15 +675,6 @@ function sidora_project_space_creation_form_submit($form, &$form_state) {
   else {
     global $user;
     module_load_include('inc', 'islandora', 'includes/utilities');
-    try
-    {
-      $tuque = islandora_get_tuque_connection();
-      $project_space_obj = $tuque->repository->constructObject(islandora_get_namespace('si:root'));
-     }catch(Exception $e) {
-       return t('The Fedora repository server is currently unavailable. Please contact the site administrator %email',
-         array('%email' => (variable_get('site_admin_email_to', '') != ''?' at ' . variable_get('site_admin_email_to'):''))
-      );
-    }
     $created_node = sidora_create_personal_project_space($user, array("label"=>$form_state['values']['ps_name'],"description"=>$form_state['values']['ps_desc']));
     if (!empty($created_node)) {
       // Load the information into the node from Fedora
