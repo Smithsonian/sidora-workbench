@@ -490,8 +490,33 @@ function sidora_fedora_sync() {
     }
   }
   else {
+    if ($command == 'resync_tree'){
+      $successes = 0;
+      $full_pid_set = sidora_get_pids_in_tree_from_nodes_by_root_pid($root_pid);
+      foreach($full_pid_set as $curr_pid){
+        $done = sidora_update_node_from_fedora($curr_pid);
+        if ($done) $successes++;
+      }
+      $to_print = '{
+successes: ' . $successes . '
+fails: ' . (sizeof($full_pid_set) - $successes) . '
+}';
+      print $to_print;
+      drupal_exit();
+    }
     if ($command == 'resync') {
-      $done = sidora_update_node_from_fedora($nid);
+      if ($nid > 0){
+        $done = sidora_update_node_from_fedora($nid);
+      }
+      else {
+        $done = sidora_update_node_from_fedora($root_pid);
+        $to_print = '{
+successes: ' . (!empty($done)?1:0) . '
+fails: ' . (empty($done)?1:0) . '
+}';
+        print $to_print;
+        drupal_exit();
+      }
       if (empty($done)){
         drupal_set_message(t('Did not update node :nid from Fedora pid :pid', array(":nid"=>$nid, ":pid"=>$done->field_fedora_pid['und'][0]['value'])),'warning');
       }

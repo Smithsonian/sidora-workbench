@@ -3337,7 +3337,12 @@ function sidora_get_groups_by_user($uid = NULL){
       $drupal_user = user_load($uid);
     }
     $gids = og_get_groups_by_user($drupal_user);
-    $groups = node_load_multiple($gids['node']);
+    if (!empty($gids['node'])){
+      $groups = node_load_multiple($gids['node']);
+    }
+    else {
+      $groups = array();
+    }
   }
   return $groups;
 }

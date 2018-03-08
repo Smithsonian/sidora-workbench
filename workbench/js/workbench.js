@@ -1113,19 +1113,8 @@ sidora.contextMenu.SetUp = function(){
     return !jQuery(opt.$trigger).hasClass("is-project-space");
   };
   $(function() {
-        $.contextMenu({
-            selector: '#fjt-holder .jstree-anchor',  // Everything that will be on the tree
-            zIndex: 91, //The resizable toolbar is at 90
-            events: {
-                show: function (options) {
-                  sidora.contextMenu.ClickItem = this;
-                }
-            }, 
-            callback: function(key, options) {
-                // Allow function to be changed on the fly
-                sidora.contextMenu.Chooser(key, options);
-            },
-            items: {
+        adminReloaders = {};
+        var items = {
                 "editConcept": {name: "Edit Folder", icon: "edit", disabled: cmips},
                 "addResources": {name: "Add Resource(s)", icon: "paste", disabled: cmips},
                 "copyConceptAndChildren": {name: "Copy Folder ...", icon: "copy", disabled: cmips},
@@ -1140,7 +1129,24 @@ sidora.contextMenu.SetUp = function(){
                 "changeOwner": {name: "Change Owner ...", icon: "arrow-right", disabled: cmnps},
                 "sep3": "---------",
                 "reload": {name: "Reload Children", icon: "arrow-right"}
-            }
+        }
+        if (Drupal.settings.is_admin == "1") {
+          items['fedora_reload'] = { name: "Fedora Reload", icon: "arrow-down" }   
+          items['fedora_reload_tree'] = { name: "Fedora Reload All Children", icon: "arrow-down" }   
+        }
+        $.contextMenu({
+            selector: '#fjt-holder .jstree-anchor',  // Everything that will be on the tree
+            zIndex: 91, //The resizable toolbar is at 90
+            events: {
+                show: function (options) {
+                  sidora.contextMenu.ClickItem = this;
+                }
+            }, 
+            callback: function(key, options) {
+                // Allow function to be changed on the fly
+                sidora.contextMenu.Chooser(key, options);
+            },
+            items: items
         });
     });
 }
@@ -1210,6 +1216,24 @@ sidora.menuChoice = function(key, pid, treeId){
       break;
     case "deleteConcept":
       sidora.concept.DeleteConceptByTreeId(treeId);
+      return;
+      break;
+    case "fedora_reload":
+      jQuery.ajax({
+        url: Drupal.settings.basePath+"admin/sidora/fedora_sync?command=resync&root_pid="+pid+"&show_table=0&nid=-1",
+        success: function(resourceList){
+          console.log(resourceList);
+        }
+      });
+      return;
+      break;
+    case "fedora_reload_tree":
+      jQuery.ajax({
+        url: Drupal.settings.basePath+"admin/sidora/fedora_sync?command=resync_tree&root_pid="+pid+"&show_table=0&nid=-1",
+        success: function(resourceList){
+          console.log(resourceList);
+        }
+      });
       return;
       break;
   }
@@ -1375,8 +1399,13 @@ sidora.InitiateJSTree = function(){
       jQuery("#psdd-select").append("<option value='link_viewAll'>View all Research Spaces...</option>");
       jQuery("#psdd-select").append("<option value='link_createNew'>Create a Research Space...</option>");
       if (window.location.hash == "") {
-        var selectedValue = mainTreeChildren[selectedIndex].id;
-        sidora.ProjectSpaces.ChangeProjectSpace(selectedValue);
+        if (typeof mainTreeChildren[selectedIndex] != 'undefined') {
+          var selectedValue = mainTreeChildren[selectedIndex].id;
+          sidora.ProjectSpaces.ChangeProjectSpace(selectedValue);
+        }
+        else {
+          console.log("User is not part of any research spaces");
+        }
       }
       else {
         // Perform the basic setup but don't change the dropdown
