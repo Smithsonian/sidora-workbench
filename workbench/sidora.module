@@ -3257,6 +3257,9 @@ function sidora_allow($user_pid_or_drupal_user, $pid_or_fedora_object, $type_of_
     $pid = $object->id;
   }
   module_load_include('inc', 'sidora', 'includes/sidora_nodes');
+  if (sidora_is_admin() && $pid == 'si:root') {
+    return TRUE;
+  }
   $node = sidora_get_update_or_create_concept_node($pid);
   // if the node doesn't exist, check to see if it's a Fedora Object to see if it needs to be created
   if ($node == NULL && is_string($pid_or_fedora_object)) {
@@ -8672,7 +8675,7 @@ function sidora_create_association_xml($batch_id,$association) {
   if (!empty($association['transform']) && (FALSE === strpos($association['transform'], 'http'))){
     global $base_url;
     global $base_path;
-    $prepend = $base_url . $base_path . 'sites/all/modules/sidora_specific/transforms/';
+    $prepend = str_replace('https://','http://',$base_url . $base_path . 'sites/all/modules/sidora_specific/transforms/');
     $association['transform'] = $prepend . $association['transform'];
   }
 //  dsm($association);
