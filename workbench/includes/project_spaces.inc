@@ -1312,6 +1312,7 @@ function sidora_create_personal_project_space($account = NULL, $info = NULL) {
   return $created_node;
 }
 function sidora_create_groups_for_pid($user_ps_object, $owner, $info = array()){
+  global $user;
   $concept_pid = $user_ps_object->id;
   if (empty($info)) {
     $info = array();
@@ -1320,7 +1321,12 @@ function sidora_create_groups_for_pid($user_ps_object, $owner, $info = array()){
   $info['concept_children'] = 0;
   $info['resource_children'] = 0;
   if (empty($info) || empty($info['owner'])){
-    $info['owner'] = $owner->name;
+    if (empty($owner) || empty($owner->name)){
+      $info['owner'] = $user->name;
+    }
+    else {
+      $info['owner'] = $owner->name;
+    }
   }
 
   $created_node = sidora_get_update_or_create_concept_node($concept_pid, $info);

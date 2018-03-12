@@ -604,6 +604,7 @@ function sidora_process_object_with_build_id($form_build_id) {
     if ($is_concept || $is_codebook) { 
       $parent_node = sidora_get_concept_node($parent_pid);
       $parent_node_id = $parent_node->nid;
+      module_load_include('inc', 'sidora', 'includes/project_spaces');
       $parent_gids = sidora_get_group_nids_membership($parent_node_id);
       $parent_groups = node_load_multiple($parent_gids);
       if ($is_concept) {

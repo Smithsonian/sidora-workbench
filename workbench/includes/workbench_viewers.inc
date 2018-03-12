@@ -86,7 +86,7 @@ function sidora_codebook_pull_num_header_rows($codebook_obj) {
  * Returns the full view for the phpexcelreader plus javascript
  */
 function sidora_tabular_view_phpexcelreader($pid,$dsid = 'OBJ'){
-  require dirname(__FILE__).'/utils.inc';
+  require_once dirname(__FILE__).'/utils.inc';
   $object = sidora_obj($pid);
   $datastream_content = $object[$dsid]->content;
   $datastream = $object[$dsid];

@@ -80,6 +80,13 @@ function sidora_create_sidora_group($owning_user, $project_pid, $type) {
     if (is_integer($owning_user) || is_string($owning_user)) {
       $owning_user = user_load(intval($owning_user));
     }
+    if (empty($owning_user)){
+      global $user;
+      watchdog("SIdora","Tried creating SIdora groups with bad user, defaulted to currently logged in user: %a %b %c", 
+        array("%a"=>$owning_user, "%b" => $project_pid, "%c" => $type)
+      );
+      $owning_user = $user;
+    }
     $project_obj = sidora_obj($project_pid);
     if (empty($project_obj)) {
       return NULL;
