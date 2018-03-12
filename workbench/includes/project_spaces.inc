@@ -933,17 +933,19 @@ function sidora_project_spaces_form($form = array(), &$form_state, $uid = NULL) 
       watchdog("sidora","Problem with group:" . (empty($owned_group)?"empty":$owned_group->id));
     }
     else {
-      $pid = $owned_group->field_fedora_pid[$owned_group->language][0]["safe_value"];
+      $ogl = $owned_group->language;
+      $pid = $owned_group->field_fedora_pid[$ogl][0]["safe_value"];
       $obj = sidora_obj($pid);
       if (!empty($obj)) {
         $name_markup = '<span class="rs-listing-rs-name">';
         $name_markup .= '<a href="/sidora/workbench/#' . $pid . '?path=" onclick="var toChoose = jQuery(\'#forjstree ul li ul li a[pid=\\\'' . $pid . '\\\']\', window.parent.document).parent().attr(\'id\'); jQuery(\'#psdd-select\', window.parent.document).val(toChoose); window.parent.Shadowbox.close();  jQuery(\'#psdd-select\',window.parent.document).change(); return false;" class="">';
-        $name_markup .= (empty($owned_group->field_fedora_label[$owned_group->language]))?"(none)":$owned_group->field_fedora_label[$owned_group->language][0]["safe_value"];
+        $name_markup .= (empty($owned_group->field_fedora_label[$ogl]))?"(none)":$owned_group->field_fedora_label[$ogl][0]["safe_value"];
         $name_markup .= '</a>';
         $name_markup .= '</span>';
         $name_markup .= '<br>';
         $name_markup .= '<span class="rs-listing-rs-desc">';
-        $name_markup .= (empty($owned_group->body[$owned_group->language]))?"":$owned_group->body[$owned_group->language][0]["value"];
+        $ogb = $owned_group->body[$ogl];
+        $name_markup .= (empty($ogb))?"":$ogb[0]["value"];
         $name_markup .= '</span>';
         $row = array(
           "name_$i" => array('data' => array(

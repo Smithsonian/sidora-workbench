@@ -3258,7 +3258,12 @@ function sidora_allow($user_pid_or_drupal_user, $pid_or_fedora_object, $type_of_
     $pid = $object->id;
   }
   module_load_include('inc', 'sidora', 'includes/sidora_nodes');
-  if (sidora_is_admin() && $pid == 'si:root') {
+  if (sidora_is_admin($drupal_user) && $pid == 'si:root') {
+    return TRUE;
+  }
+  if (sidora_is_admin($drupal_user) && $type_of_operation == 'permission') {
+    // Speed up some admin processes, do not check for object existence
+    // We will see that the object does not exist for normal permission types
     return TRUE;
   }
   $node = sidora_get_update_or_create_concept_node($pid);
