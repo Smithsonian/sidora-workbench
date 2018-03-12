@@ -935,59 +935,56 @@ function sidora_project_spaces_form($form = array(), &$form_state, $uid = NULL) 
     else {
       $ogl = $owned_group->language;
       $pid = $owned_group->field_fedora_pid[$ogl][0]["safe_value"];
-      $obj = sidora_obj($pid);
-      if (!empty($obj)) {
-        $name_markup = '<span class="rs-listing-rs-name">';
-        $name_markup .= '<a href="/sidora/workbench/#' . $pid . '?path=" onclick="var toChoose = jQuery(\'#forjstree ul li ul li a[pid=\\\'' . $pid . '\\\']\', window.parent.document).parent().attr(\'id\'); jQuery(\'#psdd-select\', window.parent.document).val(toChoose); window.parent.Shadowbox.close();  jQuery(\'#psdd-select\',window.parent.document).change(); return false;" class="">';
-        $name_markup .= (empty($owned_group->field_fedora_label[$ogl]))?"(none)":$owned_group->field_fedora_label[$ogl][0]["safe_value"];
-        $name_markup .= '</a>';
-        $name_markup .= '</span>';
-        $name_markup .= '<br>';
-        $name_markup .= '<span class="rs-listing-rs-desc">';
-        $ogb = $owned_group->body[$ogl];
-        $name_markup .= (empty($ogb))?"":$ogb[0]["value"];
-        $name_markup .= '</span>';
-        $row = array(
-          "name_$i" => array('data' => array(
-            '#markup' => $name_markup,
-          )),
-          "owner_$i" => array('data' => array(
-            '#markup' => sidora_get_username_from_uid($owned_group->uid),
-          )),
-        );
-        if (empty($uid) || $uid == $user->uid){
-          $form['table']['#header'] = array(t('Name'), t('Owner'), t('Is Default'));
-          $row["is_default_$i"] = array('data' => array(
-            "check_default_$i" => array(
-              '#type' =>'radio',
-              '#attributes' => array(
-                'name' => "default_ps",
-                'value' => $pid,
-              ),
+      $name_markup = '<span class="rs-listing-rs-name">';
+      $name_markup .= '<a href="/sidora/workbench/#' . $pid . '?path=" onclick="var toChoose = jQuery(\'#forjstree ul li ul li a[pid=\\\'' . $pid . '\\\']\', window.parent.document).parent().attr(\'id\'); jQuery(\'#psdd-select\', window.parent.document).val(toChoose); window.parent.Shadowbox.close();  jQuery(\'#psdd-select\',window.parent.document).change(); return false;" class="">';
+      $name_markup .= (empty($owned_group->field_fedora_label[$ogl]))?"(none)":$owned_group->field_fedora_label[$ogl][0]["safe_value"];
+      $name_markup .= '</a>';
+      $name_markup .= '</span>';
+      $name_markup .= '<br>';
+      $name_markup .= '<span class="rs-listing-rs-desc">';
+      $ogb = $owned_group->body[$ogl];
+      $name_markup .= (empty($ogb))?"":$ogb[0]["value"];
+      $name_markup .= '</span>';
+      $row = array(
+        "name_$i" => array('data' => array(
+          '#markup' => $name_markup,
+        )),
+        "owner_$i" => array('data' => array(
+          '#markup' => sidora_get_username_from_uid($owned_group->uid),
+        )),
+      );
+      if (empty($uid) || $uid == $user->uid){
+        $form['table']['#header'] = array(t('Name'), t('Owner'), t('Is Default'));
+        $row["is_default_$i"] = array('data' => array(
+          "check_default_$i" => array(
+            '#type' =>'radio',
+            '#attributes' => array(
+              'name' => "default_ps",
+              'value' => $pid,
             ),
-          ));
-          if ($pid == $default_ps) {
-            $row["is_default_$i"]['data']["check_default_$i"]['#attributes']['checked'] = 'checked';
-          }
-        }
-        if (sidora_allow($user, $pid, 'permissions')) {
-          $operations_markup = l(t('Edit'),'/sidora/research_space_create/' . $pid);
-          $operations_markup .= ' | ';
-          $operations_markup .= l(t('Permissions'),'/sidora/sharing_permissions/' . $pid);
-          $operations_markup .= ' | ';
-          $operations_markup .= l(t('Change Owner'),'/sidora/research_space_transfer/' . $pid);
-          $row["edit_$i"] = array('data' => array(
-            '#markup' => $operations_markup,
-          ));
-          $can_change_permission = TRUE;
-        }
-        else {
-          $row["edit_$i"] = array('data' => array(
-            '#markup' => ''
+          ),
         ));
+        if ($pid == $default_ps) {
+          $row["is_default_$i"]['data']["check_default_$i"]['#attributes']['checked'] = 'checked';
         }
-        $rows['myrow'.$i] = $row;
       }
+      if (sidora_allow($user, $pid, 'permissions')) {
+        $operations_markup = l(t('Edit'),'/sidora/research_space_create/' . $pid);
+        $operations_markup .= ' | ';
+        $operations_markup .= l(t('Permissions'),'/sidora/sharing_permissions/' . $pid);
+        $operations_markup .= ' | ';
+        $operations_markup .= l(t('Change Owner'),'/sidora/research_space_transfer/' . $pid);
+        $row["edit_$i"] = array('data' => array(
+          '#markup' => $operations_markup,
+        ));
+        $can_change_permission = TRUE;
+      }
+      else {
+        $row["edit_$i"] = array('data' => array(
+          '#markup' => ''
+      ));
+      }
+      $rows['myrow'.$i] = $row;
     }
   }
   if ($can_change_permission) {
