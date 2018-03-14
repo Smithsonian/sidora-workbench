@@ -1290,8 +1290,8 @@ function sidora_get_concept_node($pid) {
   }
   if (sizeof($nodes) > 1) {
     $nodes_list = '';
-    foreach($nodes as $node) {
-      $nodes_list = ' ' . $node->id;
+    foreach($nodes as $nid => $node) {
+      $nodes_list .= ' ' . $nid;
     }
     $text = t("Concept to PID 1-to-1 relationship failure. PID: !pid nodes: !nodes_list", array('!pid' => $pid, '!nodes_list' => $nodes_list));
     watchdog("sidora", $text);

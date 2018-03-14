@@ -2344,12 +2344,22 @@ sidora.ResizeOnWindowResize = function(){
   var setWidthTo = Math.max(jQuery("html").width() - jQuery("#conceptResizable").width(), 900);
   jQuery("#sidora_content_concept_info").width(setWidthTo);
   jQuery("#res_table").css("width","100%");
-  jQuery("#conceptResizable").height(jQuery(window).height() - 110);
-  jQuery("#concept_tabs").height(jQuery(window).height() - 180);
-  jQuery("#concept-meta").height(jQuery(window).height() - 270);
-  jQuery("#rt").height(jQuery(window).height() - 370);
-  jQuery("#concept-resource-list").height(jQuery(window).height() - 250);
-  jQuery("#concept-meta div.metadata-table").height(jQuery(window).height() - 270);
+  if (Drupal.settings.is_admin == "1") {
+    jQuery("#conceptResizable").height(jQuery(window).height() - 110);
+    jQuery("#concept_tabs").height(jQuery(window).height() - 180);
+    jQuery("#concept-meta").height(jQuery(window).height() - 270);
+    jQuery("#rt").height(jQuery(window).height() - 370);
+    jQuery("#concept-resource-list").height(jQuery(window).height() - 250);
+    jQuery("#concept-meta div.metadata-table").height(jQuery(window).height() - 270);
+  }
+  else {
+    jQuery("#conceptResizable").height(jQuery(window).height() - 40);
+    jQuery("#concept_tabs").height(jQuery(window).height() - 110);
+    jQuery("#concept-meta").height(jQuery(window).height() - 200);
+    jQuery("#rt").height(jQuery(window).height() - 300);
+    jQuery("#concept-resource-list").height(jQuery(window).height() - 180);
+    jQuery("#concept-meta div.metadata-table").height(jQuery(window).height() - 200);
+  }
 }
 
 sidora.concept.CopyNode = function(data) {
