@@ -220,22 +220,31 @@ function exhibition_config_get_exhibition_pids_for_user($user_id){
 
   $exhibition_pids = array();
   $result = db_query("select pid, last_edited, last_published, is_available from {exhibition_config}");
+  $num_rows = 0;
+  $dpm_outputs = !(empty($_GET['dpm']));
   foreach ($result as $records){
+    $num_rows++;
+    if (empty($_GET['num_listed']) || (!empty($_GET['num_listed']) && (int)$_GET['num_listed'] > $num_rows )){
+
     $pid_to_test = $records->pid;
     $curr_label = '';
     try{
+      if ($dpm_outputs) dpm("Checking:". ' ' . $pid_to_test);
+      if ($dpm_outputs) dpm(date("h:i:sa"));
       $exist = si_exhibition_check_object_info_accessible(array('pid' => $pid_to_test));
+      if ($dpm_outputs) dpm(date("h:i:sa"));
       if ($exist){
         $object = $repo->getObject($pid_to_test); 
         $curr_label = $object->label;
         $last_saved = unserialize($records->last_edited);
         $to_add = array('pid'=>$pid_to_test, 'label'=>$curr_label, 'custom_url'=>$last_saved['custom_url'], 'is_available'=>(!(is_null($records->last_published)) && ($records->last_published != ''))? '1' : $records->is_available);
+        if ($dpm_outputs) { dpm("Adding:"); dpm($to_add); }
         if (strtolower($object->owner) == strtolower($user_id) || $user_id === '') $exhibition_pids[] = $to_add;
       }
     }catch(Exception $hce){
       dsm('exception trying to get:'.$pid_to_test);
     }
-
+    }
   }
   return $exhibition_pids;
 }
@@ -247,6 +256,8 @@ function exhibition_config_get_exhibition_html_table_for_user($user_name){
   $enable_deletes = in_array('administrator', array_values($user->roles)); 
   drupal_add_library('system', 'ui.dialog');
   $epids = exhibition_config_get_exhibition_pids_for_user($user_name);
+  $dpm_outputs = !(empty($_GET['dpm']));
+  if ($dpm_outputs) dpm($epids);
   $epid_html = '<table>';
   $epid_html .= '<tr>';
   $epid_html .= '<th>ID</th><th>Label</th><th>Configure</th><th>Public</th><th>Link</th><th>Friendly Link</th>';
@@ -338,7 +349,6 @@ jQuery("body").append("<div id=\'deleteExhibitionDialog\' style=\'display:none;\
  * Adds the table of the exhibitions they own to their user page
  */
 function exhibition_config_user_view($account, $view_mode, $langcode){
-  return;
   global $user;
   $is_logged_in_as_admin = FALSE;
   module_load_include('inc', 'sidora', 'includes/utils');
