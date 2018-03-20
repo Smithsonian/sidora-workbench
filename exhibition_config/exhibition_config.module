@@ -338,6 +338,7 @@ jQuery("body").append("<div id=\'deleteExhibitionDialog\' style=\'display:none;\
  * Adds the table of the exhibitions they own to their user page
  */
 function exhibition_config_user_view($account, $view_mode, $langcode){
+  return;
   global $user;
   $is_logged_in_as_admin = FALSE;
   module_load_include('inc', 'sidora', 'includes/utils');
