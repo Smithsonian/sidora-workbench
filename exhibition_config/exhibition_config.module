@@ -38,6 +38,13 @@ function exhibition_config_menu(){
       'access arguments' => array('administer site configuration'),
       'type' => MENU_CALLBACK,
   );
+  $items['admin/exhibition_config/raw'] = array(
+      'title' => 'Exhibition Configuration',
+      'description' => 'See the raw exhibition_config database information',
+      'page callback' => 'exhibition_config_raw_db',
+      'access arguments' => array('administer site configuration'),
+      'type' => MENU_CALLBACK,
+  );
   $items['admin/exhibition_config/configure'] = array(
       'title' => 'Exhibition Configuration',
       'description' => 'Configure the Exhibition Configuration Module.',
@@ -205,6 +212,13 @@ function exhibition_config_direct_visibility_form_submit($form, &$form_state) {
   $visibility_json = $form_state['input']['visibility'];
   exhibition_config_save_visibility($pid, $visibility_json);
   drupal_set_message("Saved");
+}
+function exhibition_config_raw_db(){
+  $result = db_query("select * from {exhibition_config}");
+  foreach ($result as $record){
+    var_dump($record);
+  }
+
 }
 /*
  * Returns an array of exhibition information for the input user (or all users if empty string
