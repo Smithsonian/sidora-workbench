@@ -6388,7 +6388,7 @@ function sidora_get_plupload_html($elements, $button_text = 'Browse'){
         "Basic Video" : "ogg,mp4,mov,qt,m4a,m4v,avi,mkv",
         "Raw Sequence" : "xml","Assembled Sequence" : "fasta,fa"
       }],
-      max_file_size : "1000mb",
+      max_file_size : "5gb",
       mime_types: [
         {title : "';
   print implode(",",$elements['#extensions']) . ' files';
