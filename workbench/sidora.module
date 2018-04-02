@@ -7388,6 +7388,13 @@ function sidora_preprocess_user_login(&$vars) {
   $vars['classes_array'] = array('content');
   $vars['forgot_link'] = l(t('Forgot password?'),'user/password');
 }
+function sidora_preprocess_user_pass(&$vars) {
+  $vars['content_attributes_array']['class'][] = 'content';
+  $vars['title_attributes_array']['class'][] = 'content';
+  $vars['attributes_array']['class'][] = 'content';
+  $vars['classes_array'] = array('content');
+  $vars['forgot_link'] = l(t('Forgot password?'),'user/password');
+}
 /**
  * Implements hook_theme().
  *

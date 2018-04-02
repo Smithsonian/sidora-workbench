@@ -1219,6 +1219,10 @@ function sidora_update_concept_node_remove_child($node, $child_node_id = NULL) {
  * returns the node that was input
  */
 function sidora_update_concept_node_add_child($node, $child_node_id = NULL) {
+  if (empty($node) || empty($node->nid)){
+    watchdog('sidora', "ERROR: sidora_update_concept_node_add_child, asked to add $child_node_id to an empty parent:<pre>" . sidora_debug_string_backtrace()."</pre>");
+    return $node;
+  }
   watchdog("sidora","sidora_update_concept_node_add_child, node id:" . $node->nid . " new child node id:" . $child_node_id);
   $node_wrapper = entity_metadata_wrapper('node', $node);
   // If the child is null, then it was a resource, add one resource from the resource count
