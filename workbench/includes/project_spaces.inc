@@ -942,7 +942,9 @@ function sidora_project_spaces_form($form = array(), &$form_state, $uid = NULL) 
       $name_markup .= '</span>';
       $name_markup .= '<br>';
       $name_markup .= '<span class="rs-listing-rs-desc">';
-      $ogb = $owned_group->body[$ogl];
+      if (!empty($owned_group->body[$ogl])) {
+        $ogb = $owned_group->body[$ogl];
+      }
       $name_markup .= (empty($ogb))?"":$ogb[0]["value"];
       $name_markup .= '</span>';
       $row = array(
