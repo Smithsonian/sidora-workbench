@@ -1083,22 +1083,27 @@ sidora.contextMenu = {};
 sidora.contextMenu.SetUp = function(){
   $ = jQuery;
   var cmips = function(key, opt){
-    if (key == 'editConcept' && !sidora.concept.permissions.update) {
+    var itemCheckPermissions = sidora.contextMenu.ClickItem.attr("permissions");
+    if (key == 'editConcept' && itemCheckPermissions.indexOf("u") == -1) {
       return true;
     }
-    if (key == 'addResources' && !sidora.concept.permissions.create) {
+    if (key == 'addResources' && itemCheckPermissions.indexOf("c") == -1) {
       return true;
     }
-    if (key == 'moveConcept' && !sidora.concept.permissions.delete) {
+    if (key == 'addConcept' && itemCheckPermissions.indexOf("c") == -1) {
       return true;
     }
-    if (key == 'deleteConcept' && !sidora.concept.permissions.delete) {
+    if (key == 'moveConcept' && itemCheckPermissions.indexOf("d") == -1) {
+      return true;
+    }
+    if (key == 'deleteConcept' && itemCheckPermissions.indexOf("d") == -1) {
       return true;
     }
     return jQuery(opt.$trigger).hasClass("is-project-space");
   };
   var cmnps = function(key, opt){
-    if (key == 'addConcept' && !sidora.concept.permissions.create) {
+    var itemCheckPermissions = sidora.contextMenu.ClickItem.attr("permissions");
+    if (key == 'addConcept' && itemCheckPermissions.indexOf("c") == -1) {
       return true;
     }
     if (key == 'changePermissions' && !sidora.ProjectSpaces.isOwned()) {
@@ -1122,7 +1127,7 @@ sidora.contextMenu.SetUp = function(){
                 "linkConcept": {name: "Link Folder ...", icon: "external-link", disabled: cmips},
                 "deleteConcept": {name: "Delete Folder", icon: "delete", disabled: cmips},
                 "sep1": "---------",
-                "addConcept": {name: "Add New Folder", icon: "paste"},
+                "addConcept": {name: "Add New Folder", icon: "paste", disabled: cmips},
                 "sep2": "---------",
                 "editResearchSpace": {name: "Edit Research Space", icon: "edit", disabled: cmnps},
                 "changePermissions": {name: "Change Space Permissions ...", disabled: cmnps},
