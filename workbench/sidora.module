@@ -1581,8 +1581,12 @@ function sidora_get_parent_table($pid, $only_basic_table_and_direct_removal_call
     var clicked = jQuery("input[ppid=\'"+ppid+"\']");
     var cp = clicked.parent();
     cp.children().remove();
-    cp.append("<div>Removing...</div>");
-    sidora.queue.RequestPost("Remove parent "+ppid+" from "+pid,"'.$unassociate_location.'" + ppid + "/" + pid,"",
+    var url = "'.$unassociate_location.'"  + ppid + "/" + pid;
+    cp.append("<div pid=\"' . $pid . '\" url=\""+url+"\">Removing...</div>");
+    if (typeof(sidora) == "undefined") {
+      sidora = window.parent.sidora;
+    }
+    sidora.queue.RequestPost("Remove parent "+ppid+" from "+pid, url, "",
       function(data) {
         if (typeof(data) == "string") data = jQuery.parseJSON(data);
         if (data.error) {
@@ -1602,6 +1606,7 @@ function sidora_get_parent_table($pid, $only_basic_table_and_direct_removal_call
           }
         }
         window.lastArgs = arguments;
+        jQuery("[url=\'" + this.url + "\']").text("Successfully removed");
       },
       function() {},[pid,ppid]
     );
