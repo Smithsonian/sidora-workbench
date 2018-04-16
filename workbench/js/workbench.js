@@ -1090,9 +1090,6 @@ sidora.contextMenu.SetUp = function(){
     if (key == 'addResources' && itemCheckPermissions.indexOf("c") == -1) {
       return true;
     }
-    if (key == 'addConcept' && itemCheckPermissions.indexOf("c") == -1) {
-      return true;
-    }
     if (key == 'moveConcept' && itemCheckPermissions.indexOf("d") == -1) {
       return true;
     }
@@ -1102,9 +1099,6 @@ sidora.contextMenu.SetUp = function(){
     return jQuery(opt.$trigger).hasClass("is-project-space");
   };
   var cmnps = function(key, opt){
-    if (key == 'addConcept'){
-      return !sidora.concept.permissions.create;
-    }
     if (key == 'changePermissions' && !sidora.ProjectSpaces.isOwned()) {
       return true;
     }
@@ -1116,6 +1110,13 @@ sidora.contextMenu.SetUp = function(){
     }
     return !jQuery(opt.$trigger).hasClass("is-project-space");
   };
+  var disableAddConcept = function(key, opt){
+    var itemCheckPermissions = sidora.contextMenu.ClickItem.attr("permissions");
+    if (key == 'addConcept' && itemCheckPermissions.indexOf("c") == -1) {
+      return true;
+    }
+    return false;
+  }
   $(function() {
         adminReloaders = {};
         var items = {
@@ -1126,7 +1127,7 @@ sidora.contextMenu.SetUp = function(){
                 "linkConcept": {name: "Link Folder ...", icon: "external-link", disabled: cmips},
                 "deleteConcept": {name: "Delete Folder", icon: "delete", disabled: cmips},
                 "sep1": "---------",
-                "addConcept": {name: "Add New Folder", icon: "paste", disabled: cmips},
+                "addConcept": {name: "Add New Folder", icon: "paste", disabled: disableAddConcept},
                 "sep2": "---------",
                 "editResearchSpace": {name: "Edit Research Space", icon: "edit", disabled: cmnps},
                 "changePermissions": {name: "Change Space Permissions ...", disabled: cmnps},
