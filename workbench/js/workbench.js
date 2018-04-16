@@ -1098,8 +1098,8 @@ sidora.contextMenu.SetUp = function(){
     return jQuery(opt.$trigger).hasClass("is-project-space");
   };
   var cmnps = function(key, opt){
-    if (key == 'addConcept' && !sidora.concept.permissions.create) {
-      return true;
+    if (key == 'addConcept'){
+      return !sidora.concept.permissions.create;
     }
     if (key == 'changePermissions' && !sidora.ProjectSpaces.isOwned()) {
       return true;
