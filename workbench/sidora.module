@@ -6882,6 +6882,13 @@ function sidora_clear_entire_tree_cache() {
  * Clears specific pids out of the tree cache
  */
 function sidora_clear_tree_cache($pid = '') {
+  if (variable_get('sidora_debug_clear_cache',FALSE)){
+    watchdog('sidora_debug_clear_cache',
+      t("Clear Tree Cache: %pid",
+        array('%pid' => $pid)
+      )
+    );
+  }
   if (!empty($pid)) {
     cache_clear_all('sidora:children_results:'.$pid, 'cache', TRUE);
     sidora_recently_updated($pid);
@@ -6892,6 +6899,13 @@ function sidora_clear_tree_cache($pid = '') {
  * For any object that has been updated, keep an indicator of changed
  */
 function sidora_recently_updated($pid) {
+  if (variable_get('sidora_debug_clear_cache',FALSE)){
+    watchdog('sidora_debug_clear_cache',
+      t("Recently Updated: %pid",
+        array('%pid' => $pid)
+      )
+    );
+  }
   sidora_fedora_queue_sync($pid);
   sidora_recently_updated_clear_old();
   $cache_name = "sidora:recent_updates";

@@ -370,6 +370,13 @@ function sidora_build_tree_from_nodes($root_node_id, $max_depth = 3, $current_de
  * when the first user logs in that wants to look at that data
  */
 function sidora_fedora_queue_sync_external_call($csv_pids = NULL) {
+  if (variable_get('sidora_debug_clear_cache',FALSE)){
+    watchdog('sidora_debug_clear_cache',
+      t("Q Sync External Call: %pid",
+        array('%pid' => $csv_pids)
+      )
+    );
+  }
   $stes = variable_get("sidora_trusted_external_servers","");
   $allowed = array_map('trim' , explode(',' , $stes));
   // Intentionally not checking for X-Forwarded-For
@@ -395,12 +402,26 @@ function sidora_fedora_queue_sync_external_call($csv_pids = NULL) {
  * Tell Workbench it should update information from Fedora before the next time it displays the node information
  */
 function sidora_fedora_queue_sync($pid_or_nid) {
+  if (variable_get('sidora_debug_clear_cache',FALSE)){
+    watchdog('sidora_debug_clear_cache',
+      t("Queue Sync: %pid",
+        array('%pid' => $pid_or_nid)
+      )
+    );
+  }
   $nid = $pid_or_nid;
   if (sidora_contains($pid_or_nid,':')){
     $nid = sidora_quick_pid_to_node_id($pid_or_nid); 
   }
   $node = node_load($nid, NULL, TRUE);
   if (!empty($node)){
+    if (variable_get('sidora_debug_clear_cache',FALSE)){
+      watchdog('sidora_debug_clear_cache',
+        t("Queue Sync Nid: %pid",
+          array('%pid' => $nid)
+        )
+      );
+    }
     $node_wrapper = entity_metadata_wrapper('node', $node);
     $node_wrapper->field_sidora_fedora_sync->set('0');
     $node_wrapper->save();
