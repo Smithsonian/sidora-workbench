@@ -37,8 +37,27 @@ jQuery().ready(function(){
   jQuery(".sidora-form-next").last().addClass("form-button-disabled");
   jQuery(".sidora-form-prev:eq(1)").addClass("form-button-disabled");
   jQuery(".sidora-form-next:eq(-2)").addClass("form-button-disabled");
-  jQuery(".top-panel").append("<input value=\"Finish\" class='form-submit sidora-form-finish' style='float:right;'></input>");
-  jQuery(".bottom-panel").append("<input value=\"Finish\" class='form-submit sidora-form-finish' style='float:right;'></input>");
+  // Only add the Finish buttons if the form is submittable
+  if (jQuery(".form-submit[value=Ingest], .form-submit[value=Submit], .form-submit[value=Update], #create-resource-upload").length > 0) {
+    jQuery(".top-panel").append("<input value=\"Finish\" class='form-submit sidora-form-finish' style='float:right;'></input>");
+    jQuery(".bottom-panel").append("<input value=\"Finish\" class='form-submit sidora-form-finish' style='float:right;'></input>");
+  }
+  else if (jQuery("#edit-gen-codebook").length = 0){
+    // for all other uploads other than the codebook choose/create page
+    // Don't bother showing the unusable submitting buttons
+    jQuery(".form-submit").hide();
+    // Don't show the green + buttons to add list items
+    jQuery("input[type=image]").hide();
+    // Don't show the red - buttons or allow remove clicks to remove list items
+    jQuery(".remove-tag").hide();
+    jQuery(".edit-tag").attr("onclick","");
+    // Text fields read only
+    jQuery("input").attr("readonly","readonly");
+    // Text areas read only
+    jQuery("textarea").attr("readonly","readonly");
+    // Don't allow closing of tabs (would cause drupal error message)
+    jQuery(".ui-icon-close").css("background-image","none").css("cursor","default").unbind("click")
+  }
   jQuery(".sidora-form-prev").not(".form-button-disabled").click(function(e){ 
     window.showPrev();  
     jQuery(".form-submit[value=Update]").hide();

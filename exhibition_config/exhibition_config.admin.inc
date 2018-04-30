@@ -43,7 +43,12 @@
  *   The drupal form definition.
  */
 function exhibition_config_admin_settings() {
-  $epid_html = exhibition_config_get_exhibition_html_table_for_user('');
+  if (empty($_GET['no_table'])){
+    $epid_html = exhibition_config_get_exhibition_html_table_for_user('');
+  }
+  else {
+    $epid_html = "";
+  }
   drupal_add_js(drupal_get_path('module','exhibition_config').'/../sidora_shared/js/sidora_admin_screens.js',array('weight' => '1000000', 'group' => JS_THEME));
   $form = array(
     'si_exhibition_website_location' => array(

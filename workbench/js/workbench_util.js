@@ -137,6 +137,36 @@ sidora_util.clickBlocker.block = function(showOrHide) {
   }
 }
 sidora_util.clickBlocker.unblock = function(){this.block(false);}
+sidora_util.cachedObjects = {};
+sidora_util.cache = function(key, object, ttlSeconds) {
+  if (typeof(object) == 'undefined') {
+    var cachedObj = sidora_util.cachedObjects[key];
+    if (typeof(cachedObj) == 'undefined') {
+      return;
+    }
+    if (Date.now() < cachedObj.expire) {
+      return cachedObj.obj;
+    }
+    delete sidora_util.cachedObjects[key];
+    return;
+  }
+  sidora_util.cachedObjects[key] = {
+    'obj' : object,
+    'expire' : Date.now() + 1000 * ttlSeconds
+  };
+}
+sidora_util.cacheTidy = function(){
+  for (var key in sidora_util.cachedObjects) {
+    if (sidora_util.cachedObjects[key].expire > Date.now()) {
+      delete sidora_util.cachedObjects[key];
+    }
+  }
+}
+sidora_util.cacheClear = function(){
+  for (var key in sidora_util.cachedObjects) {
+    delete sidora_util.cachedObjects[key];
+  }
+}
 sidora_util.writeCookie = function(name,value,days) {
     var date, expires;
     if (days) {
@@ -298,6 +328,57 @@ jQuery.fn.countdown = function (callback, duration, message) {
     }, 1000);
 
 };
+/*
+ * Inject and remove injected styles
+ * Modified from injectStyles (since I needed to remove as well) from:
+https://css-tricks.com/snippets/javascript/inject-new-css-rules/
+ */
+function styleInject(rule, name) {
+var div = jQuery("<div />", {
+    html: '&shy;<style id="styleInject'+name+'">' + rule + '</style>'
+  }).children().appendTo("body"); 
+}
+function styleRemove(name) {
+  jQuery("styleInject"+name).remove();
+}
+/**
+ * Get proper location of Dom object on page
+ */
+function getOffset( el ) {
+    var _x = 0;
+    var _y = 0;
+    while( el && !isNaN( el.offsetLeft ) && !isNaN( el.offsetTop ) ) {
+        _x += el.offsetLeft - el.scrollLeft;
+        _y += el.offsetTop - el.scrollTop;
+        el = el.offsetParent;
+    }
+    return { top: _y, left: _x };
+}
+/**
+ * Performs a certain action as soon (500ms interval check) as it appears
+ * selector - css / jQuery selector for item
+ * myFunction - calls this with the selector as the argument
+ *
+ */
+
+function performWhenDisplayedOnScreen(selector, myFunction) {
+  var intervalId = setInterval(function(){
+    if (jQuery(selector).length != 0) {
+      clearInterval(intervalId);
+      myFunction(selector);
+    }
+  },500);
+}
+/**
+ * Clear the text selection of html elements (useful when dragging things across text)
+ */
+function clearSelection() {
+    if ( document.selection ) {
+        document.selection.empty();
+    } else if ( window.getSelection ) {
+        window.getSelection().removeAllRanges();
+    }
+}
 
 jQuery(document).ready(function(){
   var pp = sidora_util.ParentPid();
@@ -323,9 +404,6 @@ jQuery(document).ready(function(){
 //https://gist.github.com/djKianoosh/7090542
 // Some common IE shims... indexOf, startsWith, trim
 
-/*
-  Really? IE8 Doesn't have .indexOf
-*/
 if (!Array.prototype.indexOf) {
   Array.prototype.indexOf = function (searchElement /*, fromIndex */ ) {
     "use strict";
@@ -361,7 +439,7 @@ if (!Array.prototype.indexOf) {
 }
 
 /*
-  IE Doesn't have a .startsWith either?
+  IE Doesn't have a .startsWith
 */
 if (!String.prototype.startsWith) {
   String.prototype.startsWith = function (str){

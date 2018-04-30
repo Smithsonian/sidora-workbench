@@ -290,7 +290,7 @@ SidoraQueue.prototype.Done = function(completedItem, ajaxReturn){
 	    }else{
 	      if (batchStatus.status.toLowerCase().indexOf('error') == -1) {
 	        sidora.queue.NotificationWindow.Show("Status for batch request started at " + timestamp + " : " + "<br>" + batchStatus.message,true);
-	        setTimeout(function() {poll(requestID,batch_id,timestamp)}, 2000);
+	        setTimeout(function() {poll(requestID,batch_id,timestamp)}, 6000);
 	      }else{
 	       // Even when the batch status returned an unexpected response, it might still be running in the backend 
 	        parentPid = batchStatus.parent;
@@ -327,9 +327,9 @@ SidoraQueue.prototype.Done = function(completedItem, ajaxReturn){
 		     }
 		   },15000); 
 		})(parentPid,uiChildResourcesCount);
-	      }	 
+	      }
 	    }
-	  }			
+	  }
         },
        dataType: "json",
        //timeout: 5000
@@ -349,6 +349,10 @@ SidoraQueue.prototype.Done = function(completedItem, ajaxReturn){
       if (sidora.resources.individualPanel.resourceOfInterest != null && sidora.resources.individualPanel.resourceOfInterest.pid == completedItem.pidsBeingProcessed[i]){
         sidora.resources.individualPanel.LoadRelationships();
       }
+      if (completedItem.action == 'editMeta' && sidora.util.GetTreeNodesByPid(completedItem.pidsBeingProcessed[i]).length > 0) {
+        var jst = jQuery("#forjstree").jstree();
+        sidora.util.loadTreeSection(completedItem.pidsBeingProcessed[i], null, null, true, jst); 
+      }
       //Update the tree counts if needed, only valid pids
       if (completedItem.pidsBeingProcessed.indexOf(":") != -1) {
         sidora.util.refreshConceptChildrenNumber(completedItem.pidsBeingProcessed[i]);
@@ -357,24 +361,24 @@ SidoraQueue.prototype.Done = function(completedItem, ajaxReturn){
       //If there was an update to the Pid user is currently looking at then anything may have changed.  Reload it.
       if (sidora.concept.GetPid() == completedItem.pidsBeingProcessed[i]){
         if ((completedItem.action == 'deleteConcept') && !(executeOnceOnly)){
-          parentLocation = sidora.util.getParentHref(window.location.href);
           var jst = jQuery("#forjstree").jstree();
-          var parentLocationFromBasePath = parentLocation.substring(parentLocation.indexOf(Drupal.settings.basePath));
-          var itemSelectorForCurrentItemInTree = 'a[href=\"'+parentLocationFromBasePath+'\"]';
-          var selectThisNode = jst.get_node(itemSelectorForCurrentItemInTree);
-          jst.deselect_all();
-          jst.select_node(selectThisNode);
+          var parentId = sidora.util.getNodeIdByHref(sidora.util.getParentHref());
+          jQuery("#" + parentId + " a").click();
           executeOnceOnly = true;
         }    
         sidora.concept.LoadContent();
-        sidora.util.refreshPidInTree();
+        //sidora.util.refreshPidInTree(5);
         if (processedItemCount != ''){
           var processedResourceCountArray = processedItemCount.split(' of ');
           if ((processedResourceCountArray.length > 1) && (processedResourceCountArray[0] == processedResourceCountArray[1]-1)){
             // trying to get the last item of the current queue
             sidora_util.writeCookie('Drupal.selectResource','1','30');
             if (sidora_util.readCookie('Drupal.dtFilter') != ''){
-              if ((completedItem.fullObject.ajaxRequest.data.indexOf('islandora_ingest_form') > -1) && (completedItem.fullObject.ajaxRequest.data.indexOf('resource_model') > -1)){
+              if (typeof(completedItem.fullObject) != 'undefined' && completedItem.fullObject != null)
+              if (
+                (completedItem.fullObject.ajaxRequest.data.indexOf('islandora_ingest_form') > -1) &&
+                (completedItem.fullObject.ajaxRequest.data.indexOf('resource_model') > -1)
+              ){
                 var rmPattern = new RegExp('&resource_model=(.*)&');
                 var rmArray = rmPattern.exec(completedItem.fullObject.ajaxRequest.data);
                 if ((Array.isArray(rmArray))&& (rmArray.length >= 2) && (rmArray[1] != sidora_util.readCookie('Drupal.dtFilter'))){
@@ -475,7 +479,7 @@ SidoraQueue.prototype.updateFooterWithRequestInProcess = function(){
   setTimeout(sidora.ResizeTreeToBrowser,1000);
 }
 SidoraQueue.prototype.Next = function(){
-  if (jQuery("footer").length == 0) jQuery("body").parent().append("<footer></footer");
+  if (jQuery("footer").length == 0) jQuery("body").append("<footer></footer");
   if (this.requestInProcess == null){
     var nextItem = this.requests.shift();
     if (nextItem instanceof SidoraRequest){

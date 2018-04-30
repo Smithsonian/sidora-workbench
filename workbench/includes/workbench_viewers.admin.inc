@@ -30,6 +30,7 @@
  * This file adds in configuration settings for the SIdora viewers
  */
 function _sidora_admin_settings_add_viewer_configs(&$form){
+  drupal_add_library('system', 'drupal.collapse');
   $form['Viewer Configurations'] = array(
     'fieldset' => array(
       '#type' => 'fieldset',
@@ -49,7 +50,7 @@ function _sidora_admin_settings_add_viewer_configs(&$form){
       'osd_jquery_library_location' => array(
         '#type' => 'textfield',
         '#title' => t('The path to jQuery for the SIdora OpenSeaDragon viewer'),
-        '#default_value' => variable_get('osd_jquery_library_location', $GLOBALS['base_url'].'/'.drupal_get_path('module','sidora').'/jslibs/openseadragon-djatoka/jquery/jquery-2.1.4.min.js'),
+        '#default_value' => variable_get('osd_jquery_library_location', $GLOBALS['base_url'].'/sites/all/libraries/openseadragon-djatoka/jquery/jquery-2.1.4.min.js'),
         '#description' => t('Preferred version is jquery-2.1.4.min.js '),
         '#attributes' => array('size' => 120),
         '#maxlength' => 1024,
@@ -57,7 +58,7 @@ function _sidora_admin_settings_add_viewer_configs(&$form){
       'osd_library_location' => array(
         '#type' => 'textfield',
         '#title' => t('The path to the required JavaScript for the SIdora OpenSeaDragon viewer'),
-        '#default_value' => variable_get('osd_library_location', $GLOBALS['base_url'].'/'.drupal_get_path('module','sidora').'/jslibs/openseadragon-djatoka/'),
+        '#default_value' => variable_get('osd_library_location', $GLOBALS['base_url'].'/sites/all/libraries/openseadragon-djatoka/'),
         '#description' => t('Include the trailing slash. Location for files: openseadragon/openseadragon.min.js js/djtilesource.js and includes the openseadragon/images folder for prefixUrl'),
         '#attributes' => array('size' => 120),
         '#maxlength' => 1024,
@@ -103,7 +104,7 @@ function _sidora_admin_settings_add_viewer_configs(&$form){
         '#title' => t('Location of the viewer.html file'),
         '#default_value' => variable_get(
           'sidora_pdf_js_location', 
-          $base_url.'/sites/all/modules/sidora/workbench/jslibs/pdfjs/web/viewer.html'
+          $base_url.'/sites/all/libraries/pdfjs/web/viewer.html'
         ),
         '#attributes' => array('size' => 120),
         '#maxlength' => 1024,
@@ -122,7 +123,7 @@ function _sidora_admin_settings_add_viewer_configs(&$form){
         '#title' => t('Location of the dataTables libraries'),
         '#default_value' => variable_get(
           'sidora_dataTables_location', 
-          $base_url.'/'.drupal_get_path('module','sidora').'/jslibs/dataTables/'
+          $base_url.'/sites/all/libraries/dataTables/'
         ),
         '#attributes' => array('size' => 120),
         '#description' => t('Include the trailing slash.  This includes files: css/jquery.dataTabls.css js/jquery.js js/jquery.dataTables.min.js'),

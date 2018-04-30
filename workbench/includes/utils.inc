@@ -27,6 +27,8 @@
  * those of third-party libraries, please see the product release notes.
  */
 
+defined("SI_RELS_EXT_URI") or define('SI_RELS_EXT_URI',"http://oris.si.edu/2017/01/relations#");
+
 /**
  * @file
  * Helper functions.
@@ -165,6 +167,7 @@ function _sidora_pager_init($total, $limit = 10, $element = 0) {
 
 /**
  * Gets the root object for the given user.  Note this is for tree operations, not for user operations.
+ * For user operations, use sidora_get_user_object
  *
  * @param stdClass $account
  *   The user in quetion, defaults to the logged in user.
@@ -373,6 +376,42 @@ function sidora_get_where_codebook_used(AbstractObject $object) {
   }
   return $out;
 }
+/*
+ * Helper function to just directly get a pid, so will not have to go thru the util query array return
+ */
+function sidora_get_owning_parent_concept_pid_by_administered_pid($pid) {
+  $owning_parents = sidora_get_owning_parent_concept_by_administered_pid($pid);
+  foreach ($owning_parents as $owning_parent) {
+    return $owning_parent['pid']; 
+  }
+  return NULL;
+}
+/**
+ * Returns the standard array('pid'=>pid,'label'=>label,'models'=>array(model1,model2)) from the util queries
+ */
+function sidora_get_owning_parent_concept_by_administered_pid($pid) {
+  $out = array();
+  $query = "SELECT ?pid ?label ?model FROM <#ri> 
+      WHERE {
+         {
+         <info:fedora/" . $pid . "> <" . SI_RELS_EXT_URI . "isAdministeredBy> ?pid .
+         ?pid <info:fedora/fedora-system:def/model#state> <info:fedora/fedora-system:def/model#Active> .
+         ?pid <info:fedora/fedora-system:def/model#label> ?label .
+         ?pid <info:fedora/fedora-system:def/model#hasModel> ?model .
+          FILTER(!sameTerm(?model, <info:fedora/fedora-system:FedoraObject-3.0>) &&
+                 !sameTerm(?model, <info:fedora/si:conceptCModel>))
+        }
+      } ORDER BY ?label";
+  $tuque = islandora_get_tuque_connection();
+  $results = $tuque->repository->ri->query($query, 'sparql');
+  foreach ($results as $result) {
+    $pid = $result['pid']['value'];
+    $out[$pid]['pid'] = $pid;
+    $out[$pid]['label'] = $result['label']['value'];
+    $out[$pid]['models'][] = $result['model']['value'];
+  }
+  return $out;
+}
 /**
  * Gets the parent concepts the given object belongs to.
  *
@@ -383,25 +422,28 @@ function sidora_get_where_codebook_used(AbstractObject $object) {
  *   An associative array describing the parent concepts.
  */
 function sidora_get_parent_concepts(AbstractObject $object) {
+  return sidora_get_parent_concepts_by_pid($object->id);
+}
+function sidora_get_parent_concepts_by_pid($pid) {
   $out = array();
   $query = "SELECT ?pid ?label ?model FROM <#ri> 
 	WHERE {
          {
-         ?pid <info:fedora/fedora-system:def/relations-external#hasConcept> <info:fedora/" . $object->id . "> .
+         ?pid <info:fedora/fedora-system:def/relations-external#hasConcept> <info:fedora/" . $pid . "> .
          ?pid <info:fedora/fedora-system:def/model#state> <info:fedora/fedora-system:def/model#Active> .
          ?pid <info:fedora/fedora-system:def/model#label> ?label .
          ?pid <info:fedora/fedora-system:def/model#hasModel> ?model .
           FILTER(!sameTerm(?model, <info:fedora/fedora-system:FedoraObject-3.0>) &&
                  !sameTerm(?model, <info:fedora/si:conceptCModel>))
          } UNION {
-         ?pid <info:fedora/fedora-system:def/relations-external#hasResource> <info:fedora/" . $object->id . "> .
+         ?pid <info:fedora/fedora-system:def/relations-external#hasResource> <info:fedora/" . $pid . "> .
          ?pid <info:fedora/fedora-system:def/model#state> <info:fedora/fedora-system:def/model#Active> .
          ?pid <info:fedora/fedora-system:def/model#label> ?label .
          ?pid <info:fedora/fedora-system:def/model#hasModel> ?model .
           FILTER(!sameTerm(?model, <info:fedora/fedora-system:FedoraObject-3.0>) &&
                  !sameTerm(?model, <info:fedora/si:resourceCModel>))
          } UNION {
-         ?pid <info:fedora/fedora-system:def/relations-external#managesCodebook> <info:fedora/" . $object->id . "> .
+         ?pid <info:fedora/fedora-system:def/relations-external#managesCodebook> <info:fedora/" . $pid . "> .
          ?pid <info:fedora/fedora-system:def/model#state> <info:fedora/fedora-system:def/model#Active> .
          ?pid <info:fedora/fedora-system:def/model#label> ?label .
          ?pid <info:fedora/fedora-system:def/model#hasModel> ?model .
@@ -410,7 +452,8 @@ function sidora_get_parent_concepts(AbstractObject $object) {
                  !sameTerm(?model, <info:fedora/si:conceptCModel>))
         }
       } ORDER BY ?label";
-  $results = $object->repository->ri->query($query, 'sparql');
+  $tuque = islandora_get_tuque_connection();
+  $results = $tuque->repository->ri->query($query, 'sparql');
   foreach ($results as $result) {
     $pid = $result['pid']['value'];
     $out[$pid]['pid'] = $pid;
@@ -542,6 +585,27 @@ function sidora_mimetype_from_file_extension_override($filename) {
   return NULL;
 }
 /**
+ * Checks if the given object is a person object.
+ *
+ * @param AbstractObject $object
+ *   The object to get the content model from.
+ *
+ * @return bool
+ *   TRUE if the given object is a concept, FALSE otherwise.
+ */
+function sidora_is_person(AbstractObject $object) {
+  $concept_models = array(
+      'si:peopleCModel',
+  );
+
+  if (empty($GLOBALS['sidora_object_models_'.$object])){
+    $GLOBALS['sidora_object_models_'.$object] = $object->models;
+  }
+  $curr_models = $GLOBALS['sidora_object_models_'.$object];
+  return array_intersect($concept_models, $curr_models);
+}
+
+/**
  * Create/Update a datastream with the given parameters.
  *
  * @param AbstractObject $object
@@ -670,8 +734,8 @@ function sidora_create_user_object(stdClass $account) {
   sidora_update_datastream($user_object, $eaccpf, 'EAC-CPF');
   */
   $descmeta = sidora_create_default_person_descmeta($user_object, $account);
-  sidora_update_datastream($user_object, $descmeta, 'DESCMETA');
-  sidora_update_datastream($user_object, sidora_create_default_xacml($account), 'POLICY');
+  sidora_update_datastream($user_object, $descmeta, 'DESCMETA',NULL,NULL,'X');
+  sidora_update_datastream($user_object, sidora_create_default_xacml($account), 'POLICY', NULL, NULL, 'X');
   $associations = xml_form_builder_get_associations(array(), $user_object->models, array());
   if (count($associations) == 1){
     sidora_update_datastream($user_object, '<sidora>
@@ -680,7 +744,7 @@ function sidora_create_user_object(stdClass $account) {
 <ontology_location_id>AUTOMATIC_USER_CREATION_FROM_ASSOCIATION</ontology_location_id>
 <meta_requirements_fulfilled>FALSE</meta_requirements_fulfilled>
 <initial_dsid>'.$associations[0]['dsid'].'</initial_dsid>
-</sidora>', 'SIDORA');
+</sidora>', 'SIDORA', NULL, NULL, 'X');
   }else{
     $dsid = variable_get('sidora_automatic_person_dsid', 'DESCMETA');
     sidora_update_datastream($user_object, '<sidora>
@@ -689,8 +753,8 @@ function sidora_create_user_object(stdClass $account) {
 <ontology_location_id>AUTOMATIC_USER_CREATION_FROM_SIDORA_DEFAULT</ontology_location_id>
 <meta_requirements_fulfilled>FALSE</meta_requirements_fulfilled>
 <initial_dsid>'.$dsid.'</initial_dsid>
-</sidora>', 'SIDORA');
-    if (empty($user_object[$dsid])) sidora_update_datastream($user_object, '<xml></xml>', $dsid);
+</sidora>', 'SIDORA', NULL, NULL, 'X');
+    if (empty($user_object[$dsid])) sidora_update_datastream($user_object, '<xml></xml>', $dsid, NULL, NULL, 'X');
   }
 
   sidora_add_child($user_projects, $user_object);
@@ -1344,11 +1408,11 @@ function sidora_array_to_xml( $data, &$xml_data, &$domtree ) {
     }
     if( is_array($value) ) {
       $subnode = $domtree->createElement($key);
-			$subnode = $xml_data->appendChild($subnode);
+      $subnode = $xml_data->appendChild($subnode);
       sidora_array_to_xml($value, $subnode,$domtree);
     } else {
-       $subnode = $domtree->createElement("$key",htmlspecialchars("$value"));
-			 $xml_data->appendChild($subnode);
+      $subnode = $domtree->createElement("$key",htmlspecialchars("$value"));
+      $xml_data->appendChild($subnode);
     }
   }
 

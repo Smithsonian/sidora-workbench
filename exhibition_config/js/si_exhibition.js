@@ -73,14 +73,3 @@ function si_exhibition_ds(pid, dsid, title) {
   });
   return false; // Prevent Event Propagation
 }
-
-function si_exhibition_flexpaper(pid, title) {
-  title = title || '';
-  Shadowbox.open({
-    content:    Drupal.settings.basePath + "si/exhibition/flexpaper/" + pid,
-    player:     "iframe",
-    title:      decodeURIComponent((title).replace(/\+/g, '%20')),
-    gallery:    pid
-  });
-  return false;
-}
