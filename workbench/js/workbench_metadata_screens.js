@@ -8,7 +8,7 @@ jQuery().ready(function(){
 
     //Before attempting to submit, see that there are values in the proper places
     var needVals = jQuery(".form-required").closest("div").find("input[type=text]").filter(function(){return this.value == "";});
-    //needVals is going to contain all the blank required inputs
+    //needVals is going to cont1056ain all the blank required inputs
     if (needVals.length > 0){
       needVals.css("border","solid 1px red");
       //Show a pop up indicating which ones still need values?
