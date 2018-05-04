@@ -1,6 +1,6 @@
 jQuery().ready(function(){
   jQuery("body").css("padding-top","0px");
-  jQuery(".content").append("<input id=\"workbench-submit\" class=\"form-submit\" value=\"Submit CONCEPT\"></input>");
+  jQuery(".content").append("<input id=\"workbench-submit\" class=\"form-submit\" value=\"Submit\"></input>");
   var sidora = window.parent.sidora;
   jQuery("#workbench-submit").click(function(){
     var shouldHaveVals = jQuery(".form-required").closest("div").find("input[type=text]");
