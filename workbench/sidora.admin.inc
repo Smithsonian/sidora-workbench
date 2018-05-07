@@ -571,6 +571,13 @@ tr.removed.odd {
       ),  
     ),
   );
+  $form['sidora_user_page_info'] = array(
+    '#type' => 'checkbox',
+    '#title' => 'Show SIdora information on the user page',
+    '#description' => t('This displays their "user object" and any managed codebooks.'),
+    '#default_value' => variable_get('sidora_user_page_info', FALSE),
+  );
+
   $form['debug'] = array(
     'fieldset' => array(
       '#type' => 'fieldset',

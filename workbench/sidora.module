@@ -3544,6 +3544,10 @@ function sidora_duplicate_tree_and_resources($pid_of_item_to_duplicate, $project
  * hook_user_view shows user info for codebooks and exhibitions
  */
 function sidora_user_view($account, $view_mode, $langcode){
+  if (!variable_get('sidora_user_page_info', TRUE)){
+    return;
+  }
+
   global $user;
   $is_logged_in_as_admin = FALSE;
   //if they came in trying to change the user pid, see if they are an administrator and then do it
