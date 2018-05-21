@@ -3282,19 +3282,21 @@ function sidora_allow($user_pid_or_drupal_user, $pid_or_fedora_object, $type_of_
     // Do not create a node for it, we don't create nodes for resources and this may be a resource
   }
   else if (is_string($pid_or_fedora_object)){
-    $object = sidora_obj($pid_or_fedora_object);
+    $object = NULL;
+    // sidora_obj($pid_or_fedora_object);
+    // Do not load the object unless we really need it
   }
   else {
     $object = $pid_or_fedora_object;
   }
 
-  if (empty($object)) {
-    return FALSE;
-  }
   // At this point, we no longer use $pid_or_fedora_object
   // $pid is the pid
   // $object is the object, only loaded if we already had it or no node was found for it
-  if ($object->state != 'A') {
+  // The state of the object is reflected in the status == 1 => 'A' of the node for concepts
+  // node will be NULL for resources
+  if (!empty($node) && !$node->status) {
+    // equivalent to: if ($object->state != 'A') {
     // do not perform actions on deleted or inactive objects, even for admins
     // if you want to do something like this, set it to active in the Fedora Admin Flash app
     //   and re-delete afterward
@@ -3312,9 +3314,22 @@ function sidora_allow($user_pid_or_drupal_user, $pid_or_fedora_object, $type_of_
     $pid_with_exhibition = sidora_exhibition_exists_in_tree($pid, $pids_checked);
     return (!empty($pid_with_exhibition));
   }
-  //the owner has rights to all except manage
-  if (strtolower($object->owner) == strtolower($drupal_user->name) && $type_of_operation != 'manage'){
-   return TRUE;
+  // the owner has rights to all except manage
+  // for resources, we will have to check the Fedora object to see if the user can manage it
+  // but for concepts, we will rely on the node
+  $is_resource = empty($node);
+  if ($is_resource) {
+    if (empty($object)){
+      $object = sidora_obj($pid_or_fedora_object);
+    }
+    if (strtolower($object->owner) == strtolower($drupal_user->name) && $type_of_operation != 'manage'){
+      return TRUE;
+    }
+  }
+  else {
+    if ($drupal_user->uid == $node->uid && $type_of_operation != 'manage') {
+      return TRUE;
+    }
   }
 
 
@@ -3323,16 +3338,17 @@ function sidora_allow($user_pid_or_drupal_user, $pid_or_fedora_object, $type_of_
     return sidora_node_allow($type_of_operation, $node); 
   }
   module_load_include('inc', 'sidora', 'includes/utils');
-  $is_resource = sidora_is_resource($object);
   if ($is_resource) {
-      $parents = sidora_get_parent_concepts($object);
-      foreach ($parents as $parent_pid => $parent) {
-        // BBB TODO DO NOT LEAVE AS IS
-        // TODO TODO TODO TODO TEMPORARY TBD WARNING
-        if (sidora_allow($user_pid_or_drupal_user, $parent_pid, $type_of_operation)) {
-          return TRUE;
-        }
+    $parent_array = sidora_get_owning_parent_concept_by_administered_pid($pid);
+    $parent_pid = '';
+    if (!empty($parent_array)) {
+      foreach($parent_array as $pid => $parent_obj) {
+        $parent_pid = $pid;
       }
+    }
+    if (sidora_allow($user_pid_or_drupal_user, $parent_pid, $type_of_operation)) {
+      return TRUE;
+    }
   }
 
   //Next comment is no longer necessarily true, would need a new check TODO
