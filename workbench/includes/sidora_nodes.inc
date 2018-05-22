@@ -59,6 +59,7 @@ function sidora_node_allow($type_of_operation, $node) {
     // In case the node SHOULD allow it but the folder has not been converted yet to have permission groups
     $info = sidora_get_info($node, FALSE);
     $pid = $info['pid']; 
+    module_load_include('inc', 'sidora', 'includes/utils');
     $admin_pid = sidora_get_owning_parent_concept_pid_by_administered_pid($pid);
     if (empty($admin_pid)) {
       global $user;
@@ -1158,6 +1159,7 @@ function sidora_update_or_create_node_from_fedora($pid_or_fedora_obj_or_nid_or_n
     'concept_children' => implode(',',$child_nids),
     'resource_children' => $num_children_resources,
     'owner' => $obj->owner,
+    'state' => $obj->state,
   ); 
   $to_return = NULL;
   // If the node doesn't exist, create it
@@ -1297,6 +1299,12 @@ function sidora_update_concept_node($node, $info, $set_fedora_sync = FALSE) {
   }
   if (array_key_exists('description',$info)) {
     $node_wrapper->body->set(array('value' => $info['description']));
+  }
+  $node_wrapper->field_fedora_inactive->set('');
+  if (array_key_exists('state',$info)) {
+    if ($info['state'] != 'A') {
+      $node_wrapper->field_fedora_inactive->set($info['state']);
+    }
   }
   if ($set_fedora_sync) {
     $node_wrapper->field_sidora_fedora_sync->set(strtotime("now"));

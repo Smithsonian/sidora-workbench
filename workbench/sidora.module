@@ -3290,12 +3290,20 @@ function sidora_allow($user_pid_or_drupal_user, $pid_or_fedora_object, $type_of_
     $object = $pid_or_fedora_object;
   }
 
+  //Update the node information if it's out of sync with Fedora
+  if (!sidora_is_node_synced_with_fedora($node)) {
+    sidora_update_node_from_fedora($node);
+  }
+ 
+
   // At this point, we no longer use $pid_or_fedora_object
   // $pid is the pid
   // $object is the object, only loaded if we already had it or no node was found for it
   // The state of the object is reflected in the status == 1 => 'A' of the node for concepts
   // node will be NULL for resources
-  if (!empty($node) && !$node->status) {
+  module_load_include('inc', 'sidora', 'includes/sidora_nodes');
+  $inactive = empty($node->field_fedora_inactive['und'][0]['value'])?NULL:$node->field_fedora_inactive['und'][0]['value'];
+  if (!empty($inactive)) {
     // equivalent to: if ($object->state != 'A') {
     // do not perform actions on deleted or inactive objects, even for admins
     // if you want to do something like this, set it to active in the Fedora Admin Flash app
@@ -3334,10 +3342,10 @@ function sidora_allow($user_pid_or_drupal_user, $pid_or_fedora_object, $type_of_
 
 
   $og_handled = array('view', 'update', 'delete', 'create');
+  module_load_include('inc', 'sidora', 'includes/sidora_nodes');
   if (!empty($node) && in_array($type_of_operation, $og_handled)) {
     return sidora_node_allow($type_of_operation, $node); 
   }
-  module_load_include('inc', 'sidora', 'includes/utils');
   if ($is_resource) {
     $parent_array = sidora_get_owning_parent_concept_by_administered_pid($pid);
     $parent_pid = '';
@@ -3354,7 +3362,6 @@ function sidora_allow($user_pid_or_drupal_user, $pid_or_fedora_object, $type_of_
   //Next comment is no longer necessarily true, would need a new check TODO
   // Next line says by default it's visible unless they shared, in which case it's already been returned
   //if ($type_of_operation == 'view') return TRUE;
-
   return FALSE;
 }
 function sidora_get_groups_by_user($uid = NULL){
@@ -4369,7 +4376,12 @@ function sidora_obj($pid) {
     $object = islandora_object_load($pid);
   }
   if (empty($object)) return NULL;
-  if ($object->state != 'A') return NULL;
+  module_load_include('inc', 'sidora', 'includes/sidora_nodes');
+  $node = sidora_get_concept_node($pid);
+  $inactive = empty($node->field_fedore_inactive['und'][0]['value'])?NULL:$node->field_fedore_inactive['und'][0]['value'];
+  if (!empty($inactive)) {
+    return NULL;
+  }
   $is_concept = sidora_is_concept($object);
   $is_codebook = sidora_is_codebook($object);
   $is_resource = sidora_is_resource($object);
@@ -5496,6 +5508,7 @@ function sidora_move($move_from_id, $copy_to_id, $pid, $show_output = TRUE) {
       return $to_output;
     }
   }
+  module_load_include('inc', 'sidora', 'includes/utils');
   $owning_pid = sidora_get_owning_parent_concept_pid_by_administered_pid($pid);
   $reassign_owner = ($owning_pid == $move_from_id);
 

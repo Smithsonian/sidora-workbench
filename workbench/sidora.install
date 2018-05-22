@@ -100,7 +100,37 @@ function sidora_update_7200() {
    $insert_query->execute();
   }		 
 }
-    
+
+/**
+ * Adds the fedora_inactive field, and add it to the sidora_concept
+ * entity
+ */
+function sidora_update_7205() {
+  if (!field_info_field('field_fedora_inactive')) {
+    dpm('Created field_fedora_inactive.');
+    // Create the field base.
+    $field = array(
+      'field_name' => 'field_fedora_inactive', 
+      'type' => 'text', 
+    );
+    field_create_field($field);
+
+    // Create the field instance on the bundle.
+    $instance = array(
+      'field_name' => 'field_fedora_inactive', 
+      'entity_type' => 'node', 
+      'label' => 'Fedora Inactive',
+      'description' => 'Indicates the Fedora Object State is something other than A',
+      'bundle' => 'sidora_concept', 
+      // If you don't set the "required" property then the field wont be required by default.
+      'required' => FALSE,
+      'widget' => array(
+        'type' => 'textfield',
+      ), 
+    );
+    field_create_instance($instance);
+  } 
+}
 /*
 * Implementation of hook_uninstall().
 */
