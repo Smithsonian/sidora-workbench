@@ -319,6 +319,7 @@ function sidora_build_tree_from_nodes($root_node_id, $max_depth = 3, $current_de
     $og_gids = sidora_get_group_nids_membership($node->nid);
     // sidora_get_owning_parent_concept_by_administered_pid($pid)
     // if it's in more than 4 groups then ask what its administered by to see if it's a link
+    module_load_include('inc', 'sidora', 'includes/utils');
     $parent_array = sidora_get_owning_parent_concept_by_administered_pid($pid);
     $parent_pid = '';
     if (!empty($parent_array)) {
