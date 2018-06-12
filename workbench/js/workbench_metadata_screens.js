@@ -1,7 +1,11 @@
 jQuery().ready(function(){
   jQuery("body").css("padding-top","0px");
   jQuery(".content").append("<input id=\"workbench-submit\" class=\"form-submit\" value=\"Submit\"></input>");
+  jQuery(".content").append("<input id=\"workbench-closer\" class=\"form-submit\" value=\"Close\"></input>");
   var sidora = window.parent.sidora;
+  jQuery("#workbench-closer").click(function(){
+    sidora.CloseIFrame("","concept create");
+  });
   jQuery("#workbench-submit").click(function(){
     var shouldHaveVals = jQuery(".form-required").closest("div").find("input[type=text]");
     shouldHaveVals.css("border","");
