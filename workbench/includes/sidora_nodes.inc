@@ -56,16 +56,8 @@ function sidora_node_allow($type_of_operation, $node) {
         }
       }
     }
-    // In case the node SHOULD allow it but the folder has not been converted yet to have permission groups
-    $info = sidora_get_info($node, FALSE);
-    $pid = $info['pid']; 
-    module_load_include('inc', 'sidora', 'includes/utils');
-    $admin_pid = sidora_get_owning_parent_concept_pid_by_administered_pid($pid);
-    if (empty($admin_pid)) {
-      global $user;
-      $object = sidora_obj($pid);
-      return (strtolower($object->owner) == strtolower($user->name));
-    }
+    // Node needs to have the permission groups on it (fully converted to new system)
+    return FALSE;
   } 
   else {
     return node_access($type_of_operation, $node);

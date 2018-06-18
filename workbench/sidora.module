@@ -4973,16 +4973,19 @@ function sidora_ajax_parts($call_type, $param1 = '', $param2 = '', $param3 = '')
     ini_set('max_execution_time',60);
     ini_set('memory_limit','512M');
     try{
-      if (empty($_GET['doFast'])) {
-        //sidora_html_tree_for_ajax($param1, $param2);
-        //sleep(3);
+      if (!empty($_GET['doFast'])) {
+        $shtc = sidora_html_tree_cache($param1, $permission = 'view' , $param2);
+        if (!empty($shtc)){
+          print $shtc;
+          drupal_exit();
+        }
       }
-      print sidora_html_tree_for_ajax($param1, $param2);
+      print sidora_html_tree_cache($param1, $permission = 'view' , $param2, sidora_html_tree_for_ajax($param1, $param2));
     }catch(PDOException $e) {
       // Sending two tree requests at the same time with a change in the tree that needs to be processed can
       // cause deadlocks, so wait a bit and retry
       sleep(3);
-      print sidora_html_tree_for_ajax($param1, $param2);
+      print sidora_html_tree_cache($param1, $permission = 'view' , $param2, sidora_html_tree_for_ajax($param1, $param2));
     }
     drupal_exit();
   }
@@ -6062,7 +6065,7 @@ function sidora_json_for_delete($pid, $show_output = TRUE) {
  * Prints a html tree for replacing the existing tree
  * Currently assumes everyone has full read access
  */
-function sidora_html_tree_for_ajax($root_pid = '', $num_levels = 3, $url_params = ''){
+function sidora_html_tree_for_ajax($root_pid = '', $num_levels = 2, $url_params = ''){
   module_load_include('inc', 'sidora', 'includes/utils');
   if (empty($root_pid)) $root_pid = sidora_get_user_root_object();
   if ($root_pid == 'rs_tree') {
@@ -6077,7 +6080,7 @@ function sidora_html_tree_for_ajax($root_pid = '', $num_levels = 3, $url_params 
 /*
  * Returns a html_string for the concept tree
  */
-function sidora_html_tree_from_given_pid($root_pid = '', $root = NULL, $num_levels = 3, $url_params = ''){
+function sidora_html_tree_from_given_pid($root_pid = '', $root = NULL, $num_levels = 2, $url_params = ''){
   global $user;
   module_load_include('inc', 'sidora', 'includes/utils');
   //$expected_num_child_concepts = empty($_GET['expected_child_concepts'])?0:filter_var($_GET['expected_child_concepts'], FILTER_SANITIZE_NUMBER_INT);
@@ -6179,7 +6182,7 @@ function sidora_block_content_navigation() {
   $to_return .= '<div id="forjstree" root_pid="'.$root_pid.'">';
   module_load_include('inc', 'sidora', 'includes/project_spaces');
   if (sidora_is_admin()) {
-    $extra_admin_part = sidora_html_tree_from_given_pid($root_pid, NULL, 3, $send_params);
+    $extra_admin_part = sidora_html_tree_from_given_pid($root_pid, NULL, 2, $send_params);
     $to_return .= sidora_project_spaces_tree($extra_admin_part, TRUE, array(), FALSE);
   }
   else {
@@ -7171,6 +7174,25 @@ function _sidora_get_child_results_cache($child_pid) {
     $results = cache_get("sidora:children_results:".$child_pid)->data;
   }
   return $results;
+}
+
+/**
+ * Store or return the html for a tree, per user since this 
+ * 
+ */
+function sidora_html_tree_cache($root_pid, $permission = 'view' , $length = 2, $result = NULL){
+  global $user;
+  $cache_name = "sidora:tree:" . $root_pid . ":" . $permission . ":" . $length . ":" . $user->name;
+  if (!empty($result)) {
+    cache_set($cache_name, $result);
+    return $result;
+  } else {
+    $cgd = cache_get($cache_name);
+    if (!empty($cgd)){
+      $result = cache_get($cache_name)->data;
+    }
+  }
+  return $result;
 }
 
 /**

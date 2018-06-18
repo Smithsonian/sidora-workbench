@@ -327,6 +327,9 @@ function sidora_get_project_space_nodes_for_pid($pid){
     }
   }
   else {
+    if (is_array($nid)) {
+      $nid = array_pop($nid);
+    }
     $gids = sidora_get_group_nids_membership($nid);
   }
   $gids = array_unique($gids);

@@ -745,6 +745,9 @@ sidora.util.loadTreeSectionsIfNeeded = function(data, doFast, jst){
       }
       if (doRetrieval) {
         sidora.util.loadTreeSection(openingPid, null, null, doFast, jst);
+        if (doFast) {
+          sidora.util.loadTreeSection(openingPid, null, null, false, jst);
+        }
       }
     }
   }
@@ -864,7 +867,7 @@ sidora.ProjectSpaces.DuplicateOrTransfer = function(type, conceptsOrResources, s
     // Only allow links within the current research space
     //specificDestination = sidora.ProjectSpaces.currentPid();
     ignoredDestination = '';
-    specifiedDepth = 3;
+    specifiedDepth = 2;
   }
 
   var intro = sidora.ProjectSpaces.DuplicateOrTransferIntro(type, pids);
@@ -1288,6 +1291,15 @@ sidora.InitiateJSTree = function(){
             null, // overwriteType (defaults to changes)
             true  // doFast
           );
+          sidora.util.loadTreeSection(
+            openingPid, 
+            function(){
+              jQuery("#forjstree").trigger("loaded.jstree");
+            },
+            null, // overwriteType (defaults to changes)
+            false  // don't doFast, load up the cache or load newest
+          );
+          
           return;
         }
       }
@@ -2840,6 +2852,7 @@ sidora.util.loadTreeSection = function(openingPid, onLoadComplete, overwriteType
   //Inform the utility that we are checking on this already so don't check again
   sidora.util.loadTreeSectionCurrent[openingPid] = true;
   var url = Drupal.settings.basePath+"sidora/ajax_parts/tree/"+openingPid+"/2";
+  var noFastUrl = url;
   if (doFast) {
     url += "?doFast=true";
   }
@@ -2850,6 +2863,12 @@ sidora.util.loadTreeSection = function(openingPid, onLoadComplete, overwriteType
     "dataType":"html",
     "method":"GET",
     "url": url,
+    "success": sidora.util.createFunctionTreeAddition(openingPid, onLoadComplete, overwriteType, jst)
+  });
+  jQuery.ajax({
+    "dataType":"html",
+    "method":"GET",
+    "url": noFastUrl,
     "success": sidora.util.createFunctionTreeAddition(openingPid, onLoadComplete, overwriteType, jst)
   });
   return true;
