@@ -1173,23 +1173,33 @@ function sidora_update_or_create_node_from_fedora($pid_or_fedora_obj_or_nid_or_n
 function sidora_get_update_or_create_concept_node($pid, $info = NULL, $set_fedora_sync = FALSE){
   $node_id = sidora_get_concept_node_id($pid);
   if (empty($node_id)){
+    lock_wait("sidora_" . $pid);
+    // Check if the node got created within the lock wait time
+    $node_id = sidora_get_concept_node_id($pid);
+  }
+  if (empty($node_id)) {
     $object = sidora_obj($pid);
     if (!empty($object)){
       $is_concept = sidora_is_concept($object);
       if ($is_concept || $pid == 'si:root') {
         watchdog('sidora', "Create:<pre>" . sidora_debug_string_backtrace()."</pre>info:".json_encode($info));
-        return sidora_create_concept_node($pid, $info, $set_fedora_sync);
+        $to_return = sidora_create_concept_node($pid, $info, $set_fedora_sync);
+        lock_release("sidora_" . $pid);
+        return $to_return;
       }
       else {
+        lock_release("sidora_" . $pid);
         return NULL;
       }
     }
     else {
       watchdog('sidora', "Passed a pid:" . $pid . " that did not have a Fedora object with the intent of creating a concept node:<pre>" . sidora_debug_string_backtrace()."</pre>info:".json_encode($info));
+      lock_release("sidora_" . $pid);
       return NULL;
     }
   }
   else {
+    lock_release("sidora_" . $pid);
     $node = node_load($node_id);
     if (!empty($info)){
       sidora_update_concept_node($node, $info, $set_fedora_sync);

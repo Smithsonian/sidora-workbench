@@ -404,7 +404,7 @@ function sidora_get_project_spaces_from_og_groups($group_nodes, $user, $only_ret
            }
            else {
              // if it's empty then there are permissions groups that point to pids that there is not a node for
-             watchdog('sidora','Permission groups exist for pid: '.$pid.' but no folder node exists for it.');
+             watchdog('sidora-permission','Permission groups exist for pid: '.$pid.' but no folder node exists for it.');
            }
          }
       }
