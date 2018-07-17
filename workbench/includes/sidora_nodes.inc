@@ -1183,9 +1183,25 @@ function sidora_get_update_or_create_concept_node($pid, $info = NULL, $set_fedor
       $is_concept = sidora_is_concept($object);
       if ($is_concept || $pid == 'si:root') {
         watchdog('sidora', "Create:<pre>" . sidora_debug_string_backtrace()."</pre>info:".json_encode($info));
-        $to_return = sidora_create_concept_node($pid, $info, $set_fedora_sync);
-        lock_release("sidora_" . $pid);
-        return $to_return;
+        $nid = sidora_get_concept_node_id($pid);
+        if (empty($nid)){
+          $newly_created = sidora_create_concept_node($pid, $info, $set_fedora_sync);
+          // Allow other threads to get sorted out
+          sleep(1);
+          $existing_nid = sidora_get_concept_node_id($pid);
+          $to_return = $newly_created;
+          if ($newly_created->nid != $existing_nid) {
+            node_delete($newly_created->nid);
+            $to_return = node_load($existing_nid);
+          }
+          lock_release("sidora_" . $pid);
+          return $to_return;
+        }
+        else {
+          lock_release("sidora_" . $pid);
+          $node = node_load($nid);
+          return $node;
+        }
       }
       else {
         lock_release("sidora_" . $pid);
