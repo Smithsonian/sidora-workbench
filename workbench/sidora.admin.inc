@@ -641,6 +641,27 @@ tr.removed.odd {
       ),	
     ),
   );
+  $form['sidora_check_node_info'] = array(
+     'fieldset' => array(
+      '#type' => 'fieldset',
+      '#title' => 'Check Nodes Exist in Fedora',
+      '#description' => t('Nodes that do not exist in Fedora will be unpublished. Check the unpublished nodes to delete them.'),
+      '#collapsible' => TRUE,
+      '#collapsed' => TRUE,
+      'sidora_check_node_exist_start' => array(
+        '#type' => 'textfield',
+        '#title' => t('Node number'),
+        '#description' => t('Start checking at this node number when seeing if the node exists in Fedora'),
+        '#default_value' => variable_get('sidora_check_node_exist_start','1'),
+      ),
+      'sidora_check_node_exist_limit' => array(
+        '#type' => 'textfield',
+        '#title' => t('Number of nodes'),
+        '#description' => t('Checking this number of nodes at a cron'),
+        '#default_value' => variable_get('sidora_check_node_exist_limit','100'),
+      ),
+    ),
+  );
   $form['#attributes'] = array('OnSubmit' => 'formPreSubmit();');
   $form['sidora_links'] = array(
     '#markup' => '<ul id="sidora-admin-links"><h2>Administrative Links</h2>

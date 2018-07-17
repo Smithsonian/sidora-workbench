@@ -1836,6 +1836,16 @@ function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $ex
     return t("You must be an administrator or have an administrator set sidora_allow_all_to_debug in order to access this information");
   }
   if (!sidora_is_admin()) print t("Remember that nonadmins will NOT see output from dsm!");
+  if ($one == 'check_nodes_in_fedora'){
+    $checker = sidora_check_nodes_in_fedora();
+    dpm($checker);
+    return 'ding';
+  }
+  if ($one == 'get_between_timestamps'){
+    $cns = sidora_get_concept_nodes_between_timestamps($two, $parent_pid);
+    dpm($cns);
+    return 'timestamp checks:' . $two . ' to ' . $parent_pid;
+  }
   if ($one == 'node_dump') {
     $node = node_load($two);
     var_dump($node);

@@ -274,6 +274,9 @@ function sidora_build_tree_from_nodes_by_pid($pid, $max_depth = 3, $preload_node
 function sidora_build_tree_from_nodes($root_node_id, $max_depth = 3, $current_depth = 0, $resync_nodes_if_needed = TRUE, $preload_nodes = TRUE){
   $to_return = array();
   $node = node_load($root_node_id);
+  if ($node->status == 0){
+    return $to_return;
+  }
   if ($resync_nodes_if_needed && !sidora_is_node_synced_with_fedora($node)) {
     $returned_node = sidora_update_node_from_fedora($node);
     if (empty($returned_node)){
@@ -1067,6 +1070,9 @@ function sidora_get_info($pid_or_fedora_obj_or_nid_or_node, $load_from_fedora = 
       $obj = sidora_obj($pid);
     }
   }
+  if (!empty($node) && $node->status == 0){
+    $node = NULL;
+  }
   $to_return = array(
     'node' => $node,
     'nid' => $nid,
@@ -1576,3 +1582,87 @@ function sidora_create_fields_for_fedora_object_nodes(){
     }
   }
 }
+function sidora_check_nodes_in_fedora(){
+  $to_return = array();
+  $all_checked = array();
+  $exists = array();
+  $not_exists = array();
+  $node_start = variable_get('sidora_check_node_exist_start','1');
+  $number = variable_get('sidora_check_node_exist_limit','1');
+  $nodes = sidora_get_concept_nodes_between_node_numbers($node_start, $number);
+  // Pull the pids from these nodes, then check for them in the RI
+  $final_node = $node_start;
+  foreach($nodes as $node) {
+    $pid = $node->field_fedora_pid[$node->language][0]['value'];
+    $obj = sidora_obj($pid);
+    if (empty($obj)){
+      $node->status = 0;
+      node_save($node);
+      $all_checked[] = array($pid, $node->nid, 'NOT EXIST');
+      $not_exists[] = array($pid, $node->nid);
+    }
+    else {
+      $all_checked[] = array($pid, $node->nid, 'exist');
+      $exists[] = array($pid, $node->nid);
+    }
+    $final_node = $node->nid;
+  }
+  $to_return = array('all' => $all_checked, 'exists' => $exists, 'not_exists' => $not_exists);
+  variable_set('sidora_check_node_exist_start', $final_node + 1);
+  return $to_return;
+}
+/**
+ * Retrieves concept nodes that have been synced between two node ids
+ */
+function sidora_get_concept_nodes_between_node_numbers($node_start, $number) {
+  try {
+    $query = new EntityFieldQuery();
+    $query->entityCondition('entity_type', 'node')
+      ->entityCondition('bundle',  sidora_get_concept_content_type())
+      ->entityCondition('entity_id', $node_start, '>=')
+      ->propertyCondition('status', 1)
+      ->range(0, $number)
+      ->addMetaData('account', user_load(1)); // Run the query as user 1.
+    $result = $query->execute();
+    if (sizeof($result) === 0){
+      return NULL;
+    }
+    $to_load = array();
+    foreach($result["node"] as $nid => $obj){
+      $to_load[] = $nid;
+    }
+  }
+  catch (EntityFieldQueryException $exception) {
+    return NULL;
+  }
+  return node_load_multiple($to_load);
+}
+/**
+ * Retrieves concept nodes that have been synced between two times
+ */
+function sidora_get_concept_nodes_between_timestamps($sync_timestamp_start, $sync_timestamp_end, $range = 1) {
+  try {
+    $query = new EntityFieldQuery();
+    $query->entityCondition('entity_type', 'node')
+      ->entityCondition('bundle',  sidora_get_concept_content_type())
+      ->propertyCondition('status', 1)
+      ->fieldCondition('field_sidora_fedora_sync', 'value', $sync_timestamp_start, '>')
+      ->fieldCondition('field_sidora_fedora_sync', 'value', $sync_timestamp_end, '<')
+      ->range(0, $range)
+      ->fieldOrderBy('field_sidora_fedora_sync', 'value', 'ASC')
+      ->addMetaData('account', user_load(1)); // Run the query as user 1.
+    $result = $query->execute();
+    if (sizeof($result) === 0){
+      return NULL;
+    }
+    $to_load = array();
+    foreach($result["node"] as $nid => $obj){
+      $to_load[] = $nid;
+    }
+  }
+  catch (EntityFieldQueryException $exception) {
+    return NULL;
+  }
+  return node_load_multiple($to_load);
+}
+
