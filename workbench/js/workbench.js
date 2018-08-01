@@ -3268,6 +3268,7 @@ sidora.ProjectSpaces.refreshOptionsImmediate = function(refreshesUntilGiveUp, ch
     };
     for(var psi = 0; psi < psPids.length; psi++){
       if (ddiUsed.indexOf(psi) == -1){
+        var currentPsddSelect = jQuery("#psdd-select").val();
         var treeId = jQuery("[rspids='" + psPids[psi] + "']").parent().attr('id');
         jQuery("option[value='" + treeId + "']").remove();
         jst.pureUIChange = true;
@@ -3275,6 +3276,9 @@ sidora.ProjectSpaces.refreshOptionsImmediate = function(refreshesUntilGiveUp, ch
         jst.pureUIChange = false;
         console.log("Remove Project Space from option:" + psPids[psi]);
         changeMade = true;
+        if (treeId == currentPsddSelect) {
+          sidora.ProjectSpaces.ChangeProjectSpace(jQuery("#psdd-select").val());
+        }
       }
     }
     if (!changeMade && refreshesUntilGiveUp > 0) {
@@ -4101,7 +4105,7 @@ sidora.util.conceptAddedCompletelyNew = function(parentPid, pidOfNewItem, nidOfN
     a_attr_obj.pid = pidOfNewItem;
     // calculate and use the new url
     parentHref = oldParent.a_attr.href;
-    var childHref = "/sidora/workbench/#" + pidOfNewItem;
+    var childHref = Drupal.settings.basePath + "sidora/workbench/#" + pidOfNewItem;
     if (parentHref.indexOf("=") != -1 && !parentHref.endsWith("?path=")) {
       childHref += "?path=" + parentHref.substring(parentHref.lastIndexOf("=")+1) + "," + parentHref.substring(parentHref.indexOf("#")+1,parentHref.lastIndexOf("?"));
     }
