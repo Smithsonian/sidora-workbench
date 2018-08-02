@@ -291,6 +291,18 @@ input[type=checkbox]:checked ~ div {
   width: 16px;
   float: left;
 }
+.link-icon-holder {
+  height: 0px;
+  width: 100%;
+  text-align: left;
+}
+.link-icon-location {
+  position: relative;
+  width: 30px;
+  height: 30px;
+  top: 10px;
+  left:20px;
+}
 .resource-actions {
   width: 120px;
   text-align: left;

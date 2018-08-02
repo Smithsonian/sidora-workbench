@@ -355,6 +355,13 @@ function sidora_menu() {
       'access callback' => 'user_is_logged_in',
       'file' => 'includes/project_spaces.inc',
     ),
+    'sidora/research_space_delete' => array(
+      'title' => 'Delete Research Space',
+      'page callback' => 'drupal_get_form',
+      'page arguments' => array('sidora_project_space_delete_form', 2),
+      'access callback' => 'user_is_logged_in',
+      'file' => 'includes/project_spaces.inc',
+    ),
     'sidora/research_space_create' => array(
       'title' => 'Create Research Space',
       'page callback' => 'drupal_get_form',
@@ -4118,7 +4125,7 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
         $jsdt_response['orderOn'] = $jsdt_order_on;
         $jsdt_response['orderBy'] = $jsdt_order_by;
         $jsdt_data = array();
-        $linked_resources = '<div style="height: 0px;width: 100%;text-align: left;"><img style="position: relative;width: 20px;height: 20px;top: 20px;left:20px;" src="' . $GLOBALS['base_url'].'/'.drupal_get_path('module','sidora'). '/images/link.png" title="Linked Resource"></div>';
+        $linked_resources = '<div class="link-icon-holder"><img class="link-icon-location" src="' . $GLOBALS['base_url'].'/'.drupal_get_path('module','sidora'). '/images/link.png" title="Linked Resource"></div>';
         foreach ($resources as $element) {
           if (array_key_exists('object',$element)) {
             $element_pid = $element['object']['value'];

@@ -776,6 +776,53 @@ function sidora_maintain_codebooks_when_linking_resource_to_new_project_space($r
     }
   }
 }
+function sidora_project_space_delete_form($form = array(), &$form_state, $pid = NULL) {
+  drupal_add_css(drupal_get_path('module','sidora').'/css/workbench_basic_screen.css',array('weight' => '1000000', 'group' => CSS_THEME));
+  global $user;
+  $node = sidora_get_concept_node($pid);
+  if (empty($node) || ($node->uid != $user->uid && !sidora_is_admin())) {
+    $form['info'] = array(
+      '#markup' => t('This research space has been deleted.')
+    );
+    return $form;
+  }
+  if (empty( $node->field_fedora_label[$node->language][0]["safe_value"])){
+    $form['info'] = array(
+      '#markup' => t('This Research Space is corrupted. A message has been logged for the administrators. Contact the site administrator for immediate assistance.')
+    );
+    watchdog('sidora',t('User tried to delete a research space, but it does not have the right node structure, entered pid: %t',array("%t"=>empty($pid)?"no pid entered":$pid)));
+    return $form;
+  }
+  $label = $node->field_fedora_label[$node->language][0]["safe_value"];
+  $form['pid_info_1'] = array(
+    '#markup' => "<h1>Delete $label?</h1>",
+  );
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Confirm'),
+  );
+  $form_state['storage']['pid'] = $pid;
+  return $form;
+}
+
+function sidora_project_space_delete_form_submit($form, &$form_state) {
+  if ($form_state['values']['op'] == 'Confirm') {
+    $pid = $form_state['storage']['pid'];
+    $nid = sidora_quick_pid_to_node_id($pid);
+    // The sidora_transfer_project_space will hold the functionality to stop unauthorized users from making the change
+    $groups = sidora_get_groups_for_project_space($pid);
+    foreach($groups as $group) {
+      node_delete($group->nid);
+    } 
+    node_delete($nid);
+    $object = sidora_obj($pid);
+    $delete_status = $object->delete();
+  }
+}
+
+
+
+
 function sidora_project_space_transfer_form($form = array(), &$form_state, $pid = NULL, $to_username = NULL) {
   drupal_add_css(drupal_get_path('module','sidora').'/css/workbench_basic_screen.css',array('weight' => '1000000', 'group' => CSS_THEME));
   global $user;
@@ -979,6 +1026,10 @@ function sidora_project_spaces_form($form = array(), &$form_state, $uid = NULL) 
         $operations_markup .= l(t('Permissions'),'/sidora/sharing_permissions/' . $pid);
         $operations_markup .= ' | ';
         $operations_markup .= l(t('Change Owner'),'/sidora/research_space_transfer/' . $pid);
+        if (empty($owned_group->field_sidora_concept_children[$owned_group->language][0]['value'])) {
+          $operations_markup .= ' | ';
+          $operations_markup .= l(t('Delete'),'/sidora/research_space_delete/' . $pid);
+        }
         $row["edit_$i"] = array('data' => array(
           '#markup' => $operations_markup,
         ));
