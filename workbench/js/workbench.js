@@ -559,10 +559,13 @@ sidora.concept.LoadContentHelp.FullTableReload = function(conceptOfInterest){
   }).done(function(resources_table){
     myDiv = jQuery(resources_table);
     jQuery('#concept-resource-list-internal').children().not('.workbench-nav').remove();
-    jQuery('#concept-resource-list-internal').append(myDiv);
-    sidora.concept.LoadContentHelp.Resources.TableLoad(conceptOfInterest);
-    sidora.concept.LoadContentHelp.Resources.TableActionsSetup();
-    sidora.concept.LoadContentHelp.Relationships();
+    // The proper placeholder should have a table with id = res_table or be a table with id = res_table
+    if (myDiv.attr('id') == 'res_table' || myDiv.find("table#res_table").length() == 1) {
+      jQuery('#concept-resource-list-internal').append(myDiv);
+      sidora.concept.LoadContentHelp.Resources.TableLoad(conceptOfInterest);
+      sidora.concept.LoadContentHelp.Resources.TableActionsSetup();
+      sidora.concept.LoadContentHelp.Relationships();
+    }
     sidora.ResizeToBrowser();
   }).fail(function(failure_obj){
     var myDiv = sidora.util.getErrorMessageHtml();
