@@ -149,6 +149,9 @@ sidora.concept.LoadContentHelp.Resources ={};
  * Calls for the table setup information
  */
 sidora.concept.LoadContentHelp.Resources.TableLoad = function(conceptOfInterest){
+  if (typeof(jQuery.fn.dataTable) == 'undefined'){
+    return;
+  }
   sidora.resources.dataTable = jQuery('#res_table').dataTable({
      "oLanguage": {
        "sLengthMenu": "Show _MENU_"
@@ -1316,6 +1319,9 @@ sidora.InitiateJSTree = function(){
     //When you select a node, update the url in the browser, change the page title (not browser title) and load the concept content into the main window
     jQuery("#forjstree").unbind('select_node.jstree');
     jQuery('#forjstree').bind('select_node.jstree', function(e,data) {
+      if (typeof(jQuery("#forjstree").jstree) == 'undefined'){
+        return;
+      }
       var jst = jQuery("#forjstree").jstree();
       window.location = jQuery('#'+data.selected[0]).children('a').attr('href');
       if (typeof(jst.get_node(data.selected[0]).a_attr.permissions) != 'undefined'){
@@ -2570,7 +2576,6 @@ sidora.CloseIFrame = function(info, typeOfClosure){
  */
 sidora.util.keepUp = function(){
   sidora.concept.addClickEvents();
-  var jst = jQuery("#forjstree").jstree();
   setTimeout(sidora.util.keepUp, 2000); 
 }
 /*
@@ -3264,9 +3269,9 @@ sidora.ProjectSpaces.refreshOptionsImmediate = function(refreshesUntilGiveUp, ch
       sidora.util.loadTreeSection(elemAttr.pid, null, null, true, jst); 
       if (changeIfNewItem) {
         jQuery("#psdd-select").val(newDomId);
-        sidora.ProjectSpaces.ChangeProjectSpace(jQuery("#psdd-select").val(), true);
         jQuery("#" + newDomId + " > a").click();
       }
+      sidora.ProjectSpaces.ChangeProjectSpace(jQuery("#psdd-select").val(), true);
       changeMade = true;
     };
     for(var psi = 0; psi < psPids.length; psi++){
