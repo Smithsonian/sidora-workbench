@@ -563,7 +563,7 @@ sidora.concept.LoadContentHelp.FullTableReload = function(conceptOfInterest){
     myDiv = jQuery(resources_table);
     jQuery('#concept-resource-list-internal').children().not('.workbench-nav').remove();
     // The proper placeholder should have a table with id = res_table or be a table with id = res_table
-    if (myDiv.attr('id') == 'res_table' || myDiv.find("table#res_table").length() == 1) {
+    if (myDiv.attr('id') == 'res_table' || myDiv.find("table#res_table").length == 1) {
       jQuery('#concept-resource-list-internal').append(myDiv);
       sidora.concept.LoadContentHelp.Resources.TableLoad(conceptOfInterest);
       sidora.concept.LoadContentHelp.Resources.TableActionsSetup();
