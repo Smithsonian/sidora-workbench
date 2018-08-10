@@ -355,6 +355,13 @@ function sidora_menu() {
       'access callback' => 'user_is_logged_in',
       'file' => 'includes/project_spaces.inc',
     ),
+    'sidora/research_space_delete' => array(
+      'title' => 'Delete Research Space',
+      'page callback' => 'drupal_get_form',
+      'page arguments' => array('sidora_project_space_delete_form', 2),
+      'access callback' => 'user_is_logged_in',
+      'file' => 'includes/project_spaces.inc',
+    ),
     'sidora/research_space_create' => array(
       'title' => 'Create Research Space',
       'page callback' => 'drupal_get_form',
@@ -4116,7 +4123,7 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
         $jsdt_response['orderOn'] = $jsdt_order_on;
         $jsdt_response['orderBy'] = $jsdt_order_by;
         $jsdt_data = array();
-        $linked_resources = '<div style="height: 0px;width: 100%;text-align: left;"><img style="position: relative;width: 20px;height: 20px;top: 20px;left:20px;" src="' . $GLOBALS['base_url'].'/'.drupal_get_path('module','sidora'). '/images/link.png" title="Linked Resource"></div>';
+        $linked_resources = '<div class="link-icon-holder"><img class="link-icon-location" src="' . $GLOBALS['base_url'].'/'.drupal_get_path('module','sidora'). '/images/link.png" title="Linked Resource"></div>';
         foreach ($resources as $element) {
           if (array_key_exists('object',$element)) {
             $element_pid = $element['object']['value'];
@@ -6361,38 +6368,29 @@ function sidora_get_plupload_html($elements, $button_text = 'Browse'){
   }';
               if ($elements['#extensions'][0] == '*') {
                 print '
-                  plupload.addFileFilter("excluded_extensions", function(filter, file, cb){
-                  var self = this;
-                  var permitted = true;
-            var mimeTypes = this.settings.filters.excluded_extensions[0];
-                  Object.keys(mimeTypes).forEach(function(key){
-                    var exts = mimeTypes[key].split(",");
-              if(exts.length === 1 && exts[0] === "-")
-                 permitted = true;
-              else
-              {
-                for(var i = 0; i < exts.length; i++) {
-                  var fileArray = file.name.split(".");
-                  var extension = fileArray[fileArray.length - 1];
-                  if(exts[i].toUpperCase() === extension.toUpperCase()) {
-                    self.trigger("Error", {
-                      code: plupload.GENERIC_ERROR,
-                      message: file.name + " must be ingested using " + key + " resource type",
-                      file: file
-                    });
-                    permitted = false;
-                    cb(false);
-                    return;
-                  }
-                }
-              }
-            });
-            if(permitted)
-              cb(true);
-          });';
+  plupload.addFileFilter("information_extensions", function(filter, file, cb){
+    var self = this;
+    var mimeTypes = this.settings.filters.information_extensions[0];
+    Object.keys(mimeTypes).forEach(function(key){
+      var exts = mimeTypes[key].split(",");
+      if(exts.length === 1 && exts[0] === "-")
+         permitted = true;
+      else
+      {
+        for(var i = 0; i < exts.length; i++) {
+          var fileArray = file.name.split(".");
+          var extension = fileArray[fileArray.length - 1];
+          if(exts[i].toUpperCase() === extension.toUpperCase()) {
+            jQuery("#console").append("\\nConsider uploading \'" + file.name + "\' using the type \'" + key + "\' instead of uploading as \'Generic\' type. Close this window to upload as a new type.");
+          }
+        }
+      }
+    });
+    cb(true);
+  });';
         }                   
               print '                                   
-              window.uploader = new plupload.Uploader({
+  window.uploader = new plupload.Uploader({
     runtimes : runtimesBrowserSpecific, //No silverlight - gets bad if user does not allow it and it tries to use.
     browse_button : "pickfiles", // you can pass in id...
     container : document.getElementById("container"),'; // ... or DOM Element itself
@@ -6430,13 +6428,14 @@ function sidora_get_plupload_html($elements, $button_text = 'Browse'){
   print 'Moxie.xap",
     
     filters : {
-      excluded_extensions : [{
-        "Basic Image" : "jpg,jpeg,jp2,tiff,raw,nef,dng",
+      information_extensions : [{
+        "Basic Image" : "jpg,png,gif,tiff,tif,jp2,raw,nef,dng",
+        "Tabular Dataset" : "csv,xlsx,xls",
         "PDF Text" : "pdf",
-        "Tabular Datasets" : "csv,xls,xlsx",
-        "Basic Audio" : "aiff,wav,mp3",
+        "Basic Audio" : "mp3,aiff,wav",
         "Basic Video" : "ogg,mp4,mov,qt,m4a,m4v,avi,mkv",
-        "Raw Sequence" : "xml","Assembled Sequence" : "fasta,fa"
+        "Raw Sequence" : "xml",
+        "Assembled Sequence" : "fastq,fq,fasta,fa,fas,fsn,fna,faa"
       }],
       max_file_size : "5gb",
       mime_types: [
