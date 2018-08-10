@@ -1891,7 +1891,6 @@ function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $ex
 }
 
 function sidora_flatten_tree($branch, &$rows,$visibility_settings,$path) {
-  //var_dump($branch);
   if (isset($branch) && sizeof($branch) && !empty($branch)) {
     $resource_visibility_settings = array('show_name','show_meta','show_preview','allow_download','show_degraded');
     $concept_visibility_settings = array('show_name','show_meta','future_children_show_name','future_children_show_meta','future_children_show_preview','future_children_allow_download','future_children_show_degraded');
@@ -3956,7 +3955,7 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
       $info = sidora_get_info($pid);
       print '<span>Research Space Information</span>';
       print '<table class="ps-detail"><tr><td>Owner</td><td>' . $info['obj']->owner . '</td></tr></table>';
-      $groups = sidora_get_groups_for_project_space($pid);
+      $groups = sidora_get_groups_for_project_space($pid, TRUE);
       print '<table class="ps-detail"><tr><td>Editors</td><td>';
       foreach($groups as $group) {
         if (sidora_get_sidora_group_type($group) == 'edit') {
@@ -3970,7 +3969,6 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
       }
       print '</td></tr></table>';
       print '</span>';
-      //var_dump($mem_to_group);
       break;
     case 'meta':
       module_load_include('inc', 'sidora', 'includes/utils');
@@ -6751,6 +6749,11 @@ function sidora_cron() {
       '%n' => (sizeof($to_be_removed) - sizeof($deleted_files)),
       '%t' => (sizeof($to_be_removed)),
     ))
+  );
+  $checker = sidora_check_nodes_in_fedora();
+  watchdog(
+    'sidora_workbench',
+    json_encode($checker)
   );
 }
 

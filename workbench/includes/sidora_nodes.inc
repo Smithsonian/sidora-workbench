@@ -1133,7 +1133,7 @@ function sidora_update_or_create_node_from_fedora($pid_or_fedora_obj_or_nid_or_n
     if (!in_array($child_pid, $child_pids) && ($child_pid != $pid)){
       $child_pids[] = $child_pid;
       $existing_child_nid = sidora_get_concept_node_id($child_pid);
-      if (empty($existing_child_nid)) {
+      if (empty($existing_child_nid) && !empty($child_pid)) {
         // create the stub
         $child_node = sidora_get_update_or_create_concept_node($child_pid, array());
         if (!empty($child_node)) {
@@ -1598,11 +1598,12 @@ function sidora_check_nodes_in_fedora(){
     if (empty($obj)){
       $node->status = 0;
       node_save($node);
-      $all_checked[] = array($pid, $node->nid, 'NOT EXIST');
+      $all_checked[] = array($pid, $node->nid, 'NOT EXIST', '');
       $not_exists[] = array($pid, $node->nid);
     }
     else {
-      $all_checked[] = array($pid, $node->nid, 'exist');
+      $done = sidora_update_node_from_fedora($obj);
+      $all_checked[] = array($pid, $node->nid, 'exist', $done ? 'updated' : 'couldnotsavenode');
       $exists[] = array($pid, $node->nid);
     }
     $final_node = $node->nid;
