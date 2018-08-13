@@ -1843,6 +1843,12 @@ function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $ex
     return t("You must be an administrator or have an administrator set sidora_allow_all_to_debug in order to access this information");
   }
   if (!sidora_is_admin()) print t("Remember that nonadmins will NOT see output from dsm!");
+  if ($one == 'put_in_rs'){
+    $pid = $two;
+    module_load_include('inc', 'sidora', 'includes/project_spaces');
+    sidora_put_into_proper_project_space($pid);
+    return 'complete';
+  }
   if ($one == 'check_nodes_in_fedora'){
     $checker = sidora_check_nodes_in_fedora();
     dpm($checker);
@@ -5529,8 +5535,6 @@ function sidora_move($move_from_id, $copy_to_id, $pid, $show_output = TRUE) {
   }
   module_load_include('inc', 'sidora', 'includes/utils');
   $owning_pid = sidora_get_owning_parent_concept_pid_by_administered_pid($pid);
-  $reassign_owner = ($owning_pid == $move_from_id);
-
   
   $copied = sidora_copy($copy_to_id, $pid, FALSE);
   sidora_release_lock($copy_to_id);
@@ -5551,11 +5555,11 @@ function sidora_move($move_from_id, $copy_to_id, $pid, $show_output = TRUE) {
   //   Remove the relationship
   //   Do the copy & unassociate
   //   Attach the relationship to the pid where it was copied
-  if ($reassign_owner) {
-    $object = sidora_obj($pid);
-    $object->relationships->remove(SI_RELS_EXT_URI, 'isAdministeredBy', $move_from_id);
-    $object->relationships->add(SI_RELS_EXT_URI, 'isAdministeredBy', $copy_to_id);
-  }
+  $object = sidora_obj($pid);
+  // Repair broken isAdministeredBy by removing all isAdministeredBy
+  $object->relationships->remove(SI_RELS_EXT_URI, 'isAdministeredBy');
+  $object->relationships->add(SI_RELS_EXT_URI, 'isAdministeredBy', $copy_to_id);
+
   $unassociated = sidora_unassociate($move_from_id, $pid, FALSE);
   sidora_release_lock($copy_to_id);
   sidora_release_lock($move_from_id);

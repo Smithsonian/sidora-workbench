@@ -88,6 +88,7 @@ function sidora_put_this_into_their_project_space($add_to_groups_id, $get_groups
  */
 
 function sidora_put_into_proper_project_space($pid_or_fedora_obj_or_nid_or_node) {
+print "pipps\n";
   $sidora_obj_info = sidora_get_info($pid_or_fedora_obj_or_nid_or_node, FALSE);
   if (empty($sidora_obj_info)) {
     return FALSE;
@@ -119,6 +120,7 @@ function sidora_put_into_proper_project_space($pid_or_fedora_obj_or_nid_or_node)
     }
     else {
       $check_legacy_parents = FALSE;
+      $owning_parent_nid = sidora_get_concept_node_id($owning_pid);
       $owning_parent_gids = sidora_get_group_nids_membership(sidora_get_concept_node_id($owning_pid));
       $parent_groups = node_load_multiple($owning_parent_gids);
       foreach($parent_groups as $parent_group) {
@@ -126,6 +128,8 @@ function sidora_put_into_proper_project_space($pid_or_fedora_obj_or_nid_or_node)
       }
     }
   }
+  // Put the children into the proper project spaces
+  
   if ($check_legacy_parents) {
     watchdog('sidora',t("This pid does not have proper isAdministeredBy relationship: %pid" , array("%pid"=>$pid)));
     $parent_infos = sidora_get_parent_concepts_by_pid($pid);
@@ -135,11 +139,17 @@ function sidora_put_into_proper_project_space($pid_or_fedora_obj_or_nid_or_node)
     $parent_communal_gids = array();
     $parents_are_communal = TRUE;
     // Even if it doesn't have groups itself, go thru to see if parents have communal groups
+    $all_parents_missing_group = TRUE;
+    $parent_pids = '';
     foreach($parent_infos as $parent_info) {
       $parent_pid = $parent_info['pid'];
+      $parent_pids .= ' ' . $parent_pid;
       $parent_gids = sidora_get_group_nids_membership(sidora_get_concept_node_id($parent_pid));
       $intersect_check = array_intersect($current_gids, $parent_gids);
-      if (sizeof($intersect_check) == sizeof($parent_gids)) {
+      if (sizeof($parent_gids) > 0){
+        $all_parents_missing_group = FALSE;
+      }
+      if (sizeof($parent_gids) > 0 && sizeof($intersect_check) == sizeof($parent_gids)) {
         // Is in all the groups of this parent
         $is_in_a_parents_project_space = TRUE;
         break;
@@ -155,7 +165,8 @@ function sidora_put_into_proper_project_space($pid_or_fedora_obj_or_nid_or_node)
         }
       }
     }
-    if (!$is_in_a_parents_project_space){
+print "iiapps: $is_in_a_parents_project_space apmg: $all_parents_missing_group\n";
+    if (!$is_in_a_parents_project_space && !$all_parents_missing_group){
       // If there is only one parent, put it in there (communal will be true)
       // If all parents have the same research spaces, put it there
       if ($parents_are_communal) {
@@ -163,6 +174,9 @@ function sidora_put_into_proper_project_space($pid_or_fedora_obj_or_nid_or_node)
         foreach($parent_groups as $parent_group) {
           og_group('node', $parent_group, array('entity_type' => 'node', 'entity' => $nid));
         }
+      }
+      else if ($all_parents_missing_group){
+        watchdog('sidora',t('No parents have groups for pid: %pid parents: %pp' , array("%pid"=>$pid, "%pp"=>$parent_pids)));
       }
       else {
         // TODO TBD These will be more for legacy data than new objects

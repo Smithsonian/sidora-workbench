@@ -1562,6 +1562,18 @@ function sidora_get_concept_content_type(){
   $to_return = $type_name;
   return $type_name;
 }
+/**
+ * Pull the node ids and don't contact Fedora
+ */
+function sidora_get_child_nodes($node_id){
+  $node = node_load($node_id);
+  $pid = $node->field_fedora_pid[$node->language][0]['value'];
+  if (!empty($node->field_sidora_concept_children) && !empty($node->field_sidora_concept_children[$node->language])) {
+    $children = explode(',',$node->field_sidora_concept_children[$node->language][0]['value']);
+    return $children;
+  }
+  return NULL;
+}
 
 /**
  * Create the fields necessary for the nodes that represent a Fedora Digital Object and add it to the Fedora digital 
