@@ -251,7 +251,12 @@ function sidora_remove_from_all_project_spaces($pid_or_fedora_obj_or_nid_or_node
  * Remove the node from research spaces that its parent does not belong
  */
 function sidora_remove_from_incorrect_project_spaces($pid_or_fedora_obj_or_nid_or_node) {
-  
+  $proper_group_ids = array();
+  $changes_occurred = FALSE;
+  return sidora_remove_from_incorrect_and_give_correct_ps($pid_or_fedora_obj_or_nid_or_node, $proper_group_ids, $changes_occurred);
+}
+
+function sidora_remove_from_incorrect_and_give_correct_ps($pid_or_fedora_obj_or_nid_or_node, &$proper_group_ids, &$changes_occurred) {
   $sidora_obj_info = sidora_get_info($pid_or_fedora_obj_or_nid_or_node, FALSE);
   if (empty($sidora_obj_info)) {
     return FALSE;
@@ -305,7 +310,7 @@ function sidora_remove_from_incorrect_project_spaces($pid_or_fedora_obj_or_nid_o
 //var_dump($current_gids);
 //var_dump($proper_group_ids);
   foreach($remove_from_gids as $gid) {
-//print 'ungroup'; var_dump($gid); var_dump($nid);
+    $changes_occurred = TRUE;
     og_ungroup('node', $gid, 'node', $nid);
   }
   return TRUE;
@@ -1537,3 +1542,43 @@ function sidora_transfer_project_space($ps_node, $new_owner) {
   // if there is a problem saving an exception gets thrown. Let it bubble up.
   return TRUE;
 }
+
+
+
+/**
+ * Put this node into the project space of its administered by node
+ */
+function sidora_rectify_project_space($nid){
+  $proper_group_ids = array();
+  $changes_occurred = FALSE;
+  sidora_remove_from_incorrect_and_give_correct_ps($nid, $proper_group_ids, $changes_occurred);
+  if ($changes_occurred) {
+    foreach($project_space_groups as $individual_group) {
+      og_group('node', $individual_group, array('entity_type' => 'node', 'entity' => $nid));
+    }
+  }
+}
+
+/**
+ * Put this node and all of its descendents into the project space of its administered by node
+ */
+function sidora_rectify_ps_recursive($nid, &$checked_nids){
+  sidora_rectify_project_space($nid);
+  $node = node_load($nid);
+  $node_wrapper = entity_metadata_wrapper('node', $node);
+  // get children of the folder
+  $existing_concept_children = $node_wrapper->field_sidora_concept_children->value();
+  if (!empty($existing_concept_children)) {
+    $child_array = explode("," , $existing_concept_children);
+    // for each child
+    foreach($child_array as $child_nid){
+      // ensure not a loop (child points to parent)
+      if (!in_array($child_nid, $checked_nids)){
+        $checked_nids[] = $child_nid;
+        // put in the right spaces: call this function
+        sidora_rectify_ps_recursive($child_nid, $checked_nids);
+      }
+    }
+  }
+}
+
