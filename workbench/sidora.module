@@ -824,6 +824,10 @@ function sidora_islandora_object_modified(AbstractObject $object) {
  * Implements hook_islandora_datastream_modified
  */
 function sidora_islandora_datastream_modified(AbstractObject $object, AbstractDatastream $datastream) {
+//print "++++++++++++++++++++++++";
+//var_dump($object->id);
+//var_dump($datastream[0]);
+//print "========================";
   module_load_include('inc', 'sidora', 'includes/utils');
   // Assume that any update that occurs to a datastream that is of type xml but is not one of the "main" types is the proper type for
   // metadata to be complete.  The more formal way to do this would be:
@@ -2184,52 +2188,52 @@ function sidora_process_batch_submit($form,&$form_state) {
 </sidora>';
     file_put_contents('public://' . 'sidora_' . $batch_id . '.xml',$sidora_xml);
     $post_params = array(
-   'resourceFileList' => str_replace('https://','http://',file_create_url('public://' . '/files_' . $batch_id . '.xml')),
-   'ds_metadata' => str_replace('https://','http://',file_create_url('public://' . '/batch_' . $batch_id . '.xml')),
-   'ds_sidora' => str_replace('https://','http://',file_create_url('public://' . '/sidora_' . $batch_id . '.xml')),
-   'resourceOwner' => $user->name,
-   'association' => str_replace('https://','http://',file_create_url('public://' . '/association_' . $batch_id . '.xml'))
-   );
-  $get_params = '';
-  if ($association['content_model'] == 'si:datasetCModel') {
-    $get_params = '?codebookPID=' . $user->data['recent_codebook_id'];
-  }
-  $batch_url = variable_get('sidora_batch_ingest_url', '') . '/' . $id_to_creation_info[$form_build_id]['parent'] . $get_params;
-  watchdog('Sidora_debug',t("Sending Bulk metadata Curl to:<br/> %curl_url",
+     'resourceFileList' => str_replace('https://','http://',file_create_url('public://' . '/files_' . $batch_id . '.xml')),
+     'ds_metadata' => str_replace('https://','http://',file_create_url('public://' . '/batch_' . $batch_id . '.xml')),
+     'ds_sidora' => str_replace('https://','http://',file_create_url('public://' . '/sidora_' . $batch_id . '.xml')),
+     'resourceOwner' => $user->name,
+     'association' => str_replace('https://','http://',file_create_url('public://' . '/association_' . $batch_id . '.xml'))
+    );
+    $get_params = '';
+    if ($association['content_model'] == 'si:datasetCModel') {
+      $get_params = '?codebookPID=' . $user->data['recent_codebook_id'];
+     }
+     $batch_url = variable_get('sidora_batch_ingest_url', '') . '/' . $id_to_creation_info[$form_build_id]['parent'] . $get_params;
+     watchdog('Sidora_debug',t("Sending Bulk metadata Curl to:<br/> %curl_url",
                 array('%curl_url' => $batch_url))
                 );
-  $ingest_response = sidora_ingest_request($batch_url,$post_params);
+     $ingest_response = sidora_ingest_request($batch_url,$post_params);
         // save the curl request id to session along with the parent concept
-  if (strpos($ingest_response,'</CorrelationID>') !== false) {
-    $doc = new DOMDocument();
-    $doc->loadXML($ingest_response);
-    $parent_pid_from_response = $doc->getElementsByTagName('ParentPID')->item(0)->nodeValue;
-    if ((!empty($parent_pid_from_response)) && ($parent_pid_from_response == $id_to_creation_info[$form_build_id]['parent'])) {
-      $request_id = (string)$doc->getElementsByTagName('CorrelationID')->item(0)->nodeValue;
-      $session_key = 'sidora_batch_request_'.$batch_id;
-      $_SESSION[$session_key] = array();
-      $_SESSION[$session_key]['request_id'] = $request_id;
-      $_SESSION[$session_key]['batch_id'] = $batch_id;
-      $_SESSION[$session_key]['Parent'] = $id_to_creation_info[$form_build_id]['parent'];
-      $update_query = db_update('sidora_batch_ingest')
-       ->fields(array(
+     if (strpos($ingest_response,'</CorrelationID>') !== false) {
+       $doc = new DOMDocument();
+       $doc->loadXML($ingest_response);
+       $parent_pid_from_response = $doc->getElementsByTagName('ParentPID')->item(0)->nodeValue;
+       if ((!empty($parent_pid_from_response)) && ($parent_pid_from_response == $id_to_creation_info[$form_build_id]['parent'])) {
+         $request_id = (string)$doc->getElementsByTagName('CorrelationID')->item(0)->nodeValue;
+         $session_key = 'sidora_batch_request_'.$batch_id;
+         $_SESSION[$session_key] = array();
+         $_SESSION[$session_key]['request_id'] = $request_id;
+         $_SESSION[$session_key]['batch_id'] = $batch_id;
+         $_SESSION[$session_key]['Parent'] = $id_to_creation_info[$form_build_id]['parent'];
+         $update_query = db_update('sidora_batch_ingest')
+         ->fields(array(
            'status' => 'corelation id received',
            'corelation_id' => $request_id,
          ))
-       ->condition('batch_id', $batch_id, '=');
-      $num_updated = $update_query->execute();
-      $created = db_query("select DATE_FORMAT(Created,'%h:%i:%s') AS Created, count, resource_type from sidora_batch_ingest where batch_id = :batchid", array(':batchid' => $batch_id))->fetchAssoc();
-      print json_encode(array('status' => 'Request for batch ingest successfully received','request_id' => $request_id,'batch_id' => $batch_id,'timestamp' => $created['Created'],'message' => $created['count'] . ' ' . $created['resource_type'] . ' resources'));
-     drupal_exit();
+         ->condition('batch_id', $batch_id, '=');
+         $num_updated = $update_query->execute();
+         $created = db_query("select DATE_FORMAT(Created,'%h:%i:%s') AS Created, count, resource_type from sidora_batch_ingest where batch_id = :batchid", array(':batchid' => $batch_id))->fetchAssoc();
+         print json_encode(array('status' => 'Request for batch ingest successfully received','request_id' => $request_id,'batch_id' => $batch_id,'timestamp' => $created['Created'],'message' => $created['count'] . ' ' . $created['resource_type'] . ' resources'));
+         drupal_exit();
+      }
    }
  }
-}
 
-watchdog('Sidora_debug',t("Bulk metadata Curl response trimmed :<br/> %curl_response",
+  watchdog('Sidora_debug',t("Bulk metadata Curl response trimmed :<br/> %curl_response",
                 array('%curl_response' => substr($ingest_response,0,1024)))
                 );
-print json_encode(array('status' => 'Error in submitting batch ingest request to the backend', 'message' => $ingest_response));
-drupal_exit();
+  print json_encode(array('status' => 'Error in submitting batch ingest request to the backend', 'message' => $ingest_response));
+  drupal_exit();
 }
 
 /**
@@ -3313,7 +3317,11 @@ function sidora_allow($user_pid_or_drupal_user, $pid_or_fedora_object, $type_of_
   }
 
   //Update the node information if it's out of sync with Fedora
-  if (!sidora_is_node_synced_with_fedora($node)) {
+  $is_synced = sidora_is_node_synced_with_fedora($node);
+//var_dump($is_synced);
+  if (!$is_synced) {
+//print 'Node not synced with fedora:';
+//var_dump($node);
     sidora_update_node_from_fedora($node);
   }
  
@@ -4391,6 +4399,7 @@ function sidora_get_content_model_names() {
  *   object in any way
  */
 function sidora_obj($pid) {
+//var_dump("sidora_obj: $pid");
   module_load_include('inc', 'sidora', 'includes/utils');
   $object = array();
   $tuque = islandora_get_tuque_connection();

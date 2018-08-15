@@ -420,6 +420,8 @@ function sidora_fedora_queue_sync($pid_or_nid) {
       );
     }
     $node_wrapper = entity_metadata_wrapper('node', $node);
+//print 'fedora_sync set to zero';
+//debug_print_backtrace();
     $node_wrapper->field_sidora_fedora_sync->set('0');
     $node_wrapper->save();
   }
@@ -648,10 +650,19 @@ fails: ' . (empty($done)?1:0) . '
  * Check to see if the node should be updated
  */
 function sidora_is_node_synced_with_fedora($node) {
+//var_dump($node);
+//print 'nfs:';
+//var_dump($node->field_sidora_fedora_sync);
+//var_dump($node->field_sidora_fedora_sync[$node->language][0]['value']);
+//var_dump(empty($node->field_sidora_fedora_sync[$node->language][0]['value']));
   if (!empty($node->field_sidora_fedora_sync)) {
+//print 'not empty, ';
     // Currently based on the design that if we need to have it updated, this value gets cleared
-    return !empty($node->field_sidora_fedora_sync[$node->language][0]['value']);
+    $to_return = !empty($node->field_sidora_fedora_sync[$node->language][0]['value']);
+//print "returning: $to_return\n";
+    return $to_return;
   }
+//print "empty\n";
   return FALSE;
 }
 /**
@@ -1331,7 +1342,12 @@ function sidora_update_concept_node($node, $info, $set_fedora_sync = FALSE) {
       $node_wrapper->field_fedora_inactive->set($info['state']);
     }
   }
+//var_dump($set_fedora_sync);
+//if (!$set_fedora_sync) {
+//  debug_backtrace();
+//}
   if ($set_fedora_sync) {
+//print "field_sidora_fedora_sync set"; print strtotime("now"); print "\n";
     $node_wrapper->field_sidora_fedora_sync->set(strtotime("now"));
   }
   if (array_key_exists('owner',$info)) {
@@ -1491,6 +1507,7 @@ function sidora_create_concept_node($pid, $info = NULL, $set_fedora_sync = FALSE
   }
   
   if ($set_fedora_sync) {
+//print 'Setting set_fedora_sync:' . $time_now . "\n";
     $newNode->field_sidora_fedora_sync[$newNode->language][]['value'] = $time_now;
   }
 
