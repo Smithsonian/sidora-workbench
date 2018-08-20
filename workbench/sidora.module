@@ -4164,7 +4164,11 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
               $operations .= '<br/>';
               $operations .= '<a href="" onclick="sidora.manage.Open(\'' . $element_pid . '\', \'\', \'Manage Resource\', \'Update resource information\'); return false;" class="sidora-ui-link">Manage</a> ';
             }
-            $resource_actions = '<a href="" onclick="sidora.resources.openInNewWindow(\'' . $element_pid . '\'); return false;" class="sidora-ui-link" title="Open in New Window"><i class="material-icons">filter</i></a> ';
+            $resource_actions = '';
+            $viewer_config = sidora_get_viewer_config($element_pid);
+            if (!empty($viewer_config)){
+              $resource_actions .= '<a href="" onclick="sidora.resources.openInNewWindow(\'' . $element_pid . '\'); return false;" class="sidora-ui-link" title="Open in New Window"><i class="material-icons">filter</i></a> ';
+            }
             $resource_actions .= '<a href="" onclick="sidora.resources.download(\'' . $element_pid . '\'); return false;" class="sidora-ui-link" title="Download"><i class="material-icons">file_download</i></a> ';
             if ($permissions['d']) {
               $resource_actions .= '<a href="" onclick="sidora.resources.DeleteResource(\'' . $element_pid . '\'); return false;" class="sidora-ui-link" title="Delete"><i class="material-icons">delete</i></a>';
