@@ -468,7 +468,7 @@ function sidora_direct_jpg_output($content, $output_to_browser = TRUE) {
   }
   else {
     if (!$output_to_browser) return FALSE;
-    print t('There is no available view for this content');
+    print t('There is no viewer available view for this content');
   }
   drupal_exit();
 }
@@ -4334,9 +4334,55 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
       $fileinfo = $_SESSION['file_uploads'][$user->uid][$pid];
       $filename = $fileinfo->filename;
       $filepath = $fileinfo->filepath;
-      $handle = fopen($filepath, "r");
-      $contents = fread($handle, filesize($filepath));
-      sidora_direct_jpg_output($contents);
+
+      // SIdora is going to need about 200MB to run
+      // and the file needs to be loaded into memory to be downloaded
+      $available_for_file = sidora_get_available_memory() - 200000000;
+      // The resizer needs about an additional 30MB plus 2 times the size of file to run
+      $available_for_resize = $available_for_file - 30000000 - (2 * filesize($filepath));
+      if (!empty($_GET['info'])){
+        print "Total memory: ";
+        var_dump(sidora_get_available_memory());
+        print "Available for file load: ";
+        var_dump($available_for_file);
+        print "File size::::::::::::::: ";
+        var_dump(filesize($filepath));
+        print "Available for resize:::: ";
+        var_dump($available_for_resize);
+        print "Can this be resized:";
+        var_dump($available_for_resize >= filesize($filepath));
+        module_load_include('inc', 'sidora', 'includes/utils');
+        $vmt = sidora_get_viewable_mime_types();
+        $mime_detect = new MimeDetect();
+        $mimeType = $mime_detect->getMimeType($filepath);
+        var_dump($filepath);
+        var_dump($mimeType);
+        drupal_exit();
+      }
+      if ($available_for_file < filesize($filepath)) {
+        print t('This file is too large to be downloaded through the workbench. Contact your workbench contact to retrieve this file %email',
+          array('%email' => (variable_get('site_admin_email_to', '') != ''?' at ' . variable_get('site_admin_email_to'):''))
+        );
+      }
+      else if ($available_for_resize < filesize($filepath)){
+        // Not enough memory for resize, check if this is visible to user
+        $mime_detect = new MimeDetect();
+        $mimeType = $mime_detect->getMimeType($filepath);
+        $vmt = sidora_get_viewable_mime_types();
+        if (in_array($mimeType, $vmt)) {
+          header("Content-type: " . $mimeType);
+          header('Expires: 0');
+          header('Cache-Control: must-revalidate');
+          header('Pragma: public');
+          header('Content-Length: ' . filesize($filepath));
+          readfile($filepath);
+        }
+      }
+      else {
+        $handle = fopen($filepath, "r");
+        $contents = fread($handle, filesize($filepath));
+        sidora_direct_jpg_output($contents);
+      }
       drupal_exit();
       break;
     case 'upload2':
@@ -8818,4 +8864,29 @@ function sidora_get_nested_title_field($field_array,$parent_array) {
     return (drupal_array_get_nested_value($parent_array,$field_array));
   }
   return;
+}
+function sidora_get_available_memory(){
+  $memory_limit = _sidora_return_bytes(ini_get('memory_limit'));
+  return $memory_limit;
+}
+/**
+* Converts shorthand memory notation value to bytes
+* From http://php.net/manual/en/function.ini-get.php
+*
+* @param $val Memory size shorthand notation string
+*/
+function _sidora_return_bytes($val) {
+    $val = trim($val);
+    $last = strtolower($val[strlen($val)-1]);
+    $val = substr($val, 0, -1);
+    switch($last) {
+        // The 'G' modifier is available since PHP 5.1.0
+        case 'g':
+            $val *= 1024;
+        case 'm':
+            $val *= 1024;
+        case 'k':
+            $val *= 1024;
+    }
+    return $val;
 }
