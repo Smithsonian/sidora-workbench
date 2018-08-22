@@ -2558,7 +2558,7 @@ function sidora_create_resource_get_metadata_form_html($parent_pid, $model, $for
       if (!empty($current_uploads[$form_total]) && $at_least_one_pic) {
         $to_return .= "<div class='picHolder' id='picHolder-".$form_total."'>";
         if (sidora_is_displayable_image_with_convert($current_uploads[$form_total]->filename)) {
-          $to_return .= "<img src='".$GLOBALS['base_url']."/sidora/info/".$form_total."/previewUploadedResources'/>";
+          $to_return .= "<img src='".$GLOBALS['base_url']."/sidora/info/".$form_total."/previewUploadedResources' style='max-width:810px'/>";
         }
         else {
           $to_return .= $current_uploads[$form_total]->filename.' is not displayable at this time.';
