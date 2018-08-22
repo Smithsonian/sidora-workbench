@@ -1991,6 +1991,7 @@ function sidora_create_concept($parent_pid = 'si:root', $model = 'si:collectionC
   $to_return = drupal_render($form);
   drupal_add_css(drupal_get_path('module','sidora').'/css/workbench_metadata_screens.css',array('weight' => '1000000', 'group' => CSS_THEME));
   drupal_add_js(drupal_get_path('module','sidora').'/js/workbench_metadata_screens.js',array('weight' => '1000000', 'group' => JS_THEME));
+  drupal_add_js(drupal_get_path('module','sidora').'/js/drupal_ajax_fix.js',array('weight' => '1000000', 'group' => JS_THEME));
   drupal_add_js(drupal_get_path('module','sidora').'/js/workbench_util.js',array('weight' => '1000000', 'group' => JS_THEME));
   sidora_clear_tree_cache($parent_pid);
   return $to_return;
@@ -3152,6 +3153,7 @@ jQuery(document).ready(function() {
   drupal_add_css(drupal_get_path('module','sidora').'/css/workbench_create_resource.css',array('weight' => '1000000', 'group' => CSS_THEME));
   drupal_add_js(drupal_get_path('module','sidora').'/js/workbench_util.js',array('weight' => '1000000', 'group' => JS_THEME));
   drupal_add_js(drupal_get_path('module','sidora').'/js/workbench_uploader.js',array('weight' => '1000000', 'group' => JS_THEME));
+  drupal_add_js(drupal_get_path('module','sidora').'/js/drupal_ajax_fix.js',array('weight' => '1000000', 'group' => JS_THEME));
   sidora_clear_tree_cache($parent_pid);
   return $to_return;
 }
