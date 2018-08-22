@@ -420,6 +420,8 @@ function sidora_fedora_queue_sync($pid_or_nid) {
       );
     }
     $node_wrapper = entity_metadata_wrapper('node', $node);
+//print 'fedora_sync set to zero';
+//debug_print_backtrace();
     $node_wrapper->field_sidora_fedora_sync->set('0');
     $node_wrapper->save();
   }
@@ -648,10 +650,19 @@ fails: ' . (empty($done)?1:0) . '
  * Check to see if the node should be updated
  */
 function sidora_is_node_synced_with_fedora($node) {
+//var_dump($node);
+//print 'nfs:';
+//var_dump($node->field_sidora_fedora_sync);
+//var_dump($node->field_sidora_fedora_sync[$node->language][0]['value']);
+//var_dump(empty($node->field_sidora_fedora_sync[$node->language][0]['value']));
   if (!empty($node->field_sidora_fedora_sync)) {
+//print 'not empty, ';
     // Currently based on the design that if we need to have it updated, this value gets cleared
-    return !empty($node->field_sidora_fedora_sync[$node->language][0]['value']);
+    $to_return = !empty($node->field_sidora_fedora_sync[$node->language][0]['value']);
+//print "returning: $to_return\n";
+    return $to_return;
   }
+//print "empty\n";
   return FALSE;
 }
 /**
@@ -1133,7 +1144,7 @@ function sidora_update_or_create_node_from_fedora($pid_or_fedora_obj_or_nid_or_n
     if (!in_array($child_pid, $child_pids) && ($child_pid != $pid)){
       $child_pids[] = $child_pid;
       $existing_child_nid = sidora_get_concept_node_id($child_pid);
-      if (empty($existing_child_nid)) {
+      if (empty($existing_child_nid) && !empty($child_pid)) {
         // create the stub
         $child_node = sidora_get_update_or_create_concept_node($child_pid, array());
         if (!empty($child_node)) {
@@ -1331,7 +1342,12 @@ function sidora_update_concept_node($node, $info, $set_fedora_sync = FALSE) {
       $node_wrapper->field_fedora_inactive->set($info['state']);
     }
   }
+//var_dump($set_fedora_sync);
+//if (!$set_fedora_sync) {
+//  debug_backtrace();
+//}
   if ($set_fedora_sync) {
+//print "field_sidora_fedora_sync set"; print strtotime("now"); print "\n";
     $node_wrapper->field_sidora_fedora_sync->set(strtotime("now"));
   }
   if (array_key_exists('owner',$info)) {
@@ -1491,6 +1507,7 @@ function sidora_create_concept_node($pid, $info = NULL, $set_fedora_sync = FALSE
   }
   
   if ($set_fedora_sync) {
+//print 'Setting set_fedora_sync:' . $time_now . "\n";
     $newNode->field_sidora_fedora_sync[$newNode->language][]['value'] = $time_now;
   }
 
@@ -1562,6 +1579,18 @@ function sidora_get_concept_content_type(){
   $to_return = $type_name;
   return $type_name;
 }
+/**
+ * Pull the node ids and don't contact Fedora
+ */
+function sidora_get_child_nodes($node_id){
+  $node = node_load($node_id);
+  $pid = $node->field_fedora_pid[$node->language][0]['value'];
+  if (!empty($node->field_sidora_concept_children) && !empty($node->field_sidora_concept_children[$node->language])) {
+    $children = explode(',',$node->field_sidora_concept_children[$node->language][0]['value']);
+    return $children;
+  }
+  return NULL;
+}
 
 /**
  * Create the fields necessary for the nodes that represent a Fedora Digital Object and add it to the Fedora digital 
@@ -1614,11 +1643,12 @@ function sidora_check_nodes_in_fedora(){
     if (empty($obj)){
       $node->status = 0;
       node_save($node);
-      $all_checked[] = array($pid, $node->nid, 'NOT EXIST');
+      $all_checked[] = array($pid, $node->nid, 'NOT EXIST', '');
       $not_exists[] = array($pid, $node->nid);
     }
     else {
-      $all_checked[] = array($pid, $node->nid, 'exist');
+      $done = sidora_update_node_from_fedora($obj);
+      $all_checked[] = array($pid, $node->nid, 'exist', $done ? 'updated' : 'couldnotsavenode');
       $exists[] = array($pid, $node->nid);
     }
     $final_node = $node->nid;

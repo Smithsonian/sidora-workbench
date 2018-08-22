@@ -1147,6 +1147,7 @@ sidora.contextMenu.SetUp = function(){
         if (Drupal.settings.is_admin == "1") {
           items['fedora_reload'] = { name: "Fedora Reload", icon: "arrow-down" }   
           items['fedora_reload_tree'] = { name: "Fedora Reload All Children", icon: "arrow-down" }   
+          items['unassociate'] = { name: "SIdora Unassociate with this parent", icon: "arrow-down" }   
         }
         $.contextMenu({
             selector: '#fjt-holder .jstree-anchor',  // Everything that will be on the tree
@@ -1248,6 +1249,23 @@ sidora.menuChoice = function(key, pid, treeId){
           console.log(resourceList);
         }
       });
+      return;
+      break;
+    case "unassociate":
+      var jst = jQuery("#forjstree").jstree();
+      var itemName = jst.get_node(treeId).a_attr.fullname;
+      var parentItemName = jst.get_node(jst.get_node(treeId).parent).a_attr.fullname;
+      var parentPid = jst.get_node(jst.get_node(treeId).parent).a_attr.pid;
+      if (confirm("ADMIN: Unassociate '"+itemName+"' pid:"+pid+" with parent '"+parentItemName+"' pid:"+parentPid+"?")){
+        var actionUrl = Drupal.settings.basePath+'sidora/ajax_parts/unassociate/'+parentPid+'/'+pid;
+        jQuery.ajax({
+          url: actionUrl,
+          success: function(resourceList){
+            alert(resourceList);
+          } 
+        });  
+        console.log("CONFIRMED");
+      }
       return;
       break;
   }
@@ -1668,14 +1686,26 @@ sidora.InitiateJSTree = function(){
           if (sidora.util.userConfirmedMove){
             return true;
           }
+          // Return false if you're not allowed to create on the drop target
           if (typeof(dragStatus.ref) == 'undefined') {
-            return false;
-          }
-          if (dragStatus.ref.a_attr.class.split(' ').indexOf("is-project-space") >= 0) {
-            return false;
-          }
-          if (dragStatus.ref.a_attr.permissions.indexOf('c') == -1) {
-            return false;
+            if (typeof(mouseOverObject) == 'undefined') {
+              return false;
+            }
+            else {
+              if (mouseOverObject.a_attr.class.split(' ').indexOf("is-project-space") >= 0) {
+                return false;
+              }
+              if (mouseOverObject.a_attr.permissions.indexOf('c') == -1) {
+                return false;
+              }
+            }
+          } else{
+            if (dragStatus.ref.a_attr.class.split(' ').indexOf("is-project-space") >= 0) {
+              return false;
+            }
+            if (dragStatus.ref.a_attr.permissions.indexOf('c') == -1) {
+              return false;
+            }
           }
           if (dragStatus.core){
             var parentPid = jQuery("#"+mouseOverObject.id).children("a").attr("pid");

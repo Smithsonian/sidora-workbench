@@ -87,26 +87,60 @@ function sidora_put_this_into_their_project_space($add_to_groups_id, $get_groups
  * 
  */
 
-function sidora_put_into_proper_project_space($pid_or_fedora_obj_or_nid_or_node) {
+function sidora_put_into_proper_project_space(
+  $pid_or_fedora_obj_or_nid_or_node,
+  $processing_nids = array(),
+  $remove_from_existing_groups = FALSE
+) {
+  return _sidora_put_into_proper_project_space_recursive(
+    $pid_or_fedora_obj_or_nid_or_node,
+    $processing_nids,
+    $remove_from_existing_groups
+  );
+}
+function _sidora_put_into_proper_project_space_recursive(
+  $pid_or_fedora_obj_or_nid_or_node,
+  &$processing_nids,
+  $remove_from_existing_groups = FALSE
+) {
+  if (empty($pid_or_fedora_obj_or_nid_or_node)) {
+    return FALSE;
+  }
+  if (in_array($pid_or_fedora_obj_or_nid_or_node, $processing_nids)){
+    return TRUE;
+  }
+  $change_happened = FALSE;
   $sidora_obj_info = sidora_get_info($pid_or_fedora_obj_or_nid_or_node, FALSE);
   if (empty($sidora_obj_info)) {
     return FALSE;
   }
   $node = $sidora_obj_info['node'];
   $nid = $sidora_obj_info['nid'];
+  $processing_nids[] = $nid;
   // reminder obj may not be loaded (FALSE on 2nd param of sidora_get_info)
   $pid = $sidora_obj_info['pid'];
   if (empty($node) || empty($nid)) {
     // What was passed in was not a concept that already has a node created. Do nothing.
     return FALSE;
   }
+  $current_groups = sidora_get_group_nids_membership($nid);
+  $new_groups = array();
   // Parent choice decision priorities:
   // If it IS the research space, put it into the right groups. Do not remove existing groups.
   $project_space_groups = sidora_get_groups_for_project_space($pid, TRUE);
   $check_legacy_parents = TRUE;
+  $correct_groups = NULL;
+  $correct_gids = array();
   if (!empty($project_space_groups)) {
-    foreach($project_space_groups as $individual_group) {
-      og_group('node', $individual_group, array('entity_type' => 'node', 'entity' => $nid));
+    $correct_groups = $project_space_groups;
+    foreach($project_space_groups as $gid => $individual_group) {
+      $correct_gids[] = $gid;
+      // Do not "put into the group" if already in it
+      if (!in_array($gid, $current_groups)){
+        $change_happened = TRUE;
+        og_group('node', $individual_group, array('entity_type' => 'node', 'entity' => $nid));
+        $new_groups[] = $gid;
+      }
     }
     $check_legacy_parents = FALSE;
   }
@@ -119,13 +153,52 @@ function sidora_put_into_proper_project_space($pid_or_fedora_obj_or_nid_or_node)
     }
     else {
       $check_legacy_parents = FALSE;
+      $owning_parent_nid = sidora_get_concept_node_id($owning_pid);
       $owning_parent_gids = sidora_get_group_nids_membership(sidora_get_concept_node_id($owning_pid));
       $parent_groups = node_load_multiple($owning_parent_gids);
-      foreach($parent_groups as $parent_group) {
-        og_group('node', $parent_group, array('entity_type' => 'node', 'entity' => $nid));
+      $correct_groups = $parent_groups;
+      foreach($parent_groups as $gid => $parent_group) {
+        $correct_gids[] = $gid;
+        if (!in_array($gid, $current_groups)){
+          $change_happened = TRUE;
+          og_group('node', $parent_group, array('entity_type' => 'node', 'entity' => $nid));
+          $new_groups[] = $gid;
+        }
       }
     }
   }
+  if (!$check_legacy_parents){
+    // Remove from the groups that it shouldn't be in
+    foreach($current_groups as $cgid){
+      if (!in_array($cgid, $correct_gids)){
+        og_ungroup('node', $cgid, 'node', $nid);
+        $change_happened = TRUE;
+      }
+    }
+  }
+
+  // if there was a change, also do the children
+  if ($change_happened) {
+    module_load_include('inc', 'sidora', 'includes/sidora_nodes');
+    $child_nids = sidora_get_child_nodes($nid);
+    $children_complete = TRUE;
+    foreach ($child_nids as $child_nid) {
+      if (!empty($child_nid)){
+        $worked = _sidora_put_into_proper_project_space_recursive($child_nid, $processing_nids, TRUE);
+        if (!$worked) {
+          watchdog(
+            'sidora_workbench',
+            t(
+              'Trying to move a child (nid: %nid) to the groups of the parent but was unable to',
+              array('%nid' => $child_nid)
+            )
+          );
+          $children_complete = FALSE;
+        }
+      }
+    }
+  }
+  
   if ($check_legacy_parents) {
     watchdog('sidora',t("This pid does not have proper isAdministeredBy relationship: %pid" , array("%pid"=>$pid)));
     $parent_infos = sidora_get_parent_concepts_by_pid($pid);
@@ -135,11 +208,17 @@ function sidora_put_into_proper_project_space($pid_or_fedora_obj_or_nid_or_node)
     $parent_communal_gids = array();
     $parents_are_communal = TRUE;
     // Even if it doesn't have groups itself, go thru to see if parents have communal groups
+    $all_parents_missing_group = TRUE;
+    $parent_pids = '';
     foreach($parent_infos as $parent_info) {
       $parent_pid = $parent_info['pid'];
+      $parent_pids .= ' ' . $parent_pid;
       $parent_gids = sidora_get_group_nids_membership(sidora_get_concept_node_id($parent_pid));
       $intersect_check = array_intersect($current_gids, $parent_gids);
-      if (sizeof($intersect_check) == sizeof($parent_gids)) {
+      if (sizeof($parent_gids) > 0){
+        $all_parents_missing_group = FALSE;
+      }
+      if (sizeof($parent_gids) > 0 && sizeof($intersect_check) == sizeof($parent_gids)) {
         // Is in all the groups of this parent
         $is_in_a_parents_project_space = TRUE;
         break;
@@ -155,7 +234,7 @@ function sidora_put_into_proper_project_space($pid_or_fedora_obj_or_nid_or_node)
         }
       }
     }
-    if (!$is_in_a_parents_project_space){
+    if (!$is_in_a_parents_project_space && !$all_parents_missing_group){
       // If there is only one parent, put it in there (communal will be true)
       // If all parents have the same research spaces, put it there
       if ($parents_are_communal) {
@@ -163,6 +242,9 @@ function sidora_put_into_proper_project_space($pid_or_fedora_obj_or_nid_or_node)
         foreach($parent_groups as $parent_group) {
           og_group('node', $parent_group, array('entity_type' => 'node', 'entity' => $nid));
         }
+      }
+      else if ($all_parents_missing_group){
+        watchdog('sidora',t('No parents have groups for pid: %pid parents: %pp' , array("%pid"=>$pid, "%pp"=>$parent_pids)));
       }
       else {
         // TODO TBD These will be more for legacy data than new objects
@@ -175,10 +257,49 @@ function sidora_put_into_proper_project_space($pid_or_fedora_obj_or_nid_or_node)
   return TRUE;
 }
 /**
+ * Remove the node from all research spaces
+ */
+function sidora_remove_from_all_project_spaces($pid_or_fedora_obj_or_nid_or_node) {
+  
+  $sidora_obj_info = sidora_get_info($pid_or_fedora_obj_or_nid_or_node, FALSE);
+  if (empty($sidora_obj_info)) {
+    return FALSE;
+  }
+  $node = $sidora_obj_info['node'];
+  $nid = $sidora_obj_info['nid'];
+  // reminder obj may not be loaded (FALSE on 2nd param of sidora_get_info)
+  $pid = $sidora_obj_info['pid'];
+  if (empty($node) || empty($nid)) {
+    // What was passed in was not a concept that already has a node created. Do nothing.
+    return FALSE;
+  }
+  
+  $current_gids = sidora_get_group_nids_membership($nid);
+
+  foreach($current_gids as $gid) {
+    og_ungroup('node', $gid, 'node', $nid);
+  }
+  return TRUE;
+}
+/**
  * Remove the node from research spaces that its parent does not belong
  */
 function sidora_remove_from_incorrect_project_spaces($pid_or_fedora_obj_or_nid_or_node) {
-  
+  $proper_group_ids = array();
+  $changes_occurred = FALSE;
+  return sidora_remove_from_incorrect_and_give_correct_ps(
+    $pid_or_fedora_obj_or_nid_or_node,
+    $proper_group_ids,
+    $changes_occurred
+  );
+}
+
+function sidora_remove_from_incorrect_and_give_correct_ps(
+  $pid_or_fedora_obj_or_nid_or_node, 
+  &$proper_group_ids, 
+  &$changes_occurred
+) {
+
   $sidora_obj_info = sidora_get_info($pid_or_fedora_obj_or_nid_or_node, FALSE);
   if (empty($sidora_obj_info)) {
     return FALSE;
@@ -205,6 +326,8 @@ function sidora_remove_from_incorrect_project_spaces($pid_or_fedora_obj_or_nid_o
   // If it has a real owner, use that
   $obj = sidora_obj($pid);
   $rels = $obj->relationships->get(SI_RELS_EXT_URI, 'isAdministeredBy');
+//var_dump(__LINE__);
+//var_dump($rels);
   $ignore_other_parents = FALSE;
   foreach ($rels as $rel) {
     $ignore_other_parents = TRUE;
@@ -217,6 +340,7 @@ function sidora_remove_from_incorrect_project_spaces($pid_or_fedora_obj_or_nid_o
   if (!$ignore_other_parents) {
     watchdog('sidora',t('This pid does not have proper isAdministeredBy relationship: %pid' , array("%pid"=>$pid)));
     $parent_infos = sidora_get_parent_concepts_by_pid($pid);
+//var_dump($parent_infos);
     foreach($parent_infos as $parent_info) {
       $parent_pid = $parent_info['pid'];
       $parent_gids = sidora_get_group_nids_membership(sidora_get_concept_node_id($parent_pid));
@@ -225,7 +349,11 @@ function sidora_remove_from_incorrect_project_spaces($pid_or_fedora_obj_or_nid_o
   }
 
   $remove_from_gids = array_diff($current_gids, $proper_group_ids);
+//var_dump($remove_from_gids);
+//var_dump($current_gids);
+//var_dump($proper_group_ids);
   foreach($remove_from_gids as $gid) {
+    $changes_occurred = TRUE;
     og_ungroup('node', $gid, 'node', $nid);
   }
   return TRUE;
@@ -681,6 +809,7 @@ function sidora_project_space_creation_form_submit($form, &$form_state) {
     $created_node = sidora_create_personal_project_space($user, array("label"=>$form_state['values']['ps_name'],"description"=>$form_state['values']['ps_desc']));
     if (!empty($created_node)) {
       // Load the information into the node from Fedora
+    debug_print_backtrace();
       sidora_update_node_from_fedora($created_node);
       drupal_set_message("New Research Space Created");
     }
@@ -1456,3 +1585,43 @@ function sidora_transfer_project_space($ps_node, $new_owner) {
   // if there is a problem saving an exception gets thrown. Let it bubble up.
   return TRUE;
 }
+
+
+
+/**
+ * Put this node into the project space of its administered by node
+ */
+function sidora_rectify_project_space($nid){
+  $proper_group_ids = array();
+  $changes_occurred = FALSE;
+  sidora_remove_from_incorrect_and_give_correct_ps($nid, $proper_group_ids, $changes_occurred);
+  if ($changes_occurred) {
+    foreach($project_space_groups as $individual_group) {
+      og_group('node', $individual_group, array('entity_type' => 'node', 'entity' => $nid));
+    }
+  }
+}
+
+/**
+ * Put this node and all of its descendents into the project space of its administered by node
+ */
+function sidora_rectify_ps_recursive($nid, &$checked_nids){
+  sidora_rectify_project_space($nid);
+  $node = node_load($nid);
+  $node_wrapper = entity_metadata_wrapper('node', $node);
+  // get children of the folder
+  $existing_concept_children = $node_wrapper->field_sidora_concept_children->value();
+  if (!empty($existing_concept_children)) {
+    $child_array = explode("," , $existing_concept_children);
+    // for each child
+    foreach($child_array as $child_nid){
+      // ensure not a loop (child points to parent)
+      if (!in_array($child_nid, $checked_nids)){
+        $checked_nids[] = $child_nid;
+        // put in the right spaces: call this function
+        sidora_rectify_ps_recursive($child_nid, $checked_nids);
+      }
+    }
+  }
+}
+

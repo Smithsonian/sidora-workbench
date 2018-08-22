@@ -824,6 +824,10 @@ function sidora_islandora_object_modified(AbstractObject $object) {
  * Implements hook_islandora_datastream_modified
  */
 function sidora_islandora_datastream_modified(AbstractObject $object, AbstractDatastream $datastream) {
+//print "++++++++++++++++++++++++";
+//var_dump($object->id);
+//var_dump($datastream[0]);
+//print "========================";
   module_load_include('inc', 'sidora', 'includes/utils');
   // Assume that any update that occurs to a datastream that is of type xml but is not one of the "main" types is the proper type for
   // metadata to be complete.  The more formal way to do this would be:
@@ -1875,6 +1879,12 @@ function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $ex
     return t("You must be an administrator or have an administrator set sidora_allow_all_to_debug in order to access this information");
   }
   if (!sidora_is_admin()) print t("Remember that nonadmins will NOT see output from dsm!");
+  if ($one == 'put_in_rs'){
+    $pid = $two;
+    module_load_include('inc', 'sidora', 'includes/project_spaces');
+    sidora_put_into_proper_project_space($pid);
+    return 'complete';
+  }
   if ($one == 'check_nodes_in_fedora'){
     $checker = sidora_check_nodes_in_fedora();
     dpm($checker);
@@ -1930,7 +1940,6 @@ function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $ex
 }
 
 function sidora_flatten_tree($branch, &$rows,$visibility_settings,$path) {
-  //var_dump($branch);
   if (isset($branch) && sizeof($branch) && !empty($branch)) {
     $resource_visibility_settings = array('show_name','show_meta','show_preview','allow_download','show_degraded');
     $concept_visibility_settings = array('show_name','show_meta','future_children_show_name','future_children_show_meta','future_children_show_preview','future_children_allow_download','future_children_show_degraded');
@@ -2212,52 +2221,52 @@ function sidora_process_batch_submit($form,&$form_state) {
 </sidora>';
     file_put_contents('public://' . 'sidora_' . $batch_id . '.xml',$sidora_xml);
     $post_params = array(
-   'resourceFileList' => str_replace('https://','http://',file_create_url('public://' . '/files_' . $batch_id . '.xml')),
-   'ds_metadata' => str_replace('https://','http://',file_create_url('public://' . '/batch_' . $batch_id . '.xml')),
-   'ds_sidora' => str_replace('https://','http://',file_create_url('public://' . '/sidora_' . $batch_id . '.xml')),
-   'resourceOwner' => $user->name,
-   'association' => str_replace('https://','http://',file_create_url('public://' . '/association_' . $batch_id . '.xml'))
-   );
-  $get_params = '';
-  if ($association['content_model'] == 'si:datasetCModel') {
-    $get_params = '?codebookPID=' . $user->data['recent_codebook_id'];
-  }
-  $batch_url = variable_get('sidora_batch_ingest_url', '') . '/' . $id_to_creation_info[$form_build_id]['parent'] . $get_params;
-  watchdog('Sidora_debug',t("Sending Bulk metadata Curl to:<br/> %curl_url",
+     'resourceFileList' => str_replace('https://','http://',file_create_url('public://' . '/files_' . $batch_id . '.xml')),
+     'ds_metadata' => str_replace('https://','http://',file_create_url('public://' . '/batch_' . $batch_id . '.xml')),
+     'ds_sidora' => str_replace('https://','http://',file_create_url('public://' . '/sidora_' . $batch_id . '.xml')),
+     'resourceOwner' => $user->name,
+     'association' => str_replace('https://','http://',file_create_url('public://' . '/association_' . $batch_id . '.xml'))
+    );
+    $get_params = '';
+    if ($association['content_model'] == 'si:datasetCModel') {
+      $get_params = '?codebookPID=' . $user->data['recent_codebook_id'];
+     }
+     $batch_url = variable_get('sidora_batch_ingest_url', '') . '/' . $id_to_creation_info[$form_build_id]['parent'] . $get_params;
+     watchdog('Sidora_debug',t("Sending Bulk metadata Curl to:<br/> %curl_url",
                 array('%curl_url' => $batch_url))
                 );
-  $ingest_response = sidora_ingest_request($batch_url,$post_params);
+     $ingest_response = sidora_ingest_request($batch_url,$post_params);
         // save the curl request id to session along with the parent concept
-  if (strpos($ingest_response,'</CorrelationID>') !== false) {
-    $doc = new DOMDocument();
-    $doc->loadXML($ingest_response);
-    $parent_pid_from_response = $doc->getElementsByTagName('ParentPID')->item(0)->nodeValue;
-    if ((!empty($parent_pid_from_response)) && ($parent_pid_from_response == $id_to_creation_info[$form_build_id]['parent'])) {
-      $request_id = (string)$doc->getElementsByTagName('CorrelationID')->item(0)->nodeValue;
-      $session_key = 'sidora_batch_request_'.$batch_id;
-      $_SESSION[$session_key] = array();
-      $_SESSION[$session_key]['request_id'] = $request_id;
-      $_SESSION[$session_key]['batch_id'] = $batch_id;
-      $_SESSION[$session_key]['Parent'] = $id_to_creation_info[$form_build_id]['parent'];
-      $update_query = db_update('sidora_batch_ingest')
-       ->fields(array(
+     if (strpos($ingest_response,'</CorrelationID>') !== false) {
+       $doc = new DOMDocument();
+       $doc->loadXML($ingest_response);
+       $parent_pid_from_response = $doc->getElementsByTagName('ParentPID')->item(0)->nodeValue;
+       if ((!empty($parent_pid_from_response)) && ($parent_pid_from_response == $id_to_creation_info[$form_build_id]['parent'])) {
+         $request_id = (string)$doc->getElementsByTagName('CorrelationID')->item(0)->nodeValue;
+         $session_key = 'sidora_batch_request_'.$batch_id;
+         $_SESSION[$session_key] = array();
+         $_SESSION[$session_key]['request_id'] = $request_id;
+         $_SESSION[$session_key]['batch_id'] = $batch_id;
+         $_SESSION[$session_key]['Parent'] = $id_to_creation_info[$form_build_id]['parent'];
+         $update_query = db_update('sidora_batch_ingest')
+         ->fields(array(
            'status' => 'corelation id received',
            'corelation_id' => $request_id,
          ))
-       ->condition('batch_id', $batch_id, '=');
-      $num_updated = $update_query->execute();
-      $created = db_query("select DATE_FORMAT(Created,'%h:%i:%s') AS Created, count, resource_type from sidora_batch_ingest where batch_id = :batchid", array(':batchid' => $batch_id))->fetchAssoc();
-      print json_encode(array('status' => 'Request for batch ingest successfully received','request_id' => $request_id,'batch_id' => $batch_id,'timestamp' => $created['Created'],'message' => $created['count'] . ' ' . $created['resource_type'] . ' resources'));
-     drupal_exit();
+         ->condition('batch_id', $batch_id, '=');
+         $num_updated = $update_query->execute();
+         $created = db_query("select DATE_FORMAT(Created,'%h:%i:%s') AS Created, count, resource_type from sidora_batch_ingest where batch_id = :batchid", array(':batchid' => $batch_id))->fetchAssoc();
+         print json_encode(array('status' => 'Request for batch ingest successfully received','request_id' => $request_id,'batch_id' => $batch_id,'timestamp' => $created['Created'],'message' => $created['count'] . ' ' . $created['resource_type'] . ' resources'));
+         drupal_exit();
+      }
    }
  }
-}
 
-watchdog('Sidora_debug',t("Bulk metadata Curl response trimmed :<br/> %curl_response",
+  watchdog('Sidora_debug',t("Bulk metadata Curl response trimmed :<br/> %curl_response",
                 array('%curl_response' => substr($ingest_response,0,1024)))
                 );
-print json_encode(array('status' => 'Error in submitting batch ingest request to the backend', 'message' => $ingest_response));
-drupal_exit();
+  print json_encode(array('status' => 'Error in submitting batch ingest request to the backend', 'message' => $ingest_response));
+  drupal_exit();
 }
 
 /**
@@ -3342,7 +3351,11 @@ function sidora_allow($user_pid_or_drupal_user, $pid_or_fedora_object, $type_of_
   }
 
   //Update the node information if it's out of sync with Fedora
-  if (!sidora_is_node_synced_with_fedora($node)) {
+  $is_synced = sidora_is_node_synced_with_fedora($node);
+//var_dump($is_synced);
+  if (!$is_synced) {
+//print 'Node not synced with fedora:';
+//var_dump($node);
     sidora_update_node_from_fedora($node);
   }
  
@@ -3997,7 +4010,7 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
       $info = sidora_get_info($pid);
       print '<span>Research Space Information</span>';
       print '<table class="ps-detail"><tr><td>Owner</td><td>' . $info['obj']->owner . '</td></tr></table>';
-      $groups = sidora_get_groups_for_project_space($pid);
+      $groups = sidora_get_groups_for_project_space($pid, TRUE);
       print '<table class="ps-detail"><tr><td>Editors</td><td>';
       foreach($groups as $group) {
         if (sidora_get_sidora_group_type($group) == 'edit') {
@@ -4011,7 +4024,6 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
       }
       print '</td></tr></table>';
       print '</span>';
-      //var_dump($mem_to_group);
       break;
     case 'meta':
       module_load_include('inc', 'sidora', 'includes/utils');
@@ -4471,6 +4483,7 @@ function sidora_get_content_model_names() {
  *   object in any way
  */
 function sidora_obj($pid) {
+//var_dump("sidora_obj: $pid");
   module_load_include('inc', 'sidora', 'includes/utils');
   $object = array();
   $tuque = islandora_get_tuque_connection();
@@ -5615,8 +5628,6 @@ function sidora_move($move_from_id, $copy_to_id, $pid, $show_output = TRUE) {
   }
   module_load_include('inc', 'sidora', 'includes/utils');
   $owning_pid = sidora_get_owning_parent_concept_pid_by_administered_pid($pid);
-  $reassign_owner = ($owning_pid == $move_from_id);
-
   
   $copied = sidora_copy($copy_to_id, $pid, FALSE);
   sidora_release_lock($copy_to_id);
@@ -5637,11 +5648,11 @@ function sidora_move($move_from_id, $copy_to_id, $pid, $show_output = TRUE) {
   //   Remove the relationship
   //   Do the copy & unassociate
   //   Attach the relationship to the pid where it was copied
-  if ($reassign_owner) {
-    $object = sidora_obj($pid);
-    $object->relationships->remove(SI_RELS_EXT_URI, 'isAdministeredBy', $move_from_id);
-    $object->relationships->add(SI_RELS_EXT_URI, 'isAdministeredBy', $copy_to_id);
-  }
+  $object = sidora_obj($pid);
+  // Repair broken isAdministeredBy by removing all isAdministeredBy
+  $object->relationships->remove(SI_RELS_EXT_URI, 'isAdministeredBy');
+  $object->relationships->add(SI_RELS_EXT_URI, 'isAdministeredBy', $copy_to_id);
+
   $unassociated = sidora_unassociate($move_from_id, $pid, FALSE);
   sidora_release_lock($copy_to_id);
   sidora_release_lock($move_from_id);
@@ -6834,6 +6845,11 @@ function sidora_cron() {
       '%n' => (sizeof($to_be_removed) - sizeof($deleted_files)),
       '%t' => (sizeof($to_be_removed)),
     ))
+  );
+  $checker = sidora_check_nodes_in_fedora();
+  watchdog(
+    'sidora_workbench',
+    json_encode($checker)
   );
 }
 
