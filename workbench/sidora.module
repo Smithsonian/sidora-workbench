@@ -1259,6 +1259,7 @@ function sidora_edit_metadata($object_id_string = '', $dsid = '', $form_name = '
     }
   }
   if (empty($association)) {
+    print "<div style='padding:20px;'>";
     print "The form is not configured correctly.  The form specified is not associated to this model. Error:A2<br/>";
     print "If this is a legacy item, please ensure there is an association between the form you want to use with one of the models listed here.<br/>";
     print "pid:$object_id_string<br/>";
@@ -1266,8 +1267,28 @@ function sidora_edit_metadata($object_id_string = '', $dsid = '', $form_name = '
     print "form:$form_name<br/>";
     print "models:";
     var_dump($object->models);
+    print "</div>";
+    return "";
   }
-  $tform = drupal_get_form('xml_form_builder_datastream_form_metadata_form',$object,$association);
+  try{
+    $tform = drupal_get_form('xml_form_builder_datastream_form_metadata_form',$object,$association);
+  }catch(Exception $exc){
+    
+    print '<!-- SHOW ME -->';
+    print 'The form for: '.$object->label.' could not be saved. ';
+    print t('Please contact the site administrator %email',
+      array('%email' => (variable_get('site_admin_email_to', '') != ''?' at ' . variable_get('site_admin_email_to'):''))
+    );
+    print '<!-- FINISH -->';
+    $information_string = t("Likely issue: XML in the dsid: '%dsid' is does not match the form: '%form_name'",
+      array('%dsid' => $dsid, '%form_name' => $form_name)
+    );
+    sidora_add_fedora_assumption_problem_object(
+      $object_id_string,
+      $information_string
+    );
+    watchdog('sidora_obj', "Problem with pid: $object_id_string " . $information_string);
+  }
   // If the user is not allowed to update it, then don't allow the system to call the submit handlers that would do the updates and do not provide information that would allow user to bypass
   if (!sidora_allow($user,$object_id,'update')) {
     $tform['update']['#submit'] = array();

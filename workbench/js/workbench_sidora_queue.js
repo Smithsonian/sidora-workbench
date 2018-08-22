@@ -224,7 +224,7 @@ SidoraQueue.prototype.Done = function(completedItem, ajaxReturn){
     jsonString = ajaxReturn;
   }
   try{ jsonData = jQuery.parseJSON(jsonString); } catch (e){
-    if (jsonString.indexOf("<h2 class=\"element-invisible\">Error message</h2")>0){
+    if (jsonString.indexOf("<h2 class=\"element-invisible\">Error message</h2")>-1){
       var toShow = "Did not perform action:"+completedItem.userFriendlyName;
       this.completedFailedRequests.push({pid:completedItem.pidsBeingProcessed[0],form:jsonString});
       if (completedItem.fullObject.userFriendlyName.indexOf("Edit MetaData")>0){
@@ -239,7 +239,12 @@ SidoraQueue.prototype.Done = function(completedItem, ajaxReturn){
       }
       
       return;
-    }  
+    }
+    if (jsonString.indexOf("<!-- SHOW ME -->") > -1) {
+      var message = jsonString.substring(jsonString.indexOf("<!-- SHOW ME -->")+16, jsonString.indexOf("<!-- FINISH -->"));
+      this.NotificationWindow.Show(message, true);
+      return;
+    }
   }
   if (jsonData != null && jsonData.error){
     var toShow = "Did not perform action:"+completedItem.userFriendlyName;
