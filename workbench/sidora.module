@@ -1885,6 +1885,9 @@ function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $ex
     sidora_put_into_proper_project_space($pid);
     return 'complete';
   }
+  if ($one == 'memory'){
+    return "" . (sidora_get_available_memory());
+  }
   if ($one == 'check_nodes_in_fedora'){
     $checker = sidora_check_nodes_in_fedora();
     dpm($checker);
@@ -4064,6 +4067,15 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
             }
           }
           elseif ($dsid_loop == $specific_meta) {
+            // SIdora is going to need about 200MB to run
+            // and the file needs to be loaded into memory to be downloaded
+            $available_for_file = sidora_get_available_memory() - 200000000;
+            if ($available_for_file < $datastream_loop->size) {
+              return t('This file is too large to be downloaded through the workbench. Contact your workbench contact to retrieve this file %email',
+                array('%email' => (variable_get('site_admin_email_to', '') != ''?' at ' . variable_get('site_admin_email_to'):''))
+              );
+
+            }
             $datastream_content = $datastream_loop->content;
             $datastream = $datastream_loop;
           }
@@ -6464,6 +6476,24 @@ function sidora_get_plupload_html($elements, $button_text = 'Browse'){
     runtimesBrowserSpecific = "html5,html4";
   }';
               if ($elements['#extensions'][0] == '*') {
+// Need to change the error message from max_file_size, so add our own instead of using theirs
+                print "
+plupload.addFileFilter('sidora_max_file_size', function(maxSize, file, cb) {
+  var undef;
+ 
+  // Invalid file size
+  if (file.size !== undef && maxSize && file.size > maxSize) {
+    this.trigger('Error', {
+      code : plupload.FILE_SIZE_ERROR,
+      message : plupload.translate('File is too large.'),
+      file : file
+    });
+    cb(false);
+  } else {
+    cb(true);
+  }
+});
+";
                 print '
   plupload.addFileFilter("information_extensions", function(filter, file, cb){
     var self = this;
@@ -6534,7 +6564,7 @@ function sidora_get_plupload_html($elements, $button_text = 'Browse'){
         "Raw Sequence" : "xml",
         "Assembled Sequence" : "fastq,fq,fasta,fa,fas,fsn,fna,faa"
       }],
-      max_file_size : "5gb",
+      sidora_max_file_size : 5368709120, // 5GB
       mime_types: [
         {title : "';
   print implode(",",$elements['#extensions']) . ' files';
