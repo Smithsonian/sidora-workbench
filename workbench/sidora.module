@@ -1271,6 +1271,12 @@ function sidora_edit_metadata($object_id_string = '', $dsid = '', $form_name = '
     return "";
   }
   try{
+    $available_content = FALSE;
+    foreach ($object as $dsid_loop=>$datastream_loop) {
+      if ($dsid_loop == $association['dsid']) {
+        $available_content = $association['dsid'];
+      }
+    }
     $tform = drupal_get_form('xml_form_builder_datastream_form_metadata_form',$object,$association);
   }catch(Exception $exc){
     
@@ -1359,7 +1365,12 @@ function sidora_edit_metadata($object_id_string = '', $dsid = '', $form_name = '
   else {
     $to_return .= '<div>'.drupal_render($tform);
   }
-  $to_return .= '<div id="bottom-panel" class="bottom-panel" style="position:absolute; bottom:0; left:0; width:100%;"></div></div>';
+  $download_meta_url = '';
+  if (!empty($available_content)) {
+    $download_meta_url = $GLOBALS['base_url'].'/sidora/info/'.$object_id.'/meta/' . $available_content . '/download';
+    $download_meta_url = l('Download this information as XML', $download_meta_url);
+  }
+  $to_return .= '<div id="bottom-panel" class="bottom-panel" style="position:absolute; bottom:0; left:0; width:100%;">'.$download_meta_url.'</div></div>';
   $to_return .= "</div>";
 }
 
