@@ -1894,9 +1894,70 @@ function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $ex
     }
     return 'session';
   }
+  if ($one == 'administeredByCrumbtrail') {
+
+  }
   //This ends the testing function and should also indicate the end of liberal use of the dsm function
 }
-
+function sidora_short_admin_by_tree($pid) {
+  $object_values_build = ' <info:fedora/' . $pid . '>';
+  $query = 'select ?object ?adminBy ?adminByT ?adminByT2 ?adminT3 ?title ?titleT ?titleT2 ?titleT3 from <#ri> where {
+    ?object <http://oris.si.edu/2017/01/relations#isAdministeredBy> ?adminBy .
+               ?adminBy <info:fedora/fedora-system:def/model#label> ?title .
+    OPTIONAL { ?adminBy <http://oris.si.edu/2017/01/relations#isAdministeredBy>  ?adminByT .
+               ?adminByT <info:fedora/fedora-system:def/model#label> ?titleT .
+      OPTIONAL { ?adminByT <http://oris.si.edu/2017/01/relations#isAdministeredBy>  ?adminByT2 .
+                 ?adminByT2 <info:fedora/fedora-system:def/model#label> ?titleT2 .
+        OPTIONAL { ?adminByT2 <http://oris.si.edu/2017/01/relations#isAdministeredBy>  ?adminByT3 .
+                   ?adminByT3 <info:fedora/fedora-system:def/model#label> ?titleT3 .
+        }
+      } 
+    }
+    VALUES ?object { ' . $object_values_build . '}
+  }';
+  $results = sidora_direct_query($query);
+  $return = "This object does not have an administering parent";
+  $start = "";
+  $end = "";
+  foreach($results as $result) {
+    $return = "";
+    $start .= "<ul><li pid='".$result['adminBy']['value']."'>";
+    $start .=  $result['title']['value'];
+    $start .=  '</li>';
+    if (!empty($result['adminByT']['value'])) {
+      $start =  "<ul><li pid='".$result['adminByT']['value']."'>" . $result['titleT']['value'] . "</li>" . $start;
+      if (!empty($result['adminByT2']['value'])) {
+        $start = "<ul><li pid='".$result['adminByT2']['value']."'>" . $result['titleT2']['value'] . "</li>" . $start;
+        if (!empty($result['adminByT3']['value'])) {
+          $start = "<ul><li pid='".$result['adminByT3']['value']."'>" . $result['titleT3']['value'] . "</li>" . $start;
+          $end .= '</ul>';
+        }
+        $end .= '</ul>';
+      }
+      $end .= '</ul>';
+    }
+    $end .= '</ul>';
+    $return = $start . $end;
+  }
+  return $return;
+}
+function sidora_direct_query($query) {
+  $tuque = islandora_get_tuque_connection();
+  $results = NULL;
+  if ($tuque) {
+    try{
+      $ri = $tuque->repository->ri;
+      $results = $ri->sparqlQuery($query);
+      //var_dump($results);
+    }catch(Exception $e){
+      var_dump($e);
+    }
+  }
+  else {
+   print 'no tuque';
+  }
+  return $results;
+}
 function sidora_flatten_tree($branch, &$rows,$visibility_settings,$path) {
   //var_dump($branch);
   if (isset($branch) && sizeof($branch) && !empty($branch)) {
@@ -4911,6 +4972,13 @@ function sidora_duplicate($destination, $to_duplicate, $show_output = TRUE) {
  */
 function sidora_ajax_parts($call_type, $param1 = '', $param2 = '', $param3 = '') {
   global $user;
+  if ($call_type == 'administeredByTree'){
+    $pid = $param1;
+    if (sidora_allow(NULL, $pid, 'view')){
+      print sidora_short_admin_by_tree($pid);
+      drupal_exit();
+    }
+  }
   if ($call_type == 'create_ps' && sidora_is_admin()){
     module_load_include('inc', 'sidora', 'includes/project_spaces');
     module_load_include('inc', 'islandora', 'includes/utilities');

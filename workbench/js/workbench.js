@@ -2062,6 +2062,12 @@ sidora.InitiatePage = function(){
     sidora.concept.LoadContent();
   }
   sidora.IsUserSetUp(sidora.continueInit, sidora.doubleCheckUser);
+  // Change the tooltip function to allow html
+  jQuery(document).tooltip({
+    content: function () {
+      return jQuery(this).prop('title');
+    }
+  });
 };
 sidora.ProjectSpaces.isOwned = function() {
   return !jQuery("[pid='"+sidora.ProjectSpaces.currentPid()+"']").hasClass("not-owned");
@@ -2576,6 +2582,7 @@ sidora.CloseIFrame = function(info, typeOfClosure){
  */
 sidora.util.keepUp = function(){
   sidora.concept.addClickEvents();
+  sidora.addAdministeredByTooltips();
   setTimeout(sidora.util.keepUp, 2000); 
 }
 /*
@@ -4133,6 +4140,34 @@ sidora.util.conceptAddedCompletelyNew = function(parentPid, pidOfNewItem, nidOfN
 	  true
     );
   }  
+}
+sidora.addAdministeredByTooltips = function(){
+  jQuery("[is-link='TRUE']").filter(function(){
+    if (typeof(jQuery(this).attr("administeredByTooltip")) == 'undefined'){
+      var itemGetLink = this;
+      jQuery.ajax({
+        dataType: "text",
+        url: Drupal.settings.basePath+'sidora/ajax_parts/administeredByTree/'+jQuery(itemGetLink).attr("pid"),
+        success: function(exhibitions){
+          jQuery(itemGetLink).attr("administeredByTooltip","TRUE");
+          jQuery(itemGetLink).attr("title",exhibitions);
+        }
+      });
+    }
+  });
+  jQuery(".link-icon-location").filter(function(){
+    if (typeof(jQuery(this).attr("administeredByTooltip")) == 'undefined'){
+      var itemGetLink = this;
+      jQuery.ajax({
+        dataType: "text",
+        url: Drupal.settings.basePath+'sidora/ajax_parts/administeredByTree/'+jQuery(this).closest("tr").attr("id"),
+        success: function(exhibitions){
+          jQuery(itemGetLink).attr("administeredByTooltip","TRUE");
+          jQuery(itemGetLink).attr("title",exhibitions);
+        }
+      });
+    }
+  });
 }
 
 jQuery(function () {
