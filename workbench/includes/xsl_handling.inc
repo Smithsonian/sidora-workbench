@@ -162,14 +162,28 @@ function sidora_get_xsl_file_config_for_object($pid) {
   // Cut out early if a perfect match is found (matches form/model/preferred_dsid)
   $dsid_to_use = '';
   $curr_check = NULL;
+  $imperfect_return = NULL;
+  $catch_all = NULL;
   for ($sfci = 0; $sfci < sizeof($sfc->xsl_config) && !$perfect_match; $sfci++) {
     $curr_check = $sfc->xsl_config[$sfci];
     $model_match = in_array($curr_check->model,$models);
     $form_match = $curr_check->form == $form_name;
     $perfect_match = ($model_match && $form_match);
+    if ($curr_check->form == 'sidora_all' && $model_match) {
+      $imperfect_return = $curr_check;
+    }
+    if ($form_match && $curr_check->model == 'sidora_all') {
+      $imperfect_return = $curr_check;
+    }
+    if ($curr_check->form == 'sidora_all' && $curr_check->model == 'sidora_all') {
+      $catch_all = $curr_check;
+    }
   }
   if ($perfect_match) return $curr_check;
-  return NULL;
+  if (!empty($imperfect_return)) {
+    return $imperfect_return;
+  }
+  return $catch_all;
 }
 
 /*

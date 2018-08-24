@@ -5162,7 +5162,7 @@ function sidora_ajax_parts($call_type, $param1 = '', $param2 = '', $param3 = '')
       $to_return .= '
     <div id="details-tab" class="choosable-tab">
       <img src="'.$GLOBALS['base_url'].'/sidora/info/'.$obj->id.'/meta/TN/browser" style="max-width:190px"/>
-      <iframe style="width:calc(100% - 236);height:calc(100% - 67px);left:220px;position:absolute;" src="'.base_path().'sidora/info/'.$pid.'/meta/sidora_xsl_config_variable/browser/html"></iframe>
+      <iframe style="width:calc(100% - 236px);height:calc(100% - 67px);left:220px;position:absolute;" src="'.base_path().'sidora/info/'.$pid.'/meta/sidora_xsl_config_variable/browser/html"></iframe>
     </div>';
     }
     else {
