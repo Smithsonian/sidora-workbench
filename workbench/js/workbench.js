@@ -4132,7 +4132,11 @@ sidora.util.conceptAddedCompletelyNew = function(parentPid, pidOfNewItem, nidOfN
 	  function(){},
 	  true
     );
-  }  
+  }
+  // Open the folders that we added the new item to (SID-1057)
+  for (var opi = 0; opi < oldParents.length; opi++) {
+    jst.open_node(oldParents[opi]);
+  }
 }
 
 jQuery(function () {
