@@ -1248,7 +1248,7 @@ function sidora_edit_metadata($object_id_string = '', $dsid = '', $form_name = '
     return $to_return;
   }
   $to_return .= '<div id="form-num-'.$resource_count.'" class="sidora-ingest-form-holder">';
-  $to_return .= '<div id="top-panel" class="top-panel" style="left:0; width:100%; height:30px;"></div>';
+
   $sidora_data = sidora_get_form_and_dsid($object_id);
   $dsid = $sidora_data['dsid'];
   $form_name = $sidora_data['form_name'];
@@ -1299,6 +1299,12 @@ function sidora_edit_metadata($object_id_string = '', $dsid = '', $form_name = '
     );
     watchdog('sidora_obj', "Problem with pid: $object_id_string " . $information_string);
   }
+  $download_meta_url = '';
+  if (!empty($available_content)) {
+    $download_meta_url = $GLOBALS['base_url'].'/sidora/info/'.$object_id.'/meta/' . $available_content . '/download';
+    $download_meta_url = l('Download this information as XML', $download_meta_url);
+  }
+  $to_return .= '<div id="top-panel" class="top-panel" style="left:0; width:100%; height:30px;">'.$download_meta_url.'</div>';
   // If the user is not allowed to update it, then don't allow the system to call the submit handlers that would do the updates and do not provide information that would allow user to bypass
   if (!sidora_allow($user,$object_id,'update')) {
     $tform['update']['#submit'] = array();
@@ -1368,11 +1374,6 @@ function sidora_edit_metadata($object_id_string = '', $dsid = '', $form_name = '
   }
   else {
     $to_return .= '<div>'.drupal_render($tform);
-  }
-  $download_meta_url = '';
-  if (!empty($available_content)) {
-    $download_meta_url = $GLOBALS['base_url'].'/sidora/info/'.$object_id.'/meta/' . $available_content . '/download';
-    $download_meta_url = l('Download this information as XML', $download_meta_url);
   }
   $to_return .= '<div id="bottom-panel" class="bottom-panel" style="position:absolute; bottom:0; left:0; width:100%;">'.$download_meta_url.'</div></div>';
   $to_return .= "</div>";
@@ -2606,7 +2607,7 @@ function sidora_create_resource_get_metadata_form_html($parent_pid, $model, $for
   if (count($current_uploads) == 0 || empty($current_uploads)) {
      
   // if no files
-    $to_return .= '<div id="form-num-0" class="sidora-ingest-form-holder"><div id="top-panel" class="top-panel" style="left:0; width:100%; height:30px;"></div>';
+  $to_return .= '<div id="form-num-0" class="sidora-ingest-form-holder"><div id="top-panel" class="top-panel" style="left:0; width:100%; height:30px;"></div>';
   try {
     $page = $tuque->repository->constructObject(islandora_get_namespace('si:root'));
   }catch(Exception $e) {
