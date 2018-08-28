@@ -4248,6 +4248,7 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
         foreach ($resources as $element) {
           if (array_key_exists('object',$element)) {
             $element_pid = $element['object']['value'];
+            $viewer_config = sidora_get_viewer_config($element_pid);
             $tn = '<img src="'.$GLOBALS['base_url'].'/'.drupal_get_path('module','sidora').'/images/mime/default.png" height="30" width="30"/>';
             if (array_key_exists('thumbnail_exists',$element) && $element['thumbnail_exists']) {
               $tn = '<img style="max-height:90px;max-width:150px;" src="../info/'.$element['object']['value'].'/meta/TN/browser" />';
@@ -4284,7 +4285,6 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
               $operations .= '<a href="" onclick="sidora.manage.Open(\'' . $element_pid . '\', \'\', \'Manage Resource\', \'Update resource information\'); return false;" class="sidora-ui-link">Manage</a> ';
             }
             $resource_actions = '';
-            $viewer_config = sidora_get_viewer_config($element_pid);
             if (!empty($viewer_config)){
               $resource_actions .= '<a href="" onclick="sidora.resources.openInNewWindow(\'' . $element_pid . '\'); return false;" class="sidora-ui-link" title="Open in New Window"><i class="material-icons">filter</i></a> ';
             }
@@ -4296,6 +4296,7 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
             $thumbnail_html = '<div ';
             $thumbnail_html .= 'class="sidora-info-holder" ';
             $thumbnail_html .= 'administered-by-pid="'.$element['administeredBy']['value'].'" ';
+            $thumbnail_html .= 'has-viewer="'.(empty($viewer_config)?"0":"1").'" ';
             $thumbnail_html .= 'num-links="'.$element['incomingLinks']['value'].'" ';
             module_load_include('inc', 'sidora', 'includes/project_spaces');
             $thumbnail_html .= 'rspids="' . implode(' ', sidora_get_project_space_pids_for_pid($element_pid)) . '" ';

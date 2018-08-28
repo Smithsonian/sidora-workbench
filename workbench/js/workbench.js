@@ -209,17 +209,19 @@ sidora.concept.addClickEvents = function(){
     jQuery("#res_table td:nth-child(2):not(.sidora-click-added)").click(function(){
       var pid = jQuery(this).parent().attr("id");
       var url = Drupal.settings.basePath+"sidora/resource_viewer/"+pid;
-      Shadowbox.close();
-      setTimeout(function(){
-        Shadowbox.open({
-          content:    url,
-          player:     "iframe",
-          title:      Drupal.t('Resource Viewer'),
-          options: {
-            onFinish:  function(){}
-          }
-        });
-      },100);
+      if (jQuery(this).find(".sidora-info-holder").attr("has-viewer") != "0"){
+        Shadowbox.close();
+        setTimeout(function(){
+          Shadowbox.open({
+            content:    url,
+            player:     "iframe",
+            title:      Drupal.t('Resource Viewer'),
+            options: {
+              onFinish:  function(){}
+            }
+          });
+        },100);
+      }
     }).addClass("sidora-click-added");
 }
 sidora.resources.bulkActionSelectAction = function(){
