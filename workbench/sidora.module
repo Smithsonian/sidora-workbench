@@ -3656,6 +3656,8 @@ function sidora_duplicate_tree_and_resources($pid_of_item_to_duplicate, $project
                   if (!empty($project_space_pid)) {
                     $ps_obj = sidora_obj($project_space_pid);
                     $ps_obj->relationships->add(FEDORA_RELS_EXT_URI, 'managesCodebook', $new_codebook->id);
+                    $new_codebook->relationships->remove(SI_RELS_EXT_URI, 'isAdministeredBy');
+                    $new_codebook->relationships->add(SI_RELS_EXT_URI, 'isAdministeredBy', $project_space_pid);
                   }
                   // Add this to the list of duplicated items, which will allow checking
                   // to not reduplicate and also perform the reassociation of relationships
