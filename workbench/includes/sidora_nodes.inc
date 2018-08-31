@@ -1627,17 +1627,43 @@ function sidora_create_fields_for_fedora_object_nodes(){
     }
   }
 }
-function sidora_check_nodes_in_fedora(){
+/*
+ * Update information from Fedora based on the form data input
+ */
+function sidora_fedora_sync_external() {
+  $node_start = filter_input(INPUT_GET, 'node_start');
+  $number = filter_input(INPUT_GET, 'number');
+  $ms_between_nodes = filter_input(INPUT_GET, 'ms_between_nodes');
+  $output = sidora_check_nodes_in_fedora($node_start, $number, $ms_between_nodes);
+  print json_encode($output);
+  drupal_exit();
+}
+/**
+ * Update nodes from Fedora
+ * $node_start - what node number to start looking from
+ * $number - how many nodes to update
+ * $sleep_ms_between_nodes - how long to sleep between each node updated to allow Fedora to answer other requests during this time: 2000000 is 2 seconds
+ */
+function sidora_check_nodes_in_fedora($node_start = NULL, $number = NULL, $sleep_ms_between_nodes = 0){
+  $update_node_start = FALSE;
+  if ($node_start === NULL) {
+    $update_node_start = TRUE;
+    $node_start = variable_get('sidora_check_node_exist_start','1');
+  }
+  if ($number === NULL) {
+    $number = variable_get('sidora_check_node_exist_limit','1');
+  }
   $to_return = array();
   $all_checked = array();
   $exists = array();
   $not_exists = array();
-  $node_start = variable_get('sidora_check_node_exist_start','1');
-  $number = variable_get('sidora_check_node_exist_limit','1');
   $nodes = sidora_get_concept_nodes_between_node_numbers($node_start, $number);
   // Pull the pids from these nodes, then check for them in the RI
   $final_node = $node_start;
   foreach($nodes as $node) {
+    if (!empty($sleep_ms_between_nodes)){
+      usleep($sleep_ms_between_nodes);
+    }
     $pid = $node->field_fedora_pid[$node->language][0]['value'];
     $obj = sidora_obj($pid);
     if (empty($obj)){
@@ -1654,7 +1680,9 @@ function sidora_check_nodes_in_fedora(){
     $final_node = $node->nid;
   }
   $to_return = array('all' => $all_checked, 'exists' => $exists, 'not_exists' => $not_exists);
-  variable_set('sidora_check_node_exist_start', $final_node + 1);
+  if ($update_node_start) {
+    variable_set('sidora_check_node_exist_start', $final_node + 1);
+  }
   return $to_return;
 }
 /**

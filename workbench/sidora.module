@@ -265,6 +265,14 @@ function sidora_menu() {
       'access arguments' => array('administer site configuration'),
       'type' => MENU_CALLBACK,
    ),
+   'admin/sidora/fedora_sync_external' => array(
+      'title' => 'SIdora / Fedora Drupal node Resynchronization from outside source',
+      'description' => 'Sync a selection of nodes with Fedora',
+      'page callback' => 'sidora_fedora_sync_external',
+      'access arguments' => array('administer site configuration'),
+      'file' => 'includes/sidora_nodes.inc',
+      'type' => MENU_CALLBACK,
+   ),
    'admin/sidora/config_transfer' => array(
       'title' => 'SIdora configuration transfer',
       'description' => 'Save, export, and import SIdora configurations',
