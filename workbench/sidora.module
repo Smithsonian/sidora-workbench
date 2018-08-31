@@ -6339,7 +6339,7 @@ function sidora_html_tree_from_given_pid($root_pid = '', $root = NULL, $num_leve
   $to_return .= " owner='" . $info['obj']->owner . "'";
   if (!empty($info['node']->field_thumbnail)) {
     $to_return .= ' thumbnail_info="' . file_create_url($info['node']->field_thumbnail['und'][0]['uri']) . '"';
-    $root_label = '<div><img src="' .  file_create_url($info['node']->field_thumbnail['und'][0]['uri']) . '"/></div>' . $root_label;
+    $root_label = '<div class="concept-thumbnail"><img src="' .  file_create_url($info['node']->field_thumbnail['und'][0]['uri']) . '"/></div>' . $root_label;
   }
   $to_return .= '>';
   $to_return .= $root_label . $root_suffix;
