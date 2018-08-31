@@ -1256,7 +1256,7 @@ function sidora_edit_metadata($object_id_string = '', $dsid = '', $form_name = '
     return $to_return;
   }
   $to_return .= '<div id="form-num-'.$resource_count.'" class="sidora-ingest-form-holder">';
-  $to_return .= '<div id="top-panel" class="top-panel" style="left:0; width:100%; height:30px;"></div>';
+
   $sidora_data = sidora_get_form_and_dsid($object_id);
   $dsid = $sidora_data['dsid'];
   $form_name = $sidora_data['form_name'];
@@ -1307,6 +1307,12 @@ function sidora_edit_metadata($object_id_string = '', $dsid = '', $form_name = '
     );
     watchdog('sidora_obj', "Problem with pid: $object_id_string " . $information_string);
   }
+  $download_meta_url = '';
+  if (!empty($available_content)) {
+    $download_meta_url = $GLOBALS['base_url'].'/sidora/info/'.$object_id.'/meta/' . $available_content . '/download';
+    $download_meta_url = l('Download this information as XML', $download_meta_url);
+  }
+  $to_return .= '<div id="top-panel" class="top-panel" style="left:0; width:100%; height:30px;">'.$download_meta_url.'</div>';
   // If the user is not allowed to update it, then don't allow the system to call the submit handlers that would do the updates and do not provide information that would allow user to bypass
   if (!sidora_allow($user,$object_id,'update')) {
     $tform['update']['#submit'] = array();
@@ -1376,11 +1382,6 @@ function sidora_edit_metadata($object_id_string = '', $dsid = '', $form_name = '
   }
   else {
     $to_return .= '<div>'.drupal_render($tform);
-  }
-  $download_meta_url = '';
-  if (!empty($available_content)) {
-    $download_meta_url = $GLOBALS['base_url'].'/sidora/info/'.$object_id.'/meta/' . $available_content . '/download';
-    $download_meta_url = l('Download this information as XML', $download_meta_url);
   }
   $to_return .= '<div id="bottom-panel" class="bottom-panel" style="position:absolute; bottom:0; left:0; width:100%;">'.$download_meta_url.'</div></div>';
   $to_return .= "</div>";
@@ -2614,7 +2615,7 @@ function sidora_create_resource_get_metadata_form_html($parent_pid, $model, $for
   if (count($current_uploads) == 0 || empty($current_uploads)) {
      
   // if no files
-    $to_return .= '<div id="form-num-0" class="sidora-ingest-form-holder"><div id="top-panel" class="top-panel" style="left:0; width:100%; height:30px;"></div>';
+  $to_return .= '<div id="form-num-0" class="sidora-ingest-form-holder"><div id="top-panel" class="top-panel" style="left:0; width:100%; height:30px;"></div>';
   try {
     $page = $tuque->repository->constructObject(islandora_get_namespace('si:root'));
   }catch(Exception $e) {
@@ -4258,6 +4259,7 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
         foreach ($resources as $element) {
           if (array_key_exists('object',$element)) {
             $element_pid = $element['object']['value'];
+            $viewer_config = sidora_get_viewer_config($element_pid);
             $tn = '<img src="'.$GLOBALS['base_url'].'/'.drupal_get_path('module','sidora').'/images/mime/default.png" height="30" width="30"/>';
             if (array_key_exists('thumbnail_exists',$element) && $element['thumbnail_exists']) {
               $tn = '<img style="max-height:90px;max-width:150px;" src="../info/'.$element['object']['value'].'/meta/TN/browser" />';
@@ -4294,7 +4296,6 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
               $operations .= '<a href="" onclick="sidora.manage.Open(\'' . $element_pid . '\', \'\', \'Manage Resource\', \'Update resource information\'); return false;" class="sidora-ui-link">Manage</a> ';
             }
             $resource_actions = '';
-            $viewer_config = sidora_get_viewer_config($element_pid);
             if (!empty($viewer_config)){
               $resource_actions .= '<a href="" onclick="sidora.resources.openInNewWindow(\'' . $element_pid . '\'); return false;" class="sidora-ui-link" title="Open in New Window"><i class="material-icons">filter</i></a> ';
             }
@@ -4306,6 +4307,7 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
             $thumbnail_html = '<div ';
             $thumbnail_html .= 'class="sidora-info-holder" ';
             $thumbnail_html .= 'administered-by-pid="'.$element['administeredBy']['value'].'" ';
+            $thumbnail_html .= 'has-viewer="'.(empty($viewer_config)?"0":"1").'" ';
             $thumbnail_html .= 'num-links="'.$element['incomingLinks']['value'].'" ';
             module_load_include('inc', 'sidora', 'includes/project_spaces');
             $thumbnail_html .= 'rspids="' . implode(' ', sidora_get_project_space_pids_for_pid($element_pid)) . '" ';
