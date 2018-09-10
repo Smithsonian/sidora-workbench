@@ -4468,7 +4468,12 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
 
       // SIdora is going to need about 200MB to run
       // and the file needs to be loaded into memory to be downloaded
+      // When there is large amounts of memory available, PHP seems to use too much?
+        // We would like to use $free = shell_exec('free'); but exec is limited on production
       $available_for_file = sidora_get_available_memory() - 200000000;
+      if ($available_for_file > 1000000000){
+        $available_for_file /= 2;
+      }
       // The resizer needs about an additional 30MB plus 2 times the size of file to run
       $available_for_resize = $available_for_file - 30000000 - (2 * filesize($filepath));
       if (!empty($_GET['info'])){
