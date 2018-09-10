@@ -6644,7 +6644,7 @@ plupload.addFileFilter('sidora_max_file_size', function(maxSize, file, cb) {
         "Raw Sequence" : "xml",
         "Assembled Sequence" : "fastq,fq,fasta,fa,fas,fsn,fna,faa"
       }],
-      sidora_max_file_size : 5368709120, // 5GB
+      sidora_max_file_size : 1073741824, //= 1GB, 5368709120 = 5GB
       mime_types: [
         {title : "';
   print implode(",",$elements['#extensions']) . ' files';
