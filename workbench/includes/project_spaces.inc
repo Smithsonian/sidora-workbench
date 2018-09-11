@@ -893,12 +893,12 @@ function sidora_maintain_codebooks_when_linking_resource_to_new_project_space($r
           // Manager of the new codebook is the research space the tabular data got copied into
           $ps_obj = sidora_obj($new_ps_pid);
           $ps_obj->relationships->add(FEDORA_RELS_EXT_URI, 'managesCodebook', $new_codebook->id);
-          // Add the relationship of the duplicated codebook to the copied ("linked") object
-          // So this means this object will point to DOUBLE the original number of codebooks if
-          // the target research space doesn't already own the codebooks. Copying ("linking")
-          // back and forth will continue duplicating codebooks on each link.
-          // Use unassociate to remove unneeded linkages before copying ("linking") back and forth
+          // codebooks are administseredBy the project space that manages it
+          $new_codebook->relationships->remove(SI_RELS_EXT_URI, 'isAdministeredBy');
+          $new_codebook->relationships->add(SI_RELS_EXT_URI, 'isAdministeredBy', $ps_obj->id);
           $object = sidora_obj($resource_pid);
+          // Always remove the codebooks, only one codebook allowed per tabular object 
+          $object->relationships->remove(FEDORA_RELS_EXT_URI, 'hasCodebook');
           $object->relationships->add(FEDORA_RELS_EXT_URI, 'hasCodebook', $new_codebook->id);
         }
       }

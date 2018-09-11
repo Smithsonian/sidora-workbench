@@ -6119,6 +6119,8 @@ function sidora_copy($copy_to_id, $pid, $show_output = TRUE) {
     }
   }
   elseif ($is_codebook) {
+    // A resource cannot have multiple codebooks, this codebook overwrites the old one
+    $copy_to->relationships->remove(FEDORA_RELS_EXT_URI, 'hasCodebook');
     $copy_to->relationships->add(FEDORA_RELS_EXT_URI, 'hasCodebook', $pid);
   }
   else {
