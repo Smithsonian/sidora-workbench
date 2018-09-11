@@ -896,6 +896,7 @@ function sidora_maintain_codebooks_when_linking_resource_to_new_project_space($r
           // codebooks are administseredBy the project space that manages it
           $new_codebook->relationships->remove(SI_RELS_EXT_URI, 'isAdministeredBy');
           $new_codebook->relationships->add(SI_RELS_EXT_URI, 'isAdministeredBy', $ps_obj->id);
+          $new_codebook->owner = $ps_obj->owner;
           $object = sidora_obj($resource_pid);
           // Always remove the codebooks, only one codebook allowed per tabular object 
           $object->relationships->remove(FEDORA_RELS_EXT_URI, 'hasCodebook');
