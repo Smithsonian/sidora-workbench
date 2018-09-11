@@ -2572,6 +2572,49 @@ function sidora_is_create_resource_codebook_choice_completed($model) {
   return $ask_for_codebook;
 }
 
+function sidora_is_displayable_within_display_params($filepath){
+      // SIdora is going to need about 200MB to run
+      // and the file needs to be loaded into memory to be downloaded
+      // When there is large amounts of memory available, PHP seems to use too much?
+        // We would like to use $free = shell_exec('free'); but exec is limited on production
+      $available_for_file = sidora_get_available_memory() - 200000000;
+      if ($available_for_file > 1000000000){
+        $available_for_file /= 2;
+      }
+      // The resizer needs about an additional 30MB plus 2 times the size of file to run
+      $available_for_resize = $available_for_file - 30000000 - (2 * filesize($filepath));
+      if (!empty($_GET['info'])){
+        print "Total memory: ";
+        var_dump(sidora_get_available_memory());
+        print "Available for file load: ";
+        var_dump($available_for_file);
+        print "File size::::::::::::::: ";
+        var_dump(filesize($filepath));
+        print "Available for resize:::: ";
+        var_dump($available_for_resize);
+        print "Can this be resized:";
+        var_dump($available_for_resize >= filesize($filepath));
+        print "Can this be shown:";
+        var_dump(!($available_for_file < filesize($filepath)));
+        module_load_include('inc', 'sidora', 'includes/utils');
+        $vmt = sidora_get_viewable_mime_types();
+        $mime_detect = new MimeDetect();
+        $mimeType = $mime_detect->getMimeType($filepath);
+        var_dump($filepath);
+        var_dump($mimeType);
+        drupal_exit();
+      }
+      if (empty(filesize($filepath)) || $available_for_file < filesize($filepath)) {
+        return 0;
+      }
+      else if ($available_for_resize < filesize($filepath)){
+        return 1;
+      }
+      else {
+        return 2;
+      }
+  return 0; 
+}
 /**
  * Use the filename to determine if this can be used once the graphics library converts it to jpg
  * returns TRUE or FALSE;
@@ -2672,7 +2715,13 @@ function sidora_create_resource_get_metadata_form_html($parent_pid, $model, $for
       $to_return .= '"><div id="top-panel" class="top-panel" style="left:0; width:100%; height:30px;"></div>';
       if (!empty($current_uploads[$form_total]) && $at_least_one_pic) {
         $to_return .= "<div class='picHolder' id='picHolder-".$form_total."'>";
-        if (sidora_is_displayable_image_with_convert($current_uploads[$form_total]->filename)) {
+        global $user;
+        $fileinfo = $_SESSION['file_uploads'][$user->uid][$form_total];
+        $filepath = $fileinfo->filepath;
+        if (
+          sidora_is_displayable_image_with_convert($current_uploads[$form_total]->filename) &&
+          sidora_is_displayable_within_display_params($filepath)
+        ) {
           $to_return .= "<img src='".$GLOBALS['base_url']."/sidora/info/".$form_total."/previewUploadedResources' style='max-width:810px'/>";
         }
         else {
@@ -4463,44 +4512,14 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
     case 'previewUploadedResources' :
       // the pid in this case will be the count of current item in the uploaded resources in temp directory
       $fileinfo = $_SESSION['file_uploads'][$user->uid][$pid];
-      $filename = $fileinfo->filename;
       $filepath = $fileinfo->filepath;
-
-      // SIdora is going to need about 200MB to run
-      // and the file needs to be loaded into memory to be downloaded
-      // When there is large amounts of memory available, PHP seems to use too much?
-        // We would like to use $free = shell_exec('free'); but exec is limited on production
-      $available_for_file = sidora_get_available_memory() - 200000000;
-      if ($available_for_file > 1000000000){
-        $available_for_file /= 2;
-      }
-      // The resizer needs about an additional 30MB plus 2 times the size of file to run
-      $available_for_resize = $available_for_file - 30000000 - (2 * filesize($filepath));
-      if (!empty($_GET['info'])){
-        print "Total memory: ";
-        var_dump(sidora_get_available_memory());
-        print "Available for file load: ";
-        var_dump($available_for_file);
-        print "File size::::::::::::::: ";
-        var_dump(filesize($filepath));
-        print "Available for resize:::: ";
-        var_dump($available_for_resize);
-        print "Can this be resized:";
-        var_dump($available_for_resize >= filesize($filepath));
-        module_load_include('inc', 'sidora', 'includes/utils');
-        $vmt = sidora_get_viewable_mime_types();
-        $mime_detect = new MimeDetect();
-        $mimeType = $mime_detect->getMimeType($filepath);
-        var_dump($filepath);
-        var_dump($mimeType);
-        drupal_exit();
-      }
-      if ($available_for_file < filesize($filepath)) {
+      $display_type = sidora_is_displayable_within_display_params($filepath);
+      if ($display_type == 0){
         print t('This file is too large to be downloaded through the workbench. Contact your workbench contact to retrieve this file %email',
           array('%email' => (variable_get('site_admin_email_to', '') != ''?' at ' . variable_get('site_admin_email_to'):''))
         );
       }
-      else if ($available_for_resize < filesize($filepath)){
+      else if ($display_type == 1){
         // Not enough memory for resize, check if this is visible to user
         $mime_detect = new MimeDetect();
         $mimeType = $mime_detect->getMimeType($filepath);
