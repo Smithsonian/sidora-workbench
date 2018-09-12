@@ -2604,7 +2604,8 @@ function sidora_is_displayable_within_display_params($filepath){
         var_dump($mimeType);
         drupal_exit();
       }
-      if (empty(filesize($filepath)) || $available_for_file < filesize($filepath)) {
+      $fs_fp = filesize($filepath);
+      if (empty($fs_fp) || $available_for_file < filesize($filepath)) {
         return 0;
       }
       else if ($available_for_resize < filesize($filepath)){
