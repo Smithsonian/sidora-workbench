@@ -209,17 +209,19 @@ sidora.concept.addClickEvents = function(){
     jQuery("#res_table td:nth-child(2):not(.sidora-click-added)").click(function(){
       var pid = jQuery(this).parent().attr("id");
       var url = Drupal.settings.basePath+"sidora/resource_viewer/"+pid;
-      Shadowbox.close();
-      setTimeout(function(){
-        Shadowbox.open({
-          content:    url,
-          player:     "iframe",
-          title:      Drupal.t('Resource Viewer'),
-          options: {
-            onFinish:  function(){}
-          }
-        });
-      },100);
+      if (jQuery(this).find(".sidora-info-holder").attr("has-viewer") != "0"){
+        Shadowbox.close();
+        setTimeout(function(){
+          Shadowbox.open({
+            content:    url,
+            player:     "iframe",
+            title:      Drupal.t('Resource Viewer'),
+            options: {
+              onFinish:  function(){}
+            }
+          });
+        },100);
+      }
     }).addClass("sidora-click-added");
 }
 sidora.resources.bulkActionSelectAction = function(){
@@ -1147,6 +1149,7 @@ sidora.contextMenu.SetUp = function(){
         if (Drupal.settings.is_admin == "1") {
           items['fedora_reload'] = { name: "Fedora Reload", icon: "arrow-down" }   
           items['fedora_reload_tree'] = { name: "Fedora Reload All Children", icon: "arrow-down" }   
+          items['unassociate'] = { name: "SIdora Unassociate with this parent", icon: "arrow-down" }   
         }
         $.contextMenu({
             selector: '#fjt-holder .jstree-anchor',  // Everything that will be on the tree
@@ -1248,6 +1251,23 @@ sidora.menuChoice = function(key, pid, treeId){
           console.log(resourceList);
         }
       });
+      return;
+      break;
+    case "unassociate":
+      var jst = jQuery("#forjstree").jstree();
+      var itemName = jst.get_node(treeId).a_attr.fullname;
+      var parentItemName = jst.get_node(jst.get_node(treeId).parent).a_attr.fullname;
+      var parentPid = jst.get_node(jst.get_node(treeId).parent).a_attr.pid;
+      if (confirm("ADMIN: Unassociate '"+itemName+"' pid:"+pid+" with parent '"+parentItemName+"' pid:"+parentPid+"?")){
+        var actionUrl = Drupal.settings.basePath+'sidora/ajax_parts/unassociate/'+parentPid+'/'+pid;
+        jQuery.ajax({
+          url: actionUrl,
+          success: function(resourceList){
+            alert(resourceList);
+          } 
+        });  
+        console.log("CONFIRMED");
+      }
       return;
       break;
   }
@@ -1668,14 +1688,26 @@ sidora.InitiateJSTree = function(){
           if (sidora.util.userConfirmedMove){
             return true;
           }
+          // Return false if you're not allowed to create on the drop target
           if (typeof(dragStatus.ref) == 'undefined') {
-            return false;
-          }
-          if (dragStatus.ref.a_attr.class.split(' ').indexOf("is-project-space") >= 0) {
-            return false;
-          }
-          if (dragStatus.ref.a_attr.permissions.indexOf('c') == -1) {
-            return false;
+            if (typeof(mouseOverObject) == 'undefined') {
+              return false;
+            }
+            else {
+              if (mouseOverObject.a_attr.class.split(' ').indexOf("is-project-space") >= 0) {
+                return false;
+              }
+              if (mouseOverObject.a_attr.permissions.indexOf('c') == -1) {
+                return false;
+              }
+            }
+          } else{
+            if (dragStatus.ref.a_attr.class.split(' ').indexOf("is-project-space") >= 0) {
+              return false;
+            }
+            if (dragStatus.ref.a_attr.permissions.indexOf('c') == -1) {
+              return false;
+            }
           }
           if (dragStatus.core){
             var parentPid = jQuery("#"+mouseOverObject.id).children("a").attr("pid");
@@ -2062,6 +2094,12 @@ sidora.InitiatePage = function(){
     sidora.concept.LoadContent();
   }
   sidora.IsUserSetUp(sidora.continueInit, sidora.doubleCheckUser);
+  // Change the tooltip function to allow html
+  jQuery(document).tooltip({
+    content: function () {
+      return jQuery(this).prop('title');
+    }
+  });
 };
 sidora.ProjectSpaces.isOwned = function() {
   return !jQuery("[pid='"+sidora.ProjectSpaces.currentPid()+"']").hasClass("not-owned");
@@ -2327,6 +2365,7 @@ sidora.resources.performCopyOrMoveFedoraActions = function(action, fromParent, d
     droppedPid = pids[i];
     var userFriendlyName = sidora.display.UNKNOWN_ACTION;
     var pidList = null;
+    var refreshResourceScreen = true;
     if (action != 'copy'){
       pidListForRequest = [fromParent,droppedOn,droppedPid];
       jQuery(jq(pids[i])).addClass("is-being-moved");
@@ -2336,12 +2375,22 @@ sidora.resources.performCopyOrMoveFedoraActions = function(action, fromParent, d
       pidListForRequest = [droppedOn,droppedPid];
       userFriendlyName = sidora.display.COPYING;
       queueAction = 'copyResource';
+      refreshResourceScreen = false;
     }
     userFriendlyName += " <em>"+sidora.util.FriendlyNameDirect(droppedPid)+"</em>";
     userFriendlyName += sidora.display.FROM + " <em>"+sidora.util.FriendlyNameDirect(fromParent)+"</em>";
     userFriendlyName += sidora.display.TO + " <em>"+sidora.util.FriendlyNameDirect(droppedOn)+"</em>";
     var requestUrl = Drupal.settings.basePath+'sidora/ajax_parts/'+action+'/'+droppedOn+'/'+droppedPid;
-    sidora.queue.Request(userFriendlyName, requestUrl, onSuccess, null, pidListForRequest,queueAction,i+' of '+pids.length);
+    sidora.queue.Request(
+      userFriendlyName,
+      requestUrl,
+      onSuccess,
+      null,
+      pidListForRequest,
+      queueAction,
+      i+' of '+pids.length, //requestStat
+      refreshResourceScreen 
+    );
     console.log(userFriendlyName);
   }
   sidora.queue.Next();
@@ -2426,8 +2475,9 @@ sidora.concept.CopyNode = function(data) {
         console.log(exc);
       }
     }, 
-    sidora.util.createFunctionRefreshTree(moveToPid)
-    , [moveToPid,toMovePid],'copyConcept'
+    sidora.util.createFunctionRefreshTree(moveToPid),
+    [moveToPid,toMovePid],
+    'copyConcept'
   );
   sidora.queue.incomingRequestsAreSilent = false;
   sidora.queue.Next();
@@ -2576,6 +2626,7 @@ sidora.CloseIFrame = function(info, typeOfClosure){
  */
 sidora.util.keepUp = function(){
   sidora.concept.addClickEvents();
+  sidora.addAdministeredByTooltips();
   setTimeout(sidora.util.keepUp, 2000); 
 }
 /*
@@ -3722,7 +3773,17 @@ sidora.util.deletePid = function(pidOfInterest, onSuccess, onFailure, action){
   var url = Drupal.settings.basePath+'sidora/ajax_parts/unassociate_delete_orphan/'+unassociateFrom+'/'+pidOfInterest;
   var userFriendlyToastName = "Remove <em>"+sidora.util.FriendlyNameDirect(pidOfInterest);
   userFriendlyToastName += "</em> from <em>"+sidora.util.FriendlyNameDirect(unassociateFrom)+"</em>";
-  sidora.queue.RequestPost(userFriendlyToastName,url,"",onSuccess,onFailure,[pidOfInterest,unassociateFrom],action);
+  sidora.queue.RequestPost(
+    userFriendlyToastName,
+    url,
+    "", //postData
+    onSuccess,
+    onFailure,
+    [pidOfInterest,unassociateFrom],
+    action,
+    "", //requestStat
+    true
+  );
   sidora.queue.Next();
 }
 /*
@@ -3905,7 +3966,15 @@ sidora.manage.OpenCurrentConfig = function(){
           enableKeys: false,
           onFinish:  function(){
             jQuery("#submitObjProperties").click(function(){
-              sidora.queue.RequestPost(userFriendlyToastName+":<em>"+name+"</em> ("+pid+")",Drupal.settings.basePath+"sidora/manage/"+pid+"/save","label="+jQuery("#objPropLabel").val()+"&owner="+jQuery("#objPropOwner").val(),function(){},function(){},pid,'manage');
+              sidora.queue.RequestPost(
+                userFriendlyToastName+":<em>"+name+"</em> ("+pid+")",
+                Drupal.settings.basePath+"sidora/manage/"+pid+"/save",
+                "label="+jQuery("#objPropLabel").val()+"&owner="+jQuery("#objPropOwner").val(),
+                function(){},
+                function(){},
+                pid,
+                'manage'
+              );
               sidora.queue.Next();
             });
             jQuery("#addDatastream").click(function(){
@@ -4132,7 +4201,39 @@ sidora.util.conceptAddedCompletelyNew = function(parentPid, pidOfNewItem, nidOfN
 	  function(){},
 	  true
     );
-  }  
+  }
+  // Open the folders that we added the new item to (SID-1057)
+  for (var opi = 0; opi < oldParents.length; opi++) {
+    jst.open_node(oldParents[opi]);
+  }
+}
+sidora.addAdministeredByTooltips = function(){
+  jQuery("[is-link='TRUE']").filter(function(){
+    if (typeof(jQuery(this).attr("administeredByTooltip")) == 'undefined'){
+      var itemGetLink = this;
+      jQuery.ajax({
+        dataType: "text",
+        url: Drupal.settings.basePath+'sidora/ajax_parts/administeredByTree/'+jQuery(itemGetLink).attr("pid"),
+        success: function(exhibitions){
+          jQuery(itemGetLink).attr("administeredByTooltip","TRUE");
+          jQuery(itemGetLink).attr("title",exhibitions);
+        }
+      });
+    }
+  });
+  jQuery(".link-icon-location").filter(function(){
+    if (typeof(jQuery(this).attr("administeredByTooltip")) == 'undefined'){
+      var itemGetLink = this;
+      jQuery.ajax({
+        dataType: "text",
+        url: Drupal.settings.basePath+'sidora/ajax_parts/administeredByTree/'+jQuery(this).closest("tr").attr("id"),
+        success: function(exhibitions){
+          jQuery(itemGetLink).attr("administeredByTooltip","TRUE");
+          jQuery(itemGetLink).attr("title",exhibitions);
+        }
+      });
+    }
+  });
 }
 
 jQuery(function () {

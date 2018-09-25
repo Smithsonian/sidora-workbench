@@ -11,6 +11,7 @@ SidoraQueue.prototype.requests = [];
 SidoraQueue.prototype.pidsInProcess = [];
 SidoraQueue.prototype.requestInProcess = null;
 SidoraQueue.prototype.incomingRequestsAreSilent = false;
+SidoraQueue.prototype.refreshPageIfShowingProcessPids = true;
 SidoraQueue.prototype.showWarning = function(warning){
   console.log(warning);
 }
@@ -19,22 +20,23 @@ SidoraQueue.prototype.showMessage = function(message){
 }
 /* The action property in Sidora queue request object is used to track the actual 
  * action being performed in the request, instead of deriving it from the 
- * userFriendlyName. The requestStat property is used to track the item count in 
+ * userFriendlyName. 
+ * The requestStat property is used to track the item count in 
  * the current queue, e.g., if there are 3 requests being queued for deleting 
  * 3 resources, the requestStat will contain 0 of 3, 1 of 3,etc.
  * Use cases for action and requestStat: When multiple resources are added, the 
  * last resource added needs to be highlighted and opened in the preview pane.
- * Prior to requestStat, this was done by geting the item count from userFriendlyName.
+ * Prior to requestStat, this was done by getting the item count from userFriendlyName.
  * RequestStat is a more precise way of figuring out if we are processing 
  * the last resource in the queue.
  * Also, when a concept is deleted, the window url needs to change to the parent 
  * pid so Sidora.Concept.LoadContent loads the metadata for the parent pid. The 
  * done funtion of Sidora queue checks the action property to accomplish this functionality.
 */ 
-SidoraQueue.prototype.RequestPost = function(userFriendlyName, ajaxRequestUrl, postData, doneFunction, failFunction, pidsBeingProcessed, action, requestStat){
+SidoraQueue.prototype.RequestPost = function(userFriendlyName, ajaxRequestUrl, postData, doneFunction, failFunction, pidsBeingProcessed, action, requestStat, refreshPageIfShowingProcessPids){
   action = typeof action !== 'undefined' ? action : '';
-	requestStat = typeof requestStat !== 'undefined' ? requestStat : '';
-	console.log("in RequestPost of queue : Requested post '"+userFriendlyName+"' to post to:"+ajaxRequestUrl);
+  requestStat = typeof requestStat !== 'undefined' ? requestStat : '';
+  console.log("in RequestPost of queue : Requested post '"+userFriendlyName+"' to post to:"+ajaxRequestUrl);
   if (typeof(pidsBeingProcessed) == 'string') pidsBeingProcessed = [pidsBeingProcessed];
   if (typeof(doneFunction) == 'undefined' || !jQuery.isFunction(doneFunction)) doneFunction = function(){};
   if (typeof(failFunction) == 'undefined' || !jQuery.isFunction(failFunction)) failFunction = function(){};
@@ -61,7 +63,8 @@ SidoraQueue.prototype.RequestPost = function(userFriendlyName, ajaxRequestUrl, p
     pidsBeingProcessed: pidsBeingProcessed,
     isSilent: this.incomingRequestsAreSilent,
     action: action,
-    requestStat: requestStat
+    requestStat: requestStat,
+    refreshPageIfShowingProcessPids: refreshPageIfShowingProcessPids
   };
   sr.pullFromConfig(sidoraRequestConfig);
   myself.SidoraRequest(sr);
@@ -69,9 +72,9 @@ SidoraQueue.prototype.RequestPost = function(userFriendlyName, ajaxRequestUrl, p
 /*
  * Reminder: Request and RequestPost are handled differently
  */
-SidoraQueue.prototype.Request = function(userFriendlyName, ajaxRequestUrl, doneFunction, failFunction, pidsBeingProcessed, action, requestStat){
+SidoraQueue.prototype.Request = function(userFriendlyName, ajaxRequestUrl, doneFunction, failFunction, pidsBeingProcessed, action, requestStat, refreshPageIfShowingProcessPids){
   action = typeof action !== 'undefined' ? action : '';
-	requestStat = typeof requestStat !== 'undefined' ? requestStat : '';
+  requestStat = typeof requestStat !== 'undefined' ? requestStat : '';
   var myself = this;
   if (typeof(pidsBeingProcessed) == 'string') pidsBeingProcessed = [pidsBeingProcessed];
   if (typeof(doneFunction) == 'undefined' || !jQuery.isFunction(doneFunction)) doneFunction = function(){};
@@ -83,7 +86,7 @@ SidoraQueue.prototype.Request = function(userFriendlyName, ajaxRequestUrl, doneF
   srFailFunction = function(){ 
     failFunction.apply(this,arguments); myself.Fail(this, arguments); myself.requestInProcess = null; myself.Next(); 
   };
-  var sr = (new SidoraRequest(userFriendlyName, ajaxRequestUrl, srDoneFunction, srFailFunction, pidsBeingProcessed,action,requestStat));
+  var sr = (new SidoraRequest(userFriendlyName, ajaxRequestUrl, srDoneFunction, srFailFunction, pidsBeingProcessed,action,requestStat, refreshPageIfShowingProcessPids));
   sr.isSilent = this.incomingRequestsAreSilent;
   myself.SidoraRequest(sr);
 }
@@ -221,7 +224,7 @@ SidoraQueue.prototype.Done = function(completedItem, ajaxReturn){
     jsonString = ajaxReturn;
   }
   try{ jsonData = jQuery.parseJSON(jsonString); } catch (e){
-    if (jsonString.indexOf("<h2 class=\"element-invisible\">Error message</h2")>0){
+    if (jsonString.indexOf("<h2 class=\"element-invisible\">Error message</h2")>-1){
       var toShow = "Did not perform action:"+completedItem.userFriendlyName;
       this.completedFailedRequests.push({pid:completedItem.pidsBeingProcessed[0],form:jsonString});
       if (completedItem.fullObject.userFriendlyName.indexOf("Edit MetaData")>0){
@@ -236,7 +239,12 @@ SidoraQueue.prototype.Done = function(completedItem, ajaxReturn){
       }
       
       return;
-    }  
+    }
+    if (jsonString.indexOf("<!-- SHOW ME -->") > -1) {
+      var message = jsonString.substring(jsonString.indexOf("<!-- SHOW ME -->")+16, jsonString.indexOf("<!-- FINISH -->"));
+      this.NotificationWindow.Show(message, true);
+      return;
+    }
   }
   if (jsonData != null && jsonData.error){
     var toShow = "Did not perform action:"+completedItem.userFriendlyName;
@@ -260,76 +268,76 @@ SidoraQueue.prototype.Done = function(completedItem, ajaxReturn){
       // extract the request id and batch_id and set an interval based function 
       (function poll(requestID,batch_id,timestamp) {
        setTimeout(function(){
-	jQuery.ajax({
+  jQuery.ajax({
         url: Drupal.settings.basePath+"sidora/ajax_parts/check_batch_status/"+requestID+"/"+batch_id+"/",
         type: "GET",
         success: function(batchStatus) {
           if (batchStatus && typeof(batchStatus) != 'string'){
-	    if (batchStatus.status.toLowerCase().indexOf('complete') > -1){
-	      parentPid = batchStatus.parent;
-	      sidora.queue.NotificationWindow.Hide();
-	      console.log('parent pid to refresh is ' + parentPid);
+      if (batchStatus.status.toLowerCase().indexOf('complete') > -1){
+        parentPid = batchStatus.parent;
+        sidora.queue.NotificationWindow.Hide();
+        console.log('parent pid to refresh is ' + parentPid);
               jQuery('#batchMessage').remove();
               jQuery("body").append("<div id='batchMessage' style='display:none;' title='Batch Metadata request status'><div>The batch request started at " + timestamp + " is completed.\n" + batchStatus.message + "</div></div>");
               jQuery("#batchMessage").dialog({
                 modal: true,
-	        height:250,
+          height:250,
                 width: 400,
                 buttons: {
                  Ok: function(){
-		    jQuery( this ).dialog( "close" );
-		 }
-		}
-	      });	 
-	      if (sidora.concept.GetPid() == parentPid){
-		setTimeout(function(){
-	 	sidora.concept.LoadContent();
-		sidora.util.refreshConceptChildrenNumber(parentPid);
+        jQuery( this ).dialog( "close" );
+     }
+    }
+        });  
+        if (sidora.concept.GetPid() == parentPid){
+    setTimeout(function(){
+    sidora.concept.LoadContent();
+    sidora.util.refreshConceptChildrenNumber(parentPid);
                 },5000);
-	      }
-	    }else{
-	      if (batchStatus.status.toLowerCase().indexOf('error') == -1) {
-	        sidora.queue.NotificationWindow.Show("Status for batch request started at " + timestamp + " : " + "<br>" + batchStatus.message,true);
-	        setTimeout(function() {poll(requestID,batch_id,timestamp)}, 6000);
-	      }else{
-	       // Even when the batch status returned an unexpected response, it might still be running in the backend 
-	        parentPid = batchStatus.parent;
-	        batchCount = batchStatus.count;
-                var uiChildResourcesCount = jQuery("[pid='" + parentPid + "']").attr("resourcechildren");
-                var startTime = (new Date()).getTime();				
-		(function poll_concept_for_resource_count(parentPid,ajaxChildResourcesCount) {
-                  setTimeout(function(){
-		    if (((new Date()).getTime() - startTime) < 600000){
-		      jQuery.ajax({
-                        url: Drupal.settings.basePath+'sidora/ajax_parts/get_num_resource_children/'+parentPid,
-                      }).done(function(num_children){
-                         if (num_children > uiChildResourcesCount){
-	                   sidora.queue.NotificationWindow.Show("Status for batch request started at " + timestamp + " : " + "<br>" + (num_children - uiChildResourcesCount) + " resources ingested",true);
-                           if ((num_children - uiChildResourcesCount) < batchCount){
-			     setTimeout(function() {poll_concept_for_resource_count(parentPid,num_children)}, 15000);
-			   }else{
-	                     if (sidora.concept.GetPid() == parentPid){
-		               setTimeout(function(){
-	 	                 sidora.concept.LoadContent();
-		                 sidora.util.refreshConceptChildrenNumber(parentPid);
-                               },5000);
-			     }
-			   }
-			 }else{
-			   setTimeout(function() {poll_concept_for_resource_count(parentPid,num_children)}, 15000);
-			 }
-		       });
-		     }else{
-		       if (ajaxChildResourcesCount == uiChildResourcesCount){
-			 sidora.queue.NotificationWindow.Show("Status for batch request started at " + timestamp + " returned an error : " + "<br>" + batchStatus.message,true);
-	                 console.log(batchStatus.message);
-		       }
-		     }
-		   },15000); 
-		})(parentPid,uiChildResourcesCount);
-	      }
-	    }
-	  }
+        }
+      }else{
+        if (batchStatus.status.toLowerCase().indexOf('error') == -1) {
+          sidora.queue.NotificationWindow.Show("Status for batch request started at " + timestamp + " : " + "<br>" + batchStatus.message,true);
+          setTimeout(function() {poll(requestID,batch_id,timestamp)}, 6000);
+        }else{
+         // Even when the batch status returned an unexpected response, it might still be running in the backend 
+          parentPid = batchStatus.parent;
+          batchCount = batchStatus.count;
+          var uiChildResourcesCount = jQuery("[pid='" + parentPid + "']").attr("resourcechildren");
+          var startTime = (new Date()).getTime();       
+          (function poll_concept_for_resource_count(parentPid,ajaxChildResourcesCount) {
+            setTimeout(function(){
+            if (((new Date()).getTime() - startTime) < 600000){
+              jQuery.ajax({
+                url: Drupal.settings.basePath+'sidora/ajax_parts/get_num_resource_children/'+parentPid,
+              }).done(function(num_children){
+                if (num_children > uiChildResourcesCount){
+                  sidora.queue.NotificationWindow.Show("Status for batch request started at " + timestamp + " : " + "<br>" + (num_children - uiChildResourcesCount) + " resources ingested",true);
+                  if ((num_children - uiChildResourcesCount) < batchCount){
+                    setTimeout(function() {poll_concept_for_resource_count(parentPid,num_children)}, 15000);
+                  }else{
+                    if (sidora.concept.GetPid() == parentPid){
+                      setTimeout(function(){
+                        sidora.concept.LoadContent();
+                        sidora.util.refreshConceptChildrenNumber(parentPid);
+                      },5000);
+                    }
+                  }
+                }else{
+                  setTimeout(function() {poll_concept_for_resource_count(parentPid,num_children)}, 15000);
+                }
+              });
+            }else{
+              if (ajaxChildResourcesCount == uiChildResourcesCount){
+                sidora.queue.NotificationWindow.Show("Status for batch request started at " + timestamp + " returned an error : " + "<br>" + batchStatus.message,true);
+                console.log(batchStatus.message);
+              }
+            }
+          },15000); 
+        })(parentPid,uiChildResourcesCount);
+        }
+      }
+    }
         },
        dataType: "json",
        //timeout: 5000
@@ -339,8 +347,8 @@ SidoraQueue.prototype.Done = function(completedItem, ajaxReturn){
     }else{
       if (Drupal.settings.site_admin_email != "") site_admin = " at " + Drupal.settings.site_admin_email;
         this.NotificationWindow.Show('The batch ingest request could not be submitted to backend for processing. Contact site administrator' + site_admin,true);
-	console.log(jsonData.status+jsonData.message);
-    }				
+  console.log(jsonData.status+jsonData.message);
+    }       
   }else{  
     if (!completedItem.isSilent) this.NotificationWindow.Show(completedItem.userFriendlyName);
     var processedItemCount = completedItem.requestStat;
@@ -400,10 +408,13 @@ SidoraQueue.prototype.Done = function(completedItem, ajaxReturn){
             }
           }
         } //Ends processedItemCount != ''
-      }else if (sidora.resources.IsOnScreen(completedItem.pidsBeingProcessed[i])){
+      }else if (
+        completedItem.refreshPageIfShowingProcessPids && 
+        sidora.resources.IsOnScreen(completedItem.pidsBeingProcessed[i])
+      ){
         sidora.concept.LoadContent();
       } 
-		}	
+    } 
     }
   }
   console.log("done function of queue:"+completedItem.userFriendlyName);

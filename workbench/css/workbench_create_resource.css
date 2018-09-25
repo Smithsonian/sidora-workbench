@@ -31,7 +31,7 @@ body.toolbar {padding-top: 0px;}
 	float: right;
 }
 .picHolder {
-	overflow: scroll;
+	overflow: auto;
 	width: 50%;
 	float: left;
 }

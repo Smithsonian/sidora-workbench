@@ -265,6 +265,14 @@ function sidora_menu() {
       'access arguments' => array('administer site configuration'),
       'type' => MENU_CALLBACK,
    ),
+   'admin/sidora/fedora_sync_external' => array(
+      'title' => 'SIdora / Fedora Drupal node Resynchronization from outside source',
+      'description' => 'Sync a selection of nodes with Fedora',
+      'page callback' => 'sidora_fedora_sync_external',
+      'access arguments' => array('administer site configuration'),
+      'file' => 'includes/sidora_nodes.inc',
+      'type' => MENU_CALLBACK,
+   ),
    'admin/sidora/config_transfer' => array(
       'title' => 'SIdora configuration transfer',
       'description' => 'Save, export, and import SIdora configurations',
@@ -468,7 +476,7 @@ function sidora_direct_jpg_output($content, $output_to_browser = TRUE) {
   }
   else {
     if (!$output_to_browser) return FALSE;
-    print t('There is no available view for this content');
+    print t('There is no viewer available view for this content');
   }
   drupal_exit();
 }
@@ -824,6 +832,10 @@ function sidora_islandora_object_modified(AbstractObject $object) {
  * Implements hook_islandora_datastream_modified
  */
 function sidora_islandora_datastream_modified(AbstractObject $object, AbstractDatastream $datastream) {
+//print "++++++++++++++++++++++++";
+//var_dump($object->id);
+//var_dump($datastream[0]);
+//print "========================";
   module_load_include('inc', 'sidora', 'includes/utils');
   // Assume that any update that occurs to a datastream that is of type xml but is not one of the "main" types is the proper type for
   // metadata to be complete.  The more formal way to do this would be:
@@ -1244,7 +1256,7 @@ function sidora_edit_metadata($object_id_string = '', $dsid = '', $form_name = '
     return $to_return;
   }
   $to_return .= '<div id="form-num-'.$resource_count.'" class="sidora-ingest-form-holder">';
-  $to_return .= '<div id="top-panel" class="top-panel" style="left:0; width:100%; height:30px;"></div>';
+
   $sidora_data = sidora_get_form_and_dsid($object_id);
   $dsid = $sidora_data['dsid'];
   $form_name = $sidora_data['form_name'];
@@ -1259,6 +1271,7 @@ function sidora_edit_metadata($object_id_string = '', $dsid = '', $form_name = '
     }
   }
   if (empty($association)) {
+    print "<div style='padding:20px;'>";
     print "The form is not configured correctly.  The form specified is not associated to this model. Error:A2<br/>";
     print "If this is a legacy item, please ensure there is an association between the form you want to use with one of the models listed here.<br/>";
     print "pid:$object_id_string<br/>";
@@ -1266,8 +1279,40 @@ function sidora_edit_metadata($object_id_string = '', $dsid = '', $form_name = '
     print "form:$form_name<br/>";
     print "models:";
     var_dump($object->models);
+    print "</div>";
+    return "";
   }
-  $tform = drupal_get_form('xml_form_builder_datastream_form_metadata_form',$object,$association);
+  try{
+    $available_content = FALSE;
+    foreach ($object as $dsid_loop=>$datastream_loop) {
+      if ($dsid_loop == $association['dsid']) {
+        $available_content = $association['dsid'];
+      }
+    }
+    $tform = drupal_get_form('xml_form_builder_datastream_form_metadata_form',$object,$association);
+  }catch(Exception $exc){
+    
+    print '<!-- SHOW ME -->';
+    print 'The form for: '.$object->label.' could not be saved. ';
+    print t('Please contact the site administrator %email',
+      array('%email' => (variable_get('site_admin_email_to', '') != ''?' at ' . variable_get('site_admin_email_to'):''))
+    );
+    print '<!-- FINISH -->';
+    $information_string = t("Likely issue: XML in the dsid: '%dsid' is does not match the form: '%form_name'",
+      array('%dsid' => $dsid, '%form_name' => $form_name)
+    );
+    sidora_add_fedora_assumption_problem_object(
+      $object_id_string,
+      $information_string
+    );
+    watchdog('sidora_obj', "Problem with pid: $object_id_string " . $information_string);
+  }
+  $download_meta_url = '';
+  if (!empty($available_content)) {
+    $download_meta_url = $GLOBALS['base_url'].'/sidora/info/'.$object_id.'/meta/' . $available_content . '/download';
+    $download_meta_url = l('Download this information as XML', $download_meta_url);
+  }
+  $to_return .= '<div id="top-panel" class="top-panel" style="left:0; width:100%; height:30px;">'.$download_meta_url.'</div>';
   // If the user is not allowed to update it, then don't allow the system to call the submit handlers that would do the updates and do not provide information that would allow user to bypass
   if (!sidora_allow($user,$object_id,'update')) {
     $tform['update']['#submit'] = array();
@@ -1338,7 +1383,7 @@ function sidora_edit_metadata($object_id_string = '', $dsid = '', $form_name = '
   else {
     $to_return .= '<div>'.drupal_render($tform);
   }
-  $to_return .= '<div id="bottom-panel" class="bottom-panel" style="position:absolute; bottom:0; left:0; width:100%;"></div></div>';
+  $to_return .= '<div id="bottom-panel" class="bottom-panel" style="position:absolute; bottom:0; left:0; width:100%;">'.$download_meta_url.'</div></div>';
   $to_return .= "</div>";
 }
 
@@ -1843,6 +1888,15 @@ function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $ex
     return t("You must be an administrator or have an administrator set sidora_allow_all_to_debug in order to access this information");
   }
   if (!sidora_is_admin()) print t("Remember that nonadmins will NOT see output from dsm!");
+  if ($one == 'put_in_rs'){
+    $pid = $two;
+    module_load_include('inc', 'sidora', 'includes/project_spaces');
+    sidora_put_into_proper_project_space($pid);
+    return 'complete';
+  }
+  if ($one == 'memory'){
+    return "" . (sidora_get_available_memory());
+  }
   if ($one == 'check_nodes_in_fedora'){
     $checker = sidora_check_nodes_in_fedora();
     dpm($checker);
@@ -1894,11 +1948,71 @@ function sidora_testing($one = 'one', $two = 'two', $parent_pid = 'si:root', $ex
     }
     return 'session';
   }
+  if ($one == 'administeredByCrumbtrail') {
+
+  }
   //This ends the testing function and should also indicate the end of liberal use of the dsm function
 }
-
+function sidora_short_admin_by_tree($pid) {
+  $object_values_build = ' <info:fedora/' . $pid . '>';
+  $query = 'select ?object ?adminBy ?adminByT ?adminByT2 ?adminT3 ?title ?titleT ?titleT2 ?titleT3 from <#ri> where {
+    ?object <http://oris.si.edu/2017/01/relations#isAdministeredBy> ?adminBy .
+               ?adminBy <info:fedora/fedora-system:def/model#label> ?title .
+    OPTIONAL { ?adminBy <http://oris.si.edu/2017/01/relations#isAdministeredBy>  ?adminByT .
+               ?adminByT <info:fedora/fedora-system:def/model#label> ?titleT .
+      OPTIONAL { ?adminByT <http://oris.si.edu/2017/01/relations#isAdministeredBy>  ?adminByT2 .
+                 ?adminByT2 <info:fedora/fedora-system:def/model#label> ?titleT2 .
+        OPTIONAL { ?adminByT2 <http://oris.si.edu/2017/01/relations#isAdministeredBy>  ?adminByT3 .
+                   ?adminByT3 <info:fedora/fedora-system:def/model#label> ?titleT3 .
+        }
+      } 
+    }
+    VALUES ?object { ' . $object_values_build . '}
+  }';
+  $results = sidora_direct_query($query);
+  $return = "This object does not have an administering parent";
+  $start = "";
+  $end = "";
+  foreach($results as $result) {
+    $return = "";
+    $start .= "<ul><li pid='".$result['adminBy']['value']."'>";
+    $start .=  $result['title']['value'];
+    $start .=  '</li>';
+    if (!empty($result['adminByT']['value'])) {
+      $start =  "<ul><li pid='".$result['adminByT']['value']."'>" . $result['titleT']['value'] . "</li>" . $start;
+      if (!empty($result['adminByT2']['value'])) {
+        $start = "<ul><li pid='".$result['adminByT2']['value']."'>" . $result['titleT2']['value'] . "</li>" . $start;
+        if (!empty($result['adminByT3']['value'])) {
+          $start = "<ul><li pid='".$result['adminByT3']['value']."'>" . $result['titleT3']['value'] . "</li>" . $start;
+          $end .= '</ul>';
+        }
+        $end .= '</ul>';
+      }
+      $end .= '</ul>';
+    }
+    $end .= '</ul>';
+    $return = $start . $end;
+  }
+  return $return;
+}
+function sidora_direct_query($query) {
+  $tuque = islandora_get_tuque_connection();
+  $results = NULL;
+  if ($tuque) {
+    try{
+      $ri = $tuque->repository->ri;
+      $results = $ri->sparqlQuery($query);
+      //var_dump($results);
+    }catch(Exception $e){
+      var_dump($e);
+    }
+  }
+  else {
+   print 'no tuque';
+  }
+  return $results;
+}
 function sidora_flatten_tree($branch, &$rows,$visibility_settings,$path) {
-  //var_dump($branch);
   if (isset($branch) && sizeof($branch) && !empty($branch)) {
     $resource_visibility_settings = array('show_name','show_meta','show_preview','allow_download','show_degraded');
     $concept_visibility_settings = array('show_name','show_meta','future_children_show_name','future_children_show_meta','future_children_show_preview','future_children_allow_download','future_children_show_degraded');
@@ -1991,6 +2105,7 @@ function sidora_create_concept($parent_pid = 'si:root', $model = 'si:collectionC
   $to_return = drupal_render($form);
   drupal_add_css(drupal_get_path('module','sidora').'/css/workbench_metadata_screens.css',array('weight' => '1000000', 'group' => CSS_THEME));
   drupal_add_js(drupal_get_path('module','sidora').'/js/workbench_metadata_screens.js',array('weight' => '1000000', 'group' => JS_THEME));
+  drupal_add_js(drupal_get_path('module','sidora').'/js/drupal_ajax_fix.js',array('weight' => '1000000', 'group' => JS_THEME));
   drupal_add_js(drupal_get_path('module','sidora').'/js/workbench_util.js',array('weight' => '1000000', 'group' => JS_THEME));
   sidora_clear_tree_cache($parent_pid);
   return $to_return;
@@ -2179,52 +2294,52 @@ function sidora_process_batch_submit($form,&$form_state) {
 </sidora>';
     file_put_contents('public://' . 'sidora_' . $batch_id . '.xml',$sidora_xml);
     $post_params = array(
-   'resourceFileList' => str_replace('https://','http://',file_create_url('public://' . '/files_' . $batch_id . '.xml')),
-   'ds_metadata' => str_replace('https://','http://',file_create_url('public://' . '/batch_' . $batch_id . '.xml')),
-   'ds_sidora' => str_replace('https://','http://',file_create_url('public://' . '/sidora_' . $batch_id . '.xml')),
-   'resourceOwner' => $user->name,
-   'association' => str_replace('https://','http://',file_create_url('public://' . '/association_' . $batch_id . '.xml'))
-   );
-  $get_params = '';
-  if ($association['content_model'] == 'si:datasetCModel') {
-    $get_params = '?codebookPID=' . $user->data['recent_codebook_id'];
-  }
-  $batch_url = variable_get('sidora_batch_ingest_url', '') . '/' . $id_to_creation_info[$form_build_id]['parent'] . $get_params;
-  watchdog('Sidora_debug',t("Sending Bulk metadata Curl to:<br/> %curl_url",
+     'resourceFileList' => str_replace('https://','http://',file_create_url('public://' . '/files_' . $batch_id . '.xml')),
+     'ds_metadata' => str_replace('https://','http://',file_create_url('public://' . '/batch_' . $batch_id . '.xml')),
+     'ds_sidora' => str_replace('https://','http://',file_create_url('public://' . '/sidora_' . $batch_id . '.xml')),
+     'resourceOwner' => $user->name,
+     'association' => str_replace('https://','http://',file_create_url('public://' . '/association_' . $batch_id . '.xml'))
+    );
+    $get_params = '';
+    if ($association['content_model'] == 'si:datasetCModel') {
+      $get_params = '?codebookPID=' . $user->data['recent_codebook_id'];
+     }
+     $batch_url = variable_get('sidora_batch_ingest_url', '') . '/' . $id_to_creation_info[$form_build_id]['parent'] . $get_params;
+     watchdog('Sidora_debug',t("Sending Bulk metadata Curl to:<br/> %curl_url",
                 array('%curl_url' => $batch_url))
                 );
-  $ingest_response = sidora_ingest_request($batch_url,$post_params);
+     $ingest_response = sidora_ingest_request($batch_url,$post_params);
         // save the curl request id to session along with the parent concept
-  if (strpos($ingest_response,'</CorrelationID>') !== false) {
-    $doc = new DOMDocument();
-    $doc->loadXML($ingest_response);
-    $parent_pid_from_response = $doc->getElementsByTagName('ParentPID')->item(0)->nodeValue;
-    if ((!empty($parent_pid_from_response)) && ($parent_pid_from_response == $id_to_creation_info[$form_build_id]['parent'])) {
-      $request_id = (string)$doc->getElementsByTagName('CorrelationID')->item(0)->nodeValue;
-      $session_key = 'sidora_batch_request_'.$batch_id;
-      $_SESSION[$session_key] = array();
-      $_SESSION[$session_key]['request_id'] = $request_id;
-      $_SESSION[$session_key]['batch_id'] = $batch_id;
-      $_SESSION[$session_key]['Parent'] = $id_to_creation_info[$form_build_id]['parent'];
-      $update_query = db_update('sidora_batch_ingest')
-       ->fields(array(
+     if (strpos($ingest_response,'</CorrelationID>') !== false) {
+       $doc = new DOMDocument();
+       $doc->loadXML($ingest_response);
+       $parent_pid_from_response = $doc->getElementsByTagName('ParentPID')->item(0)->nodeValue;
+       if ((!empty($parent_pid_from_response)) && ($parent_pid_from_response == $id_to_creation_info[$form_build_id]['parent'])) {
+         $request_id = (string)$doc->getElementsByTagName('CorrelationID')->item(0)->nodeValue;
+         $session_key = 'sidora_batch_request_'.$batch_id;
+         $_SESSION[$session_key] = array();
+         $_SESSION[$session_key]['request_id'] = $request_id;
+         $_SESSION[$session_key]['batch_id'] = $batch_id;
+         $_SESSION[$session_key]['Parent'] = $id_to_creation_info[$form_build_id]['parent'];
+         $update_query = db_update('sidora_batch_ingest')
+         ->fields(array(
            'status' => 'corelation id received',
            'corelation_id' => $request_id,
          ))
-       ->condition('batch_id', $batch_id, '=');
-      $num_updated = $update_query->execute();
-      $created = db_query("select DATE_FORMAT(Created,'%h:%i:%s') AS Created, count, resource_type from sidora_batch_ingest where batch_id = :batchid", array(':batchid' => $batch_id))->fetchAssoc();
-      print json_encode(array('status' => 'Request for batch ingest successfully received','request_id' => $request_id,'batch_id' => $batch_id,'timestamp' => $created['Created'],'message' => $created['count'] . ' ' . $created['resource_type'] . ' resources'));
-     drupal_exit();
+         ->condition('batch_id', $batch_id, '=');
+         $num_updated = $update_query->execute();
+         $created = db_query("select DATE_FORMAT(Created,'%h:%i:%s') AS Created, count, resource_type from sidora_batch_ingest where batch_id = :batchid", array(':batchid' => $batch_id))->fetchAssoc();
+         print json_encode(array('status' => 'Request for batch ingest successfully received','request_id' => $request_id,'batch_id' => $batch_id,'timestamp' => $created['Created'],'message' => $created['count'] . ' ' . $created['resource_type'] . ' resources'));
+         drupal_exit();
+      }
    }
  }
-}
 
-watchdog('Sidora_debug',t("Bulk metadata Curl response trimmed :<br/> %curl_response",
+  watchdog('Sidora_debug',t("Bulk metadata Curl response trimmed :<br/> %curl_response",
                 array('%curl_response' => substr($ingest_response,0,1024)))
                 );
-print json_encode(array('status' => 'Error in submitting batch ingest request to the backend', 'message' => $ingest_response));
-drupal_exit();
+  print json_encode(array('status' => 'Error in submitting batch ingest request to the backend', 'message' => $ingest_response));
+  drupal_exit();
 }
 
 /**
@@ -2457,6 +2572,50 @@ function sidora_is_create_resource_codebook_choice_completed($model) {
   return $ask_for_codebook;
 }
 
+function sidora_is_displayable_within_display_params($filepath){
+      // SIdora is going to need about 200MB to run
+      // and the file needs to be loaded into memory to be downloaded
+      // When there is large amounts of memory available, PHP seems to use too much?
+        // We would like to use $free = shell_exec('free'); but exec is limited on production
+      $available_for_file = sidora_get_available_memory() - 200000000;
+      if ($available_for_file > 1000000000){
+        $available_for_file /= 2;
+      }
+      // The resizer needs about an additional 30MB plus 2 times the size of file to run
+      $available_for_resize = $available_for_file - 30000000 - (2 * filesize($filepath));
+      if (!empty($_GET['info'])){
+        print "Total memory: ";
+        var_dump(sidora_get_available_memory());
+        print "Available for file load: ";
+        var_dump($available_for_file);
+        print "File size::::::::::::::: ";
+        var_dump(filesize($filepath));
+        print "Available for resize:::: ";
+        var_dump($available_for_resize);
+        print "Can this be resized:";
+        var_dump($available_for_resize >= filesize($filepath));
+        print "Can this be shown:";
+        var_dump(!($available_for_file < filesize($filepath)));
+        module_load_include('inc', 'sidora', 'includes/utils');
+        $vmt = sidora_get_viewable_mime_types();
+        $mime_detect = new MimeDetect();
+        $mimeType = $mime_detect->getMimeType($filepath);
+        var_dump($filepath);
+        var_dump($mimeType);
+        drupal_exit();
+      }
+      $fs_fp = filesize($filepath);
+      if (empty($fs_fp) || $available_for_file < filesize($filepath)) {
+        return 0;
+      }
+      else if ($available_for_resize < filesize($filepath)){
+        return 1;
+      }
+      else {
+        return 2;
+      }
+  return 0; 
+}
 /**
  * Use the filename to determine if this can be used once the graphics library converts it to jpg
  * returns TRUE or FALSE;
@@ -2500,7 +2659,7 @@ function sidora_create_resource_get_metadata_form_html($parent_pid, $model, $for
   if (count($current_uploads) == 0 || empty($current_uploads)) {
      
   // if no files
-    $to_return .= '<div id="form-num-0" class="sidora-ingest-form-holder"><div id="top-panel" class="top-panel" style="left:0; width:100%; height:30px;"></div>';
+  $to_return .= '<div id="form-num-0" class="sidora-ingest-form-holder"><div id="top-panel" class="top-panel" style="left:0; width:100%; height:30px;"></div>';
   try {
     $page = $tuque->repository->constructObject(islandora_get_namespace('si:root'));
   }catch(Exception $e) {
@@ -2557,8 +2716,14 @@ function sidora_create_resource_get_metadata_form_html($parent_pid, $model, $for
       $to_return .= '"><div id="top-panel" class="top-panel" style="left:0; width:100%; height:30px;"></div>';
       if (!empty($current_uploads[$form_total]) && $at_least_one_pic) {
         $to_return .= "<div class='picHolder' id='picHolder-".$form_total."'>";
-        if (sidora_is_displayable_image_with_convert($current_uploads[$form_total]->filename)) {
-          $to_return .= "<img src='".$GLOBALS['base_url']."/sidora/info/".$form_total."/previewUploadedResources'/>";
+        global $user;
+        $fileinfo = $_SESSION['file_uploads'][$user->uid][$form_total];
+        $filepath = $fileinfo->filepath;
+        if (
+          sidora_is_displayable_image_with_convert($current_uploads[$form_total]->filename) &&
+          sidora_is_displayable_within_display_params($filepath)
+        ) {
+          $to_return .= "<img src='".$GLOBALS['base_url']."/sidora/info/".$form_total."/previewUploadedResources' style='max-width:810px'/>";
         }
         else {
           $to_return .= $current_uploads[$form_total]->filename.' is not displayable at this time.';
@@ -3152,6 +3317,7 @@ jQuery(document).ready(function() {
   drupal_add_css(drupal_get_path('module','sidora').'/css/workbench_create_resource.css',array('weight' => '1000000', 'group' => CSS_THEME));
   drupal_add_js(drupal_get_path('module','sidora').'/js/workbench_util.js',array('weight' => '1000000', 'group' => JS_THEME));
   drupal_add_js(drupal_get_path('module','sidora').'/js/workbench_uploader.js',array('weight' => '1000000', 'group' => JS_THEME));
+  drupal_add_js(drupal_get_path('module','sidora').'/js/drupal_ajax_fix.js',array('weight' => '1000000', 'group' => JS_THEME));
   sidora_clear_tree_cache($parent_pid);
   return $to_return;
 }
@@ -3308,7 +3474,11 @@ function sidora_allow($user_pid_or_drupal_user, $pid_or_fedora_object, $type_of_
   }
 
   //Update the node information if it's out of sync with Fedora
-  if (!sidora_is_node_synced_with_fedora($node)) {
+  $is_synced = sidora_is_node_synced_with_fedora($node);
+//var_dump($is_synced);
+  if (!$is_synced) {
+//print 'Node not synced with fedora:';
+//var_dump($node);
     sidora_update_node_from_fedora($node);
   }
  
@@ -3545,6 +3715,8 @@ function sidora_duplicate_tree_and_resources($pid_of_item_to_duplicate, $project
                   if (!empty($project_space_pid)) {
                     $ps_obj = sidora_obj($project_space_pid);
                     $ps_obj->relationships->add(FEDORA_RELS_EXT_URI, 'managesCodebook', $new_codebook->id);
+                    $new_codebook->relationships->remove(SI_RELS_EXT_URI, 'isAdministeredBy');
+                    $new_codebook->relationships->add(SI_RELS_EXT_URI, 'isAdministeredBy', $project_space_pid);
                   }
                   // Add this to the list of duplicated items, which will allow checking
                   // to not reduplicate and also perform the reassociation of relationships
@@ -3963,7 +4135,7 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
       $info = sidora_get_info($pid);
       print '<span>Research Space Information</span>';
       print '<table class="ps-detail"><tr><td>Owner</td><td>' . $info['obj']->owner . '</td></tr></table>';
-      $groups = sidora_get_groups_for_project_space($pid);
+      $groups = sidora_get_groups_for_project_space($pid, TRUE);
       print '<table class="ps-detail"><tr><td>Editors</td><td>';
       foreach($groups as $group) {
         if (sidora_get_sidora_group_type($group) == 'edit') {
@@ -3977,7 +4149,6 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
       }
       print '</td></tr></table>';
       print '</span>';
-      //var_dump($mem_to_group);
       break;
     case 'meta':
       module_load_include('inc', 'sidora', 'includes/utils');
@@ -4018,6 +4189,15 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
             }
           }
           elseif ($dsid_loop == $specific_meta) {
+            // SIdora is going to need about 200MB to run
+            // and the file needs to be loaded into memory to be downloaded
+            $available_for_file = sidora_get_available_memory() - 200000000;
+            if ($available_for_file < $datastream_loop->size) {
+              return t('This file is too large to be downloaded through the workbench. Contact your workbench contact to retrieve this file %email',
+                array('%email' => (variable_get('site_admin_email_to', '') != ''?' at ' . variable_get('site_admin_email_to'):''))
+              );
+
+            }
             $datastream_content = $datastream_loop->content;
             $datastream = $datastream_loop;
           }
@@ -4129,6 +4309,7 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
         foreach ($resources as $element) {
           if (array_key_exists('object',$element)) {
             $element_pid = $element['object']['value'];
+            $viewer_config = sidora_get_viewer_config($element_pid);
             $tn = '<img src="'.$GLOBALS['base_url'].'/'.drupal_get_path('module','sidora').'/images/mime/default.png" height="30" width="30"/>';
             if (array_key_exists('thumbnail_exists',$element) && $element['thumbnail_exists']) {
               $tn = '<img style="max-height:90px;max-width:150px;" src="../info/'.$element['object']['value'].'/meta/TN/browser" />';
@@ -4164,7 +4345,10 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
               $operations .= '<br/>';
               $operations .= '<a href="" onclick="sidora.manage.Open(\'' . $element_pid . '\', \'\', \'Manage Resource\', \'Update resource information\'); return false;" class="sidora-ui-link">Manage</a> ';
             }
-            $resource_actions = '<a href="" onclick="sidora.resources.openInNewWindow(\'' . $element_pid . '\'); return false;" class="sidora-ui-link" title="Open in New Window"><i class="material-icons">filter</i></a> ';
+            $resource_actions = '';
+            if (!empty($viewer_config)){
+              $resource_actions .= '<a href="" onclick="sidora.resources.openInNewWindow(\'' . $element_pid . '\'); return false;" class="sidora-ui-link" title="Open in New Window"><i class="material-icons">filter</i></a> ';
+            }
             $resource_actions .= '<a href="" onclick="sidora.resources.download(\'' . $element_pid . '\'); return false;" class="sidora-ui-link" title="Download"><i class="material-icons">file_download</i></a> ';
             if ($permissions['d']) {
               $resource_actions .= '<a href="" onclick="sidora.resources.DeleteResource(\'' . $element_pid . '\'); return false;" class="sidora-ui-link" title="Delete"><i class="material-icons">delete</i></a>';
@@ -4173,6 +4357,7 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
             $thumbnail_html = '<div ';
             $thumbnail_html .= 'class="sidora-info-holder" ';
             $thumbnail_html .= 'administered-by-pid="'.$element['administeredBy']['value'].'" ';
+            $thumbnail_html .= 'has-viewer="'.(empty($viewer_config)?"0":"1").'" ';
             $thumbnail_html .= 'num-links="'.$element['incomingLinks']['value'].'" ';
             module_load_include('inc', 'sidora', 'includes/project_spaces');
             $thumbnail_html .= 'rspids="' . implode(' ', sidora_get_project_space_pids_for_pid($element_pid)) . '" ';
@@ -4328,11 +4513,32 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
     case 'previewUploadedResources' :
       // the pid in this case will be the count of current item in the uploaded resources in temp directory
       $fileinfo = $_SESSION['file_uploads'][$user->uid][$pid];
-      $filename = $fileinfo->filename;
       $filepath = $fileinfo->filepath;
-      $handle = fopen($filepath, "r");
-      $contents = fread($handle, filesize($filepath));
-      sidora_direct_jpg_output($contents);
+      $display_type = sidora_is_displayable_within_display_params($filepath);
+      if ($display_type == 0){
+        print t('This file is too large to be downloaded through the workbench. Contact your workbench contact to retrieve this file %email',
+          array('%email' => (variable_get('site_admin_email_to', '') != ''?' at ' . variable_get('site_admin_email_to'):''))
+        );
+      }
+      else if ($display_type == 1){
+        // Not enough memory for resize, check if this is visible to user
+        $mime_detect = new MimeDetect();
+        $mimeType = $mime_detect->getMimeType($filepath);
+        $vmt = sidora_get_viewable_mime_types();
+        if (in_array($mimeType, $vmt)) {
+          header("Content-type: " . $mimeType);
+          header('Expires: 0');
+          header('Cache-Control: must-revalidate');
+          header('Pragma: public');
+          header('Content-Length: ' . filesize($filepath));
+          readfile($filepath);
+        }
+      }
+      else {
+        $handle = fopen($filepath, "r");
+        $contents = fread($handle, filesize($filepath));
+        sidora_direct_jpg_output($contents);
+      }
       drupal_exit();
       break;
     case 'upload2':
@@ -4387,6 +4593,7 @@ function sidora_get_content_model_names() {
  *   object in any way
  */
 function sidora_obj($pid) {
+//var_dump("sidora_obj: $pid");
   module_load_include('inc', 'sidora', 'includes/utils');
   $object = array();
   $tuque = islandora_get_tuque_connection();
@@ -4911,6 +5118,13 @@ function sidora_duplicate($destination, $to_duplicate, $show_output = TRUE) {
  */
 function sidora_ajax_parts($call_type, $param1 = '', $param2 = '', $param3 = '') {
   global $user;
+  if ($call_type == 'administeredByTree'){
+    $pid = $param1;
+    if (sidora_allow(NULL, $pid, 'view')){
+      print sidora_short_admin_by_tree($pid);
+      drupal_exit();
+    }
+  }
   if ($call_type == 'create_ps' && sidora_is_admin()){
     module_load_include('inc', 'sidora', 'includes/project_spaces');
     module_load_include('inc', 'islandora', 'includes/utilities');
@@ -5162,7 +5376,7 @@ function sidora_ajax_parts($call_type, $param1 = '', $param2 = '', $param3 = '')
       $to_return .= '
     <div id="details-tab" class="choosable-tab">
       <img src="'.$GLOBALS['base_url'].'/sidora/info/'.$obj->id.'/meta/TN/browser" style="max-width:190px"/>
-      <iframe style="width:calc(100% - 236);height:calc(100% - 67px);left:220px;position:absolute;" src="'.base_path().'sidora/info/'.$pid.'/meta/sidora_xsl_config_variable/browser/html"></iframe>
+      <iframe style="width:calc(100% - 236px);height:calc(100% - 67px);left:220px;position:absolute;" src="'.base_path().'sidora/info/'.$pid.'/meta/sidora_xsl_config_variable/browser/html"></iframe>
     </div>';
     }
     else {
@@ -5531,8 +5745,6 @@ function sidora_move($move_from_id, $copy_to_id, $pid, $show_output = TRUE) {
   }
   module_load_include('inc', 'sidora', 'includes/utils');
   $owning_pid = sidora_get_owning_parent_concept_pid_by_administered_pid($pid);
-  $reassign_owner = ($owning_pid == $move_from_id);
-
   
   $copied = sidora_copy($copy_to_id, $pid, FALSE);
   sidora_release_lock($copy_to_id);
@@ -5553,11 +5765,11 @@ function sidora_move($move_from_id, $copy_to_id, $pid, $show_output = TRUE) {
   //   Remove the relationship
   //   Do the copy & unassociate
   //   Attach the relationship to the pid where it was copied
-  if ($reassign_owner) {
-    $object = sidora_obj($pid);
-    $object->relationships->remove(SI_RELS_EXT_URI, 'isAdministeredBy', $move_from_id);
-    $object->relationships->add(SI_RELS_EXT_URI, 'isAdministeredBy', $copy_to_id);
-  }
+  $object = sidora_obj($pid);
+  // Repair broken isAdministeredBy by removing all isAdministeredBy
+  $object->relationships->remove(SI_RELS_EXT_URI, 'isAdministeredBy');
+  $object->relationships->add(SI_RELS_EXT_URI, 'isAdministeredBy', $copy_to_id);
+
   $unassociated = sidora_unassociate($move_from_id, $pid, FALSE);
   sidora_release_lock($copy_to_id);
   sidora_release_lock($move_from_id);
@@ -5927,6 +6139,8 @@ function sidora_copy($copy_to_id, $pid, $show_output = TRUE) {
     }
   }
   elseif ($is_codebook) {
+    // A resource cannot have multiple codebooks, this codebook overwrites the old one
+    $copy_to->relationships->remove(FEDORA_RELS_EXT_URI, 'hasCodebook');
     $copy_to->relationships->add(FEDORA_RELS_EXT_URI, 'hasCodebook', $pid);
   }
   else {
@@ -6152,7 +6366,7 @@ function sidora_html_tree_from_given_pid($root_pid = '', $root = NULL, $num_leve
   $to_return .= " owner='" . $info['obj']->owner . "'";
   if (!empty($info['node']->field_thumbnail)) {
     $to_return .= ' thumbnail_info="' . file_create_url($info['node']->field_thumbnail['und'][0]['uri']) . '"';
-    $root_label = '<div><img src="' .  file_create_url($info['node']->field_thumbnail['und'][0]['uri']) . '"/></div>' . $root_label;
+    $root_label = '<div class="concept-thumbnail"><img src="' .  file_create_url($info['node']->field_thumbnail['und'][0]['uri']) . '"/></div>' . $root_label;
   }
   $to_return .= '>';
   $to_return .= $root_label . $root_suffix;
@@ -6369,6 +6583,24 @@ function sidora_get_plupload_html($elements, $button_text = 'Browse'){
     runtimesBrowserSpecific = "html5,html4";
   }';
               if ($elements['#extensions'][0] == '*') {
+// Need to change the error message from max_file_size, so add our own instead of using theirs
+                print "
+plupload.addFileFilter('sidora_max_file_size', function(maxSize, file, cb) {
+  var undef;
+ 
+  // Invalid file size
+  if (file.size !== undef && maxSize && file.size > maxSize) {
+    this.trigger('Error', {
+      code : plupload.FILE_SIZE_ERROR,
+      message : plupload.translate('File is too large.'),
+      file : file
+    });
+    cb(false);
+  } else {
+    cb(true);
+  }
+});
+";
                 print '
   plupload.addFileFilter("information_extensions", function(filter, file, cb){
     var self = this;
@@ -6439,7 +6671,7 @@ function sidora_get_plupload_html($elements, $button_text = 'Browse'){
         "Raw Sequence" : "xml",
         "Assembled Sequence" : "fastq,fq,fasta,fa,fas,fsn,fna,faa"
       }],
-      max_file_size : "5gb",
+      sidora_max_file_size : 1073741824, //= 1GB, 5368709120 = 5GB
       mime_types: [
         {title : "';
   print implode(",",$elements['#extensions']) . ' files';
@@ -6750,6 +6982,11 @@ function sidora_cron() {
       '%n' => (sizeof($to_be_removed) - sizeof($deleted_files)),
       '%t' => (sizeof($to_be_removed)),
     ))
+  );
+  $checker = sidora_check_nodes_in_fedora();
+  watchdog(
+    'sidora_workbench',
+    json_encode($checker)
   );
 }
 
@@ -8814,4 +9051,29 @@ function sidora_get_nested_title_field($field_array,$parent_array) {
     return (drupal_array_get_nested_value($parent_array,$field_array));
   }
   return;
+}
+function sidora_get_available_memory(){
+  $memory_limit = _sidora_return_bytes(ini_get('memory_limit'));
+  return $memory_limit;
+}
+/**
+* Converts shorthand memory notation value to bytes
+* From http://php.net/manual/en/function.ini-get.php
+*
+* @param $val Memory size shorthand notation string
+*/
+function _sidora_return_bytes($val) {
+    $val = trim($val);
+    $last = strtolower($val[strlen($val)-1]);
+    $val = substr($val, 0, -1);
+    switch($last) {
+        // The 'G' modifier is available since PHP 5.1.0
+        case 'g':
+            $val *= 1024;
+        case 'm':
+            $val *= 1024;
+        case 'k':
+            $val *= 1024;
+    }
+    return $val;
 }
