@@ -4561,7 +4561,7 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
 }
 function sidora_get_resource_types() {
   return array(
-    'all' => array('si:imageCModel', 'si:generalImageCModel','si:fieldbookCModel','si:datasetCModel','islandora:sp-audioCModel','islandora:sp_videoCModel','si:genericCModel','si:rawGeneSequenceCModel','si:assembledGeneSequenceCModel'),
+    'all' => array('si:proteomicsCModel', 'si:imageCModel', 'si:generalImageCModel','si:fieldbookCModel','si:datasetCModel','islandora:sp-audioCModel','islandora:sp_videoCModel','si:genericCModel','si:rawGeneSequenceCModel','si:assembledGeneSequenceCModel'),
     'images' => array('si:imageCModel', 'si:generalImageCModel'),
     'pdf' => array('si:fieldbookCModel'),
     'csv' => array('si:datasetCModel'),
