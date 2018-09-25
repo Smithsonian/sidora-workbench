@@ -1,9 +1,12 @@
 SIdora modules for Workbench (sidora module) and Exhibition Configuration for data owners (exhibition_config module).
 
-Version 0.6.2
+Version 0.6.3
 See [here](https://confluence.si.edu/display/SIDKB/Administrators+Knowledge+Base) for more information.
 
-New features:
+0.6.3 features:
+Bug fixes
+
+0.6.2 features:
 Fix moving folder trees to new project spaces
 Fix permissions for codebooks when tabular data is moved between project spaces
 Add ability to delete research spaces
