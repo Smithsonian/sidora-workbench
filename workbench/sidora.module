@@ -4751,7 +4751,7 @@ function sidora_xml_form_builder_get_transforms() {
   // calls an include file to do the actual commands
   // The choice to not use hook_hook_info is to future-protect and not have a mechanic that can go wrong in unexpected ways
   module_load_include('inc', 'sidora', 'includes/sidora_admin_only');
-  return sidora_hook_xml_form_builder_get_self_transforms();
+  return sidora_hook_xml_form_builder_get_transforms();
 }
 
 
