@@ -283,156 +283,156 @@ SidoraQueue.prototype.Done = function(completedItem, ajaxReturn){
         var timestamp = jsonData.timestamp;
         console.log("Request id:"+requestID);
         this.NotificationWindow.Show('Batch Ingest request started at ' + timestamp + ' to ingest ' + jsonData.message + ' is now submitted for processing',true);
-      // extract the request id and batch_id and set an interval based function 
-      (function poll(requestID,batch_id,timestamp) {
-       setTimeout(function(){
-  jQuery.ajax({
-        url: Drupal.settings.basePath+"sidora/ajax_parts/check_batch_status/"+requestID+"/"+batch_id+"/",
-        type: "GET",
-        success: function(batchStatus) {
-          if (batchStatus && typeof(batchStatus) != 'string'){
-      if (batchStatus.status.toLowerCase().indexOf('complete') > -1){
-        parentPid = batchStatus.parent;
-        sidora.queue.NotificationWindow.Hide();
-        console.log('parent pid to refresh is ' + parentPid);
-              jQuery('#batchMessage').remove();
-              jQuery("body").append("<div id='batchMessage' style='display:none;' title='Batch Metadata request status'><div>The batch request started at " + timestamp + " is completed.\n" + batchStatus.message + "</div></div>");
-              jQuery("#batchMessage").dialog({
-                modal: true,
-          height:250,
-                width: 400,
-                buttons: {
-                 Ok: function(){
-        jQuery( this ).dialog( "close" );
-     }
-    }
-        });  
-        if (sidora.concept.GetPid() == parentPid){
-    setTimeout(function(){
-    sidora.concept.LoadContent();
-    sidora.util.refreshConceptChildrenNumber(parentPid);
-                },5000);
-        }
-      }else{
-        if (batchStatus.status.toLowerCase().indexOf('error') == -1) {
-          sidora.queue.NotificationWindow.Show("Status for batch request started at " + timestamp + " : " + "<br>" + batchStatus.message,true);
-          setTimeout(function() {poll(requestID,batch_id,timestamp)}, 6000);
-        }else{
-         // Even when the batch status returned an unexpected response, it might still be running in the backend 
-          parentPid = batchStatus.parent;
-          batchCount = batchStatus.count;
-          var uiChildResourcesCount = jQuery("[pid='" + parentPid + "']").attr("resourcechildren");
-          var startTime = (new Date()).getTime();       
-          (function poll_concept_for_resource_count(parentPid,ajaxChildResourcesCount) {
-            setTimeout(function(){
-            if (((new Date()).getTime() - startTime) < 600000){
-              jQuery.ajax({
-                url: Drupal.settings.basePath+'sidora/ajax_parts/get_num_resource_children/'+parentPid,
-              }).done(function(num_children){
-                if (num_children > uiChildResourcesCount){
-                  sidora.queue.NotificationWindow.Show("Status for batch request started at " + timestamp + " : " + "<br>" + (num_children - uiChildResourcesCount) + " resources ingested",true);
-                  if ((num_children - uiChildResourcesCount) < batchCount){
-                    setTimeout(function() {poll_concept_for_resource_count(parentPid,num_children)}, 15000);
-                  }else{
+        // extract the request id and batch_id and set an interval based function 
+        (function poll(requestID,batch_id,timestamp) {
+          setTimeout(function(){
+            jQuery.ajax({
+              url: Drupal.settings.basePath+"sidora/ajax_parts/check_batch_status/"+requestID+"/"+batch_id+"/",
+              type: "GET",
+              success: function(batchStatus) {
+                if (batchStatus && typeof(batchStatus) != 'string'){
+                  if (batchStatus.status.toLowerCase().indexOf('complete') > -1){
+                    parentPid = batchStatus.parent;
+                    sidora.queue.NotificationWindow.Hide();
+                    console.log('parent pid to refresh is ' + parentPid);
+                    jQuery('#batchMessage').remove();
+                    jQuery("body").append("<div id='batchMessage' style='display:none;' title='Batch Metadata request status'><div>The batch request started at " + timestamp + " is completed.\n" + batchStatus.message + "</div></div>");
+                    jQuery("#batchMessage").dialog({
+                      modal: true,
+                      height:250,
+                      width: 400,
+                      buttons: {
+                        Ok: function(){
+                          jQuery( this ).dialog( "close" );
+                        }
+                      }
+                    });
                     if (sidora.concept.GetPid() == parentPid){
                       setTimeout(function(){
                         sidora.concept.LoadContent();
                         sidora.util.refreshConceptChildrenNumber(parentPid);
                       },5000);
                     }
+                  }else{
+                    if (batchStatus.status.toLowerCase().indexOf('error') == -1) {
+                      sidora.queue.NotificationWindow.Show("Status for batch request started at " + timestamp + " : " + "<br>" + batchStatus.message,true);
+                      setTimeout(function() {poll(requestID,batch_id,timestamp)}, 6000);
+                    }else{
+                     // Even when the batch status returned an unexpected response, it might still be running in the backend 
+                      parentPid = batchStatus.parent;
+                      batchCount = batchStatus.count;
+                      var uiChildResourcesCount = jQuery("[pid='" + parentPid + "']").attr("resourcechildren");
+                      var startTime = (new Date()).getTime();       
+                      (function poll_concept_for_resource_count(parentPid,ajaxChildResourcesCount) {
+                        setTimeout(function(){
+                          if (((new Date()).getTime() - startTime) < 600000){
+                            jQuery.ajax({
+                              url: Drupal.settings.basePath+'sidora/ajax_parts/get_num_resource_children/'+parentPid,
+                            }).done(function(num_children){
+                              if (num_children > uiChildResourcesCount){
+                                sidora.queue.NotificationWindow.Show("Status for batch request started at " + timestamp + " : " + "<br>" + (num_children - uiChildResourcesCount) + " resources ingested",true);
+                                if ((num_children - uiChildResourcesCount) < batchCount){
+                                  setTimeout(function() {poll_concept_for_resource_count(parentPid,num_children)}, 15000);
+                                }else{
+                                  if (sidora.concept.GetPid() == parentPid){
+                                    setTimeout(function(){
+                                      sidora.concept.LoadContent();
+                                      sidora.util.refreshConceptChildrenNumber(parentPid);
+                                    },5000);
+                                  }
+                                }
+                              }else{
+                                setTimeout(function() {poll_concept_for_resource_count(parentPid,num_children)}, 15000);
+                              }
+                            });
+                          }else{
+                            if (ajaxChildResourcesCount == uiChildResourcesCount){
+                              sidora.queue.NotificationWindow.Show("Status for batch request started at " + timestamp + " returned an error : " + "<br>" + batchStatus.message,true);
+                              console.log(batchStatus.message);
+                            }
+                          }
+                        },15000); 
+                      })(parentPid,uiChildResourcesCount);
+                    }
                   }
-                }else{
-                  setTimeout(function() {poll_concept_for_resource_count(parentPid,num_children)}, 15000);
                 }
-              });
-            }else{
-              if (ajaxChildResourcesCount == uiChildResourcesCount){
-                sidora.queue.NotificationWindow.Show("Status for batch request started at " + timestamp + " returned an error : " + "<br>" + batchStatus.message,true);
-                console.log(batchStatus.message);
+              },
+              dataType: "json",
+              //timeout: 5000
+            });
+          },2000);
+        })(requestID,batch_id,timestamp);
+      }else{
+        if (Drupal.settings.site_admin_email != "") site_admin = " at " + Drupal.settings.site_admin_email;
+        this.NotificationWindow.Show('The batch ingest request could not be submitted to backend for processing. Contact site administrator' + site_admin,true);
+        console.log(jsonData.status+jsonData.message);
+      }       
+    }else{
+      if (!completedItem.isSilent) this.NotificationWindow.Show(completedItem.userFriendlyName);
+      var processedItemCount = completedItem.requestStat;
+      var executeOnceOnly = false;
+      for (var i = 0; i < completedItem.pidsBeingProcessed.length; i++){
+        if (sidora.resources.individualPanel.resourceOfInterest != null && sidora.resources.individualPanel.resourceOfInterest.pid == completedItem.pidsBeingProcessed[i]){
+          sidora.resources.individualPanel.LoadRelationships();
+        }
+        if (completedItem.action == 'editMeta' && sidora.util.GetTreeNodesByPid(completedItem.pidsBeingProcessed[i]).length > 0) {
+          var jst = jQuery("#forjstree").jstree();
+          sidora.util.loadTreeSection(completedItem.pidsBeingProcessed[i], null, null, true, jst); 
+        }
+        //Update the tree counts if needed, only valid pids
+        if (completedItem.pidsBeingProcessed.indexOf(":") != -1) {
+          sidora.util.refreshConceptChildrenNumber(completedItem.pidsBeingProcessed[i]);
+        }
+        if (completedItem.pidsBeingProcessed.length == '2') sidora.util.refreshNodeByID(completedItem.pidsBeingProcessed);
+        //If there was an update to the Pid user is currently looking at then anything may have changed.  Reload it.
+        if (sidora.concept.GetPid() == completedItem.pidsBeingProcessed[i]){
+          if ((completedItem.action == 'deleteConcept') && !(executeOnceOnly)){
+            var jst = jQuery("#forjstree").jstree();
+            var parentId = sidora.util.getNodeIdByHref(sidora.util.getParentHref());
+            jQuery("#" + parentId + " a").click();
+            executeOnceOnly = true;
+          }    
+          sidora.concept.LoadContent();
+          //sidora.util.refreshPidInTree(5);
+          if (processedItemCount != ''){
+            var processedResourceCountArray = processedItemCount.split(' of ');
+            if ((processedResourceCountArray.length > 1) && (processedResourceCountArray[0] == processedResourceCountArray[1]-1)){
+              // trying to get the last item of the current queue
+              sidora_util.writeCookie('Drupal.selectResource','1','30');
+              if (sidora_util.readCookie('Drupal.dtFilter') != ''){
+                if (typeof(completedItem.fullObject) != 'undefined' && completedItem.fullObject != null)
+                if (
+                  (completedItem.fullObject.ajaxRequest.data.indexOf('islandora_ingest_form') > -1) &&
+                  (completedItem.fullObject.ajaxRequest.data.indexOf('resource_model') > -1)
+                ){
+                  var rmPattern = new RegExp('&resource_model=(.*)&');
+                  var rmArray = rmPattern.exec(completedItem.fullObject.ajaxRequest.data);
+                  if ((Array.isArray(rmArray))&& (rmArray.length >= 2) && (rmArray[1] != sidora_util.readCookie('Drupal.dtFilter'))){
+                    if (!sidora.util.isConfirmShowing()){
+                      sidora.util.Confirm(
+                        "Resources Filter Warning",
+                        "The resources you just added aren't visible right now because they are filtered out by the current resource filter. Click 'Reset' to if you want to view all resources, or close this window to leave the current filter.",
+                        function(){
+                          sidora_util.writeCookie('Drupal.dtFilter','','30');
+                          jQuery('#sidora-resource-type-dropdown').val('');
+                          sidora.resources.reloadDatatableBasedOnCurrentFilters();
+                        },
+                        function(){},
+                        'Reset'
+                      );
+                    }
+                  }
+                }    
               }
             }
-          },15000); 
-        })(parentPid,uiChildResourcesCount);
-        }
-      }
-    }
-        },
-       dataType: "json",
-       //timeout: 5000
-      });
-     },2000);
-   })(requestID,batch_id,timestamp);
-    }else{
-      if (Drupal.settings.site_admin_email != "") site_admin = " at " + Drupal.settings.site_admin_email;
-        this.NotificationWindow.Show('The batch ingest request could not be submitted to backend for processing. Contact site administrator' + site_admin,true);
-  console.log(jsonData.status+jsonData.message);
-    }       
-  }else{  
-    if (!completedItem.isSilent) this.NotificationWindow.Show(completedItem.userFriendlyName);
-    var processedItemCount = completedItem.requestStat;
-    var executeOnceOnly = false;
-    for (var i = 0; i < completedItem.pidsBeingProcessed.length; i++){
-      if (sidora.resources.individualPanel.resourceOfInterest != null && sidora.resources.individualPanel.resourceOfInterest.pid == completedItem.pidsBeingProcessed[i]){
-        sidora.resources.individualPanel.LoadRelationships();
-      }
-      if (completedItem.action == 'editMeta' && sidora.util.GetTreeNodesByPid(completedItem.pidsBeingProcessed[i]).length > 0) {
-        var jst = jQuery("#forjstree").jstree();
-        sidora.util.loadTreeSection(completedItem.pidsBeingProcessed[i], null, null, true, jst); 
-      }
-      //Update the tree counts if needed, only valid pids
-      if (completedItem.pidsBeingProcessed.indexOf(":") != -1) {
-        sidora.util.refreshConceptChildrenNumber(completedItem.pidsBeingProcessed[i]);
-      }
-      if (completedItem.pidsBeingProcessed.length == '2') sidora.util.refreshNodeByID(completedItem.pidsBeingProcessed);
-      //If there was an update to the Pid user is currently looking at then anything may have changed.  Reload it.
-      if (sidora.concept.GetPid() == completedItem.pidsBeingProcessed[i]){
-        if ((completedItem.action == 'deleteConcept') && !(executeOnceOnly)){
-          var jst = jQuery("#forjstree").jstree();
-          var parentId = sidora.util.getNodeIdByHref(sidora.util.getParentHref());
-          jQuery("#" + parentId + " a").click();
-          executeOnceOnly = true;
-        }    
-        sidora.concept.LoadContent();
-        //sidora.util.refreshPidInTree(5);
-        if (processedItemCount != ''){
-          var processedResourceCountArray = processedItemCount.split(' of ');
-          if ((processedResourceCountArray.length > 1) && (processedResourceCountArray[0] == processedResourceCountArray[1]-1)){
-            // trying to get the last item of the current queue
-            sidora_util.writeCookie('Drupal.selectResource','1','30');
-            if (sidora_util.readCookie('Drupal.dtFilter') != ''){
-              if (typeof(completedItem.fullObject) != 'undefined' && completedItem.fullObject != null)
-              if (
-                (completedItem.fullObject.ajaxRequest.data.indexOf('islandora_ingest_form') > -1) &&
-                (completedItem.fullObject.ajaxRequest.data.indexOf('resource_model') > -1)
-              ){
-                var rmPattern = new RegExp('&resource_model=(.*)&');
-                var rmArray = rmPattern.exec(completedItem.fullObject.ajaxRequest.data);
-                if ((Array.isArray(rmArray))&& (rmArray.length >= 2) && (rmArray[1] != sidora_util.readCookie('Drupal.dtFilter'))){
-                  if (!sidora.util.isConfirmShowing()){
-                    sidora.util.Confirm(
-                      "Resources Filter Warning",
-                      "The resources you just added aren't visible right now because they are filtered out by the current resource filter. Click 'Reset' to if you want to view all resources, or close this window to leave the current filter.",
-                      function(){
-                        sidora_util.writeCookie('Drupal.dtFilter','','30');
-                        jQuery('#sidora-resource-type-dropdown').val('');
-                        sidora.resources.reloadDatatableBasedOnCurrentFilters();
-                      },
-                      function(){},
-                      'Reset'
-                    );
-                  }
-                }
-              }    
-            }
-          }
-        } //Ends processedItemCount != ''
-      }else if (
-        completedItem.refreshPageIfShowingProcessPids && 
-        sidora.resources.IsOnScreen(completedItem.pidsBeingProcessed[i])
-      ){
-        sidora.concept.LoadContent();
+          } //Ends processedItemCount != ''
+        }else if (
+          completedItem.refreshPageIfShowingProcessPids && 
+          sidora.resources.IsOnScreen(completedItem.pidsBeingProcessed[i])
+        ){
+          sidora.concept.LoadContent();
+        } 
       } 
-    } 
     }
   }
   console.log("done function of queue:"+completedItem.userFriendlyName);
