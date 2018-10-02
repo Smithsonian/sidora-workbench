@@ -43,11 +43,29 @@ SidoraQueue.prototype.RequestPost = function(userFriendlyName, ajaxRequestUrl, p
   if (!jQuery.isArray(pidsBeingProcessed)) pidsBeingProcessed = [];
   var sr = new SidoraRequest();
   var myself = this;
-  srDoneFunction = function(){ 
-    doneFunction.apply(this,arguments); myself.Done(sr, arguments); myself.requestInProcess = null; myself.Next();
+  srDoneFunction = function(){
+    try{
+      doneFunction.apply(this,arguments);
+      myself.Done(sr, arguments);
+    }catch(exc){
+      console.log("Exception caught in the ajax success function. The likely source of this is a Firefox NS_ERROR_NOT_INITIALIZED from a setTimeout in the autologout code.");
+      console.log("This likely not a problem if the below error is NS_ERROR_NOT_INITIALIZED:");
+      console.log(exc);
+    }
+    myself.requestInProcess = null;
+    myself.Next();
   };
-  srFailFunction = function(){ 
-    failFunction.apply(this,arguments); myself.Fail(sr, arguments); myself.requestInProcess = null; myself.Next(); 
+  srFailFunction = function(){
+    try{
+      failFunction.apply(this,arguments);
+      myself.Fail(sr, arguments);
+    }catch(exc){
+      console.log("Exception caught in the ajax fail function. The likely source of this is a Firefox NS_ERROR_NOT_INITIALIZED from a setTimeout in the autologout code.");
+      console.log("This likely not a problem if the below error is NS_ERROR_NOT_INITIALIZED:");
+      console.log(exc);
+    }
+    myself.requestInProcess = null;
+    myself.Next(); 
   };
   var ajaxObj = {
     type: "POST",
