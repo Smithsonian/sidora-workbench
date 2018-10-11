@@ -2453,6 +2453,7 @@ function sidora_create_resource_get_upload_form_html($model, $form_name, $ontolo
     'islandora:sp_videoCModel' => array('ogg','mp4','mov','qt', 'm4a', 'm4v', 'avi', 'mkv'),
     'si:rawGeneSequenceCModel' => array('fastq','fq','fasta','fa','fas','fsn','fna','faa'),
     'si:assembledGeneSequenceCModel' => array('fastq','fq','fasta','fa','fas','fsn','fna','faa'),
+    'si:massSpectrometryCModel' => array('*'),
     'si:genericCModel' => array('*'),
     '*' => array('*')
   );
@@ -2478,27 +2479,27 @@ function sidora_create_resource_get_upload_form_html($model, $form_name, $ontolo
         if (!empty($elements)) {
     $to_return .= "<div id='create-resource-upload'>";
     $to_return .= "<div><ul>";
-    if ($elements['#extensions'][0] != '*') {
+    //if ($elements['#extensions'][0] != '*') {
       $to_return .= '<li class="non-bulk">You can upload one or multiple files at a time</li>';
       $to_return .= '<li>';
       $to_return .= 'File types allowed: ' . implode($elements['#extensions'],', ');
       $to_return .= '</li>';
-    }
-    else {
-      $to_return .= '<li>';
-      $to_return .= 'Upload a single file of any type';
-      $to_return .= '</li>';
-    }
+    //}
+    //else {
+    //  $to_return .= '<li>';
+    //  $to_return .= 'Upload a single file of any type';
+    //  $to_return .= '</li>';
+    //}
     $to_return .= "</ul></div>";
     $to_return .= sidora_get_plupload_html($elements, $upload_button_text);
     $to_return .= '<div style="display:inline-block;position:relative">';
     $to_return .= "<input class=\"form-submit\" id=\"Next\" value=\"Add Individual Metadata\" onclick=\"jQuery('#create-resource-upload').hide(); location.reload();\" style='top:0px;position:absolute;'></input>";
-    if ($elements['#extensions'][0] != '*') {
+    //if ($elements['#extensions'][0] != '*') {
       $to_return .= "<div style='position:absolute;left:230px;width:300px;'>";
       $to_return .= "<input class=\"form-submit\" id=\"applyBatch\" value=\"Add Same Metadata to All\" onclick=\"jQuery('#create-resource-upload').hide(); if (window.location.href.indexOf('metabulk') == -1) {window.location.href += '//metabulk';}\" style='margin-bottom:0px;width:200px;'></input>";
       $to_return .= '<div class="non-bulk" style="font-style: italic;font-size: 9px;font-weight: bold;">Metadata entered here will be applied to all resources listed.</div>';
       $to_return .= "</div>";
-    }
+    //}
     // end button holder
     $to_return .= "</div>";
     // end create-resource-upload
@@ -4561,7 +4562,7 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
 }
 function sidora_get_resource_types() {
   return array(
-    'all' => array('si:proteomicsCModel', 'si:imageCModel', 'si:generalImageCModel','si:fieldbookCModel','si:datasetCModel','islandora:sp-audioCModel','islandora:sp_videoCModel','si:genericCModel','si:rawGeneSequenceCModel','si:assembledGeneSequenceCModel'),
+    'all' => array('si:massSpectrometryCModel','si:imageCModel','si:generalImageCModel','si:fieldbookCModel','si:datasetCModel','islandora:sp-audioCModel','islandora:sp_videoCModel','si:genericCModel','si:rawGeneSequenceCModel','si:assembledGeneSequenceCModel'),
     'images' => array('si:imageCModel', 'si:generalImageCModel'),
     'pdf' => array('si:fieldbookCModel'),
     'csv' => array('si:datasetCModel'),
@@ -6529,7 +6530,8 @@ function sidora_get_plupload_html($elements, $button_text = 'Browse'){
   $path_for_remove_icon = base_path() . drupal_get_path('module', 'xml_forms') . '/elements/images/';
   $multi_selection = 'true';
   $drag_and_drop = 'true';
-  if ((strpos(strtoupper($button_text),"OBJ") !== FALSE) || ($elements['#extensions'][0] == '*')) {
+  //if ((strpos(strtoupper($button_text),"OBJ") !== FALSE) || ($elements['#extensions'][0] == '*')) {
+  if (strpos(strtoupper($button_text),"OBJ") !== FALSE) {
     $multi_selection = 'false';
     $drag_and_drop = 'false';
     $button_text = 'Browse';
@@ -6628,7 +6630,8 @@ plupload.addFileFilter('sidora_max_file_size', function(maxSize, file, cb) {
     runtimes : runtimesBrowserSpecific, //No silverlight - gets bad if user does not allow it and it tries to use.
     browse_button : "pickfiles", // you can pass in id...
     container : document.getElementById("container"),'; // ... or DOM Element itself
-    if (($drag_and_drop == 'false') || ($elements['#extensions'][0] == '*')) {
+    //if (($drag_and_drop == 'false') || ($elements['#extensions'][0] == '*')) {
+    if ($drag_and_drop == 'false') {
       print '
               max_files : "1",';
     }
