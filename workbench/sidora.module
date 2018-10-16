@@ -4249,6 +4249,8 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
           header("Content-Disposition: attachment; filename=\"$filename\"");
         }
         if ($formatted == 'html') {
+          // HTML should not have enough data to overflow the memory, feel free to load the full content
+          $datastream_content = $datastream->content;
           $converted = sidora_html_convert_entities($datastream_content);
           // convert all the html entites to xml
           module_load_include('inc', 'sidora', 'includes/xsl_handling');
