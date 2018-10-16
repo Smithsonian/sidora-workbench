@@ -4199,8 +4199,9 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
               );
 
             }
-            $datastream_content = $datastream_loop->content;
+            $datastream_content = TRUE;
             $datastream = $datastream_loop;
+            $content_size = $datastream->size;
           }
         }
         if (empty($datastream_content)) {
@@ -4226,7 +4227,12 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
           header("Content-type: $mime_type");
         }
         if ($download=='download') {
-          $content_size = strlen($datastream_content);
+          if (is_string($datastream_content)){
+            $content_size = strlen($datastream_content);
+          }
+          else {
+            $content_size = $datastream->size;
+          }
           // $filename = $pid.'_'.$specific_meta;//get_suggest_filename($label, $mime_type);
           $filename = $pid.'_'.$specific_meta.$file_extension;//get_suggest_filename($label, $mime_type);
           if ((strtoupper($specific_meta) == 'OBJ') && (strtoupper($datastream->label) != 'OBJ')) {
@@ -4249,7 +4255,45 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
           print '<div class="metadata-table">'.sidora_metadata_to_html_table_transform($converted, $xsl_file).'</div>';
         }
         else {
-          print $datastream_content;
+          if (is_string($datastream_content)){
+            print $datastream_content;
+          }
+          else {
+            $start = 0;
+            $buffer_size = 1024 * 8 * 1000;
+            $chunker_size = $buffer_size;
+            $end = $start + $chunker_size;
+	    module_load_include('inc', 'islandora', 'includes/datastream');
+            $file_uri = islandora_view_datastream_retrieve_file_uri($datastream);
+            while($start < $content_size ){
+              if ($end > $content_size-1){
+                $end = $content_size-1;
+              }
+              $params = array(
+                'start' => $start,
+                'end' => $end,
+              );
+              // The meat of this has been taken from:
+              // http://mobiforge.com/design-development/content-delivery-mobile-devices.
+              $fp = @fopen($file_uri, 'rb');
+              fseek($fp, $params['start']);
+              // Start buffered download.
+              $buffer = $buffer_size; //1024 * 8;
+              while (!feof($fp) && ($p = ftell($fp)) <= $params['end']) {
+                if ($p + $buffer > $params['end']) {
+                  // In case we're only outputting a chunk, make sure we don't read past the
+                  // length.
+                  $buffer = $params['end'] - $p + 1;
+                }
+                // Reset time limit for big files.
+                set_time_limit(0);
+                echo fread($fp, $buffer);
+              }
+              fclose($fp);
+              $start += $chunker_size;
+              $end += $chunker_size;
+            }
+          }
           drupal_exit();
         }
       }
