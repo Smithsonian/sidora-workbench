@@ -249,7 +249,8 @@ window.startBatch = function(){
           function(){},
           ajaxSettings.pidsOfInterest,
           'editMeta',
-          i+' of '+window.batchRequests.length
+          i+' of '+window.batchRequests.length,
+          (type == "Resource")
         );
       }else{
         if (currentInfo.type == 'batchIngest'){
