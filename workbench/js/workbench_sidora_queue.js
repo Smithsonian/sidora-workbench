@@ -35,6 +35,7 @@ SidoraQueue.prototype.showMessage = function(message){
 */ 
 SidoraQueue.prototype.RequestPost = function(userFriendlyName, ajaxRequestUrl, postData, doneFunction, failFunction, pidsBeingProcessed, action, requestStat, refreshPageIfShowingProcessPids){
   action = typeof action !== 'undefined' ? action : '';
+  refreshPageIfShowingProcessPids = typeof refreshPageIfShowingProcessPids !== 'undefined' ? refreshPageIfShowingProcessPids : this.refreshPageIfShowingProcessPids;
   requestStat = typeof requestStat !== 'undefined' ? requestStat : '';
   console.log("in RequestPost of queue : Requested post '"+userFriendlyName+"' to post to:"+ajaxRequestUrl);
   if (typeof(pidsBeingProcessed) == 'string') pidsBeingProcessed = [pidsBeingProcessed];
