@@ -40,6 +40,7 @@ SidoraRequest.prototype.pullFromConfig = function(configObject){
   this.isSilent = this.fullObject.isSilent;
   this.action = this.fullObject.action;
   this.requestStat = this.fullObject.requestStat;
+  this.refreshPageIfShowingProcessPids = this.fullObject.refreshPageIfShowingProcessPids;
 }
 
 SidoraRequest.prototype.performAjax = function(){
