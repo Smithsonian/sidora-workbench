@@ -34,9 +34,10 @@ SidoraQueue.prototype.showMessage = function(message){
  * done funtion of Sidora queue checks the action property to accomplish this functionality.
 */ 
 SidoraQueue.prototype.RequestPost = function(userFriendlyName, ajaxRequestUrl, postData, doneFunction, failFunction, pidsBeingProcessed, action, requestStat, refreshPageIfShowingProcessPids){
-  action = typeof action !== 'undefined' ? action : '';
-  requestStat = typeof requestStat !== 'undefined' ? requestStat : '';
   console.log("in RequestPost of queue : Requested post '"+userFriendlyName+"' to post to:"+ajaxRequestUrl);
+  if (typeof(action) != 'string') action = '';
+  if (typeof(refreshPageIfShowingProcessPids) != 'boolean') refreshPageIfShowingProcessPids = this.refreshPageIfShowingProcessPids;
+  if (typeof(requestStat) !== 'string') requestStat = '';
   if (typeof(pidsBeingProcessed) == 'string') pidsBeingProcessed = [pidsBeingProcessed];
   if (typeof(doneFunction) == 'undefined' || !jQuery.isFunction(doneFunction)) doneFunction = function(){};
   if (typeof(failFunction) == 'undefined' || !jQuery.isFunction(failFunction)) failFunction = function(){};
