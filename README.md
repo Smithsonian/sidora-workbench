@@ -5,7 +5,6 @@ Version 0.6.3
 See [here](https://confluence.si.edu/display/SIDKB/Administrators+Knowledge+Base) for more information.
 
 
-
 0.6.3 features:
 
 Bug fixes
