@@ -2805,14 +2805,15 @@ function sidora_create_resource_get_metadata_form_html($parent_pid, $model, $for
       cache_set("sidora:form_id_to_creation_info",$id_to_creation_info);
       $resource_types = array(
         'si:imageCModel' => 'images',
-  'si:generalImageCModel' => 'images',
+        'si:generalImageCModel' => 'images',
         'si:fieldbookCModel' => 'pdf',
         'si:datasetCModel' => 'csv',
         'islandora:sp-audioCModel' => 'audio',
         'islandora:sp_videoCModel' => 'video',
-              'si:genericCModel' => 'generic',
-              'si:rawGeneSequenceCModel' => 'rawsequence',
-              'si:assembledGeneSequenceCModel' => 'assembledsequence'
+        'si:genericCModel' => 'generic',
+        'si:massSpectrometryCModel' => 'generic',
+        'si:rawGeneSequenceCModel' => 'rawsequence',
+        'si:assembledGeneSequenceCModel' => 'assembledsequence'
       );
       $form['resource_model'] = array(
       '#name' => 'resource_model',
@@ -4414,13 +4415,17 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
               $thumbnail_html .= $linked_resources; 
             }
             $thumbnail_html .= $tn.'</div>';
+            $uploadedFileName = '';
+            if (array_key_exists('DatastreamLabel',$element) && !empty($element['DatastreamLabel'])) {
+              $uploadedFileName = '<br />&nbsp;&nbsp;' .  'File: ' . $element['DatastreamLabel'];
+            }
             $jsdt_data[] = array(
               "DT_RowId"=>$element['object']['value'],
               0=>'<div class="sidora-bulk-action-check">
 <i class="material-icons"><div class="holder"></div></i></div>',
               1=>$thumbnail_html,
               /*$element['m']['value'],*/
-              2=>'<div class="resource-list-label">'.$element['title']['value'].'</div>',
+              2=>'<div class="resource-list-label">'.$element['title']['value'] . $uploadedFileName . '</div>',
               3=>'<div class="">' . $type . '</div>',
               4=>$status_text,
               5=>'<div class="">' . $creation_date['month'] . '/' . $creation_date['day'] . '/' . substr($creation_date['year'],2) . '</div>',
@@ -4737,6 +4742,7 @@ function sidora_concept_resource_listing($pid, $resource_types, $limit, $offset,
           }
           if ($dsid == 'OBJ') {
             $results[$resindex]['MainMimeType'] = $datastream->mimetype;
+            $results[$resindex]['DatastreamLabel'] = $datastream->label;
           }
           if ($dsid == 'RELS-EXT') {
             // Why is this stored in RELS-EXT? Who knows! It's not a relationship, but thats where it sits
@@ -9039,7 +9045,9 @@ function sidora_create_batch_filelist($batch_id,$uploaded_files) {
     $unique_filename = sidora_toAscii($batch_id . '_' . $file->filename);
     if (file_unmanaged_copy($file->filepath, 'public://' . $unique_filename)) {
       $filename_xml = $domtree->createElement('file', str_replace('https://','http://',file_create_url('public://' . '/' . $unique_filename)));
-      $filename_xml = $batch_tag->appendChild($filename_xml);
+      //$filename_xml = $batch_tag->appendChild($filename_xml);
+      $batch_tag->appendChild($filename_xml);
+      $filename_xml->setAttribute("originalname", $file->filename);
       $files[] = array('original' => $file->filename,'ingest' => $unique_filename);
     }
     else {
