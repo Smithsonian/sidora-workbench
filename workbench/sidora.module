@@ -4417,7 +4417,7 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
             $thumbnail_html .= $tn.'</div>';
             $uploadedFileName = '';
             if (array_key_exists('DatastreamLabel',$element) && !empty($element['DatastreamLabel'])) {
-              $uploadedFileName = '<br />' .  'Filename: ' . $element['DatastreamLabel'];
+              $uploadedFileName = '<br />&nbsp;&nbsp;' .  'File: ' . $element['DatastreamLabel'];
             }
             $jsdt_data[] = array(
               "DT_RowId"=>$element['object']['value'],
@@ -9045,7 +9045,9 @@ function sidora_create_batch_filelist($batch_id,$uploaded_files) {
     $unique_filename = sidora_toAscii($batch_id . '_' . $file->filename);
     if (file_unmanaged_copy($file->filepath, 'public://' . $unique_filename)) {
       $filename_xml = $domtree->createElement('file', str_replace('https://','http://',file_create_url('public://' . '/' . $unique_filename)));
-      $filename_xml = $batch_tag->appendChild($filename_xml);
+      //$filename_xml = $batch_tag->appendChild($filename_xml);
+      $batch_tag->appendChild($filename_xml);
+      $filename_xml->setAttribute("originalname", $file->filename);
       $files[] = array('original' => $file->filename,'ingest' => $unique_filename);
     }
     else {
