@@ -7637,6 +7637,7 @@ function sidora_startsWith($haystack, $needle) {
  */
 function sidora_endsWith($haystack, $needle) {
   // search forward starting from end minus needle length characters
+  if (empty($haystack)) return FALSE;
   return $needle === "" || strpos($haystack, $needle, strlen($haystack) - strlen($needle)) !== FALSE;
 }
 
