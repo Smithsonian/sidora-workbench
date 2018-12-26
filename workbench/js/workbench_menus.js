@@ -42,7 +42,6 @@ var resetMenu = function(menuId){
     } 
     */ 
     jQuery(this).parent().css("height",myHeight+"px");
-    jQuery(this).parent().css("width",myWidth+"px");
     event.stopPropagation();
   });
 }
