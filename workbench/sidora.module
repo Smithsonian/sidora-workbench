@@ -4956,6 +4956,7 @@ function sidora_block_view($delta = '') {
   }catch(Exception $e) {
     // TODO BBB
     $block['content'] = 'Tuque down for block:'.$delta;
+    watchdog("sidora",t('Tuque down:'. json_encode($e)));
     return $block;
   }
 }
