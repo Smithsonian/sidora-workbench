@@ -539,7 +539,6 @@ function exhibition_permission_form_submit($form, &$form_state) {
   //$packed = $form['packed']['#value'];
   //$packed_index = 0;
   $visibility_page_keys = exhibition_config_get_visibility_page_keys($root_pid);
-  var_dump($visibility_page_keys);
   for ($vpki = 0; $vpki < sizeof($visibility_page_keys); $vpki++) {
     $visibility_page_key = $visibility_page_keys[$vpki];
     $visibility_array = exhibition_config_get_visibility_page($root_pid, $visibility_page_key);
