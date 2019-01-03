@@ -1,0 +1,9 @@
+name = Sidora eMammal Add-On
+description = eMammal's package to add functionality to SIdora
+core = 7.x
+package = Smithsonian
+dependencies[] = islandora
+dependencies[] = islandora_jwplayer
+dependencies[] = islandora_audio
+dependencies[] = sidora
+configure = admin/sidora_emammal/configure

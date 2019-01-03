@@ -1,0 +1,81 @@
+<?php
+/*
+ * Copyright 2015 Smithsonian Institution.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License.You may obtain a copy of
+ * the License at: http://www.apache.org/licenses/
+ *
+ * This software and accompanying documentation is supplied without
+ * warranty of any kind. The copyright holder and the Smithsonian Institution:
+ * (1) expressly disclaim any warranties, express or implied, including but not
+ * limited to any implied warranties of merchantability, fitness for a
+ * particular purpose, title or non-infringement; (2) do not assume any legal
+ * liability or responsibility for the accuracy, completeness, or usefulness of
+ * the software; (3) do not represent that use of the software would not
+ * infringe privately owned rights; (4) do not warrant that the software
+ * is error-free or will be maintained, supported, updated or enhanced;
+ * (5) will not be liable for any indirect, incidental, consequential special
+ * or punitive damages of any kind or nature, including but not limited to lost
+ * profits or loss of data, on any basis arising from contract, tort or
+ * otherwise, even if any of the parties has been warned of the possibility of
+ * such loss or damage.
+ *
+ *
+ * This distribution includes several third-party libraries, each with their own
+ * license terms. For a complete copy of all copyright and license terms, including
+ * those of third-party libraries, please see the product release notes.
+ */
+
+
+/*
+ * hook_init
+ * run on every drupal call, loads items that the rest of the code needs
+ */
+function sidora_emammal_init() {
+  drupal_add_css(drupal_get_path('module','sidora_emammal') . '/css/sidora_emammal.css', array('weight' => 10000, 'group' => CSS_THEME));
+}
+
+
+/**
+ * Implements hook_help().
+ *
+ * Displays help and module information.
+ *
+ * @param path
+ *   Which path of the site we're using to display help
+ * @param arg
+ *   Array that holds the current path as returned from arg() function
+ */
+function sidora_emammal_help($path, $arg) {
+  switch ($path) {
+    case "admin/help#sidora":
+      $output =  '<p>' . t("Sidora") . '</p>';
+      $output .=  '<p>' . t("Smithsonian Institution's module to allows users to store and share information.") . '</p>';
+      return $output;
+      break;
+  }
+}
+
+/**
+ * Implements hook_menu().
+ */
+function sidora_emammal_menu() {
+  return array(
+    'admin/sidora/concept_review' => array(
+      'title' => 'Concept clean up',
+      'description' => 'Perform certain clean up procedures for concept nodes',
+      'page callback' => 'sidora_concept_node_maintenance',
+      'access arguments' => array('administer site configuration'),
+      'file' => 'includes/sidora_nodes.inc',
+      'type' => MENU_CALLBACK,
+    ),
+  );
+}
+function sidora_emammal_wi(){
+  // Check to see if project already exists
+  // Create project
+}
+function sidora_emammal_wi_init(){
+  // Create organization
+}
