@@ -4250,12 +4250,17 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
           header("Content-Disposition: attachment; filename=\"$filename\"");
         }
         if ($formatted == 'html') {
-          // HTML should not have enough data to overflow the memory, feel free to load the full content
-          $datastream_content = $datastream->content;
-          $converted = sidora_html_convert_entities($datastream_content);
-          // convert all the html entites to xml
-          module_load_include('inc', 'sidora', 'includes/xsl_handling');
-          print '<div class="metadata-table">'.sidora_metadata_to_html_table_transform($converted, $xsl_file).'</div>';
+          if (is_object($datastream)){
+            // HTML should not have enough data to overflow the memory, feel free to load the full content
+            $datastream_content = $datastream->content;
+            $converted = sidora_html_convert_entities($datastream_content);
+            // convert all the html entites to xml
+            module_load_include('inc', 'sidora', 'includes/xsl_handling');
+            print '<div class="metadata-table">'.sidora_metadata_to_html_table_transform($converted, $xsl_file).'</div>';
+          }
+          else {
+            watchdog("SIdora", t("Attempted to view bad datastream:") . json_encode(array($pid, $type, $specific_meta, $download, $formatted, $limit, $offset)));
+          }
         }
         else {
           if (is_string($datastream_content)){
