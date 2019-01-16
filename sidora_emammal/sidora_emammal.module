@@ -62,15 +62,36 @@ function sidora_emammal_help($path, $arg) {
  */
 function sidora_emammal_menu() {
   return array(
-    'admin/sidora/concept_review' => array(
-      'title' => 'Concept clean up',
-      'description' => 'Perform certain clean up procedures for concept nodes',
-      'page callback' => 'sidora_concept_node_maintenance',
+    'admin/sidora_emammal/test' => array(
+      'title' => 'eMammal Administrative test functions',
+      'page callback' => 'sidora_emammal_test',
       'access arguments' => array('administer site configuration'),
-      'file' => 'includes/sidora_nodes.inc',
       'type' => MENU_CALLBACK,
     ),
   );
+}
+function sidora_emammal_test($method = '', $data = ''){
+  switch ($method) {
+    case 'wi_curl':
+      echo '<pre>';
+      $curl_return = sidora_emammal_wi_curl(
+        'https://staging.api.wildlifeinsights.org/v1/auth/sign-in',
+        json_encode(array('email' => 'vizz@info.com', 'password' => '1234')),
+        'POST'
+      );
+      var_dump($curl_return);
+      echo($curl_return);
+      break;
+    case 'token':
+      $token = sidora_emammal_get_wi_token();
+      print($token);
+
+      break;
+    default:
+      echo "No function to test";
+
+  }
+  exit();
 }
 function sidora_emammal_wi(){
   // Check to see if project already exists
@@ -79,3 +100,99 @@ function sidora_emammal_wi(){
 function sidora_emammal_wi_init(){
   // Create organization
 }
+function sidora_emammal_wi_curl($url, $data = '', $method = "POST"){
+var_dump($data);
+  $curl = curl_init();
+  if ($method == 'POST'){
+    curl_setopt($curl, CURLOPT_POST, 1);
+    curl_setopt($curl, CURLOPT_POSTFIELDS, $data);
+    curl_setopt($curl, CURLOPT_HTTPHEADER, array(
+      'Content-Type: application/json',
+      'Content-Length: ' . strlen($data)
+    ));
+  }
+  else {
+    curl_setopt($curl, CURLOPT_HTTPHEADER, array(
+      'Content-Type: application/json',
+    ));
+  }
+  curl_setopt($curl, CURLOPT_URL, $url);
+  curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1);
+  $result = curl_exec($curl);
+  $all_info = curl_getinfo($curl);
+  var_dump($all_info);
+  
+ /* $curl_dump_info = substr(curl_error($curl),0,1024);
+  if (!empty($curl_dump_info)) {
+    watchdog('Sidora_emammal_debug',t("Bulk metadata Curl error:<br/> %curl_dump",
+                array('%curl_dump' => substr(curl_error($curl),0,1024)))
+                );
+  }
+  */
+
+  curl_close($curl);
+  return $result;
+}
+function sidora_emammal_wi_create_project(){
+}
+function sidora_emammal_wi_create_deployment(){
+}
+function sidora_emammal_wi_create_identification_output(){
+}
+function sidora_emammal_wi_create_sequence(){
+}
+function sidora_emammal_wi_create_datafilemetadatavalues(){
+}
+function sidora_emammal_wi_create_organization(){
+}
+function sidora_emammal_islandora_object_ingested(AbstractObject $object) {
+    watchdog('emammal',"1");// . $object['id']);
+}
+function sidora_emammal_islandora_object_modified(AbstractObject $object) {
+    watchdog('emammal',"2");// . $object['id']);
+}
+function sidora_emammal_islandora_datastream_modified(AbstractObject $object, AbstractDatastream $datastream) {
+    watchdog('emammal',"3");// . $datastream['id'] . '---' . $datastream['label']);
+    watchdog('emammal', $datastream->id);
+    watchdog('emammal', $datastream->label);
+}
+function sidora_emammal_islandora_datastream_ingested(AbstractObject $object, AbstractDatastream $datastream) {
+    watchdog('emammal',"4");// . $datastream['id'] . '---' . $datastream['label']);
+    watchdog('emammal', $datastream->id);
+    watchdog('emammal', $datastream->label);
+}
+function sidora_emammal_get_wi_token(){
+  $token = sidora_emammal_get_cache('token');
+  if (empty($token)){
+    $curl_return = sidora_emammal_wi_curl(
+      'https://staging.api.wildlifeinsights.org/v1/auth/sign-in',
+      json_encode(array('email' => 'vizz@info.com', 'password' => '1234')),
+      'POST'
+    );
+    $token_obj = json_decode($curl_return, TRUE);
+    if (empty($token_obj['token'])){
+      watchdog('Sidora_emammal',t("Could not get authentication token from WI"));
+      return "";
+    }
+    $token = $token_obj['token'];
+    // Assume the token will be valid for 12 hours
+    cache_set('sidora_emammal:token', $token, 'cache', time()+12*60*60);
+  }
+  return $token;
+}
+/*
+ * Wrapper for cache getting
+ * @param: key - an arbitrary name given to the cached data
+ * @return: the cached data, but only if not expired
+ */
+function sidora_emammal_get_cache($key = 'token'){
+  $data = NULL;
+  // get cache
+  $cache = cache_get('sidora_emammal:'.$key);
+  if ($cache && (time() < $cache->expire))
+  {
+    $data = $cache->data;
+  }
+  return $data;
+}
+
