@@ -50,8 +50,8 @@ function sidora_emammal_init() {
 function sidora_emammal_help($path, $arg) {
   switch ($path) {
     case "admin/help#sidora":
-      $output =  '<p>' . t("Sidora") . '</p>';
-      $output .=  '<p>' . t("Smithsonian Institution's module to allows users to store and share information.") . '</p>';
+      $output =  '<p>' . t("Sidora eMammal") . '</p>';
+      $output .=  '<p>' . t("Smithsonian Institution's module to integrate eMammal Wildlife Insights with SIdora workbench.") . '</p>';
       return $output;
       break;
   }
@@ -62,6 +62,15 @@ function sidora_emammal_help($path, $arg) {
  */
 function sidora_emammal_menu() {
   return array(
+    'admin/sidora_emammal/configure' => array(
+      'title' => 'Sidora Configuration',
+      'description' => 'Configure the Sidora eMammal Module.',
+      'page callback' => 'drupal_get_form',
+      'page arguments' => array('sidora_emammal_admin_settings'),
+      'access arguments' => array('administer site configuration'),
+      'file' => 'sidora_emammal.admin.inc',
+      'type' => MENU_NORMAL_ITEM,
+    ),
     'admin/sidora_emammal/test' => array(
       'title' => 'eMammal Administrative test functions',
       'page callback' => 'sidora_emammal_test',
@@ -87,6 +96,11 @@ function sidora_emammal_test($method = '', $data = ''){
       print($token);
 
       break;
+    case 'initialize':
+echo 'Start<br>';
+      sidora_emammal_wi_org_init();
+echo '<br>End';
+      break;
     default:
       echo "No function to test";
 
@@ -97,11 +111,70 @@ function sidora_emammal_wi(){
   // Check to see if project already exists
   // Create project
 }
-function sidora_emammal_wi_init(){
-  // Create organization
+function sidora_emammal_get_project_space(){
+  $id = 'si:121909';
+  $emammal_org_obj = sidora_obj($id);
+  if (empty($emammal_org_obj) || ($emammal_org_obj->id != $id)){
+    watchdog("sidora_emammal",t("Could not find emammal object with pid: %pid", array("%pid" => $id)));
+    echo 'eMammal object not found'; 
+    exit();
+  }
+  return $emammal_org_obj;
+}
+/**
+ * Create the organization
+ */
+function sidora_emammal_wi_org_init($emammal_org_obj = NULL){
+  if (empty($emammal_org_obj)){
+    $emammal_org_obj = sidora_emammal_get_project_space();
+  }
+  return sidora_emammal_wi_create($emammal_org_obj, 'organization');
+}
+
+/**
+ * Returns the Wildlife Insights ID
+ * $emammal_obj = the Islandora object to obtain the id from, or the pid
+ * $create_type = the type of object to create for this if the ID is not found, leave empty if no object should be created
+ */
+function sidora_emammal_wi_get_id($emammal_obj, $create_type = NULL){
+  if (is_string($emammal_obj)){
+    $emammal_obj = sidora_obj($emammal_obj);
+  }
+  // See if there is already a Wildlife Insights ID present (Stored in eMammal's SIDORA datastream if it exists)
+  $sidora_ds = $emammal_obj['SIDORA'];
+  $org_id = NULL;
+  $doc = new DOMDocument();
+  if (empty($sidora_ds)){
+    watchdog("sidora_emammal", t("Creating SIdora datastream for object: %pid of type: %type", array("%pid" => $id, '%type' => $create_type)));
+    $docToLoad = ('<?xml version="1.0" encoding="UTF-8"?'.'>'.'<sidora></sidora>');
+    $doc->loadXML($docToLoad);
+  }
+  else {
+    $docToLoad = ('<?xml version="1.0" encoding="UTF-8"?'.'>'.$emammal_obj['SIDORA']->content);
+    $doc->loadXML($docToLoad);
+    $existing_wi_id_nodes = $doc->getElementsByTagName("wi_id");
+    foreach($existing_wi_id_nodes as $exister){
+      $org_id = $exister->nodeValue;
+    }
+  }
+  if (empty($org_id) && !empty($create_type)){
+    // No ID, need to create it if the create type is there
+    $org_id =  sidora_emammal_wi_create($create_type);
+    $node = $doc->createElement('wi_id');
+    $node->nodeValue = $org_id;
+    $sidora_node = $doc->getElementsByTagName('sidora');
+    // If there is a blank wi_id, remove it
+    $existing_wi_id_nodes = $doc->getElementsByTagName("wi_id");
+    foreach($existing_wi_id_nodes as $to_remove){
+      $sidora_node.removeChild($to_remove);
+    }
+    $sidora_node->item(0)->appendChild($node);
+    $new_content =  $doc->saveXML($sidora_node->item(0));
+    $saved = sidora_update_datastream($emammal_obj, $new_content, 'SIDORA', NULL, NULL, 'X');
+  }
+  return $org_id;
 }
 function sidora_emammal_wi_curl($url, $data = '', $method = "POST"){
-var_dump($data);
   $curl = curl_init();
   if ($method == 'POST'){
     curl_setopt($curl, CURLOPT_POST, 1);
@@ -119,19 +192,61 @@ var_dump($data);
   curl_setopt($curl, CURLOPT_URL, $url);
   curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1);
   $result = curl_exec($curl);
-  $all_info = curl_getinfo($curl);
-  var_dump($all_info);
-  
- /* $curl_dump_info = substr(curl_error($curl),0,1024);
-  if (!empty($curl_dump_info)) {
-    watchdog('Sidora_emammal_debug',t("Bulk metadata Curl error:<br/> %curl_dump",
-                array('%curl_dump' => substr(curl_error($curl),0,1024)))
-                );
-  }
-  */
-
+  //$all_info = curl_getinfo($curl);
+  //var_dump($all_info);
   curl_close($curl);
+echo $result;
   return $result;
+}
+/**
+ * Intended to be the main method used to access the api
+ * $call_name - should be the full call including WI IDs ("/project/2345345/deployment/3456543" for a deployment)
+ * $data - full string of data or an object which will be run through json_encode 
+ * $method_override - will be used for PATCH or DELETE instead of POST or GET
+ */
+function sidora_emammal_wi_api_call($call_name, $data = NULL, $method_override = NULL){
+  $method = 'POST';
+  if ($data == NULL){
+    $method = 'GET';
+  }
+  else {
+    if (!is_string($data)){
+      $data = json_encode($data);
+    }
+  }
+  if ($method_override != NULL){
+    $method = $method_override;
+  }
+  $url = variable_get('sidora_emammal_wi_base_url', '') . $call_name;
+  return sidora_emammal_wi_curl($url, $data, $method);
+}
+/**
+ * Helper function to pull out an ID from a wi api call
+ * returns NULL if not found
+ */
+function sidora_emammal_wi_helper_pull_id($data){
+  if (is_string($data)){
+    $data = json_decode($data);
+  }
+  if (is_array($data)){
+    if (empty($data['id'])){
+      return NULL;
+    }
+    return $data['id'];
+  }
+  if (is_object($data)){
+    if (property_exists($data, 'id')){
+      return $data->id;
+    }
+    return NULL;
+  }
+  return NULL;
+}
+function sidora_emammal_wi_create($type){
+  if ($type == 'organization'){
+    return sidora_emammal_wi_create_organization();
+  }
+  return NULL;
 }
 function sidora_emammal_wi_create_project(){
 }
@@ -143,7 +258,42 @@ function sidora_emammal_wi_create_sequence(){
 }
 function sidora_emammal_wi_create_datafilemetadatavalues(){
 }
+function sidora_emammal_wi_get_organization_id(){
+  $cache = cache_get('sidora_emammal:'.$key);
+  if ($cache){
+    $org_id = $cache->data;
+  }
+  else {
+    // Pull the organization from eMammal project space
+    $emammal_org_obj = sidora_emammal_get_project_space();
+    // See if there is already an organization present (Stored in eMammal's SIDORA datastream if it exists)
+    $sidora_ds = $emammal_org_obj['SIDORA'];
+    if (empty($sidora_ds)){
+      watchdog("sidora_emammal", t("Creating SIdora datastream for main emammal object: %pid", array("%pid" => $id)));
+    }
+    echo($emammal_org_obj->id);
+  }
+  return $org_id; 
+}
+/**
+ * Ask the WI API to create an organization based on hard-coded values
+ */
 function sidora_emammal_wi_create_organization(){
+  $data = array(
+    'name' => 'eMammal Wildlife Insights Integration',
+    'streetAddress' => 'unknown', 
+    'city' => 'unknown', 
+    'state' => 'unknown', 
+    'postalCode' => 'unknown', 
+    'phone' => 'unknown', 
+    'email' => 'unknown', 
+    'countryCode' => 'unknown', 
+    'organizationUrl' => 'unknown', 
+    'remarks' => 'unknown', 
+  );
+  $result = sidora_emammal_wi_api_call("organization", $data);
+  $org_id = sidora_emammal_wi_helper_pull_id($result);
+  return $org_id;
 }
 function sidora_emammal_islandora_object_ingested(AbstractObject $object) {
     watchdog('emammal',"1");// . $object['id']);
@@ -164,10 +314,13 @@ function sidora_emammal_islandora_datastream_ingested(AbstractObject $object, Ab
 function sidora_emammal_get_wi_token(){
   $token = sidora_emammal_get_cache('token');
   if (empty($token)){
+    $token_url = variable_get('sidora_emammal_wi_token_url', '');
+    if (empty($token_url)){
+      return "";
+    }
     $curl_return = sidora_emammal_wi_curl(
-      'https://staging.api.wildlifeinsights.org/v1/auth/sign-in',
-      json_encode(array('email' => 'vizz@info.com', 'password' => '1234')),
-      'POST'
+      $token_url, //'https://staging.api.wildlifeinsights.org/v1/auth/sign-in',
+      variable_get('sidora_emammal_wi_sign_in', '')
     );
     $token_obj = json_decode($curl_return, TRUE);
     if (empty($token_obj['token'])){
