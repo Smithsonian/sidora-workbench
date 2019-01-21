@@ -235,6 +235,48 @@ function sidora_emammal_add_wi_id_to_sidora_ds($emammal_obj, $org_id, $subtype =
 }
 
 /**
+ * Returns the WI token if we have one in the cache or creates one and returns it
+ */
+function sidora_emammal_get_wi_token(){
+  $token = sidora_emammal_get_cache('token');
+  if (empty($token)){
+    $token_url = variable_get('sidora_emammal_wi_token_url', '');
+    if (empty($token_url)){
+      return "";
+    }
+    $curl_return = sidora_emammal_wi_curl(
+      $token_url, //'https://staging.api.wildlifeinsights.org/v1/auth/sign-in',
+      variable_get('sidora_emammal_wi_sign_in', '')
+    );
+    $token_obj = json_decode($curl_return, TRUE);
+    if (empty($token_obj['token'])){
+      watchdog('Sidora_emammal',t("Could not get authentication token from WI"));
+      return "";
+    }
+    $token = $token_obj['token'];
+    // Assume the token will be valid for 12 hours
+    cache_set('sidora_emammal:token', $token, 'cache', time()+12*60*60);
+  }
+  return $token;
+}
+
+/*
+ * Wrapper for cache getting
+ * @param: key - an arbitrary name given to the cached data
+ * @return: the cached data, but only if not expired
+ */
+function sidora_emammal_get_cache($key = 'token'){
+  $data = NULL;
+  // get cache
+  $cache = cache_get('sidora_emammal:'.$key);
+  if ($cache && (time() < $cache->expire))
+  {
+    $data = $cache->data;
+  }
+  return $data;
+}
+
+/**
  * Helper method to call the WI API
  */
 function sidora_emammal_wi_curl($url, $data = '', $method = "POST"){
@@ -245,11 +287,29 @@ function sidora_emammal_wi_curl($url, $data = '', $method = "POST"){
     curl_setopt($curl, CURLOPT_HTTPHEADER, array(
       'Content-Type: application/json',
       'Content-Length: ' . strlen($data)
+      'Authorization: Bearer ' . sidora_emammal_get_wi_token(),
     ));
   }
-  else {
+  elseif ($method == 'GET'){
     curl_setopt($curl, CURLOPT_HTTPHEADER, array(
       'Content-Type: application/json',
+      'Authorization: Bearer ' . sidora_emammal_get_wi_token(),
+    ));
+  }
+  elseif ($method == 'DELETE'){
+    curl_setopt($curl, CURLOPT_CUSTOMREQUEST, 'DELETE');
+    curl_setopt($curl, CURLOPT_HTTPHEADER, array(
+      'Content-Type: application/json',
+      'Authorization: Bearer ' . sidora_emammal_get_wi_token(),
+    ));
+  }
+  elseif ($method == 'PATCH'){
+    curl_setopt($curl, CURLOPT_CUSTOMREQUEST, 'PATCH');
+    curl_setopt($curl, CURLOPT_POSTFIELDS, $data);
+    curl_setopt($curl, CURLOPT_HTTPHEADER, array(
+      'Content-Type: application/json',
+      'Content-Length: ' . strlen($data),
+      'Authorization: Bearer ' . sidora_emammal_get_wi_token(),
     ));
   }
   curl_setopt($curl, CURLOPT_URL, $url);
@@ -709,7 +769,9 @@ function sidora_emammal_wi_org_init($emammal_org_obj = NULL){
   return sidora_emammal_wi_create($emammal_org_obj, 'organization');
 }
 
-
+/**
+ * Get the WI organization ID
+ */
 function sidora_emammal_wi_get_organization_id(){
   // Cache the WI organization ID so we don't go get it from Fedora every time
   $key = "org_id";
@@ -907,45 +969,3 @@ function sidora_emammal_check_opt_in_for_wi(AbstractObject $object){
   }
   return FALSE;
 }
-
-/**
- * Returns the WI token if we have one in the cache or creates one and returns it
- */
-function sidora_emammal_get_wi_token(){
-  $token = sidora_emammal_get_cache('token');
-  if (empty($token)){
-    $token_url = variable_get('sidora_emammal_wi_token_url', '');
-    if (empty($token_url)){
-      return "";
-    }
-    $curl_return = sidora_emammal_wi_curl(
-      $token_url, //'https://staging.api.wildlifeinsights.org/v1/auth/sign-in',
-      variable_get('sidora_emammal_wi_sign_in', '')
-    );
-    $token_obj = json_decode($curl_return, TRUE);
-    if (empty($token_obj['token'])){
-      watchdog('Sidora_emammal',t("Could not get authentication token from WI"));
-      return "";
-    }
-    $token = $token_obj['token'];
-    // Assume the token will be valid for 12 hours
-    cache_set('sidora_emammal:token', $token, 'cache', time()+12*60*60);
-  }
-  return $token;
-}
-/*
- * Wrapper for cache getting
- * @param: key - an arbitrary name given to the cached data
- * @return: the cached data, but only if not expired
- */
-function sidora_emammal_get_cache($key = 'token'){
-  $data = NULL;
-  // get cache
-  $cache = cache_get('sidora_emammal:'.$key);
-  if ($cache && (time() < $cache->expire))
-  {
-    $data = $cache->data;
-  }
-  return $data;
-}
-
