@@ -135,32 +135,6 @@ function sidora_emammal_test($method = '', $data = '', $data2 = '', $data3 = '')
 
 
 
-function sidora_emammal_wi(){
-  // Check to see if project already exists
-  // Create project
-}
-function sidora_emammal_get_project_space(){
-  $id = 'si:121909';
-  $emammal_org_obj = sidora_obj($id);
-  if (empty($emammal_org_obj) || ($emammal_org_obj->id != $id)){
-    watchdog("sidora_emammal",t("Could not find emammal object with pid: %pid", array("%pid" => $id)));
-    echo 'eMammal object not found'; 
-    exit();
-  }
-  return $emammal_org_obj;
-}
-
-/**
- * Create the organization
- */
-function sidora_emammal_wi_org_init($emammal_org_obj = NULL){
-  if (empty($emammal_org_obj)){
-    $emammal_org_obj = sidora_emammal_get_project_space();
-  }
-  return sidora_emammal_wi_create($emammal_org_obj, 'organization');
-}
-
-
 /*****************************************************************************
  *****************************************************************************
  *****************************************************************************
@@ -170,7 +144,6 @@ function sidora_emammal_wi_org_init($emammal_org_obj = NULL){
  *****************************************************************************
  *****************************************************************************
  ****************************************************************************/
-
 
 /**
  * Returns the Wildlife Insights ID
@@ -706,11 +679,36 @@ function sidora_emammal_wi_create_datafilemetadatavalues(){
  *****************************************************************************
  *****************************************************************************
  *** WI OBJECT: ORGANIZATION
- *** These functions deal with Organization
+ *** These functions deal with Organization / eMammal Project Space
  *** 
  *****************************************************************************
  *****************************************************************************
  ****************************************************************************/
+
+/**
+ * Return the Project Space object
+ */
+function sidora_emammal_get_project_space(){
+  $id = 'si:121909';
+  $emammal_org_obj = sidora_obj($id);
+  if (empty($emammal_org_obj) || ($emammal_org_obj->id != $id)){
+    watchdog("sidora_emammal",t("Could not find emammal object with pid: %pid", array("%pid" => $id)));
+    echo 'eMammal object not found'; 
+    exit();
+  }
+  return $emammal_org_obj;
+}
+
+/**
+ * Create the organization
+ */
+function sidora_emammal_wi_org_init($emammal_org_obj = NULL){
+  if (empty($emammal_org_obj)){
+    $emammal_org_obj = sidora_emammal_get_project_space();
+  }
+  return sidora_emammal_wi_create($emammal_org_obj, 'organization');
+}
+
 
 function sidora_emammal_wi_get_organization_id(){
   // Cache the WI organization ID so we don't go get it from Fedora every time
@@ -752,7 +750,7 @@ function sidora_emammal_wi_create_organization(){
  *****************************************************************************
  *****************************************************************************
  *** ISLANDORA HOOKS
- *** 
+ *** Islandora hooks and helper functions for the islandora hooks 
  *** 
  *****************************************************************************
  *****************************************************************************
