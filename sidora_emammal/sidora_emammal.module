@@ -27,6 +27,7 @@
  * those of third-party libraries, please see the product release notes.
  */
 
+defined("SIDORA_EMAMMAL_OPT_IN_TAG") or define('SIDORA_EMAMMAL_OPT_IN_TAG',"recordIdOI");
 
 /*
  * hook_init
@@ -79,7 +80,7 @@ function sidora_emammal_menu() {
     ),
   );
 }
-function sidora_emammal_test($method = '', $data = ''){
+function sidora_emammal_test($method = '', $data = '', $data2 = ''){
   switch ($method) {
     case 'wi_curl':
       echo '<pre>';
@@ -97,9 +98,19 @@ function sidora_emammal_test($method = '', $data = ''){
 
       break;
     case 'initialize':
-echo 'Start<br>';
-      sidora_emammal_wi_org_init();
-echo '<br>End';
+      echo 'Start<br>';
+      echo      sidora_emammal_wi_org_init();
+      echo '<br>End';
+      break;
+    case 'createProj':
+      $obj = sidora_obj($data);
+      $wi_id = sidora_emammal_wi_create_project($obj, TRUE); 
+      var_dump($wi_id);
+      break;
+    case 'wi_id':
+      $obj = sidora_obj($data);
+      $wi_id = sidora_emammal_wi_get_id($obj, NULL, $data2);
+      var_dump($wi_id);
       break;
     default:
       echo "No function to test";
@@ -107,6 +118,17 @@ echo '<br>End';
   }
   exit();
 }
+
+
+
+
+
+
+
+
+
+
+
 function sidora_emammal_wi(){
   // Check to see if project already exists
   // Create project
@@ -128,45 +150,64 @@ function sidora_emammal_wi_org_init($emammal_org_obj = NULL){
   if (empty($emammal_org_obj)){
     $emammal_org_obj = sidora_emammal_get_project_space();
   }
-  return sidora_emammal_wi_create($emammal_org_obj, 'organization');
+  return sidora_emammal_wi_create('organization', NULL, $emammal_org_obj);
 }
 
 /**
  * Returns the Wildlife Insights ID
  * $emammal_obj = the Islandora object to obtain the id from, or the pid
  * $create_type = the type of object to create for this if the ID is not found, leave empty if no object should be created
+ * $subtype = the wi_id to return for subtypes, like location for project
  */
-function sidora_emammal_wi_get_id($emammal_obj, $create_type = NULL){
+function sidora_emammal_wi_get_id($emammal_obj, $create_type = NULL, $subtype = ''){
   if (is_string($emammal_obj)){
     $emammal_obj = sidora_obj($emammal_obj);
   }
   // See if there is already a Wildlife Insights ID present (Stored in eMammal's SIDORA datastream if it exists)
   $sidora_ds = $emammal_obj['SIDORA'];
   $org_id = NULL;
-  $doc = new DOMDocument();
-  if (empty($sidora_ds)){
-    watchdog("sidora_emammal", t("Creating SIdora datastream for object: %pid of type: %type", array("%pid" => $id, '%type' => $create_type)));
-    $docToLoad = ('<?xml version="1.0" encoding="UTF-8"?'.'>'.'<sidora></sidora>');
-    $doc->loadXML($docToLoad);
-  }
-  else {
+  $creating_sidora = empty($sidora_ds);
+  if (!$creating_sidora){
+    $doc = new DOMDocument();
     $docToLoad = ('<?xml version="1.0" encoding="UTF-8"?'.'>'.$emammal_obj['SIDORA']->content);
     $doc->loadXML($docToLoad);
     $existing_wi_id_nodes = $doc->getElementsByTagName("wi_id");
+    // If there is more than one, return the one
     foreach($existing_wi_id_nodes as $exister){
-      $org_id = $exister->nodeValue;
+      $saved_type = $exister->getAttribute('subtype');
+      if (empty($subtype) && empty($saved_type)){
+        $org_id = $exister->nodeValue;
+      }
+      else if ($subtype == $saved_type){
+        $org_id = $exister->nodeValue;
+      }
     }
   }
-  if (empty($org_id) && !empty($create_type)){
+  if (empty($org_id) && !(empty($create_type) && empty($subtype))){
     // No ID, need to create it if the create type is there
-    $org_id =  sidora_emammal_wi_create($create_type);
+    $org_id =  sidora_emammal_wi_create($create_type, $subtype);
+    if ($creating_sidora){
+      watchdog("sidora_emammal", t("Creating SIdora datastream for object: %pid of type: %type", array("%pid" => $id, '%type' => $create_type)));
+      $doc = new DOMDocument();
+      $docToLoad = ('<?xml version="1.0" encoding="UTF-8"?'.'>'.'<sidora></sidora>');
+      $doc->loadXML($docToLoad);
+    }
     $node = $doc->createElement('wi_id');
+    if (!empty($subtype)){
+      $node->setAttribute('subtype', $subtype);
+    }
     $node->nodeValue = $org_id;
     $sidora_node = $doc->getElementsByTagName('sidora');
-    // If there is a blank wi_id, remove it
+    // Remove existing IDs of the same type
     $existing_wi_id_nodes = $doc->getElementsByTagName("wi_id");
     foreach($existing_wi_id_nodes as $to_remove){
-      $sidora_node.removeChild($to_remove);
+      $saved_type = $exister->getAttribute('subtype');
+      if (empty($subtype) && empty($saved_type)){
+        $sidora_node->removeChild($to_remove);
+      }
+      else if ($subtype == $saved_type){
+        $sidora_node->removeChild($to_remove);
+      }
     }
     $sidora_node->item(0)->appendChild($node);
     $new_content =  $doc->saveXML($sidora_node->item(0));
@@ -174,6 +215,10 @@ function sidora_emammal_wi_get_id($emammal_obj, $create_type = NULL){
   }
   return $org_id;
 }
+
+/**
+ * Helper method to call the WI API
+ */
 function sidora_emammal_wi_curl($url, $data = '', $method = "POST"){
   $curl = curl_init();
   if ($method == 'POST'){
@@ -195,7 +240,7 @@ function sidora_emammal_wi_curl($url, $data = '', $method = "POST"){
   //$all_info = curl_getinfo($curl);
   //var_dump($all_info);
   curl_close($curl);
-echo $result;
+  //echo $result; 
   return $result;
 }
 /**
@@ -221,7 +266,7 @@ function sidora_emammal_wi_api_call($call_name, $data = NULL, $method_override =
   return sidora_emammal_wi_curl($url, $data, $method);
 }
 /**
- * Helper function to pull out an ID from a wi api call
+ * Helper function to pull out an ID from a wi api call return data
  * returns NULL if not found
  */
 function sidora_emammal_wi_helper_pull_id($data){
@@ -242,15 +287,233 @@ function sidora_emammal_wi_helper_pull_id($data){
   }
   return NULL;
 }
-function sidora_emammal_wi_create($type){
+/**
+ * Direct the creation of all types and handle whatever additional creation of WI
+ * objects that needs to happen
+ * $type - the WI type
+ * $subtype - the WI type to create that is not a direct representation of the base_obj
+ *    e.g. location created for a project
+ * $base_obj - the Fedora object to use for creation
+ * $create_override - normally do not create an object if it already has a WI ID
+ *    if TRUE, will create a WI object anyway, and recreate all children
+ *    if FALSE, will return the ID of the item, but will continue to create
+ *      any children that do not have their WI ID
+ */
+function sidora_emammal_wi_create($type, $subtype = '', $base_obj = NULL, $create_override = FALSE){
+  // If creating a project or deployment, also create the tree under it.
+
   if ($type == 'organization'){
     return sidora_emammal_wi_create_organization();
   }
+  if ($type == 'project'){
+    $project_wi_id = sidora_emammal_wi_create_project($base_obj, $create_override);
+    // create all the deployments under it
+    // the deployments are typically the grandchildren of projects
+    // find all the subprojects
+    // find all the deployments from the subprojects
+    // create deployments
+    // Do not create any deployments which already have a WI id in their 
+    //    SIDORA datastream
+  }
   return NULL;
 }
-function sidora_emammal_wi_create_project(){
+/*
+ * This creates the project object in WI. It will not create any child objects
+ * of a project. Does NOT update existing project with new data. ONLY used for
+ * creation. This will create the location object in WI if there is not one present
+ *
+ * $base_obj - the Fedora object to use for creation
+ * $create_override - normally do not create an object if it already has a WI ID
+ *    if TRUE, will create a WI object anyway
+ *    if FALSE, will return the ID of the item
+ * returns the Wildlife Insights ID of the existing object or newly created object
+ */
+function sidora_emammal_wi_create_project($base_obj, $create_override = FALSE){
+  $do_create = $create_override;
+  // See if it has a WI id
+  $wi_id = sidora_emammal_wi_get_id($base_obj);
+  if (empty($wi_id)){
+    $do_create = TRUE;
+  }
+  if ($do_create){
+    $update_info = sidora_emammal_wi_project_update_strings($base_obj);
+    // Should contain 2 objects, first is the project
+    $result = sidora_emammal_wi_api_call("project", $update_info[0]['json']);
+    $proj_id = sidora_emammal_wi_helper_pull_id($result);
+    if (empty($proj_id)){
+      watchdog('Sidora_emammal',t(
+        "Tried to create project, but did not get WI ID: %uinfo %result", 
+        array('%uinfo' => json_encode($update_info), '%result' => $result)
+      ));
+    }
+    else {
+      // project created, update the sidora datastream with the result
+    }
+    // Now the object is created. Its WI ID is in its SIDORA datastream and
+    // in the $wi_id variable
+  }
+  return $wi_id;
 }
+
+function sidora_emammal_wi_project_update_strings($base_obj){
+  $to_return = array();
+  $name = $base_obj->label;
+  $content = $base_obj['EAC-CPF']->content;
+  if (!empty($content)){
+    $doc = new DOMDocument();
+    $docToLoad = ($content);
+    $doc->loadXML($docToLoad);
+
+    $short_nodes = $doc->getElementsByTagName("recordId");
+    foreach($short_nodes as $exister){
+      $short_name = $exister->nodeValue;
+    }
+
+    $status_nodes = $doc->getElementsByTagName("maintenanceStatus");
+    foreach($status_nodes as $exister){
+      $status = $exister->nodeValue;
+    }
+
+    $from_nodes = $doc->getElementsByTagName("fromDate");
+    foreach($from_nodes as $exister){
+      $from_date = $exister->nodeValue;
+    }
+
+    $to_nodes = $doc->getElementsByTagName("toDate");
+    foreach($to_nodes as $exister){
+      $to_date = $exister->nodeValue;
+    }
+
+    $ne_nodes = $doc->getElementsByTagName("nameEntry");
+    foreach($ne_nodes as $exister){
+      $check_is_abbr = $exister->getAttribute('localType');
+      if ($check_is_abbr == "abbreviation"){
+        foreach($exister->childNodes as $part){ 
+          $abbr = $part->nodeValue;
+        }
+      }
+    }
+
+    $func_nodes = $doc->getElementsByTagName("function");
+    $remarks = '';
+    $objectives = '';
+    $data_access = '';
+    $acknow = '';
+    $design = '';
+    foreach($func_nodes as $exister){
+      $term = '';
+      $dnote = '';
+      foreach($exister->childNodes as $func_part){
+        if($func_part->nodeType == XML_ELEMENT_NODE) {
+          // See which kind of function this is
+          if ($func_part->tagName == 'term'){
+            $term = $func_part->nodeValue;
+          }
+          if ($func_part->tagName == 'descriptiveNote'){
+            // We want the full html but not the outer spacing from the XML pretty printing
+            $dnote_children = $func_part->childNodes;
+            $dnote = '';
+            foreach($dnote_children as $dnote_child){
+              $dnote .= $doc->saveXML($dnote_child);
+            }
+            $dnote = trim($dnote);
+          }
+        }
+      }
+      if ($term == 'Project Objectives'){
+        $objectives .= $dnote;
+      }
+      if ($term == 'Project Data Access and Use Constraints'){
+        $data_access .= $dnote;
+      }
+      if ($term == 'Project Acknowledgements'){
+        $acknow .= $dnote;
+      }
+      if ($term == 'Project Design'){
+        $design .= $dnote;
+      }
+      if ($term == ''){
+        $remarks .= $dnote;
+      }
+    }
+
+    $place_entry_nodes = $doc->getElementsByTagName("placeEntry");
+    $proj_loc = '';
+    $region = '';
+    $country = '';
+    $lat = '';
+    $long = '';
+    foreach($place_entry_nodes as $exister){
+      $local_type = $exister->getAttribute('localType');
+      if ($local_type == 'address'){
+        $proj_loc = $exister->nodeValue;
+      }
+      elseif ($local_type == 'region'){
+        $region = $exister->nodeValue;
+      }
+      else {
+        $c_country = $exister->getAttribute('countryCode');
+        $c_lat = $exister->getAttribute('latitude');
+        $c_long = $exister->getAttribute('longitude');
+        $country = empty($c_country)?$country:$c_country;
+        $lat     = empty($c_lat)?    $lat    :$c_lat;
+        $long    = empty($c_long)?   $long   :$c_long;
+      }
+    }
+    
+    $creation_obj = array(
+     'name' => $name,
+     'abbreviation' => $abbr,
+     'shortName' => $short_name,
+     'design' => $design,
+     'objectives' => $objectives,
+     'rightsHolder' => '',
+     'accessRights' => $data_access,
+     'projectUrl' => '',
+     'projectStatus' => $status,
+     'methodology' => '',
+     'startDate' => $from_date, //array(),
+     'endDate' => $to_date, //array(),
+     'remarks' => $remarks,
+     'projectCreditLine' => '',
+     'acknowledgements' => $acknow,
+     'dataCitation' => '',
+     'embargo' => 0,
+     'dataUse' => 0,
+     'tags' => array(),
+    );
+    $creation_string = json_encode($creation_obj);
+
+    $location_obj = array(
+      "latitude" => $lat,
+      "longitude" => $long,
+      "placename" => $proj_loc,
+      "propertyType" => "",
+      "habitat" => "",
+      "remarks" => "",
+      "plotTreatment" => "",
+      "plotTreatmentDescription" => "",
+      "geodeticDatum" => "",
+      "fieldNumber" => "",
+      "country" => $country,
+      "firstOrderDivision" => $region,
+      "secondOrderDivision" => "",
+      "landcoverType" => "",
+      "igbpClimateClassification" => "",
+      "elevationGtopo30" => 0
+    );
+
+    $location_string = json_encode($location_obj);
+  }
+  $to_return[] = array("wi_type" => "project", "json" => $creation_string);
+  $to_return[] = array("wi_type" => "location", "json" => $location_string);
+  return $to_return;
+}
+/*
+ *
+ */
 function sidora_emammal_wi_create_deployment(){
+
 }
 function sidora_emammal_wi_create_identification_output(){
 }
@@ -258,23 +521,22 @@ function sidora_emammal_wi_create_sequence(){
 }
 function sidora_emammal_wi_create_datafilemetadatavalues(){
 }
+
 function sidora_emammal_wi_get_organization_id(){
+  // Cache the WI organization ID so we don't go get it from Fedora every time
+  $key = "org_id";
   $cache = cache_get('sidora_emammal:'.$key);
   if ($cache){
     $org_id = $cache->data;
   }
   else {
-    // Pull the organization from eMammal project space
     $emammal_org_obj = sidora_emammal_get_project_space();
-    // See if there is already an organization present (Stored in eMammal's SIDORA datastream if it exists)
-    $sidora_ds = $emammal_org_obj['SIDORA'];
-    if (empty($sidora_ds)){
-      watchdog("sidora_emammal", t("Creating SIdora datastream for main emammal object: %pid", array("%pid" => $id)));
-    }
-    echo($emammal_org_obj->id);
+    $org_id = sidora_emammal_wi_get_id($emammal_obj);
+    cache_set('sidora_emammal:'.$key, $org_id);
   }
   return $org_id; 
 }
+
 /**
  * Ask the WI API to create an organization based on hard-coded values
  */
@@ -302,15 +564,118 @@ function sidora_emammal_islandora_object_modified(AbstractObject $object) {
     watchdog('emammal',"2");// . $object['id']);
 }
 function sidora_emammal_islandora_datastream_modified(AbstractObject $object, AbstractDatastream $datastream) {
-    watchdog('emammal',"3");// . $datastream['id'] . '---' . $datastream['label']);
-    watchdog('emammal', $datastream->id);
-    watchdog('emammal', $datastream->label);
+  watchdog('emammal',"3");// . $datastream['id'] . '---' . $datastream['label']);
+  sidora_emammal_update_for_wi_if_needed($object, $datastream);
 }
 function sidora_emammal_islandora_datastream_ingested(AbstractObject $object, AbstractDatastream $datastream) {
-    watchdog('emammal',"4");// . $datastream['id'] . '---' . $datastream['label']);
-    watchdog('emammal', $datastream->id);
-    watchdog('emammal', $datastream->label);
+  watchdog('emammal',"4");// . $datastream['id'] . '---' . $datastream['label']);
+  sidora_emammal_update_for_wi_if_needed($object, $datastream);
 }
+
+function sidora_emammal_update_for_wi_if_needed(AbstractObject $object, AbstractDatastream $datastream){
+  // Do NOT perform updates if the datastream that was updated is SIDORA or DC,
+  // We only care if the metadata was updated or if it gained / lost children
+  if ($datastream['id'] == 'SIDORA' || $datastream['id'] == 'DC'){
+    return;
+  }
+  $opt_in = sidora_emammal_check_need_update_for_wi($object);
+  if ($opt_in){
+    if ($datastream['id'] == 'RELS-EXT'){
+      // Run though all its children trees and update them all
+      // But we don't need to update this object
+      // TBD
+    }
+    else {
+      sidora_emammal_update_for_wi($object);
+    }
+  }
+}
+
+/**
+ * Create or Update this item in WI
+ */
+function sidora_emammal_update_for_wi(AbstractObject $object){
+    // See if it already exists
+    $wi_id = sidora_emammal_wi_get_id($object);
+    if (empty($wi_id)){
+      // Create the object in WI
+      // Create / Update its children
+    }
+    else {
+      // Update the object in WI, assume its children are unchanged
+    } 
+}
+/**
+ * When a datastream is created or updated, check to see if it is an eMammal object and if the Opt-In is selected
+ * for the project. If these are true, update the information for the object in WI
+ */
+function sidora_emammal_check_need_update_for_wi(AbstractObject $object){
+  $models = ($object->relationships->get('info:fedora/fedora-system:def/model#', 'hasModel'));
+  $fedora_models_to_wi_type = array(
+    'si:projectCModel' => array(
+       'distance_to_project' => 0,
+       'wi_type' => 'project',
+    ),
+    'si:cameraTrapCModel' => array(
+       'distance_to_project' => 2,
+       'wi_type' => 'deployment',
+    ),
+    'si:generalImageCModel' => array(
+       'distance_to_project' => 3,
+       'wi_type' => 'dataFile',
+    ),
+    'si:datasetCModel' => array(
+       'distance_to_project' => 3,
+       'wi_type' => 'dataFile',
+    ),
+  );
+  $wi_model_types = array_keys($fedora_models_to_wi_type);
+  $wi_info = NULL;
+  foreach($models as $model_rel) {
+    $model = $model_rel['object']['value'];
+    if (in_array($model, $wi_model_types)){
+      $wi_info = $fedora_models_to_wi_type[$model];
+    }
+  }
+  if (!empty($wi_info)){
+    $opt_in = FALSE;
+    $checker_id = $object->id;
+    for($i = 0; $i < $wi_info['distance_to_project']; $i++){ 
+      module_load_include('inc', 'sidora', 'includes/utils');
+      // use isAdministeredBy if exists
+      $parent_id = sidora_get_owning_parent_concept_pid_by_administered_pid($checker_id);
+      if (empty($parent_id)){
+        $parents = sidora_get_parent_concepts_by_pid($checker_id);
+        foreach($parents as $ppid => $parent){
+          $parent_id = $ppid;
+        }
+      }
+      $checker_id = $parent_id;
+    }
+    // $checker_id should now hold the pid of the project, which we need to check to see if it's opt-in is checked
+    $project_obj = sidora_obj($checker_id);
+    if (!empty($project_obj) && (!empty($project_obj['EAC-CPF']))){
+      $content = $project_obj['EAC-CPF']->content;
+      if (!empty($content)){
+        $doc = new DOMDocument();
+        $docToLoad = ($content);
+        $doc->loadXML($docToLoad);
+        $existing_wi_opt_in_nodes = $doc->getElementsByTagName(SIDORA_EMAMMAL_OPT_IN_TAG);
+        foreach($existing_wi_opt_in_nodes as $exister){
+          $opt_in = $exister->nodeValue;
+        }
+      }
+    }
+    if ("" . $opt_in === "1"){
+      return TRUE;
+    }
+  }
+  return FALSE;
+}
+
+/**
+ * Returns the WI token if we have one in the cache or creates one and returns it
+ */
 function sidora_emammal_get_wi_token(){
   $token = sidora_emammal_get_cache('token');
   if (empty($token)){
