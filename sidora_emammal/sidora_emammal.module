@@ -160,6 +160,18 @@ function sidora_emammal_wi_org_init($emammal_org_obj = NULL){
   return sidora_emammal_wi_create($emammal_org_obj, 'organization');
 }
 
+
+/*****************************************************************************
+ *****************************************************************************
+ *****************************************************************************
+ *** GENERIC SECTION
+ *** These functions are for all aspects of obtaining information
+ *** for WI
+ *****************************************************************************
+ *****************************************************************************
+ ****************************************************************************/
+
+
 /**
  * Returns the Wildlife Insights ID
  * $emammal_obj = the Islandora object to obtain the id from, or the pid
@@ -322,6 +334,55 @@ function sidora_emammal_wi_helper_pull_id($data){
   return NULL;
 }
 
+/*****************************************************************************
+ *****************************************************************************
+ *****************************************************************************
+ *** CONTROLLER SECTION
+ *** These dispense out to the specific calls
+ *** 
+ *****************************************************************************
+ *****************************************************************************
+ ****************************************************************************/
+
+/**
+ * Direct the delete of all types
+ * $type - the WI type
+ * $subtype - the WI type to update that is not a direct representation of the base_obj
+ *    e.g. location created for a project
+ * $base_obj - the Fedora object to use for deletion information
+ */
+function sidora_emammal_wi_delete($base_obj = NULL, $type = '', $subtype = ''){
+  $to_return = NULL;
+  if ($type == 'organization'){
+    // TBD / TODO
+  }
+  if ($type == 'project'){
+    $to_return = sidora_emammal_wi_delete_project($base_obj);
+    // Also delete the children. TBD / TODO
+  }
+  return $to_return;
+}
+
+/**
+ * Direct the update of all types
+ * $type - the WI type
+ * $subtype - the WI type to update that is not a direct representation of the base_obj
+ *    e.g. location created for a project
+ * $base_obj - the Fedora object to use for creation
+ */
+function sidora_emammal_wi_update($base_obj = NULL, $type = '', $subtype = ''){
+  $to_return = NULL;
+  if ($type == 'organization'){
+    // TBD / TODO
+  }
+  if ($type == 'project'){
+    $to_return = sidora_emammal_wi_update_project($base_obj);
+    // Assume that this is NOT a call to update the children. Those calls should
+    // occur that their own level
+  }
+  return $to_return;
+}
+
 /**
  * Direct the creation of all types and handle whatever additional creation of WI
  * objects that needs to happen
@@ -352,6 +413,16 @@ function sidora_emammal_wi_create($base_obj = NULL, $type = '', $subtype = '', $
   }
   return NULL;
 }
+
+/*****************************************************************************
+ *****************************************************************************
+ *****************************************************************************
+ *** WI OBJECT: PROJECT AND LOCATION
+ *** These functions deal with Project and Location
+ *** 
+ *****************************************************************************
+ *****************************************************************************
+ ****************************************************************************/
 
 /*
  * This creates the project object in WI. It will not create any child objects
@@ -620,10 +691,9 @@ function sidora_emammal_wi_project_update_strings($base_obj){
   return $to_return;
 }
 /*
- *
+ * UNIMPLEMENTED
  */
 function sidora_emammal_wi_create_deployment(){
-
 }
 function sidora_emammal_wi_create_identification_output(){
 }
@@ -631,6 +701,16 @@ function sidora_emammal_wi_create_sequence(){
 }
 function sidora_emammal_wi_create_datafilemetadatavalues(){
 }
+
+/*****************************************************************************
+ *****************************************************************************
+ *****************************************************************************
+ *** WI OBJECT: ORGANIZATION
+ *** These functions deal with Organization
+ *** 
+ *****************************************************************************
+ *****************************************************************************
+ ****************************************************************************/
 
 function sidora_emammal_wi_get_organization_id(){
   // Cache the WI organization ID so we don't go get it from Fedora every time
@@ -667,6 +747,16 @@ function sidora_emammal_wi_create_organization(){
   $org_id = sidora_emammal_wi_helper_pull_id($result);
   return $org_id;
 }
+
+/*****************************************************************************
+ *****************************************************************************
+ *****************************************************************************
+ *** ISLANDORA HOOKS
+ *** 
+ *** 
+ *****************************************************************************
+ *****************************************************************************
+ ****************************************************************************/
 function sidora_emammal_islandora_object_ingested(AbstractObject $object) {
     watchdog('emammal',"1");// . $object['id']);
 }
@@ -674,19 +764,19 @@ function sidora_emammal_islandora_object_modified(AbstractObject $object) {
     watchdog('emammal',"2");// . $object['id']);
 }
 function sidora_emammal_islandora_datastream_modified(AbstractObject $object, AbstractDatastream $datastream) {
-  sidora_emammal_update_for_wi_if_needed($object, $datastream);
+  sidora_emammal_create_or_update_for_wi_if_needed($object, $datastream);
 }
 function sidora_emammal_islandora_datastream_ingested(AbstractObject $object, AbstractDatastream $datastream) {
-  sidora_emammal_update_for_wi_if_needed($object, $datastream);
+  sidora_emammal_create_or_update_for_wi_if_needed($object, $datastream);
 }
 
-function sidora_emammal_update_for_wi_if_needed(AbstractObject $object, AbstractDatastream $datastream){
+function sidora_emammal_create_or_update_for_wi_if_needed(AbstractObject $object, AbstractDatastream $datastream){
   // Do NOT perform updates if the datastream that was updated is SIDORA or DC,
   // We only care if the metadata was updated or if it gained / lost children
   if ($datastream->id == 'SIDORA' || $datastream->id == 'DC'){
     return;
   }
-  $opt_in = sidora_emammal_check_need_update_for_wi($object);
+  $opt_in = sidora_emammal_check_opt_in_for_wi($object);
   if ($opt_in){
     if ($datastream->id == 'RELS-EXT'){
       // Run though all its children trees and update them all
@@ -694,32 +784,71 @@ function sidora_emammal_update_for_wi_if_needed(AbstractObject $object, Abstract
       // TBD
     }
     else {
-      sidora_emammal_update_for_wi($object);
+      sidora_emammal_create_or_update_for_wi($object);
     }
   }
+}
+
+/** 
+ * Remove from WI if no longer Opted In
+ */
+function sidora_emammal_delete_from_wi(AbstractObject $object){
+  $wi_id = sidora_emammal_wi_get_id($object);
+  if (!empty($wi_id)){
+    $wi_info = sidora_emammal_get_wi_type($object);
+    if (!empty($wi_info)){
+      $type = $wi_info['wi_type'];
+      sidora_emammal_wi_delete($object, $type);
+    }
+  }
+  return TRUE;
 }
 
 /**
  * Create or Update this item in WI
  */
-function sidora_emammal_update_for_wi(AbstractObject $object){
-    // See if it already exists
-    $wi_id = sidora_emammal_wi_get_id($object);
-    if (empty($wi_id)){
-      // Create the object in WI
-      // Create / Update its children
+function sidora_emammal_create_or_update_for_wi(AbstractObject $object){
+  // See if it already exists
+  $wi_id = sidora_emammal_wi_get_id($object);
+  $wi_info = sidora_emammal_get_wi_type($object);
+  if (empty($wi_id)){
+    if (!empty($wi_info)){
+      $type = $wi_info['wi_type'];
+      sidora_emammal_wi_create($object, $type);
+      // Create the object in WI, sidora_emammal_wi_create will handle children if needed
     }
-    else {
-      // Update the object in WI, assume its children are unchanged
-    } 
+  }
+  else {
+    // Update the object in WI, assume its children are unchanged
+    if (!empty($wi_info)){
+      $type = $wi_info['wi_type'];
+      sidora_emammal_wi_update($object, $type);
+    }
+  } 
 }
+
 /**
- * When a datastream is created or updated, check to see if it is an eMammal object and if the Opt-In is selected
- * for the project. If these are true, update the information for the object in WI
+ * Helper function to return the base type of the WI object for this Fedora object
  */
-function sidora_emammal_check_need_update_for_wi(AbstractObject $object){
+function sidora_emammal_get_wi_type($object){
+  $fedora_models_to_wi_type = sidora_emammal_get_fedora_models_to_wi_type();
   $models = ($object->relationships->get('info:fedora/fedora-system:def/model#', 'hasModel'));
-  $fedora_models_to_wi_type = array(
+  $wi_model_types = array_keys($fedora_models_to_wi_type);
+  $wi_info = NULL;
+  foreach($models as $model_rel) {
+    $model = $model_rel['object']['value'];
+    if (in_array($model, $wi_model_types)){
+      $wi_info = $fedora_models_to_wi_type[$model];
+    }
+  }
+  return $wi_info;
+}
+
+/**
+ * Helper single location for this array of info linking Feodra to WI types
+ */
+function sidora_emammal_get_fedora_models_to_wi_type(){
+  return array(
     'si:projectCModel' => array(
        'distance_to_project' => 0,
        'wi_type' => 'project',
@@ -737,14 +866,14 @@ function sidora_emammal_check_need_update_for_wi(AbstractObject $object){
        'wi_type' => 'dataFile',
     ),
   );
-  $wi_model_types = array_keys($fedora_models_to_wi_type);
-  $wi_info = NULL;
-  foreach($models as $model_rel) {
-    $model = $model_rel['object']['value'];
-    if (in_array($model, $wi_model_types)){
-      $wi_info = $fedora_models_to_wi_type[$model];
-    }
-  }
+}
+
+/**
+ * When a datastream is created or updated, check to see if it is an eMammal object and if the Opt-In is selected
+ * for the project. If these are true, update the information for the object in WI
+ */
+function sidora_emammal_check_opt_in_for_wi(AbstractObject $object){
+  $wi_info = sidora_emammal_get_wi_type($object);
   if (!empty($wi_info)){
     $opt_in = FALSE;
     $checker_id = $object->id;
