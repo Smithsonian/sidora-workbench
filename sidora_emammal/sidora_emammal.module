@@ -286,7 +286,7 @@ function sidora_emammal_wi_curl($url, $data = '', $method = "POST"){
     curl_setopt($curl, CURLOPT_POSTFIELDS, $data);
     curl_setopt($curl, CURLOPT_HTTPHEADER, array(
       'Content-Type: application/json',
-      'Content-Length: ' . strlen($data)
+      'Content-Length: ' . strlen($data),
       'Authorization: Bearer ' . sidora_emammal_get_wi_token(),
     ));
   }
@@ -561,6 +561,38 @@ function sidora_emammal_wi_update_project($base_obj){
   return TRUE;
 }
 
+/**
+ * Deletes this project and location ONLY from the WI API
+ * Assume the children get deleted by this function's caller
+ */
+function sidora_emammal_wi_delete_project($base_obj){
+  if (!is_object($base_obj)){
+    watchdog('Sidora_emammal',t(
+      "Tried to delete project, but did not have a valid object: %encoded", 
+      array('%encoded' => json_encode($base_obj))
+    ));
+    return FALSE;
+  }
+  $wi_id = sidora_emammal_wi_get_id($base_obj);
+  if (empty($wi_id)){
+    watchdog('Sidora_emammal',t(
+      "Tried to delete project, but did not have a WI ID in SIDORA: %pid", 
+      array('%pid' => $base_obj->id)
+    ));
+    return FALSE;
+  }
+  $loc_wi_id = sidora_emammal_wi_get_id($base_obj, 'location');
+  if (empty($wi_id)){
+    watchdog('Sidora_emammal',t(
+      "Tried to delete project, but did not have a WI ID in SIDORA: %pid", 
+      array('%pid' => $base_obj->id)
+    ));
+    return FALSE;
+  }
+  $call_worked = sidora_emammal_wi_api_call("project/" . $wi_id . "/location" . $loc_wi_id, NULL, 'DELETE');
+  $call_worked = $call_worked && sidora_emammal_wi_api_call("project/" . $wi_id, NULL, 'DELETE');
+  return $call_worked;
+}
 /**
  * Returns an array of objects to use to update or create project and location in WI
  * the array looks like this:
