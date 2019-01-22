@@ -122,21 +122,31 @@ function sidora_dc_join_and_return_xml($pid) {
     // If there's not a DC transform set, this is almost certainly a misconfigured form, but maybe not.
     // Let's not clutter watchdog yet...
     if ($transform != FALSE) {
-      $pre_transform_string = $object[$association['dsid']]->content;
-      $pre_transform_dd = new DOMDocument();
-      $pre_transform_dd->loadXML($pre_transform_string);
-      $post_transform_dd = xml_form_builder_transform_document($transform, $pre_transform_dd);
-      if ($post_transform_dd == null) {
-        watchdog(
-          'sidora',
-          "DC transform failed! PID: !pid associations !associations transform !transform",
-           array('!pid' => $pid, '!associations' => json_encode($associations), '!transform' => json_encode($transform))
-        );
+      $post_transform_dd = null;
+      if (!empty($object[$association['dsid']])){
+        $pre_transform_string = $object[$association['dsid']]->content;
+        $pre_transform_dd = new DOMDocument();
+        $pre_transform_dd->loadXML($pre_transform_string);
+        $post_transform_dd = xml_form_builder_transform_document($transform, $pre_transform_dd);
+        if ($post_transform_dd == null) {
+          watchdog(
+            'sidora',
+            "DC transform failed! PID: !pid associations !associations transform !transform",
+             array('!pid' => $pid, '!associations' => json_encode($associations), '!transform' => json_encode($transform))
+          );
+        }
+        else {
+          $post_transform_string = $post_transform_dd->saveXML();
+          // Place information from the transformed metadata into the old entry
+          $xml_string = sidora_dc_xml_join($insert_data_into, $post_transform_string);
+        }
       }
       else {
-        $post_transform_string = $post_transform_dd->saveXML();
-        // Place information from the transformed metadata into the old entry
-        $xml_string = sidora_dc_xml_join($insert_data_into, $post_transform_string);
+        watchdog(
+          'sidora',
+          "Problem finding datastream of object: !pid with association !association"
+           array('!pid' => $pid, '!association' => json_encode($association))
+        );
       }
     }
   }
