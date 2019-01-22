@@ -87,7 +87,8 @@ function sidora_emammal_test($method = '', $data = '', $data2 = '', $data3 = '')
       $curl_return = sidora_emammal_wi_curl(
         'https://staging.api.wildlifeinsights.org/v1/auth/sign-in',
         json_encode(array('email' => 'vizz@info.com', 'password' => '1234')),
-        'POST'
+        'POST',
+        FALSE
       );
       var_dump($curl_return);
       echo($curl_return);
@@ -235,6 +236,35 @@ function sidora_emammal_add_wi_id_to_sidora_ds($emammal_obj, $org_id, $subtype =
 }
 
 /**
+ * Remove the specified wi_id from the object
+ */
+function sidora_emammal_remove_wi_id($emammal_obj, $wi_id){
+  sidora_emammal_debug("Remove this WI id:" . $wi_id);
+  $sidora_ds = $emammal_obj['SIDORA'];
+  if ( empty($sidora_ds) ) {
+    sidora_emammal_debug("No SIDORA datastream to remove the WI ID from");
+    // Nothing to do here...
+    return TRUE;
+  }
+  
+  $doc = new DOMDocument();
+  $docToLoad = ('<?xml version="1.0" encoding="UTF-8"?'.'>'.$emammal_obj['SIDORA']->content);
+  $doc->loadXML($docToLoad);
+  $sidora_node = $doc->getElementsByTagName('sidora');
+  // Remove existing IDs of the same type
+  $existing_wi_id_nodes = $doc->getElementsByTagName("wi_id");
+  foreach($existing_wi_id_nodes as $to_remove){
+    sidora_emammal_debug("Check:" . $to_remove->nodeValue);
+    if ($to_remove->nodeValue == $wi_id){
+      $sidora_node->item(0)->removeChild($to_remove);
+    }
+  }
+  $new_content =  $doc->saveXML($sidora_node->item(0));
+  $saved = sidora_update_datastream($emammal_obj, $new_content, 'SIDORA', NULL, NULL, 'X');
+  return $saved;
+}
+
+/**
  * Returns the WI token if we have one in the cache or creates one and returns it
  */
 function sidora_emammal_get_wi_token(){
@@ -246,7 +276,9 @@ function sidora_emammal_get_wi_token(){
     }
     $curl_return = sidora_emammal_wi_curl(
       $token_url, //'https://staging.api.wildlifeinsights.org/v1/auth/sign-in',
-      variable_get('sidora_emammal_wi_sign_in', '')
+      variable_get('sidora_emammal_wi_sign_in', ''),
+      'POST',
+      FALSE
     );
     $token_obj = json_decode($curl_return, TRUE);
     if (empty($token_obj['token'])){
@@ -279,41 +311,39 @@ function sidora_emammal_get_cache($key = 'token'){
 /**
  * Helper method to call the WI API
  */
-function sidora_emammal_wi_curl($url, $data = '', $method = "POST"){
+function sidora_emammal_wi_curl($url, $data = '', $method = "POST", $include_bearer = TRUE){
   $curl = curl_init();
-  if ($method == 'POST'){
-    curl_setopt($curl, CURLOPT_POST, 1);
-    curl_setopt($curl, CURLOPT_POSTFIELDS, $data);
-    curl_setopt($curl, CURLOPT_HTTPHEADER, array(
-      'Content-Type: application/json',
-      'Content-Length: ' . strlen($data),
-      'Authorization: Bearer ' . sidora_emammal_get_wi_token(),
-    ));
+  $header_array = array(
+    'Content-Type: application/json',
+  );
+  sidora_emammal_debug("curl inited, header_array started");
+  if ($include_bearer){
+    sidora_emammal_debug("Bearer for url:" . $url);
+    $header_array[] = 'Authorization: Bearer ' . sidora_emammal_get_wi_token();
   }
-  elseif ($method == 'GET'){
-    curl_setopt($curl, CURLOPT_HTTPHEADER, array(
-      'Content-Type: application/json',
-      'Authorization: Bearer ' . sidora_emammal_get_wi_token(),
-    ));
+  sidora_emammal_debug("curl method:" . $method);
+  if ($method == 'POST'){
+    sidora_emammal_debug("POSTing...");
+    curl_setopt($curl, CURLOPT_POST, 1);
+    sidora_emammal_debug("POSTing adding data...");
+    curl_setopt($curl, CURLOPT_POSTFIELDS, $data);
+    sidora_emammal_debug("POSTing setting length...");
+    $header_array[] = 'Content-Length: ' . strlen($data);
+    sidora_emammal_debug("POSTing header array set:" . json_encode($header_array));
   }
   elseif ($method == 'DELETE'){
     curl_setopt($curl, CURLOPT_CUSTOMREQUEST, 'DELETE');
-    curl_setopt($curl, CURLOPT_HTTPHEADER, array(
-      'Content-Type: application/json',
-      'Authorization: Bearer ' . sidora_emammal_get_wi_token(),
-    ));
   }
   elseif ($method == 'PATCH'){
     curl_setopt($curl, CURLOPT_CUSTOMREQUEST, 'PATCH');
     curl_setopt($curl, CURLOPT_POSTFIELDS, $data);
-    curl_setopt($curl, CURLOPT_HTTPHEADER, array(
-      'Content-Type: application/json',
-      'Content-Length: ' . strlen($data),
-      'Authorization: Bearer ' . sidora_emammal_get_wi_token(),
-    ));
+    $header_array[] = 'Content-Length: ' . strlen($data);
   }
+  sidora_emammal_debug("About to set header_array:" . json_encode($header_array));
+  curl_setopt($curl, CURLOPT_HTTPHEADER, $header_array);
   curl_setopt($curl, CURLOPT_URL, $url);
   curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1);
+  sidora_emammal_debug("About to curl:" . $url);
   $result = curl_exec($curl);
   //$all_info = curl_getinfo($curl);
   //var_dump($all_info);
@@ -341,6 +371,7 @@ function sidora_emammal_wi_api_call($call_name, $data = NULL, $method_override =
     $method = $method_override;
   }
   $url = variable_get('sidora_emammal_wi_base_url', '') . $call_name;
+  sidora_emammal_debug("api call, url:" . $url);
   return sidora_emammal_wi_curl($url, $data, $method);
 }
 
@@ -367,6 +398,10 @@ function sidora_emammal_wi_helper_pull_id($data){
   return NULL;
 }
 
+function sidora_emammal_debug($output){
+  if (FALSE) watchdog("emammal_debug", $output);
+}
+
 /*****************************************************************************
  *****************************************************************************
  *****************************************************************************
@@ -385,12 +420,19 @@ function sidora_emammal_wi_helper_pull_id($data){
  * $base_obj - the Fedora object to use for deletion information
  */
 function sidora_emammal_wi_delete($base_obj = NULL, $type = '', $subtype = ''){
+  sidora_emammal_debug( "delete:" . $base_obj->id);
   $to_return = NULL;
   if ($type == 'organization'){
     // TBD / TODO
   }
   if ($type == 'project'){
     $to_return = sidora_emammal_wi_delete_project($base_obj);
+    if ($to_return){
+      watchdog('Sidora_emammal',t(
+        "Remove project from WI: %removed",
+        array('%removed' => $base_obj->id)
+      ));
+    }
     // Also delete the children. TBD / TODO
   }
   return $to_return;
@@ -435,6 +477,7 @@ function sidora_emammal_wi_create($base_obj = NULL, $type = '', $subtype = '', $
     return sidora_emammal_wi_create_organization();
   }
   if ($type == 'project'){
+    sidora_emammal_debug("Create project:" . $type);
     $project_wi_id = sidora_emammal_wi_create_project($base_obj, $create_override);
     // create all the deployments under it TBD TODO
     // the deployments are typically the grandchildren of projects
@@ -475,10 +518,13 @@ function sidora_emammal_wi_create_project($base_obj, $create_override = FALSE){
   if (empty($wi_id)){
     $do_create = TRUE;
   }
+  sidora_emammal_debug("Create project?" . $do_create);
   if ($do_create){
     $update_info = sidora_emammal_wi_project_update_strings($base_obj);
+    sidora_emammal_debug("update strings:" . json_encode($update_info));
     // Should contain 2 objects, first is the project
     $result = sidora_emammal_wi_api_call("project", $update_info[0]['json']);
+    sidora_emammal_debug("create project result::" . $result);
     $proj_id = sidora_emammal_wi_helper_pull_id($result);
     if (empty($proj_id)){
       watchdog('Sidora_emammal',t(
@@ -543,8 +589,8 @@ function sidora_emammal_wi_update_project($base_obj){
   $returned_wi_id = sidora_emammal_wi_helper_pull_id($result);
   if ($returned_wi_id != $wi_id){
     watchdog('Sidora_emammal',t(
-      "Tried to update project, but update failed: %res",
-      array('%res' => $result)
+      "Tried to update project, but update failed: %res <br>Sent ID: %sent <br> got back: %back",
+      array('%res' => $result, '%sent' => $wi_id, '%back' => $returned_wi_id)
     ));
     return FALSE;
   }
@@ -566,6 +612,8 @@ function sidora_emammal_wi_update_project($base_obj){
  * Assume the children get deleted by this function's caller
  */
 function sidora_emammal_wi_delete_project($base_obj){
+  sidora_emammal_debug("Starting delete project...");
+  
   if (!is_object($base_obj)){
     watchdog('Sidora_emammal',t(
       "Tried to delete project, but did not have a valid object: %encoded", 
@@ -573,7 +621,9 @@ function sidora_emammal_wi_delete_project($base_obj){
     ));
     return FALSE;
   }
+  sidora_emammal_debug("Getting base_obj id");
   $wi_id = sidora_emammal_wi_get_id($base_obj);
+  sidora_emammal_debug("base_obj id:" . $wi_id);
   if (empty($wi_id)){
     watchdog('Sidora_emammal',t(
       "Tried to delete project, but did not have a WI ID in SIDORA: %pid", 
@@ -581,7 +631,9 @@ function sidora_emammal_wi_delete_project($base_obj){
     ));
     return FALSE;
   }
+  sidora_emammal_debug("Getting location id");
   $loc_wi_id = sidora_emammal_wi_get_id($base_obj, 'location');
+  sidora_emammal_debug("location id:" . $loc_wi_id);
   if (empty($wi_id)){
     watchdog('Sidora_emammal',t(
       "Tried to delete project, but did not have a WI ID in SIDORA: %pid", 
@@ -589,8 +641,12 @@ function sidora_emammal_wi_delete_project($base_obj){
     ));
     return FALSE;
   }
+  sidora_emammal_debug("Deleting location");
   $call_worked = sidora_emammal_wi_api_call("project/" . $wi_id . "/location" . $loc_wi_id, NULL, 'DELETE');
+  sidora_emammal_remove_wi_id($base_obj, $loc_wi_id);
+  sidora_emammal_debug("Deleting project");
   $call_worked = $call_worked && sidora_emammal_wi_api_call("project/" . $wi_id, NULL, 'DELETE');
+  sidora_emammal_remove_wi_id($base_obj, $wi_id);
   return $call_worked;
 }
 /**
@@ -879,13 +935,21 @@ function sidora_emammal_create_or_update_for_wi_if_needed(AbstractObject $object
       sidora_emammal_create_or_update_for_wi($object);
     }
   }
+  else {
+    $wi_id = sidora_emammal_wi_get_id($object);
+    sidora_emammal_debug("Opt-out, but has ID:" . $wi_id . " proceeding to remove");
+    if (!empty($wi_id)){
+      sidora_emammal_delete_from_wi($object, $wi_id);
+    }
+  }
+  
 }
 
 /** 
  * Remove from WI if no longer Opted In
  */
-function sidora_emammal_delete_from_wi(AbstractObject $object){
-  $wi_id = sidora_emammal_wi_get_id($object);
+function sidora_emammal_delete_from_wi(AbstractObject $object, $wi_id){
+  sidora_emammal_debug("delete from wi, wi_id:" . $wi_id);
   if (!empty($wi_id)){
     $wi_info = sidora_emammal_get_wi_type($object);
     if (!empty($wi_info)){
@@ -903,9 +967,12 @@ function sidora_emammal_create_or_update_for_wi(AbstractObject $object){
   // See if it already exists
   $wi_id = sidora_emammal_wi_get_id($object);
   $wi_info = sidora_emammal_get_wi_type($object);
+  
+  sidora_emammal_debug(json_encode(array($wi_id, $wi_info)));
   if (empty($wi_id)){
     if (!empty($wi_info)){
       $type = $wi_info['wi_type'];
+      sidora_emammal_debug("Create:" . $type);
       sidora_emammal_wi_create($object, $type);
       // Create the object in WI, sidora_emammal_wi_create will handle children if needed
     }
