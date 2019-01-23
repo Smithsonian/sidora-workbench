@@ -1660,6 +1660,15 @@ function sidora_check_nodes_in_fedora($node_start = NULL, $number = NULL, $sleep
   $nodes = sidora_get_concept_nodes_between_node_numbers($node_start, $number);
   // Pull the pids from these nodes, then check for them in the RI
   $final_node = $node_start;
+  if (empty($nodes)){
+    watchdog(
+      "sidora",
+      t("Could not check Fedora nodes, attempted to check this many nodes:' %number ' nodes starting at ' %node_start '", 
+        array("%number" => $number, "%node_start" => $node_start)
+      )
+    );
+    return array('error' => TRUE, 'all' => array(), 'exists' => array(), 'not_exists' => array());;
+  }
   foreach($nodes as $node) {
     if (!empty($sleep_ms_between_nodes)){
       usleep($sleep_ms_between_nodes);
