@@ -130,6 +130,12 @@ function sidora_emammal_test($method = '', $data = '', $data2 = '', $data3 = '')
       echo sidora_emammal_get_project_wi_id($obj);
       echo '<br>End';
       break;
+    case 'get_wi_type':
+      echo 'Start<br>';
+      $obj = sidora_obj($data);
+      echo json_encode(sidora_emammal_get_wi_type($obj));
+      echo '<br>End';
+      break;
     default:
       echo "No function to test";
     // testing end
@@ -438,6 +444,50 @@ function sidora_emammal_wi_delete($base_obj = NULL, $type = '', $subtype = ''){
     // TBD / TODO
   }
   if ($type == 'project'){
+    // delete all the deployments under it
+    $subprojects = array();
+    $children_concepts = $base_obj->relationships->get(FEDORA_RELS_EXT_URI, 'hasConcept');
+    foreach($children_concepts as $child_rel) {
+      $to_check_pid = $child_rel['object']['value'];
+      $subprojects[] = sidora_obj($to_check_pid);
+    }
+    sidora_emammal_debug("Num subprojects:" . sizeof($subprojects));
+    $deployments = array();
+    foreach($subprojects as $subproject){
+      $children_concepts = $subproject->relationships->get(FEDORA_RELS_EXT_URI, 'hasConcept');
+      sidora_emammal_debug("Subproject children:" . json_encode($children_concepts));
+      foreach($children_concepts as $child_rel) {
+        // This could be a deployment or it could be a plot, check the type
+        $to_check_pid = $child_rel['object']['value'];
+        sidora_emammal_debug("Checking pid to see if deployment(1):" . $to_check_pid);
+        $check_obj = sidora_obj($to_check_pid);
+        sidora_emammal_debug("Got a fedora object with id:" . $check_obj->id);
+        $check_type = sidora_emammal_get_wi_type($check_obj);
+        sidora_emammal_debug("type:" . $check_type);
+        if ($check_type == 'deployment'){
+          $wi_id = sidora_emammal_wi_get_id($check_obj);
+          sidora_emammal_debug("wi id:" . $wi_id);
+          if (!empty($wi_id)){
+            sidora_emammal_wi_delete($check_obj, 'deployment');
+          }
+        }
+        else {
+          // This is a plot, check its children for deployments
+          $plot_children_concepts = $check_obj->relationships->get(FEDORA_RELS_EXT_URI, 'hasConcept');
+          foreach($plot_children_concepts as $plot_child_rel) {
+            $to_check_pid = $plot_child_rel['object']['value'];
+            sidora_emammal_debug("Checking pid to see if deployment(2):" . $to_check_pid);
+            $check_obj = sidora_obj($to_check_pid);
+            if (sidora_emammal_get_wi_type($check_obj) == 'deployment'){
+              $wi_id = sidora_emammal_wi_get_id($check_obj);
+              if (!empty($wi_id)){
+                sidora_emammal_wi_delete($check_obj, 'deployment');
+              }
+            }
+          }
+        }
+      }
+    }
     $to_return = sidora_emammal_wi_delete_project($base_obj);
     if ($to_return){
       watchdog('Sidora_emammal',t(
@@ -445,7 +495,9 @@ function sidora_emammal_wi_delete($base_obj = NULL, $type = '', $subtype = ''){
         array('%removed' => $base_obj->id)
       ));
     }
-    // Also delete the children. TBD / TODO
+  }
+  if ($type == 'deployment'){
+    $to_return = sidora_emammal_wi_delete_deployment($base_obj);
   }
   return $to_return;
 }
@@ -491,7 +543,7 @@ function sidora_emammal_wi_create($base_obj = NULL, $type = '', $subtype = '', $
   if ($type == 'project'){
     sidora_emammal_debug("Create project:" . $type);
     $project_wi_id = sidora_emammal_wi_create_project($base_obj, $create_override);
-    // create all the deployments under it TBD TODO
+    // create all the deployments under it
     $subprojects = array();
     $children_concepts = $base_obj->relationships->get(FEDORA_RELS_EXT_URI, 'hasConcept');
     foreach($children_concepts as $child_rel) {
@@ -506,9 +558,9 @@ function sidora_emammal_wi_create($base_obj = NULL, $type = '', $subtype = '', $
         $to_check_pid = $child_rel['object']['value'];
         $check_obj = sidora_obj($to_check_pid);
         if (sidora_emammal_get_wi_type($check_obj) == 'deployment'){
-          $wi_id = sidora_emammal_wi_get_id($deployment);
+          $wi_id = sidora_emammal_wi_get_id($check_obj);
           if (empty($wi_id)){
-            sidora_emammal_wi_create($deployment, 'deployment');
+            sidora_emammal_wi_create($check_obj, 'deployment');
           }
         }
         else {
@@ -518,9 +570,9 @@ function sidora_emammal_wi_create($base_obj = NULL, $type = '', $subtype = '', $
             $to_check_pid = $plot_child_rel['object']['value'];
             $check_obj = sidora_obj($to_check_pid);
             if (sidora_emammal_get_wi_type($check_obj) == 'deployment'){
-              $wi_id = sidora_emammal_wi_get_id($deployment);
+              $wi_id = sidora_emammal_wi_get_id($check_obj);
               if (empty($wi_id)){
-                sidora_emammal_wi_create($deployment, 'deployment');
+                sidora_emammal_wi_create($check_obj, 'deployment');
               }
             }
           }
@@ -805,6 +857,71 @@ function sidora_emammal_wi_deployment_update_strings($base_obj){
   $to_return[] = array("wi_type" => "location", "json" => $location_string);
   return $to_return;
 }
+/**
+ * Deletes this deployment, device and location ONLY from the WI API
+ * Assume the children get deleted by this function's caller
+ */
+function sidora_emammal_wi_delete_deployment($base_obj){
+  sidora_emammal_debug("Starting delete deployment...");
+  
+  if (!is_object($base_obj)){
+    watchdog('Sidora_emammal',t(
+      "Tried to delete deployment, but did not have a valid object: %encoded", 
+      array('%encoded' => json_encode($base_obj))
+    ));
+    return FALSE;
+  }
+  sidora_emammal_debug("Getting base_obj id");
+  $wi_id = sidora_emammal_wi_get_id($base_obj);
+  sidora_emammal_debug("base_obj id:" . $wi_id);
+  if (empty($wi_id)){
+    watchdog('Sidora_emammal',t(
+      "Tried to delete deployment, but did not have a WI ID in SIDORA: %pid", 
+      array('%pid' => $base_obj->id)
+    ));
+    return FALSE;
+  }
+  sidora_emammal_debug("Getting location id");
+  $loc_wi_id = sidora_emammal_wi_get_id($base_obj, 'location');
+  sidora_emammal_debug("location id:" . $loc_wi_id);
+  if (empty($loc_wi_id)){
+    watchdog('Sidora_emammal',t(
+      "Tried to delete deployment location, but did not have a WI ID in SIDORA: %pid", 
+      array('%pid' => $base_obj->id)
+    ));
+    return FALSE;
+  }
+  sidora_emammal_debug("Getting device id");
+  $device_wi_id = sidora_emammal_wi_get_id($base_obj, 'device');
+  sidora_emammal_debug("device id:" . $device_wi_id);
+  if (empty($device_wi_id)){
+    watchdog('Sidora_emammal',t(
+      "Tried to delete deployment device, but did not have a WI ID in SIDORA: %pid", 
+      array('%pid' => $base_obj->id)
+    ));
+    return FALSE;
+  }
+  $proj_id = sidora_emammal_get_project_wi_id($base_obj);
+  if (empty($proj_id)){
+    watchdog('Sidora_emammal',t(
+      "Tried to delete deployment, but did not have an associated PROJECT WI ID in SIDORA: %pid", 
+      array('%pid' => $base_obj->id)
+    ));
+    return FALSE;
+  }
+  sidora_emammal_debug("Deleting location");
+  $call_worked = sidora_emammal_wi_api_call("project/" . $proj_id . "/location" . $loc_wi_id, NULL, 'DELETE');
+  sidora_emammal_remove_wi_id($base_obj, $loc_wi_id);
+  $org_id = sidora_emammal_wi_get_organization_id();
+  sidora_emammal_debug("Deleting device");
+  $call_worked = $call_worked && sidora_emammal_wi_api_call("organization/" . $org_id . "/device/" . $device_wi_id, NULL, 'DELETE');
+  sidora_emammal_remove_wi_id($base_obj, $device_wi_id);
+  sidora_emammal_debug("Deleting deployment");
+  $call_worked = $call_worked && sidora_emammal_wi_api_call("project/" . $proj_id . "/deployment/" .  $wi_id, NULL, 'DELETE');
+  sidora_emammal_remove_wi_id($base_obj, $wi_id);
+  return $call_worked;
+}
+/**
 
 /*****************************************************************************
  *****************************************************************************
@@ -1239,6 +1356,7 @@ function sidora_emammal_create_or_update_for_wi_if_needed(AbstractObject $object
     return;
   }
   $opt_in = sidora_emammal_check_opt_in_for_wi($object);
+  sidora_emammal_debug("Checking update:" . $object->id . " , opt-in: '" . ($opt_in?"TRUE":"FALSE") . "'");
   if ($opt_in){
     if ($datastream->id == 'RELS-EXT'){
       // Run though all its children trees and update them all
@@ -1265,11 +1383,8 @@ function sidora_emammal_create_or_update_for_wi_if_needed(AbstractObject $object
 function sidora_emammal_delete_from_wi(AbstractObject $object, $wi_id){
   sidora_emammal_debug("delete from wi, wi_id:" . $wi_id);
   if (!empty($wi_id)){
-    $wi_info = sidora_emammal_get_wi_type($object);
-    if (!empty($wi_info)){
-      $type = $wi_info[0]['wi_type'];
-      sidora_emammal_wi_delete($object, $type);
-    }
+    $type = sidora_emammal_get_wi_type($object);
+    sidora_emammal_wi_delete($object, $type);
   }
   return TRUE;
 }
@@ -1280,12 +1395,10 @@ function sidora_emammal_delete_from_wi(AbstractObject $object, $wi_id){
 function sidora_emammal_create_or_update_for_wi(AbstractObject $object){
   // See if it already exists
   $wi_id = sidora_emammal_wi_get_id($object);
-  $wi_info = sidora_emammal_get_wi_type($object);
+  $type = sidora_emammal_get_wi_type($object);
   
-  sidora_emammal_debug(json_encode(array($wi_id, $wi_info)));
   if (empty($wi_id)){
-    if (!empty($wi_info)){
-      $type = $wi_info[0]['wi_type'];
+    if (!empty($type)){
       sidora_emammal_debug("Create:" . $type);
       sidora_emammal_wi_create($object, $type);
       // Create the object in WI, sidora_emammal_wi_create will handle children if needed
@@ -1293,8 +1406,7 @@ function sidora_emammal_create_or_update_for_wi(AbstractObject $object){
   }
   else {
     // Update the object in WI, assume its children are unchanged
-    if (!empty($wi_info)){
-      $type = $wi_info[0]['wi_type'];
+    if (!empty($type)){
       sidora_emammal_wi_update($object, $type);
     }
   } 
@@ -1303,7 +1415,16 @@ function sidora_emammal_create_or_update_for_wi(AbstractObject $object){
 /**
  * Helper function to return the base type of the WI object for this Fedora object
  */
-function sidora_emammal_get_wi_type($object){
+function sidora_emammal_get_wi_type($object, $return_distances = FALSE){
+  if (empty($object)){
+    sidora_emammal_debug("Tried getting type for empty object");
+    return NULL;
+  }
+  if (!is_object($object)){
+    sidora_emammal_debug("Tried getting type for non-object:" . json_encode($object));
+    return NULL;
+  }
+  sidora_emammal_debug("Getting type for:" . $object->id);
   $fedora_models_to_wi_type = sidora_emammal_get_fedora_models_to_wi_type();
   $models = ($object->relationships->get('info:fedora/fedora-system:def/model#', 'hasModel'));
   $wi_model_types = array_keys($fedora_models_to_wi_type);
@@ -1311,7 +1432,11 @@ function sidora_emammal_get_wi_type($object){
   foreach($models as $model_rel) {
     $model = $model_rel['object']['value'];
     if (in_array($model, $wi_model_types)){
-      $wi_info[] = $fedora_models_to_wi_type[$model];
+      $check = $fedora_models_to_wi_type[$model];
+      if (!$return_distances){
+        return $check['wi_type'];
+      }
+      $wi_info[] = $check;
     }
   }
   return $wi_info;
@@ -1352,7 +1477,7 @@ function sidora_emammal_get_fedora_models_to_wi_type(){
  */
 function sidora_emammal_check_opt_in_for_wi(AbstractObject $object){
   sidora_emammal_debug("Checking opt-in for:" . $object->id);
-  $wi_infos = sidora_emammal_get_wi_type($object);
+  $wi_infos = sidora_emammal_get_wi_type($object, TRUE);
   sidora_emammal_debug("wi_infos:" . json_encode($wi_infos));
   if (!empty($wi_infos)){
     foreach($wi_infos as $wi_info) {
@@ -1401,12 +1526,12 @@ function sidora_emammal_check_opt_in_for_wi(AbstractObject $object){
 }
 
 /**
- * Find the project's WI ID given an object, or return NULL, requires that OPT IN is set
+ * Find the project's WI ID given an object, or return NULL
  * $object - any fedora object
  */
 function sidora_emammal_get_project_wi_id(AbstractObject $object){
   sidora_emammal_debug("Checking opt-in for:" . $object->id);
-  $wi_infos = sidora_emammal_get_wi_type($object);
+  $wi_infos = sidora_emammal_get_wi_type($object, TRUE);
   sidora_emammal_debug("wi_infos:" . json_encode($wi_infos));
   if (!empty($wi_infos)){
     foreach($wi_infos as $wi_info) {
@@ -1424,21 +1549,9 @@ function sidora_emammal_get_project_wi_id(AbstractObject $object){
           if (!empty($project_obj) && (!empty($project_obj['EAC-CPF']))){
             $content = $project_obj['EAC-CPF']->content;
             if (!empty($content)){
-              $doc = new DOMDocument();
-              $docToLoad = ($content);
-              $doc->loadXML($docToLoad);
-              $existing_wi_opt_in_nodes = $doc->getElementsByTagName(SIDORA_EMAMMAL_OPT_IN_TAG);
-              foreach($existing_wi_opt_in_nodes as $exister){
-                $opt_in = $exister->nodeValue;
-              }
+              $proj_wi_id = sidora_emammal_wi_get_id($project_obj);
+              return $proj_wi_id;
             }
-          }
-          if ("" . $opt_in === "1"){
-            $proj_wi_id = sidora_emammal_wi_get_id($project_obj);
-            return $proj_wi_id;
-          }
-          else {
-            sidora_emammal_debug("Not opted in:" . $project_obj->id);
           }
         }
         if ($i < $wi_info['max_distance_to_project']){
