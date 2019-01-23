@@ -119,6 +119,17 @@ function sidora_emammal_test($method = '', $data = '', $data2 = '', $data3 = '')
       sidora_emammal_add_wi_id_to_sidora_ds($obj, $data2, $data3);
       echo $obj['SIDORA']->content;
       break;
+    case 'dus':
+      $obj = sidora_obj($data);
+      $us = sidora_emammal_wi_deployment_update_strings($obj);
+      echo json_encode($us);
+      break;
+    case 'get_project_wi_id':
+      echo 'Start<br>';
+      $obj = sidora_obj($data);
+      echo sidora_emammal_get_project_wi_id($obj);
+      echo '<br>End';
+      break;
     default:
       echo "No function to test";
     // testing end
@@ -205,7 +216,7 @@ function sidora_emammal_add_wi_id_to_sidora_ds($emammal_obj, $org_id, $subtype =
   $creating_sidora = empty($sidora_ds);
   $doc = new DOMDocument();
   if ($creating_sidora){
-    watchdog("sidora_emammal", t("Creating SIdora datastream for object: %pid of type: %type", array("%pid" => $id, '%type' => $create_type)));
+    watchdog("sidora_emammal", t("Creating SIdora datastream for object: %pid", array("%pid" => $emammal_obj->id)));
     $docToLoad = ('<?xml version="1.0" encoding="UTF-8"?'.'>'.'<sidora></sidora>');
   }
   else {
@@ -399,7 +410,8 @@ function sidora_emammal_wi_helper_pull_id($data){
 }
 
 function sidora_emammal_debug($output){
-  if (FALSE) watchdog("emammal_debug", $output);
+  if (FALSE)
+    watchdog("emammal_debug", $output);
 }
 
 /*****************************************************************************
@@ -480,6 +492,24 @@ function sidora_emammal_wi_create($base_obj = NULL, $type = '', $subtype = '', $
     sidora_emammal_debug("Create project:" . $type);
     $project_wi_id = sidora_emammal_wi_create_project($base_obj, $create_override);
     // create all the deployments under it TBD TODO
+    $subprojects = array();
+    $children_concepts = $base_obj->relationships->get(FEDORA_RELS_EXT_URI, 'hasConcept');
+    foreach($children_concepts as $child_rel) {
+      $to_check_pid = $child_rel['object']['value'];
+      $subprojects[] = sidora_obj($to_check_pid);
+    }
+    $deployments = array();
+    foreach($subprojects as $subproject){
+      $children_concepts = $subproject->relationships->get(FEDORA_RELS_EXT_URI, 'hasConcept');
+      foreach($children_concepts as $child_rel) {
+        $to_check_pid = $child_rel['object']['value'];
+        $deployment = sidora_obj($to_check_pid);
+        $wi_id = sidora_emammal_wi_get_id($deployment);
+        if (empty($wi_id)){
+          sidora_emammal_wi_create($deployment, 'deployment');
+        }
+      }
+    }
     // the deployments are typically the grandchildren of projects
     // find all the subprojects
     // find all the deployments from the subprojects
@@ -487,7 +517,276 @@ function sidora_emammal_wi_create($base_obj = NULL, $type = '', $subtype = '', $
     // Do not create any deployments which already have a WI id in their 
     //    SIDORA datastream
   }
+  if ($type == 'deployment'){
+    sidora_emammal_wi_create_deployment($base_obj, $create_override);
+  }
   return NULL;
+}
+
+/*****************************************************************************
+ *****************************************************************************
+ *****************************************************************************
+ *** WI OBJECT: DEPLOYMENT
+ *** These functions deal with Deployment
+ *** 
+ *****************************************************************************
+ *****************************************************************************
+ ****************************************************************************/
+
+/*
+ * This creates the deployment object in WI. It will not create any child objects
+ * of a deployment. Does NOT update existing deployments with new data. ONLY used for
+ * creation. This will create the device object in the WI as well
+ *
+ * $base_obj - the Fedora object to use for creation
+ * $create_override - normally do not create an object if it already has a WI ID
+ *    if TRUE, will create a WI object anyway
+ *    if FALSE, will return the ID of the item
+ * returns the Wildlife Insights ID of the existing object or newly created object
+ */
+function sidora_emammal_wi_create_deployment($base_obj, $create_override = FALSE){
+  $do_create = $create_override;
+  // See if it has a WI id
+  $wi_id = sidora_emammal_wi_get_id($base_obj);
+  if (empty($wi_id)){
+    $do_create = TRUE;
+  }
+  $proj_id = sidora_emammal_get_project_wi_id($base_obj);
+  if (empty($proj_id)){
+    sidora_emammal_debug("The project for $base_obj->id is not in WI or does not have opt-in");
+    $do_create = FALSE;
+  }
+  sidora_emammal_debug("Create deployment:" . $do_create);
+  if ($do_create){
+    $update_info = sidora_emammal_wi_deployment_update_strings($base_obj);
+    sidora_emammal_debug("update strings:" . json_encode($update_info));
+    // Should contain 3 objects, device and location must be entered first so that their ids can be put in the deployment
+    $org_id = sidora_emammal_wi_get_organization_id();
+    $result = sidora_emammal_wi_api_call("organization/" . $org_id . "/device", $update_info[1]['json']);
+    sidora_emammal_debug("create device result::" . $result);
+    $device_id = sidora_emammal_wi_helper_pull_id($result);
+    if (empty($device_id)){
+      watchdog('Sidora_emammal',t(
+        "Tried to create device for deployment, but did not get WI ID: %uinfo %result", 
+        array('%uinfo' => json_encode($update_info), '%result' => $result)
+      ));
+    }
+    else {
+      // device created, update the sidora datastream with the result
+      sidora_emammal_add_wi_id_to_sidora_ds($base_obj, $device_id, 'device');
+    }
+    // Create the location TBD TODO BBB
+    $loc_id = NULL;
+    if (!empty($device_id)){ 
+      $result = sidora_emammal_wi_api_call("project/" . $proj_id . "/location", $update_info[2]['json']);
+      $loc_id = sidora_emammal_wi_helper_pull_id($result);
+      if (empty($loc_id)){
+        watchdog('Sidora_emammal',t(
+          "Tried to create location for new deployment, but did not get location's WI ID: %uinfo %result", 
+          array('%uinfo' => json_encode($update_info), '%result' => $result)
+        ));
+      }
+      else {
+        sidora_emammal_add_wi_id_to_sidora_ds($base_obj, $loc_id, 'location');
+      }
+    }
+    if (!empty($loc_id)){ 
+      // Put in the location and device ids to the deployment
+      $deployment_obj = json_decode($update_info[0]['json'], TRUE);
+      $deployment_obj["deviceId"] = $device_id;
+      $deployment_obj["locationId"] = $loc_id;
+      $deployment_json = json_encode($deployment_obj);
+      $result = sidora_emammal_wi_api_call("project/" . $proj_id . "/deployment", $deployment_json);
+      $deployment_id = sidora_emammal_wi_helper_pull_id($result);
+      if (empty($deployment_id)){
+        watchdog('Sidora_emammal',t(
+          "Tried to create deployment, but did not get deployment's WI ID: %uinfo %result", 
+          array('%uinfo' => json_encode($update_info), '%result' => $result)
+        ));
+      }
+      else {
+        sidora_emammal_add_wi_id_to_sidora_ds($base_obj, $deployment_id);
+      }
+      $wi_id = $deployment_id;
+    }
+    // Now the object is created. Its WI ID is in its SIDORA datastream and
+    // in the $wi_id variable
+  }
+  return $wi_id;
+}
+
+/**
+ * Returns an array of objects to use to update or create project and location in WI
+ * the array looks like this:
+ * $returned = array(
+ *   [0] => array("wi_type" => "deployment",  "json" => $creation_string),
+ *   [1] => array("wi_type" => "device",  "json" => $dev_creation_string),
+ *   [2] => array("wi_type" => "location",  "json" => $loc_creation_string),
+ * );
+ */
+function sidora_emammal_wi_deployment_update_strings($base_obj){
+  $to_return = array();
+  $name = $base_obj->label;
+  $content = $base_obj['FGDC']->content;
+  if (!empty($content)){
+    // The information to fill in:
+    $deployment_id = '';
+    $deployment_name = '';
+    $sensor_resolution = '';
+    $sensor_sensitivity = '';
+    $start_date_time = '';
+    $end_date_time = '';
+    $remarks = '';
+    $detection_distance = 0;
+    $quiet_period = 0;
+    $lat = "";
+    $long = "";
+    $camera_id = "";
+    $camera_make = "";
+    $camera_model = "";
+
+    $doc = new DOMDocument();
+    $docToLoad = ($content);
+    $doc->loadXML($docToLoad);
+
+    $di_nodes = $doc->getElementsByTagName("othercit");
+    foreach($di_nodes as $exister){
+      $deployment_id = $exister->nodeValue;
+    }
+
+    $title_nodes = $doc->getElementsByTagName("title");
+    foreach($title_nodes as $exister){
+      $deployment_name = $exister->nodeValue;
+    }
+
+    $start_date_time_nodes = $doc->getElementsByTagName("begdate");
+    foreach($start_date_time_nodes as $exister){
+      $start_date_time = $exister->nodeValue;
+    }
+
+    $end_date_time_nodes = $doc->getElementsByTagName("enddate");
+    foreach($end_date_time_nodes as $exister){
+      $end_date_time = $exister->nodeValue;
+    }
+
+    $attrlabl_nodes = $doc->getElementsByTagName("attrlabl");
+    foreach($attrlabl_nodes as $exister){
+      $label_value = $exister->nodeValue;
+      $attr_node = $exister->parentNode;
+      foreach($attr_node->childNodes as $attr_child_node){
+        if($attr_child_node->nodeType == XML_ELEMENT_NODE) {
+          if ($attr_child_node->tagName == 'attrdomv'){
+            $domv_child_nodes = $attr_child_node->childNodes;
+            foreach($domv_child_nodes as $edom_node){
+              if ($edom_node->childNodes !== NULL){
+                foreach($edom_node->childNodes as $ecn){
+                  if($ecn->nodeType == XML_ELEMENT_NODE) {
+                    if ($ecn->tagName == 'edomv'){
+                      $value = $ecn->nodeValue;
+                      if (empty($value)) $value = '';
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+      if ($label_value == "Image Resolution Setting"){
+        $sensor_resolution = $value;
+      }
+      if ($label_value == "Sensitivity Setting"){
+        $sensor_sensitivity = $value;
+      }
+      if ($label_value == "Detection Distance"){
+        $detection_distance = floatval($value);
+      }
+      if ($label_value == "Quiet Period Setting"){
+        $quiet_period = floatval($value);
+      }
+      if ($label_value == "Actual Latitude"){
+        $lat = $value;
+      }
+      if ($label_value == "Actual Longitude"){
+        $long = $value;
+      }
+      if ($label_value == "Camera ID"){
+        $camera_id = $value;
+      }
+      if ($label_value == "Camera Make"){
+        $camera_make = $value;
+      }
+      if ($label_value == "Camera Model"){
+        $camera_model = $value;
+      }
+    }
+
+    $creation_obj = array(
+      "deploymentIdentifier" => $deployment_id,
+      "deploymentName" => $deployment_name,
+      "sensorHeight" => 0,
+      "quietPeriod" => $quiet_period,
+      "detectionDistance" => $detection_distance,
+      "sampleRate" => '', // No sampleRate
+      "sensorOrientation" => '', //No orientation
+      "sensorSchedule" => '', //No schedule
+      "sensorResolution" => $sensor_resolution, 
+      "sensorSensitivity" => $sensor_sensitivity,
+      "sensorFailureDetails" => '', /// No failure details
+      "sensorEndStatus" => '', // No sensor end status
+      "startDatetime" => $start_date_time,
+      "endDatetime" => $end_date_time,
+      "remarks" => $remarks,
+      "sensorId" => 0,
+      "deviceId" => 0,
+      "baitTypeId" => 0,
+      "locationId" => 0,
+      "participantSetSensorId" => 0,
+      "participantRemoveSensorId" => 0
+    );
+    $creation_string = json_encode($creation_obj);
+
+    
+    $device_obj = array(
+      "name" => $camera_id,
+      "purchaseDate" => array(),
+      "make" => $camera_make,
+      "model" => $camera_model,
+      "modelNumber" => "",
+      "serialNumber" => "",
+      "purchaseYear" => 0,
+      "purchasePrice" => 0,
+      "productUrl" => "",
+      "remarks" => "Camera for deployment:" . $deployment_name,
+    );
+
+    $device_string = json_encode($device_obj);
+
+    $location_obj = array(
+      "latitude" => $lat,
+      "longitude" => $long,
+      "placename" => "Camera Location for deployment:" . $deployment_name,
+      "propertyType" => "",
+      "habitat" => "",
+      "remarks" => "",
+      "plotTreatment" => "",
+      "plotTreatmentDescription" => "",
+      "geodeticDatum" => "",
+      "fieldNumber" => "",
+      "country" => "",
+      "firstOrderDivision" => "",
+      "secondOrderDivision" => "",
+      "landcoverType" => "",
+      "igbpClimateClassification" => "",
+      "elevationGtopo30" => 0
+    );
+
+    $location_string = json_encode($location_obj);
+  }
+  $to_return[] = array("wi_type" => "deployment", "json" => $creation_string);
+  $to_return[] = array("wi_type" => "device", "json" => $device_string);
+  $to_return[] = array("wi_type" => "location", "json" => $location_string);
+  return $to_return;
 }
 
 /*****************************************************************************
@@ -814,8 +1113,6 @@ function sidora_emammal_wi_project_update_strings($base_obj){
 /*
  * UNIMPLEMENTED
  */
-function sidora_emammal_wi_create_deployment(){
-}
 function sidora_emammal_wi_create_identification_output(){
 }
 function sidora_emammal_wi_create_sequence(){
@@ -937,8 +1234,8 @@ function sidora_emammal_create_or_update_for_wi_if_needed(AbstractObject $object
   }
   else {
     $wi_id = sidora_emammal_wi_get_id($object);
-    sidora_emammal_debug("Opt-out, but has ID:" . $wi_id . " proceeding to remove");
     if (!empty($wi_id)){
+      sidora_emammal_debug("Opt-out, but has ID:" . $wi_id . " proceeding to remove");
       sidora_emammal_delete_from_wi($object, $wi_id);
     }
   }
@@ -953,7 +1250,7 @@ function sidora_emammal_delete_from_wi(AbstractObject $object, $wi_id){
   if (!empty($wi_id)){
     $wi_info = sidora_emammal_get_wi_type($object);
     if (!empty($wi_info)){
-      $type = $wi_info['wi_type'];
+      $type = $wi_info[0]['wi_type'];
       sidora_emammal_wi_delete($object, $type);
     }
   }
@@ -971,7 +1268,7 @@ function sidora_emammal_create_or_update_for_wi(AbstractObject $object){
   sidora_emammal_debug(json_encode(array($wi_id, $wi_info)));
   if (empty($wi_id)){
     if (!empty($wi_info)){
-      $type = $wi_info['wi_type'];
+      $type = $wi_info[0]['wi_type'];
       sidora_emammal_debug("Create:" . $type);
       sidora_emammal_wi_create($object, $type);
       // Create the object in WI, sidora_emammal_wi_create will handle children if needed
@@ -980,7 +1277,7 @@ function sidora_emammal_create_or_update_for_wi(AbstractObject $object){
   else {
     // Update the object in WI, assume its children are unchanged
     if (!empty($wi_info)){
-      $type = $wi_info['wi_type'];
+      $type = $wi_info[0]['wi_type'];
       sidora_emammal_wi_update($object, $type);
     }
   } 
@@ -993,11 +1290,11 @@ function sidora_emammal_get_wi_type($object){
   $fedora_models_to_wi_type = sidora_emammal_get_fedora_models_to_wi_type();
   $models = ($object->relationships->get('info:fedora/fedora-system:def/model#', 'hasModel'));
   $wi_model_types = array_keys($fedora_models_to_wi_type);
-  $wi_info = NULL;
+  $wi_info = array();
   foreach($models as $model_rel) {
     $model = $model_rel['object']['value'];
     if (in_array($model, $wi_model_types)){
-      $wi_info = $fedora_models_to_wi_type[$model];
+      $wi_info[] = $fedora_models_to_wi_type[$model];
     }
   }
   return $wi_info;
@@ -1009,21 +1306,26 @@ function sidora_emammal_get_wi_type($object){
 function sidora_emammal_get_fedora_models_to_wi_type(){
   return array(
     'si:projectCModel' => array(
-       'distance_to_project' => 0,
+       'min_distance_to_project' => 0,
+       'max_distance_to_project' => 0,
        'wi_type' => 'project',
     ),
     'si:cameraTrapCModel' => array(
-       'distance_to_project' => 2,
+       'min_distance_to_project' => 2,
+       'max_distance_to_project' => 3,
        'wi_type' => 'deployment',
     ),
     'si:generalImageCModel' => array(
-       'distance_to_project' => 3,
+       'min_distance_to_project' => 3,
+       'max_distance_to_project' => 4,
        'wi_type' => 'dataFile',
     ),
     'si:datasetCModel' => array(
-       'distance_to_project' => 3,
+       'min_distance_to_project' => 3,
+       'max_distance_to_project' => 4,
        'wi_type' => 'dataFile',
     ),
+    // Optional level of plots push things one down
   );
 }
 
@@ -1032,38 +1334,108 @@ function sidora_emammal_get_fedora_models_to_wi_type(){
  * for the project. If these are true, update the information for the object in WI
  */
 function sidora_emammal_check_opt_in_for_wi(AbstractObject $object){
-  $wi_info = sidora_emammal_get_wi_type($object);
-  if (!empty($wi_info)){
-    $opt_in = FALSE;
-    $checker_id = $object->id;
-    for($i = 0; $i < $wi_info['distance_to_project']; $i++){ 
-      module_load_include('inc', 'sidora', 'includes/utils');
-      // use isAdministeredBy if exists
-      $parent_id = sidora_get_owning_parent_concept_pid_by_administered_pid($checker_id);
-      if (empty($parent_id)){
-        $parents = sidora_get_parent_concepts_by_pid($checker_id);
-        foreach($parents as $ppid => $parent){
-          $parent_id = $ppid;
+  sidora_emammal_debug("Checking opt-in for:" . $object->id);
+  $wi_infos = sidora_emammal_get_wi_type($object);
+  sidora_emammal_debug("wi_infos:" . json_encode($wi_infos));
+  if (!empty($wi_infos)){
+    foreach($wi_infos as $wi_info) {
+      sidora_emammal_debug("wi_info:" . json_encode($wi_info));
+      $opt_in = FALSE;
+      $parent_id = $object->id;
+      sidora_emammal_debug("parent_id:" . $parent_id);
+      for($i = 0; $i <= $wi_info['max_distance_to_project']; $i++){ 
+        $checker_id = $parent_id;
+        sidora_emammal_debug("checker_id:" . $checker_id);
+        if ($i >= $wi_info['min_distance_to_project']){
+          sidora_emammal_debug("past_min_dist_check:" . $checker_id);
+          // $checker_id should now hold the pid of the project, which we need to check to see if it's opt-in is checked
+          $project_obj = sidora_obj($checker_id);
+          if (!empty($project_obj) && (!empty($project_obj['EAC-CPF']))){
+            $content = $project_obj['EAC-CPF']->content;
+            if (!empty($content)){
+              $doc = new DOMDocument();
+              $docToLoad = ($content);
+              $doc->loadXML($docToLoad);
+              $existing_wi_opt_in_nodes = $doc->getElementsByTagName(SIDORA_EMAMMAL_OPT_IN_TAG);
+              foreach($existing_wi_opt_in_nodes as $exister){
+                $opt_in = $exister->nodeValue;
+              }
+            }
+          }
+          if ("" . $opt_in === "1"){
+            return TRUE;
+          }
+        }
+        if ($i < $wi_info['max_distance_to_project']){
+          module_load_include('inc', 'sidora', 'includes/utils');
+          // use isAdministeredBy if exists
+          $parent_id = sidora_get_owning_parent_concept_pid_by_administered_pid($checker_id);
+          if (empty($parent_id)){
+            $parents = sidora_get_parent_concepts_by_pid($checker_id);
+            foreach($parents as $ppid => $parent){
+              $parent_id = $ppid;
+            }
+          }
         }
       }
-      $checker_id = $parent_id;
     }
-    // $checker_id should now hold the pid of the project, which we need to check to see if it's opt-in is checked
-    $project_obj = sidora_obj($checker_id);
-    if (!empty($project_obj) && (!empty($project_obj['EAC-CPF']))){
-      $content = $project_obj['EAC-CPF']->content;
-      if (!empty($content)){
-        $doc = new DOMDocument();
-        $docToLoad = ($content);
-        $doc->loadXML($docToLoad);
-        $existing_wi_opt_in_nodes = $doc->getElementsByTagName(SIDORA_EMAMMAL_OPT_IN_TAG);
-        foreach($existing_wi_opt_in_nodes as $exister){
-          $opt_in = $exister->nodeValue;
+  }
+  return FALSE;
+}
+
+/**
+ * Find the project's WI ID given an object, or return NULL, requires that OPT IN is set
+ * $object - any fedora object
+ */
+function sidora_emammal_get_project_wi_id(AbstractObject $object){
+  sidora_emammal_debug("Checking opt-in for:" . $object->id);
+  $wi_infos = sidora_emammal_get_wi_type($object);
+  sidora_emammal_debug("wi_infos:" . json_encode($wi_infos));
+  if (!empty($wi_infos)){
+    foreach($wi_infos as $wi_info) {
+      sidora_emammal_debug("wi_info:" . json_encode($wi_info));
+      $opt_in = FALSE;
+      $parent_id = $object->id;
+      sidora_emammal_debug("parent_id:" . $parent_id);
+      for($i = 0; $i <= $wi_info['max_distance_to_project']; $i++){ 
+        $checker_id = $parent_id;
+        sidora_emammal_debug("checker_id:" . $checker_id);
+        if ($i >= $wi_info['min_distance_to_project']){
+          sidora_emammal_debug("past_min_dist_check:" . $checker_id);
+          // $checker_id should now hold the pid of the project, which we need to check to see if it's opt-in is checked
+          $project_obj = sidora_obj($checker_id);
+          if (!empty($project_obj) && (!empty($project_obj['EAC-CPF']))){
+            $content = $project_obj['EAC-CPF']->content;
+            if (!empty($content)){
+              $doc = new DOMDocument();
+              $docToLoad = ($content);
+              $doc->loadXML($docToLoad);
+              $existing_wi_opt_in_nodes = $doc->getElementsByTagName(SIDORA_EMAMMAL_OPT_IN_TAG);
+              foreach($existing_wi_opt_in_nodes as $exister){
+                $opt_in = $exister->nodeValue;
+              }
+            }
+          }
+          if ("" . $opt_in === "1"){
+            $proj_wi_id = sidora_emammal_wi_get_id($project_obj);
+            return $proj_wi_id;
+          }
+          else {
+            sidora_emammal_debug("Not opted in:" . $project_obj->id);
+          }
+        }
+        if ($i < $wi_info['max_distance_to_project']){
+          module_load_include('inc', 'sidora', 'includes/utils');
+          // use isAdministeredBy if exists
+          $parent_id = sidora_get_owning_parent_concept_pid_by_administered_pid($checker_id);
+          if (empty($parent_id)){
+            $parents = sidora_get_parent_concepts_by_pid($checker_id);
+            foreach($parents as $ppid => $parent){
+              $parent_id = $ppid;
+            }
+          }
         }
       }
-    }
-    if ("" . $opt_in === "1"){
-      return TRUE;
     }
   }
   return FALSE;
