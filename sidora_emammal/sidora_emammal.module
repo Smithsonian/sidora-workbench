@@ -502,11 +502,28 @@ function sidora_emammal_wi_create($base_obj = NULL, $type = '', $subtype = '', $
     foreach($subprojects as $subproject){
       $children_concepts = $subproject->relationships->get(FEDORA_RELS_EXT_URI, 'hasConcept');
       foreach($children_concepts as $child_rel) {
+        // This could be a deployment or it could be a plot, check the type
         $to_check_pid = $child_rel['object']['value'];
-        $deployment = sidora_obj($to_check_pid);
-        $wi_id = sidora_emammal_wi_get_id($deployment);
-        if (empty($wi_id)){
-          sidora_emammal_wi_create($deployment, 'deployment');
+        $check_obj = sidora_obj($to_check_pid);
+        if (sidora_emammal_get_wi_type($check_obj) == 'deployment'){
+          $wi_id = sidora_emammal_wi_get_id($deployment);
+          if (empty($wi_id)){
+            sidora_emammal_wi_create($deployment, 'deployment');
+          }
+        }
+        else {
+          // This is a plot, check its children for deployments
+          $plot_children_concepts = $check_obj->relationships->get(FEDORA_RELS_EXT_URI, 'hasConcept');
+          foreach($plot_children_concepts as $plot_child_rel) {
+            $to_check_pid = $plot_child_rel['object']['value'];
+            $check_obj = sidora_obj($to_check_pid);
+            if (sidora_emammal_get_wi_type($check_obj) == 'deployment'){
+              $wi_id = sidora_emammal_wi_get_id($deployment);
+              if (empty($wi_id)){
+                sidora_emammal_wi_create($deployment, 'deployment');
+              }
+            }
+          }
         }
       }
     }
