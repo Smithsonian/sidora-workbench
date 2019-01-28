@@ -130,11 +130,25 @@ function sidora_emammal_test($method = '', $data = '', $data2 = '', $data3 = '')
       echo sidora_emammal_get_project_wi_id($obj);
       echo '<br>End';
       break;
+    case 'get_deployment_wi_id':
+      echo 'Start<br>';
+      $obj = sidora_obj($data);
+      echo sidora_emammal_get_deployment_wi_id($obj);
+      echo '<br>End';
+      break;
     case 'get_wi_type':
       echo 'Start<br>';
       $obj = sidora_obj($data);
       echo json_encode(sidora_emammal_get_wi_type($obj));
       echo '<br>End';
+      break;
+    case 'createSeq':
+      echo 'Start<br>';
+      $obj = sidora_obj($data);
+      $seq_id = sidora_emammal_wi_create_sequence($obj);
+      echo $seq_id;
+      echo '<br>End';
+     
       break;
     default:
       echo "No function to test";
@@ -167,8 +181,9 @@ function sidora_emammal_test($method = '', $data = '', $data2 = '', $data3 = '')
  * Returns the Wildlife Insights ID
  * $emammal_obj = the Islandora object to obtain the id from, or the pid
  * $subtype = the wi_id to return for subtypes, like location for project
+ * $emammal_id = emammal's identifier, used to determine when multiple exist of the same subtype
  */
-function sidora_emammal_wi_get_id($emammal_obj, $subtype = ''){
+function sidora_emammal_wi_get_id($emammal_obj, $subtype = '', $emammal_id = ''){
   if (is_string($emammal_obj)){
     $emammal_obj = sidora_obj($emammal_obj);
   }
@@ -187,8 +202,14 @@ function sidora_emammal_wi_get_id($emammal_obj, $subtype = ''){
       if (empty($subtype) && empty($saved_type)){
         $org_id = $exister->nodeValue;
       }
-      else if ($subtype == $saved_type){
-        $org_id = $exister->nodeValue;
+      elseif ($subtype == $saved_type){
+        $saved_emammal_id = $exister->getAttribute('emammal_id');
+        if (empty($emammal_id) && empty($saved_emammal_id)){
+          $org_id = $exister->nodeValue;
+        }
+        elseif ($emammal_id == $saved_emammal_id){
+          $org_id = $exister->nodeValue;
+        }
       }
     }
   }
@@ -200,7 +221,7 @@ function sidora_emammal_wi_get_id($emammal_obj, $subtype = ''){
  * $emammal_obj = the Islandora object to obtain the id from, or the pid
  * $create_type = the type of object to create for this if the ID is not found, leave empty if no object should be created
  * $subtype = the wi_id to return for subtypes, like location for project
- */
+ * TODO: Vestigial? Remove?
 function sidora_emammal_wi_create_if_not_exist($emammal_obj, $create_type = NULL, $subtype = ''){
   $org_id = sidora_emammal_wi_get_id($emammal_obj, $subtype);
   if (empty($org_id) && !(empty($create_type) && empty($subtype))){
@@ -210,14 +231,16 @@ function sidora_emammal_wi_create_if_not_exist($emammal_obj, $create_type = NULL
   }
   return $org_id;
 }
+ */
 
 /**
  * Adds a Wildlife Insights ID to the SIDORA datastream of the object, overwriting existing ones
  * $emammal_obj = the Islandora object to add this WI onto
  * $org_id = the WI Id
  * $subtype = the wi_id subtype, like location for project
+ * $emammal_id = eMammal's original ID (e.g. sequence number is d21021s99) to differentiate subtype ids
  */
-function sidora_emammal_add_wi_id_to_sidora_ds($emammal_obj, $org_id, $subtype = ''){
+function sidora_emammal_add_wi_id_to_sidora_ds($emammal_obj, $org_id, $subtype = '', $emammal_id = ''){
   $sidora_ds = $emammal_obj['SIDORA'];
   $creating_sidora = empty($sidora_ds);
   $doc = new DOMDocument();
@@ -233,6 +256,9 @@ function sidora_emammal_add_wi_id_to_sidora_ds($emammal_obj, $org_id, $subtype =
   if (!empty($subtype)){
     $node->setAttribute('subtype', $subtype);
   }
+  if (!empty($emammal_id)){
+    $node->setAttribute('emammal_id', $emammal_id);
+  }
   $node->nodeValue = $org_id;
   $sidora_node = $doc->getElementsByTagName('sidora');
   // Remove existing IDs of the same type
@@ -242,8 +268,14 @@ function sidora_emammal_add_wi_id_to_sidora_ds($emammal_obj, $org_id, $subtype =
     if (empty($subtype) && empty($saved_type)){
       $sidora_node->item(0)->removeChild($to_remove);
     }
-    else if ($subtype == $saved_type){
-      $sidora_node->item(0)->removeChild($to_remove);
+    elseif ($subtype == $saved_type){
+      $saved_emammal_id = $to_remove->getAttribute('emammal_id');
+      if (empty($emammal_id) && empty($saved_emammal_id)){
+        $sidora_node->item(0)->removeChild($to_remove);
+      }
+      elseif ($emammal_id == $saved_emammal_id){
+        $sidora_node->item(0)->removeChild($to_remove);
+      }
     }
   }
   $sidora_node->item(0)->appendChild($node);
@@ -416,7 +448,7 @@ function sidora_emammal_wi_helper_pull_id($data){
 }
 
 function sidora_emammal_debug($output){
-  if (FALSE)
+  //if (FALSE)
     watchdog("emammal_debug", $output);
 }
 
@@ -589,23 +621,33 @@ function sidora_emammal_wi_create($base_obj = NULL, $type = '', $subtype = '', $
   if ($type == 'deployment'){
     sidora_emammal_wi_create_deployment($base_obj, $create_override);
   }
+  if ($type == 'sequences'){
+    sidora_emammal_wi_create_sequence($base_obj, $create_override);
+  }
   return NULL;
 }
 
 /*****************************************************************************
  *****************************************************************************
  *****************************************************************************
- *** WI OBJECT: DEPLOYMENT
- *** These functions deal with Deployment
+ *** WI OBJECT: Data Files
+ *** These functions deal with Data Files
  *** 
  *****************************************************************************
  *****************************************************************************
  ****************************************************************************/
 
-/*
- * This creates the deployment object in WI. It will not create any child objects
- * of a deployment. Does NOT update existing deployments with new data. ONLY used for
- * creation. This will create the device object in the WI as well
+/* TODO
+ * This creates the data file object in WI, and the sequence if needed.
+ * The deployment is checked for an existing sequence ID
+ *   The most likely reason a sequence ID is in the deployment is if there
+ *   are 2+ images in the sequence and one has already been added.
+ * Identifiers for eMammal data:
+ *   deployment: d21021
+ *   sequence:   d21021s99
+ *   image:      d21021s99i4
+ * It does not create DataFileMetaValue
+ * It does not create IdentificationOutputs
  *
  * $base_obj - the Fedora object to use for creation
  * $create_override - normally do not create an object if it already has a WI ID
@@ -613,7 +655,7 @@ function sidora_emammal_wi_create($base_obj = NULL, $type = '', $subtype = '', $
  *    if FALSE, will return the ID of the item
  * returns the Wildlife Insights ID of the existing object or newly created object
  */
-function sidora_emammal_wi_create_deployment($base_obj, $create_override = FALSE){
+function sidora_emammal_wi_create_datafile($base_obj, $create_override = FALSE){
   $do_create = $create_override;
   // See if it has a WI id
   $wi_id = sidora_emammal_wi_get_id($base_obj);
@@ -625,75 +667,155 @@ function sidora_emammal_wi_create_deployment($base_obj, $create_override = FALSE
     sidora_emammal_debug("The project for $base_obj->id is not in WI or does not have opt-in");
     $do_create = FALSE;
   }
-  sidora_emammal_debug("Create deployment:" . $do_create);
+  sidora_emammal_debug("Create datafile:" . $do_create);
   if ($do_create){
-    $update_info = sidora_emammal_wi_deployment_update_strings($base_obj);
+    $update_info = sidora_emammal_wi_datafile_update_strings($base_obj);
     sidora_emammal_debug("update strings:" . json_encode($update_info));
     // Should contain 3 objects, device and location must be entered first so that their ids can be put in the deployment
-    $org_id = sidora_emammal_wi_get_organization_id();
-    $result = sidora_emammal_wi_api_call("organization/" . $org_id . "/device", $update_info[1]['json']);
-    sidora_emammal_debug("create device result::" . $result);
-    $device_id = sidora_emammal_wi_helper_pull_id($result);
-    if (empty($device_id)){
+    $deploy_id = sidora_emammal_wi_get_deployment_wi_id($base_obj);
+    $result = sidora_emammal_wi_api_call("project/" . $proj_id . "/deployment/" . $deploy_id . "/data-file", $update_info[0]['json']);
+    sidora_emammal_debug("create datafile result::" . $result);
+    $datafile_id = sidora_emammal_wi_helper_pull_id($result);
+    if (empty($datafile_id)){
       watchdog('Sidora_emammal',t(
-        "Tried to create device for deployment, but did not get WI ID: %uinfo %result", 
+        "Tried to create datafile for deployment, but did not get WI ID: %uinfo %result", 
         array('%uinfo' => json_encode($update_info), '%result' => $result)
       ));
     }
     else {
-      // device created, update the sidora datastream with the result
-      sidora_emammal_add_wi_id_to_sidora_ds($base_obj, $device_id, 'device');
+      // datafile created, update the sidora datastream with the result
+      sidora_emammal_add_wi_id_to_sidora_ds($base_obj, $datafile_id);
     }
-    // Create the location TBD TODO BBB
-    $loc_id = NULL;
-    if (!empty($device_id)){ 
-      $result = sidora_emammal_wi_api_call("project/" . $proj_id . "/location", $update_info[2]['json']);
-      $loc_id = sidora_emammal_wi_helper_pull_id($result);
-      if (empty($loc_id)){
-        watchdog('Sidora_emammal',t(
-          "Tried to create location for new deployment, but did not get location's WI ID: %uinfo %result", 
-          array('%uinfo' => json_encode($update_info), '%result' => $result)
-        ));
-      }
-      else {
-        sidora_emammal_add_wi_id_to_sidora_ds($base_obj, $loc_id, 'location');
-      }
-    }
-    if (!empty($loc_id)){ 
-      // Put in the location and device ids to the deployment
-      $deployment_obj = json_decode($update_info[0]['json'], TRUE);
-      $deployment_obj["deviceId"] = $device_id;
-      $deployment_obj["locationId"] = $loc_id;
-      $deployment_json = json_encode($deployment_obj);
-      $result = sidora_emammal_wi_api_call("project/" . $proj_id . "/deployment", $deployment_json);
-      $deployment_id = sidora_emammal_wi_helper_pull_id($result);
-      if (empty($deployment_id)){
-        watchdog('Sidora_emammal',t(
-          "Tried to create deployment, but did not get deployment's WI ID: %uinfo %result", 
-          array('%uinfo' => json_encode($update_info), '%result' => $result)
-        ));
-      }
-      else {
-        sidora_emammal_add_wi_id_to_sidora_ds($base_obj, $deployment_id);
-      }
-      $wi_id = $deployment_id;
+    if (!empty($datafile_id)){ 
+      $result = sidora_emammal_wi_api_call("project/" . $proj_id . "/deployment/" . $deploy_id . "/data-file/" . $datafile_id . '/upload-url', $update_info[1]['json']);
+      sidora_emammal_debug("create datafile upload result::" . $result);
+      // Uploads do not have an ID
     }
     // Now the object is created. Its WI ID is in its SIDORA datastream and
     // in the $wi_id variable
   }
   return $wi_id;
 }
-
 /**
+ * Intended to be used as part of the create datafile
+ * $base_obj - Image Fedora object
+ * $create_override - normally do not create an object if it already has a WI ID
+ *    if TRUE, will create a WI object anyway
+ *    if FALSE, will return the ID of the item
+ * returns the Wildlife Insights ID of the existing object or newly created object
+ */
+function sidora_emammal_wi_create_sequence($base_obj, $create_override = FALSE, $proj_id = NULL, $deploy_obj = NULL){
+  if (empty($proj_id)){
+    $proj_id = sidora_emammal_get_project_wi_id($base_obj);
+    sidora_emammal_debug("create sequence, got proj id:" . json_encode($proj_id));
+  }
+  
+  if (empty($deploy_obj)){
+    sidora_emammal_debug("create sequence, getting deploy obj");
+    $deploy_obj = sidora_emammal_get_deployment_obj($base_obj);
+    sidora_emammal_debug("create sequence, got deploy obj:" . $deploy_obj);
+  }
+  sidora_emammal_debug("getting deployment id from deployment object:" . $deploy_obj);
+  $deploy_id = sidora_emammal_wi_get_id($deploy_obj);
+
+  sidora_emammal_debug("create sequence, proj id: $proj_id deploy id: $deploy_id");
+  // See if the sequence ID already exists on the data file
+  $existing_wi_seq_id_from_df = sidora_emammal_wi_get_id($base_obj, 'sequence');
+
+
+  $content = $base_obj['MODS']->content;
+  if (!empty($content)){
+    $doc = new DOMDocument();
+    $docToLoad = ($content);
+    $doc->loadXML($docToLoad);
+
+    $identifier_nodes = $doc->getElementsByTagName("identifier");
+    foreach($identifier_nodes as $exister){
+      $check_is_seq_id = $exister->getAttribute('type');
+      if ($check_is_seq_id == 'Image Sequence ID'){
+        $emammal_sequence_id = $exister->nodeValue;
+      }
+    }
+  }
+  if (empty($emammal_sequence_id)){
+    watchdog('Sidora_emammal', t(
+      "Wildlife Insights Sequence ID missing eMammal sequence id for: %pid",
+      array('%pid' => $base_obj->id)
+    ));
+    return NULL;
+  }
+
+  $existing_wi_seq_id_from_deploy = sidora_emammal_wi_get_id($deploy_obj, 'sequence', $emammal_sequence_id);
+
+  // If there is a sequence id on the datafile does not match the one on the deployment, this is an error!
+  if (!empty($existing_wi_seq_id_from_df) && !empty($existing_wi_seq_id_from_deploy) && 
+    $existing_wi_seq_id_from_df != $existing_wi_seq_id_from_deploy
+  ){
+    watchdog('Sidora_emammal', t(
+      "Wildlife Insights Sequence IDs between a data file and deployment mismatch: DF: %df Deploy: %dep",
+      array('%df' => $base_obj->id, '%dep' => $deploy_obj->id)
+    ));
+    return NULL;
+  }
+
+  if (!$create_override){
+    // If both are the same, sequence is already existing
+    if (!empty($existing_wi_seq_id_from_df) && $existing_wi_seq_id_from_df == $existing_wi_seq_id_from_deploy){
+      return $existing_wi_seq_id_from_df;
+    }
+    // If df has it but deployment does not, add info to deployment
+    if (!empty($existing_wi_seq_id_from_df) && empty($existing_wi_seq_id_from_deploy)){
+      $wi_sequence_id = $existing_wi_seq_id_from_df;
+      sidora_emammal_add_wi_id_to_sidora_ds($deploy_obj, $wi_sequence_id, 'sequence', $emammal_sequence_id);
+      return $wi_sequence_id;
+    }
+    // If deploy has it but df does not (happens often), add info to df
+    if (!empty($existing_wi_seq_id_from_df) && empty($existing_wi_seq_id_from_deploy)){
+      $wi_sequence_id = $existing_wi_seq_id_from_deploy;
+      sidora_emammal_add_wi_id_to_sidora_ds($base_obj, $wi_sequence_id, 'sequence');
+      return $wi_sequence_id;
+    }
+  }
+  sidora_emammal_debug("create sequence, existing ids df: $existing_wi_seq_id_from_df deploy: $existing_wi_seq_id_from_deploy");
+ 
+  // If both empty or create_override then create a new sequence
+  $seq_obj = array(
+    'name' => $emammal_sequence_id,
+    'controlField' => '',
+    'rule' => 0,
+    'remarks' => '',
+    'sequenceIdentifier' => $emammal_sequence_id
+  );
+  $seq_json_string = json_encode($seq_obj);
+  $result = sidora_emammal_wi_api_call("project/" . $proj_id . "/deployment/" . $deploy_id . "/sequence", $seq_json_string);
+  sidora_emammal_debug("create sequence result::" . $result);
+  $wi_sequence_id = sidora_emammal_wi_helper_pull_id($result);
+  if (empty($wi_sequence_id)){
+    watchdog('Sidora_emammal',t(
+      "Tried to create sequence for data file, but did not get WI ID: %uinfo %result", 
+      array('%uinfo' => $seq_json_string, '%result' => $result)
+    ));
+  }
+  else {
+    // sequence created, update the sidora datastream with the result
+    sidora_emammal_add_wi_id_to_sidora_ds($base_obj, $wi_sequence_id, 'sequence');
+    // update the deployment with the wi sequence id so that it can be used by other data files
+    sidora_emammal_add_wi_id_to_sidora_ds($deploy_obj, $wi_sequence_id, 'sequence', $emammal_sequence_id);
+    return $wi_sequence_id;
+  }
+  return NULL;
+}
+
+/** TODO
  * Returns an array of objects to use to update or create project and location in WI
  * the array looks like this:
  * $returned = array(
- *   [0] => array("wi_type" => "deployment",  "json" => $creation_string),
- *   [1] => array("wi_type" => "device",  "json" => $dev_creation_string),
- *   [2] => array("wi_type" => "location",  "json" => $loc_creation_string),
+ *   [0] => array("wi_type" => "datafile",  "json" => $creation_string),
+ *   [1] => array("wi_type" => "upload",  "json" => $upload_creation_string),
  * );
  */
-function sidora_emammal_wi_deployment_update_strings($base_obj){
+function sidora_emammal_wi_datafile_update_strings($base_obj){
+  // TBD TODO Need to get the sequence first
   $to_return = array();
   $name = $base_obj->label;
   $content = $base_obj['FGDC']->content;
@@ -857,11 +979,11 @@ function sidora_emammal_wi_deployment_update_strings($base_obj){
   $to_return[] = array("wi_type" => "location", "json" => $location_string);
   return $to_return;
 }
-/**
+/** TODO
  * Deletes this deployment, device and location ONLY from the WI API
  * Assume the children get deleted by this function's caller
  */
-function sidora_emammal_wi_delete_deployment($base_obj){
+function sidora_emammal_wi_delete_datafile($base_obj){
   sidora_emammal_debug("Starting delete deployment...");
   
   if (!is_object($base_obj)){
@@ -1244,12 +1366,338 @@ function sidora_emammal_wi_project_update_strings($base_obj){
   $to_return[] = array("wi_type" => "location", "json" => $location_string);
   return $to_return;
 }
+
+/*****************************************************************************
+ *****************************************************************************
+ *****************************************************************************
+ *** WI OBJECT: DEPLOYMENT
+ *** These functions deal with Deployment
+ *** 
+ *****************************************************************************
+ *****************************************************************************
+ ****************************************************************************/
+
 /*
- * UNIMPLEMENTED
+ * This creates the deployment object in WI. It will not create any child objects
+ * of a deployment. Does NOT update existing deployments with new data. ONLY used for
+ * creation. This will create the device object in the WI as well
+ *
+ * $base_obj - the Fedora object to use for creation
+ * $create_override - normally do not create an object if it already has a WI ID
+ *    if TRUE, will create a WI object anyway
+ *    if FALSE, will return the ID of the item
+ * returns the Wildlife Insights ID of the existing object or newly created object
  */
-function sidora_emammal_wi_create_identification_output(){
+function sidora_emammal_wi_create_deployment($base_obj, $create_override = FALSE){
+  $do_create = $create_override;
+  // See if it has a WI id
+  $wi_id = sidora_emammal_wi_get_id($base_obj);
+  if (empty($wi_id)){
+    $do_create = TRUE;
+  }
+  $proj_id = sidora_emammal_get_project_wi_id($base_obj);
+  if (empty($proj_id)){
+    sidora_emammal_debug("The project for $base_obj->id is not in WI or does not have opt-in");
+    $do_create = FALSE;
+  }
+  sidora_emammal_debug("Create deployment:" . $do_create);
+  if ($do_create){
+    $update_info = sidora_emammal_wi_deployment_update_strings($base_obj);
+    sidora_emammal_debug("update strings:" . json_encode($update_info));
+    // Should contain 3 objects, device and location must be entered first so that their ids can be put in the deployment
+    $org_id = sidora_emammal_wi_get_organization_id();
+    $result = sidora_emammal_wi_api_call("organization/" . $org_id . "/device", $update_info[1]['json']);
+    sidora_emammal_debug("create device result::" . $result);
+    $device_id = sidora_emammal_wi_helper_pull_id($result);
+    if (empty($device_id)){
+      watchdog('Sidora_emammal',t(
+        "Tried to create device for deployment, but did not get WI ID: %uinfo %result", 
+        array('%uinfo' => json_encode($update_info), '%result' => $result)
+      ));
+    }
+    else {
+      // device created, update the sidora datastream with the result
+      sidora_emammal_add_wi_id_to_sidora_ds($base_obj, $device_id, 'device');
+    }
+    // Create the location TBD TODO BBB
+    $loc_id = NULL;
+    if (!empty($device_id)){ 
+      $result = sidora_emammal_wi_api_call("project/" . $proj_id . "/location", $update_info[2]['json']);
+      $loc_id = sidora_emammal_wi_helper_pull_id($result);
+      if (empty($loc_id)){
+        watchdog('Sidora_emammal',t(
+          "Tried to create location for new deployment, but did not get location's WI ID: %uinfo %result", 
+          array('%uinfo' => json_encode($update_info), '%result' => $result)
+        ));
+      }
+      else {
+        sidora_emammal_add_wi_id_to_sidora_ds($base_obj, $loc_id, 'location');
+      }
+    }
+    if (!empty($loc_id)){ 
+      // Put in the location and device ids to the deployment
+      $deployment_obj = json_decode($update_info[0]['json'], TRUE);
+      $deployment_obj["deviceId"] = $device_id;
+      $deployment_obj["locationId"] = $loc_id;
+      $deployment_json = json_encode($deployment_obj);
+      $result = sidora_emammal_wi_api_call("project/" . $proj_id . "/deployment", $deployment_json);
+      $deployment_id = sidora_emammal_wi_helper_pull_id($result);
+      if (empty($deployment_id)){
+        watchdog('Sidora_emammal',t(
+          "Tried to create deployment, but did not get deployment's WI ID: %uinfo %result", 
+          array('%uinfo' => json_encode($update_info), '%result' => $result)
+        ));
+      }
+      else {
+        sidora_emammal_add_wi_id_to_sidora_ds($base_obj, $deployment_id);
+      }
+      $wi_id = $deployment_id;
+    }
+    // Now the object is created. Its WI ID is in its SIDORA datastream and
+    // in the $wi_id variable
+  }
+  return $wi_id;
 }
-function sidora_emammal_wi_create_sequence(){
+
+/**
+ * Returns an array of objects to use to update or create project and location in WI
+ * the array looks like this:
+ * $returned = array(
+ *   [0] => array("wi_type" => "deployment",  "json" => $creation_string),
+ *   [1] => array("wi_type" => "device",  "json" => $dev_creation_string),
+ *   [2] => array("wi_type" => "location",  "json" => $loc_creation_string),
+ * );
+ */
+function sidora_emammal_wi_deployment_update_strings($base_obj){
+  $to_return = array();
+  $name = $base_obj->label;
+  $content = $base_obj['FGDC']->content;
+  if (!empty($content)){
+    // The information to fill in:
+    $deployment_id = '';
+    $deployment_name = '';
+    $sensor_resolution = '';
+    $sensor_sensitivity = '';
+    $start_date_time = '';
+    $end_date_time = '';
+    $remarks = '';
+    $detection_distance = 0;
+    $quiet_period = 0;
+    $lat = "";
+    $long = "";
+    $camera_id = "";
+    $camera_make = "";
+    $camera_model = "";
+
+    $doc = new DOMDocument();
+    $docToLoad = ($content);
+    $doc->loadXML($docToLoad);
+
+    $di_nodes = $doc->getElementsByTagName("othercit");
+    foreach($di_nodes as $exister){
+      $deployment_id = $exister->nodeValue;
+    }
+
+    $title_nodes = $doc->getElementsByTagName("title");
+    foreach($title_nodes as $exister){
+      $deployment_name = $exister->nodeValue;
+    }
+
+    $start_date_time_nodes = $doc->getElementsByTagName("begdate");
+    foreach($start_date_time_nodes as $exister){
+      $start_date_time = $exister->nodeValue;
+    }
+
+    $end_date_time_nodes = $doc->getElementsByTagName("enddate");
+    foreach($end_date_time_nodes as $exister){
+      $end_date_time = $exister->nodeValue;
+    }
+
+    $attrlabl_nodes = $doc->getElementsByTagName("attrlabl");
+    foreach($attrlabl_nodes as $exister){
+      $label_value = $exister->nodeValue;
+      $attr_node = $exister->parentNode;
+      foreach($attr_node->childNodes as $attr_child_node){
+        if($attr_child_node->nodeType == XML_ELEMENT_NODE) {
+          if ($attr_child_node->tagName == 'attrdomv'){
+            $domv_child_nodes = $attr_child_node->childNodes;
+            foreach($domv_child_nodes as $edom_node){
+              if ($edom_node->childNodes !== NULL){
+                foreach($edom_node->childNodes as $ecn){
+                  if($ecn->nodeType == XML_ELEMENT_NODE) {
+                    if ($ecn->tagName == 'edomv'){
+                      $value = $ecn->nodeValue;
+                      if (empty($value)) $value = '';
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+      if ($label_value == "Image Resolution Setting"){
+        $sensor_resolution = $value;
+      }
+      if ($label_value == "Sensitivity Setting"){
+        $sensor_sensitivity = $value;
+      }
+      if ($label_value == "Detection Distance"){
+        $detection_distance = floatval($value);
+      }
+      if ($label_value == "Quiet Period Setting"){
+        $quiet_period = floatval($value);
+      }
+      if ($label_value == "Actual Latitude"){
+        $lat = $value;
+      }
+      if ($label_value == "Actual Longitude"){
+        $long = $value;
+      }
+      if ($label_value == "Camera ID"){
+        $camera_id = $value;
+      }
+      if ($label_value == "Camera Make"){
+        $camera_make = $value;
+      }
+      if ($label_value == "Camera Model"){
+        $camera_model = $value;
+      }
+    }
+
+    $creation_obj = array(
+      "deploymentIdentifier" => $deployment_id,
+      "deploymentName" => $deployment_name,
+      "sensorHeight" => 0,
+      "quietPeriod" => $quiet_period,
+      "detectionDistance" => $detection_distance,
+      "sampleRate" => '', // No sampleRate
+      "sensorOrientation" => '', //No orientation
+      "sensorSchedule" => '', //No schedule
+      "sensorResolution" => $sensor_resolution, 
+      "sensorSensitivity" => $sensor_sensitivity,
+      "sensorFailureDetails" => '', /// No failure details
+      "sensorEndStatus" => '', // No sensor end status
+      "startDatetime" => $start_date_time,
+      "endDatetime" => $end_date_time,
+      "remarks" => $remarks,
+      "sensorId" => 0,
+      "deviceId" => 0,
+      "baitTypeId" => 0,
+      "locationId" => 0,
+      "participantSetSensorId" => 0,
+      "participantRemoveSensorId" => 0
+    );
+    $creation_string = json_encode($creation_obj);
+
+    
+    $device_obj = array(
+      "name" => $camera_id,
+      "purchaseDate" => array(),
+      "make" => $camera_make,
+      "model" => $camera_model,
+      "modelNumber" => "",
+      "serialNumber" => "",
+      "purchaseYear" => 0,
+      "purchasePrice" => 0,
+      "productUrl" => "",
+      "remarks" => "Camera for deployment:" . $deployment_name,
+    );
+
+    $device_string = json_encode($device_obj);
+
+    $location_obj = array(
+      "latitude" => $lat,
+      "longitude" => $long,
+      "placename" => "Camera Location for deployment:" . $deployment_name,
+      "propertyType" => "",
+      "habitat" => "",
+      "remarks" => "",
+      "plotTreatment" => "",
+      "plotTreatmentDescription" => "",
+      "geodeticDatum" => "",
+      "fieldNumber" => "",
+      "country" => "",
+      "firstOrderDivision" => "",
+      "secondOrderDivision" => "",
+      "landcoverType" => "",
+      "igbpClimateClassification" => "",
+      "elevationGtopo30" => 0
+    );
+
+    $location_string = json_encode($location_obj);
+  }
+  $to_return[] = array("wi_type" => "deployment", "json" => $creation_string);
+  $to_return[] = array("wi_type" => "device", "json" => $device_string);
+  $to_return[] = array("wi_type" => "location", "json" => $location_string);
+  return $to_return;
+}
+/**
+ * Deletes this deployment, device and location ONLY from the WI API
+ * Assume the children get deleted by this function's caller
+ */
+function sidora_emammal_wi_delete_deployment($base_obj){
+  sidora_emammal_debug("Starting delete deployment...");
+  
+  if (!is_object($base_obj)){
+    watchdog('Sidora_emammal',t(
+      "Tried to delete deployment, but did not have a valid object: %encoded", 
+      array('%encoded' => json_encode($base_obj))
+    ));
+    return FALSE;
+  }
+  sidora_emammal_debug("Getting base_obj id");
+  $wi_id = sidora_emammal_wi_get_id($base_obj);
+  sidora_emammal_debug("base_obj id:" . $wi_id);
+  if (empty($wi_id)){
+    watchdog('Sidora_emammal',t(
+      "Tried to delete deployment, but did not have a WI ID in SIDORA: %pid", 
+      array('%pid' => $base_obj->id)
+    ));
+    return FALSE;
+  }
+  sidora_emammal_debug("Getting location id");
+  $loc_wi_id = sidora_emammal_wi_get_id($base_obj, 'location');
+  sidora_emammal_debug("location id:" . $loc_wi_id);
+  if (empty($loc_wi_id)){
+    watchdog('Sidora_emammal',t(
+      "Tried to delete deployment location, but did not have a WI ID in SIDORA: %pid", 
+      array('%pid' => $base_obj->id)
+    ));
+    return FALSE;
+  }
+  sidora_emammal_debug("Getting device id");
+  $device_wi_id = sidora_emammal_wi_get_id($base_obj, 'device');
+  sidora_emammal_debug("device id:" . $device_wi_id);
+  if (empty($device_wi_id)){
+    watchdog('Sidora_emammal',t(
+      "Tried to delete deployment device, but did not have a WI ID in SIDORA: %pid", 
+      array('%pid' => $base_obj->id)
+    ));
+    return FALSE;
+  }
+  $proj_id = sidora_emammal_get_project_wi_id($base_obj);
+  if (empty($proj_id)){
+    watchdog('Sidora_emammal',t(
+      "Tried to delete deployment, but did not have an associated PROJECT WI ID in SIDORA: %pid", 
+      array('%pid' => $base_obj->id)
+    ));
+    return FALSE;
+  }
+  sidora_emammal_debug("Deleting location");
+  $call_worked = sidora_emammal_wi_api_call("project/" . $proj_id . "/location" . $loc_wi_id, NULL, 'DELETE');
+  sidora_emammal_remove_wi_id($base_obj, $loc_wi_id);
+  $org_id = sidora_emammal_wi_get_organization_id();
+  sidora_emammal_debug("Deleting device");
+  $call_worked = $call_worked && sidora_emammal_wi_api_call("organization/" . $org_id . "/device/" . $device_wi_id, NULL, 'DELETE');
+  sidora_emammal_remove_wi_id($base_obj, $device_wi_id);
+  sidora_emammal_debug("Deleting deployment");
+  $call_worked = $call_worked && sidora_emammal_wi_api_call("project/" . $proj_id . "/deployment/" .  $wi_id, NULL, 'DELETE');
+  sidora_emammal_remove_wi_id($base_obj, $wi_id);
+  return $call_worked;
+}
+
+function sidora_emammal_wi_create_identification_output(){
 }
 function sidora_emammal_wi_create_datafilemetadatavalues(){
 }
@@ -1526,11 +1974,63 @@ function sidora_emammal_check_opt_in_for_wi(AbstractObject $object){
 }
 
 /**
+ * Find the deployment's WI ID given an object, or return NULL
+ * $object - any fedora object
+ */
+function sidora_emammal_get_deployment_wi_id(AbstractObject $object){
+  $deploy_obj = sidora_emammal_get_deployment_obj($object);
+  if (!empty($deploy_obj)){
+    return sidora_emammal_wi_get_id($deploy_obj);
+  }
+  return FALSE;
+}
+
+/**
+ * Find the deployment object, or return NULL
+ * $object - any fedora object
+ */
+function sidora_emammal_get_deployment_obj(AbstractObject $object){
+  // Keep going up the chain until we find a model match for a deployment, then return ID
+  // Stop if we have gone up to the the project
+  sidora_emammal_debug("Getting deployment WI ID for:" . $object->id);
+  $wi_infos = sidora_emammal_get_wi_type($object, TRUE);
+  sidora_emammal_debug("wi_infos:" . json_encode($wi_infos));
+  if (!empty($wi_infos)){
+    foreach($wi_infos as $wi_info) {
+      sidora_emammal_debug("wi_info:" . json_encode($wi_info));
+      $opt_in = FALSE;
+      $parent_id = $object->id;
+      sidora_emammal_debug("parent_id:" . $parent_id);
+      for($i = 0; $i <= $wi_info['max_distance_to_project']; $i++){ 
+        $checker_id = $parent_id;
+        sidora_emammal_debug("checker_id:" . $checker_id);
+        $project_obj = sidora_obj($checker_id);
+        $check_deployment_string = sidora_emammal_get_wi_type($project_obj);
+        if ($check_deployment_string == 'deployment'){
+          return $project_obj;
+        }
+        if ($i < $wi_info['max_distance_to_project']){
+          module_load_include('inc', 'sidora', 'includes/utils');
+          // use isAdministeredBy if exists
+          $parent_id = sidora_get_owning_parent_concept_pid_by_administered_pid($checker_id);
+          if (empty($parent_id)){
+            $parents = sidora_get_parent_concepts_by_pid($checker_id);
+            foreach($parents as $ppid => $parent){
+              $parent_id = $ppid;
+            }
+          }
+        }
+      }
+    }
+  }
+  return FALSE;
+}
+/**
  * Find the project's WI ID given an object, or return NULL
  * $object - any fedora object
  */
 function sidora_emammal_get_project_wi_id(AbstractObject $object){
-  sidora_emammal_debug("Checking opt-in for:" . $object->id);
+  sidora_emammal_debug("Getting project WI ID for:" . $object->id);
   $wi_infos = sidora_emammal_get_wi_type($object, TRUE);
   sidora_emammal_debug("wi_infos:" . json_encode($wi_infos));
   if (!empty($wi_infos)){
@@ -1549,7 +2049,9 @@ function sidora_emammal_get_project_wi_id(AbstractObject $object){
           if (!empty($project_obj) && (!empty($project_obj['EAC-CPF']))){
             $content = $project_obj['EAC-CPF']->content;
             if (!empty($content)){
+              sidora_emammal_debug("Found the project::" . $project_obj->id);
               $proj_wi_id = sidora_emammal_wi_get_id($project_obj);
+              sidora_emammal_debug("project has wi id::" . $proj_wi_id);
               return $proj_wi_id;
             }
           }
@@ -1568,5 +2070,6 @@ function sidora_emammal_get_project_wi_id(AbstractObject $object){
       }
     }
   }
+  sidora_emammal_debug("Couldn't find a project id for:" . $object->id);
   return FALSE;
 }
