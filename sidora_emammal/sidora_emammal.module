@@ -148,7 +148,13 @@ function sidora_emammal_test($method = '', $data = '', $data2 = '', $data3 = '')
       $seq_id = sidora_emammal_wi_create_sequence($obj);
       echo $seq_id;
       echo '<br>End';
-     
+      break;
+    case 'createDf':
+      echo 'Start<br>';
+      $obj = sidora_obj($data);
+      $df = sidora_emammal_wi_create_datafile($obj, TRUE);
+      echo $df;
+      echo '<br>End';
       break;
     default:
       echo "No function to test";
@@ -669,10 +675,14 @@ function sidora_emammal_wi_create_datafile($base_obj, $create_override = FALSE){
   }
   sidora_emammal_debug("Create datafile:" . $do_create);
   if ($do_create){
-    $update_info = sidora_emammal_wi_datafile_update_strings($base_obj);
+    $deploy_obj = sidora_emammal_get_deployment_obj($base_obj);
+    $deploy_id = sidora_emammal_wi_get_id($deploy_obj);
+    $sequence_wi_id = sidora_emammal_wi_create_sequence($base_obj, FALSE, NULL, $deploy_obj);
+    $update_info = sidora_emammal_wi_datafile_update_strings($base_obj, $deploy_id, $sequence_wi_id);
+
     sidora_emammal_debug("update strings:" . json_encode($update_info));
     // Should contain 3 objects, device and location must be entered first so that their ids can be put in the deployment
-    $deploy_id = sidora_emammal_wi_get_deployment_wi_id($base_obj);
+    $deploy_id = sidora_emammal_get_deployment_wi_id($base_obj);
     $result = sidora_emammal_wi_api_call("project/" . $proj_id . "/deployment/" . $deploy_id . "/data-file", $update_info[0]['json']);
     sidora_emammal_debug("create datafile result::" . $result);
     $datafile_id = sidora_emammal_wi_helper_pull_id($result);
@@ -694,7 +704,7 @@ function sidora_emammal_wi_create_datafile($base_obj, $create_override = FALSE){
     // Now the object is created. Its WI ID is in its SIDORA datastream and
     // in the $wi_id variable
   }
-  return $wi_id;
+  return $datafile_id;
 }
 /**
  * Intended to be used as part of the create datafile
@@ -806,7 +816,7 @@ function sidora_emammal_wi_create_sequence($base_obj, $create_override = FALSE, 
   return NULL;
 }
 
-/** TODO
+/**
  * Returns an array of objects to use to update or create project and location in WI
  * the array looks like this:
  * $returned = array(
@@ -814,169 +824,41 @@ function sidora_emammal_wi_create_sequence($base_obj, $create_override = FALSE, 
  *   [1] => array("wi_type" => "upload",  "json" => $upload_creation_string),
  * );
  */
-function sidora_emammal_wi_datafile_update_strings($base_obj){
-  // TBD TODO Need to get the sequence first
+function sidora_emammal_wi_datafile_update_strings($base_obj, $deployment_id = '', $sequence_id = ''){
   $to_return = array();
-  $name = $base_obj->label;
-  $content = $base_obj['FGDC']->content;
+  $content = $base_obj['MODS']->content;
   if (!empty($content)){
-    // The information to fill in:
-    $deployment_id = '';
-    $deployment_name = '';
-    $sensor_resolution = '';
-    $sensor_sensitivity = '';
-    $start_date_time = '';
-    $end_date_time = '';
-    $remarks = '';
-    $detection_distance = 0;
-    $quiet_period = 0;
-    $lat = "";
-    $long = "";
-    $camera_id = "";
-    $camera_make = "";
-    $camera_model = "";
-
     $doc = new DOMDocument();
     $docToLoad = ($content);
     $doc->loadXML($docToLoad);
 
-    $di_nodes = $doc->getElementsByTagName("othercit");
-    foreach($di_nodes as $exister){
-      $deployment_id = $exister->nodeValue;
-    }
-
-    $title_nodes = $doc->getElementsByTagName("title");
-    foreach($title_nodes as $exister){
-      $deployment_name = $exister->nodeValue;
-    }
-
-    $start_date_time_nodes = $doc->getElementsByTagName("begdate");
-    foreach($start_date_time_nodes as $exister){
-      $start_date_time = $exister->nodeValue;
-    }
-
-    $end_date_time_nodes = $doc->getElementsByTagName("enddate");
-    foreach($end_date_time_nodes as $exister){
-      $end_date_time = $exister->nodeValue;
-    }
-
-    $attrlabl_nodes = $doc->getElementsByTagName("attrlabl");
-    foreach($attrlabl_nodes as $exister){
-      $label_value = $exister->nodeValue;
-      $attr_node = $exister->parentNode;
-      foreach($attr_node->childNodes as $attr_child_node){
-        if($attr_child_node->nodeType == XML_ELEMENT_NODE) {
-          if ($attr_child_node->tagName == 'attrdomv'){
-            $domv_child_nodes = $attr_child_node->childNodes;
-            foreach($domv_child_nodes as $edom_node){
-              if ($edom_node->childNodes !== NULL){
-                foreach($edom_node->childNodes as $ecn){
-                  if($ecn->nodeType == XML_ELEMENT_NODE) {
-                    if ($ecn->tagName == 'edomv'){
-                      $value = $ecn->nodeValue;
-                      if (empty($value)) $value = '';
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-      if ($label_value == "Image Resolution Setting"){
-        $sensor_resolution = $value;
-      }
-      if ($label_value == "Sensitivity Setting"){
-        $sensor_sensitivity = $value;
-      }
-      if ($label_value == "Detection Distance"){
-        $detection_distance = floatval($value);
-      }
-      if ($label_value == "Quiet Period Setting"){
-        $quiet_period = floatval($value);
-      }
-      if ($label_value == "Actual Latitude"){
-        $lat = $value;
-      }
-      if ($label_value == "Actual Longitude"){
-        $long = $value;
-      }
-      if ($label_value == "Camera ID"){
-        $camera_id = $value;
-      }
-      if ($label_value == "Camera Make"){
-        $camera_make = $value;
-      }
-      if ($label_value == "Camera Model"){
-        $camera_model = $value;
+    $emammal_image_id = "";
+    $identifier_nodes = $doc->getElementsByTagName("identifier");
+    foreach($identifier_nodes as $exister){
+      $check_is_seq_id = $exister->getAttribute('type');
+      if ($check_is_seq_id == 'Image ID'){
+        $emammal_image_id = $exister->nodeValue;
       }
     }
-
+    $index_i = strrpos($emammal_image_id, 'i');
+    $image_sequence_position = substr($emammal_image_id, $index_i);
     $creation_obj = array(
-      "deploymentIdentifier" => $deployment_id,
-      "deploymentName" => $deployment_name,
-      "sensorHeight" => 0,
-      "quietPeriod" => $quiet_period,
-      "detectionDistance" => $detection_distance,
-      "sampleRate" => '', // No sampleRate
-      "sensorOrientation" => '', //No orientation
-      "sensorSchedule" => '', //No schedule
-      "sensorResolution" => $sensor_resolution, 
-      "sensorSensitivity" => $sensor_sensitivity,
-      "sensorFailureDetails" => '', /// No failure details
-      "sensorEndStatus" => '', // No sensor end status
-      "startDatetime" => $start_date_time,
-      "endDatetime" => $end_date_time,
-      "remarks" => $remarks,
-      "sensorId" => 0,
-      "deviceId" => 0,
-      "baitTypeId" => 0,
-      "locationId" => 0,
-      "participantSetSensorId" => 0,
-      "participantRemoveSensorId" => 0
+      "noCV" => "",
+      "position" => intval($image_sequence_position),
+      "sequenceId" => $sequence_id
     );
     $creation_string = json_encode($creation_obj);
 
-    
-    $device_obj = array(
-      "name" => $camera_id,
-      "purchaseDate" => array(),
-      "make" => $camera_make,
-      "model" => $camera_model,
-      "modelNumber" => "",
-      "serialNumber" => "",
-      "purchaseYear" => 0,
-      "purchasePrice" => 0,
-      "productUrl" => "",
-      "remarks" => "Camera for deployment:" . $deployment_name,
+    global $base_url;
+    $upload_url_obj = array(
+      "fileName" => $emammal_image_id,
+      "contentType" => "image/jpeg",
+      "clientId" => "eMammal",
+      "url" => $base_url . "/sidora/info/" . $base_obj->id . "/meta/OBJ/" . $emammal_image_id . ".jpg"
     );
-
-    $device_string = json_encode($device_obj);
-
-    $location_obj = array(
-      "latitude" => $lat,
-      "longitude" => $long,
-      "placename" => "Camera Location for deployment:" . $deployment_name,
-      "propertyType" => "",
-      "habitat" => "",
-      "remarks" => "",
-      "plotTreatment" => "",
-      "plotTreatmentDescription" => "",
-      "geodeticDatum" => "",
-      "fieldNumber" => "",
-      "country" => "",
-      "firstOrderDivision" => "",
-      "secondOrderDivision" => "",
-      "landcoverType" => "",
-      "igbpClimateClassification" => "",
-      "elevationGtopo30" => 0
-    );
-
-    $location_string = json_encode($location_obj);
   }
-  $to_return[] = array("wi_type" => "deployment", "json" => $creation_string);
-  $to_return[] = array("wi_type" => "device", "json" => $device_string);
-  $to_return[] = array("wi_type" => "location", "json" => $location_string);
+  $to_return[] = array("wi_type" => "datafile", "json" => $creation_string);
+  $to_return[] = array("wi_type" => "upload-url", "json" => $creation_string);
   return $to_return;
 }
 /** TODO
@@ -1005,7 +887,7 @@ function sidora_emammal_wi_delete_datafile($base_obj){
   }
   sidora_emammal_debug("Getting location id");
   $loc_wi_id = sidora_emammal_wi_get_id($base_obj, 'location');
-  sidora_emammal_debug("location id:" . $loc_wi_id);
+  eidora_emammal_debug("location id:" . $loc_wi_id);
   if (empty($loc_wi_id)){
     watchdog('Sidora_emammal',t(
       "Tried to delete deployment location, but did not have a WI ID in SIDORA: %pid", 
