@@ -861,8 +861,8 @@ function sidora_emammal_wi_datafile_update_strings($base_obj, $deployment_id = '
   $to_return[] = array("wi_type" => "upload-url", "json" => $creation_string);
   return $to_return;
 }
-/** TODO
- * Deletes this deployment, device and location ONLY from the WI API
+/** 
+ * Deletes this datafile, device and location ONLY from the WI API
  * Assume the children get deleted by this function's caller
  */
 function sidora_emammal_wi_delete_datafile($base_obj){
@@ -870,7 +870,7 @@ function sidora_emammal_wi_delete_datafile($base_obj){
   
   if (!is_object($base_obj)){
     watchdog('Sidora_emammal',t(
-      "Tried to delete deployment, but did not have a valid object: %encoded", 
+      "Tried to delete datafile, but did not have a valid object: %encoded", 
       array('%encoded' => json_encode($base_obj))
     ));
     return FALSE;
@@ -885,43 +885,24 @@ function sidora_emammal_wi_delete_datafile($base_obj){
     ));
     return FALSE;
   }
-  sidora_emammal_debug("Getting location id");
-  $loc_wi_id = sidora_emammal_wi_get_id($base_obj, 'location');
-  eidora_emammal_debug("location id:" . $loc_wi_id);
-  if (empty($loc_wi_id)){
+  sidora_emammal_debug("Getting sequence id");
+  $seq_wi_id = sidora_emammal_wi_get_id($base_obj, 'sequence');
+  sidora_emammal_debug("sequence id:" . $loc_wi_id);
+  if (empty($seq_wi_id)){
     watchdog('Sidora_emammal',t(
-      "Tried to delete deployment location, but did not have a WI ID in SIDORA: %pid", 
-      array('%pid' => $base_obj->id)
-    ));
-    return FALSE;
-  }
-  sidora_emammal_debug("Getting device id");
-  $device_wi_id = sidora_emammal_wi_get_id($base_obj, 'device');
-  sidora_emammal_debug("device id:" . $device_wi_id);
-  if (empty($device_wi_id)){
-    watchdog('Sidora_emammal',t(
-      "Tried to delete deployment device, but did not have a WI ID in SIDORA: %pid", 
+      "Tried to delete datafile and sequence, but did not have a WI ID in SIDORA: %pid", 
       array('%pid' => $base_obj->id)
     ));
     return FALSE;
   }
   $proj_id = sidora_emammal_get_project_wi_id($base_obj);
-  if (empty($proj_id)){
-    watchdog('Sidora_emammal',t(
-      "Tried to delete deployment, but did not have an associated PROJECT WI ID in SIDORA: %pid", 
-      array('%pid' => $base_obj->id)
-    ));
-    return FALSE;
-  }
-  sidora_emammal_debug("Deleting location");
-  $call_worked = sidora_emammal_wi_api_call("project/" . $proj_id . "/location" . $loc_wi_id, NULL, 'DELETE');
-  sidora_emammal_remove_wi_id($base_obj, $loc_wi_id);
-  $org_id = sidora_emammal_wi_get_organization_id();
-  sidora_emammal_debug("Deleting device");
-  $call_worked = $call_worked && sidora_emammal_wi_api_call("organization/" . $org_id . "/device/" . $device_wi_id, NULL, 'DELETE');
-  sidora_emammal_remove_wi_id($base_obj, $device_wi_id);
-  sidora_emammal_debug("Deleting deployment");
-  $call_worked = $call_worked && sidora_emammal_wi_api_call("project/" . $proj_id . "/deployment/" .  $wi_id, NULL, 'DELETE');
+  $deploy_id = sidora_emammal_get_deployment_wi_id($base_obj);
+
+  sidora_emammal_debug("Deleting sequence");
+  $call_worked = sidora_emammal_wi_api_call("project/" . $proj_id . "/deployment/" .  $deploy_id . "/sequence/" . $seq_wi_id, NULL, 'DELETE');
+  sidora_emammal_remove_wi_id($base_obj, $seq_wi_id);
+  sidora_emammal_debug("Deleting datafile");
+  $call_worked = $call_worked && sidora_emammal_wi_api_call("project/" . $proj_id . "/deployment/" .  $deploy_id . "/data-file/" . $wi_id, NULL, 'DELETE');
   sidora_emammal_remove_wi_id($base_obj, $wi_id);
   return $call_worked;
 }
