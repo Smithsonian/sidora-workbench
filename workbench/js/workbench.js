@@ -2996,6 +2996,13 @@ sidora.util.refreshConceptChildrenNumber = function(pid){
   jQuery.ajax({
     url: Drupal.settings.basePath+'sidora/ajax_parts/get_num_resource_children/'+pid,
   }).done(function(num_children){
+    if (pid == sidora.concept.GetPid()){
+      var previousChildren = sidora.resources.GetLength();
+      if (previousChildren != num_children){
+        // The children of the currently loaded concept changed, update the user's view
+        sidora.concept.LoadContent();
+      }
+    }
     sidora.util.refreshConceptChildrenNumberDirect(pid, num_children);
   }).fail(function(failure_obj){
     sidora.recentAjaxFailure(failure_obj);
