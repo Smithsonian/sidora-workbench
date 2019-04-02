@@ -145,7 +145,7 @@ function sidora_emammal_test($method = '', $data = '', $data2 = '', $data3 = '')
     case 'createSeq':
       echo 'Start<br>';
       $obj = sidora_obj($data);
-      $seq_id = sidora_emammal_wi_create_sequence($obj);
+      $seq_id = sidora_emammal_wi_create_sequence($obj, $data2);
       echo $seq_id;
       echo '<br>End';
       break;
@@ -228,23 +228,6 @@ function sidora_emammal_wi_get_id($emammal_obj, $subtype = '', $emammal_id = '')
   }
   return $org_id;
 }
-
-/**
- * Returns the Wildlife Insights ID or creates the object and then returns the WI ID
- * $emammal_obj = the Islandora object to obtain the id from, or the pid
- * $create_type = the type of object to create for this if the ID is not found, leave empty if no object should be created
- * $subtype = the wi_id to return for subtypes, like location for project
- * TODO: Vestigial? Remove?
-function sidora_emammal_wi_create_if_not_exist($emammal_obj, $create_type = NULL, $subtype = ''){
-  $org_id = sidora_emammal_wi_get_id($emammal_obj, $subtype);
-  if (empty($org_id) && !(empty($create_type) && empty($subtype))){
-    // No ID, need to create it if the create type is there
-    $org_id =  sidora_emammal_wi_create($emammal_obj, $create_type, $subtype);
-    sidora_emammal_add_wi_id_to_sidora_ds($emammal_obj, $org_id, $subtype);
-  }
-  return $org_id;
-}
- */
 
 /**
  * Adds a Wildlife Insights ID to the SIDORA datastream of the object, overwriting existing ones
@@ -634,9 +617,6 @@ function sidora_emammal_wi_create($base_obj = NULL, $type = '', $subtype = '', $
   if ($type == 'deployment'){
     sidora_emammal_wi_create_deployment($base_obj, $create_override);
   }
-  if ($type == 'sequences'){
-    sidora_emammal_wi_create_sequence($base_obj, $create_override);
-  }
   return NULL;
 }
 
@@ -651,10 +631,7 @@ function sidora_emammal_wi_create($base_obj = NULL, $type = '', $subtype = '', $
  ****************************************************************************/
 
 /**
- * This creates the data file object in WI, and the sequence if needed.
- * The deployment is checked for an existing sequence ID
- *   The most likely reason a sequence ID is in the deployment is if there
- *   are 2+ images in the sequence and one has already been added.
+ * This creates the data file object in WI.
  * Identifiers for eMammal data:
  *   deployment: d21021
  *   sequence:   d21021s99
@@ -684,8 +661,6 @@ function sidora_emammal_wi_create_datafile($base_obj, $create_override = FALSE){
   if ($do_create){
     $deploy_obj = sidora_emammal_get_deployment_obj($base_obj);
     $deploy_id = sidora_emammal_wi_get_id($deploy_obj);
-    $sequence_wi_id = sidora_emammal_wi_create_sequence($base_obj, FALSE, NULL, $deploy_obj);
-    $update_info = sidora_emammal_wi_datafile_update_strings($base_obj, $deploy_id, $sequence_wi_id);
 
     sidora_emammal_debug("update strings:" . json_encode($update_info));
     // Should contain 3 objects, device and location must be entered first so that their ids can be put in the deployment
@@ -717,112 +692,51 @@ function sidora_emammal_wi_create_datafile($base_obj, $create_override = FALSE){
 
 /**
  * Intended to be used as part of the create datafile
- * $base_obj - Image Fedora object
+ * $deploy_obj - deployment object
+ * $emammal_sequence_id - string eMammal's id for a sequence, like "d18262s80"
  * $create_override - normally do not create an object if it already has a WI ID
  *    if TRUE, will create a WI object anyway
  *    if FALSE, will return the ID of the item
  * returns the Wildlife Insights ID of the existing object or newly created object
  */
-function sidora_emammal_wi_create_sequence($base_obj, $create_override = FALSE, $proj_id = NULL, $deploy_obj = NULL){
+function sidora_emammal_wi_create_sequence($deploy_obj, $emammal_sequence_id, $create_override = FALSE, $proj_id = NULL){
   if (empty($proj_id)){
     $proj_id = sidora_emammal_get_project_wi_id($base_obj);
     sidora_emammal_debug("create sequence, got proj id:" . json_encode($proj_id));
   }
   
-  if (empty($deploy_obj)){
-    sidora_emammal_debug("create sequence, getting deploy obj");
-    $deploy_obj = sidora_emammal_get_deployment_obj($base_obj);
-    sidora_emammal_debug("create sequence, got deploy obj:" . $deploy_obj);
-  }
   sidora_emammal_debug("getting deployment id from deployment object:" . $deploy_obj);
   $deploy_id = sidora_emammal_wi_get_id($deploy_obj);
 
   sidora_emammal_debug("create sequence, proj id: $proj_id deploy id: $deploy_id");
-  // See if the sequence ID already exists on the data file
-  $existing_wi_seq_id_from_df = sidora_emammal_wi_get_id($base_obj, 'sequence');
-
-
-  $content = $base_obj['MODS']->content;
-  if (!empty($content)){
-    $doc = new DOMDocument();
-    $docToLoad = ($content);
-    $doc->loadXML($docToLoad);
-
-    $identifier_nodes = $doc->getElementsByTagName("identifier");
-    foreach($identifier_nodes as $exister){
-      $check_is_seq_id = $exister->getAttribute('type');
-      if ($check_is_seq_id == 'Image Sequence ID'){
-        $emammal_sequence_id = $exister->nodeValue;
-      }
-    }
-  }
-  if (empty($emammal_sequence_id)){
-    watchdog('Sidora_emammal', t(
-      "Wildlife Insights Sequence ID missing eMammal sequence id for: %pid",
-      array('%pid' => $base_obj->id)
-    ));
-    return NULL;
-  }
-
   $existing_wi_seq_id_from_deploy = sidora_emammal_wi_get_id($deploy_obj, 'sequence', $emammal_sequence_id);
 
-  // If there is a sequence id on the datafile does not match the one on the deployment, this is an error!
-  if (!empty($existing_wi_seq_id_from_df) && !empty($existing_wi_seq_id_from_deploy) && 
-    $existing_wi_seq_id_from_df != $existing_wi_seq_id_from_deploy
-  ){
-    watchdog('Sidora_emammal', t(
-      "Wildlife Insights Sequence IDs between a data file and deployment mismatch: DF: %df Deploy: %dep",
-      array('%df' => $base_obj->id, '%dep' => $deploy_obj->id)
-    ));
-    return NULL;
-  }
-
-  if (!$create_override){
-    // If both are the same, sequence is already existing
-    if (!empty($existing_wi_seq_id_from_df) && $existing_wi_seq_id_from_df == $existing_wi_seq_id_from_deploy){
-      return $existing_wi_seq_id_from_df;
+  if ($create_override || empty($existing_wi_seq_id_from_deploy)){
+    $seq_obj = array(
+      'name' => $emammal_sequence_id,
+      'controlField' => '',
+      'rule' => 0,
+      'remarks' => '',
+      'sequenceIdentifier' => $emammal_sequence_id
+    );
+    $seq_json_string = json_encode($seq_obj);
+    $result = sidora_emammal_wi_api_call("project/" . $proj_id . "/deployment/" . $deploy_id . "/sequence", $seq_json_string);
+    sidora_emammal_debug("create sequence result::" . $result);
+    $wi_sequence_id = sidora_emammal_wi_helper_pull_id($result);
+    if (empty($wi_sequence_id)){
+      watchdog('Sidora_emammal',t(
+        "Tried to create sequence for data file, but did not get WI ID: %uinfo %result", 
+        array('%uinfo' => $seq_json_string, '%result' => $result)
+      ));
     }
-    // If df has it but deployment does not, add info to deployment
-    if (!empty($existing_wi_seq_id_from_df) && empty($existing_wi_seq_id_from_deploy)){
-      $wi_sequence_id = $existing_wi_seq_id_from_df;
+    else {
+      // update the deployment with the wi sequence id so that it can be used by other data files
       sidora_emammal_add_wi_id_to_sidora_ds($deploy_obj, $wi_sequence_id, 'sequence', $emammal_sequence_id);
       return $wi_sequence_id;
     }
-    // If deploy has it but df does not (happens often), add info to df
-    if (!empty($existing_wi_seq_id_from_df) && empty($existing_wi_seq_id_from_deploy)){
-      $wi_sequence_id = $existing_wi_seq_id_from_deploy;
-      sidora_emammal_add_wi_id_to_sidora_ds($base_obj, $wi_sequence_id, 'sequence');
-      return $wi_sequence_id;
-    }
+    return NULL;
   }
-  sidora_emammal_debug("create sequence, existing ids df: $existing_wi_seq_id_from_df deploy: $existing_wi_seq_id_from_deploy");
- 
-  // If both empty or create_override then create a new sequence
-  $seq_obj = array(
-    'name' => $emammal_sequence_id,
-    'controlField' => '',
-    'rule' => 0,
-    'remarks' => '',
-    'sequenceIdentifier' => $emammal_sequence_id
-  );
-  $seq_json_string = json_encode($seq_obj);
-  $result = sidora_emammal_wi_api_call("project/" . $proj_id . "/deployment/" . $deploy_id . "/sequence", $seq_json_string);
-  sidora_emammal_debug("create sequence result::" . $result);
-  $wi_sequence_id = sidora_emammal_wi_helper_pull_id($result);
-  if (empty($wi_sequence_id)){
-    watchdog('Sidora_emammal',t(
-      "Tried to create sequence for data file, but did not get WI ID: %uinfo %result", 
-      array('%uinfo' => $seq_json_string, '%result' => $result)
-    ));
-  }
-  else {
-    // sequence created, update the sidora datastream with the result
-    sidora_emammal_add_wi_id_to_sidora_ds($base_obj, $wi_sequence_id, 'sequence');
-    // update the deployment with the wi sequence id so that it can be used by other data files
-    sidora_emammal_add_wi_id_to_sidora_ds($deploy_obj, $wi_sequence_id, 'sequence', $emammal_sequence_id);
-    return $wi_sequence_id;
-  }
-  return NULL;
+  return $existing_wi_seq_id_from_deploy;
 }
 
 /**
@@ -895,22 +809,9 @@ function sidora_emammal_wi_delete_datafile($base_obj){
     ));
     return FALSE;
   }
-  sidora_emammal_debug("Getting sequence id");
-  $seq_wi_id = sidora_emammal_wi_get_id($base_obj, 'sequence');
-  sidora_emammal_debug("sequence id:" . $loc_wi_id);
-  if (empty($seq_wi_id)){
-    watchdog('Sidora_emammal',t(
-      "Tried to delete datafile and sequence, but did not have a WI ID in SIDORA: %pid", 
-      array('%pid' => $base_obj->id)
-    ));
-    return FALSE;
-  }
   $proj_id = sidora_emammal_get_project_wi_id($base_obj);
   $deploy_id = sidora_emammal_get_deployment_wi_id($base_obj);
 
-  sidora_emammal_debug("Deleting sequence");
-  $call_worked = sidora_emammal_wi_api_call("project/" . $proj_id . "/deployment/" .  $deploy_id . "/sequence/" . $seq_wi_id, NULL, 'DELETE');
-  sidora_emammal_remove_wi_id($base_obj, $seq_wi_id);
   sidora_emammal_debug("Deleting datafile");
   $call_worked = $call_worked && sidora_emammal_wi_api_call("project/" . $proj_id . "/deployment/" .  $deploy_id . "/data-file/" . $wi_id, NULL, 'DELETE');
   sidora_emammal_remove_wi_id($base_obj, $wi_id);
@@ -1087,6 +988,7 @@ function sidora_emammal_wi_delete_project($base_obj){
 function sidora_emammal_wi_project_update_strings($base_obj){
   $to_return = array();
   $name = $base_obj->label;
+  $fedora_id = $base_obj->id;
   $content = $base_obj['EAC-CPF']->content;
   if (!empty($content)){
     $doc = new DOMDocument();
@@ -1210,6 +1112,10 @@ function sidora_emammal_wi_project_update_strings($base_obj){
      'embargo' => 0,
      'dataUse' => 0,
      'tags' => array(),
+     'metadata' => array(
+       'emammal_id' => 'TBD',
+       'fedora_id' => $fedora_id,
+     ),
     );
     $creation_string = json_encode($creation_obj);
 
@@ -1291,7 +1197,7 @@ function sidora_emammal_wi_create_deployment($base_obj, $create_override = FALSE
       // device created, update the sidora datastream with the result
       sidora_emammal_add_wi_id_to_sidora_ds($base_obj, $device_id, 'device');
     }
-    // Create the location TBD TODO BBB
+    // Create the location
     $loc_id = NULL;
     if (!empty($device_id)){ 
       $result = sidora_emammal_wi_api_call("project/" . $proj_id . "/location", $update_info[2]['json']);
@@ -1325,9 +1231,11 @@ function sidora_emammal_wi_create_deployment($base_obj, $create_override = FALSE
       }
       $wi_id = $deployment_id;
     }
-    // Now the object is created. Its WI ID is in its SIDORA datastream and
-    // in the $wi_id variable
   }
+  // Now the object is created. Its WI ID is in its SIDORA datastream and
+  // in the $wi_id variable
+  // Create the sequences for the deployment
+  sidora_emammal_wi_create_sequences_and_identificationoutputs($base_obj, $create_override);
   return $wi_id;
 }
 
@@ -1338,6 +1246,7 @@ function sidora_emammal_wi_create_deployment($base_obj, $create_override = FALSE
  *   [0] => array("wi_type" => "deployment",  "json" => $creation_string),
  *   [1] => array("wi_type" => "device",  "json" => $dev_creation_string),
  *   [2] => array("wi_type" => "location",  "json" => $loc_creation_string),
+ *   [3-??] => array("wi_type" => "sequence",  "json" => $seq_creation_string, "emammal_id" => emammal sequence id),
  * );
  */
 function sidora_emammal_wi_deployment_update_strings($base_obj){
@@ -1580,18 +1489,18 @@ function sidora_emammal_wi_delete_deployment($base_obj){
  ****************************************************************************/
 
 /* 
- * This creates the identification outputs in WI for this datafile. It will go to the
- * researcher CSV. 
+ * This creates the identification outputs in WI for this deployment. It will
+ * go to the researcher CSV. 
  * Does NOT update existing identification outputs with new data. ONLY used for
- * creation. This will create the device object in the WI as well
+ * creation.
  *
- * $base_obj - the Fedora object to use for creation (image file)
+ * $base_obj - the Fedora object to use for creation (deployment)
  * $create_override - normally do not create an object if it already has a WI ID
  *    if TRUE, will create a WI object anyway
  *    if FALSE, will return the ID of the item
  * returns an array of Wildlife Insights ID of the identification outputs
  */
-function sidora_emammal_wi_create_identificationoutput($base_obj, $create_override = FALSE){
+function sidora_emammal_wi_create_sequences_and_identificationoutputs($base_obj, $create_override = FALSE){
   /* What needs to be done here is first to check the CSV for which identifications happened in this 
    * image. Figuring that out requires getting the emammal ID for the image and finding the lines that
    * correspond to it.
@@ -1605,54 +1514,24 @@ function sidora_emammal_wi_create_identificationoutput($base_obj, $create_overri
   $deploy_obj = sidora_emammal_get_deployment_obj($base_obj);
   if (empty($deploy_obj)){
     watchdog('Sidora_emammal',t(
-      "Tried to create identification-output for datafile: %dfpid with but did not find the deployment object",
+      "Tried to create identification-output for deployment: %dfpid with but did not find the deployment object",
       array('%dpid' => $deploy_obj->id)
     ));
-    return NULL
+    return NULL;
   }
   $deploy_id = sidora_emammal_get_deployment_wi_id($deploy_obj);
   if (empty($deploy_id)){
     watchdog('Sidora_emammal',t(
-      "Tried to create identification-output for datafile: %dfpid with but did not find the deployment WI ID",
+      "Tried to create identification-output for deployment: %dfpid with but did not find the deployment WI ID",
       array('%dpid' => $deploy_obj->id)
     ));
-    return NULL
+    return NULL;
   }
   $proj_id = sidora_emammal_get_project_wi_id($base_obj);
   if (empty($proj_id)){
     watchdog('Sidora_emammal',t(
-      "Tried to create identification-output for datafile: %dfpid with but did not find the project",
+      "Tried to create identification-output for deployment: %dfpid with but did not find the project",
       array('%dpid' => $deploy_obj->id)
-    ));
-    return NULL
-  }
-  $df_id = sidora_emammal_wi_get_id($base_obj);
-  if (empty($df_id)){
-    watchdog('Sidora_emammal',t(
-      "Tried to create identification-output for datafile: %dfpid with but did not find WI ID for the datafile",
-      array('%dpid' => $deploy_obj->id)
-    ));
-    return NULL
-  }
-
-  $content = $base_obj['MODS']->content;
-  if (!empty($content)){
-    $doc = new DOMDocument();
-    $docToLoad = ($content);
-    $doc->loadXML($docToLoad);
-
-    $identifier_nodes = $doc->getElementsByTagName("identifier");
-    foreach($identifier_nodes as $exister){
-      $check_is_seq_id = $exister->getAttribute('type');
-      if ($check_is_seq_id == 'Image Sequence ID'){
-        $emammal_sequence_id = $exister->nodeValue;
-      }
-    }
-  }
-  if (empty($emammal_sequence_id)){
-    watchdog('Sidora_emammal', t(
-      "Wildlife Insights Sequence ID missing eMammal sequence id for: %pid while trying to create Identification Outputs",
-      array('%pid' => $base_obj->id)
     ));
     return NULL;
   }
@@ -1663,63 +1542,89 @@ function sidora_emammal_wi_create_identificationoutput($base_obj, $create_overri
   $child_res = sidora_concept_resource_listing($deploy_obj->id, array('csv' => array('si:datasetCModel')), 10, 0, 'csv', 'Researcher Observations');
   if (empty($child_res)){
     watchdog('Sidora_emammal',t(
-      "Tried to create identification-output for datafile: %dfpid with deployment: %dpid but did not find the Researcher Observations file", 
-      array('%dpid' => $deploy_obj->id, '%dfpid' => $base_obj->id)
+      "Tried to create identification-output for deployment: %dpid but did not find the Researcher Observations file", 
+      array('%dpid' => $deploy_obj->id)
     ));
     return NULL;
   }
   $researcher_obs_pid = $child_res[0]['object']['value'];
   $researcher_obs_obj = sidora_obj($researcher_obs_pid);
   $csv_content = $researcher_obs_obj['OBJ']->content;
-  $observations_for_image = sidora_emammal_pull_observations_for_sequence($csv_content, $emammal_sequence_id);
+  $observations = sidora_emammal_pull_observations_for_sequences($csv_content);
 
-  // See if the observations are already there
-  $io_id = sidora_emammal_wi_get_id($base_obj, 'identification_output');
-  $do_create = $create_override;
-  if (empty($io_id)){
-    $do_create = TRUE;
-  }
-  if ($do_create){
-    $cio_obj = array(
-      "blankYn" => true,
-      "identificationMethodId" => 0,
-      "identifiedObjects" => array(),
-    );
-    foreach($observations_for_image as $obs_line){
-      $scientific_name = $obs_line[5];
-      $identified_object = array(
-        'commonName' => $obs_line[6],
-        'relativeAge' => '',
-        'sex' => '',
-        'markings' => '',
-        'individualIdentified' => true,
-        'remarks' => $scientific_name,
-        'behavior' => '',
-        'date' => array(),
-        'certainty' => 0,
-        'taxonomyId' => 0
-      );
-      $coi_obj['identifiedObjects'][] = $identified_object;
+  foreach($observations as $emammal_seq_id => $observations_for_sequence){
+    // See if the sequence is already there
+    $wi_seq_id = sidora_emammal_wi_get_id($base_obj, 'sequence', $emammal_seq_id);
+    $do_create = $create_override;
+    if (empty($wi_seq_id)){
+      $do_create = TRUE;
     }
-    $update_info_json = json_encode($coi_obj);
-    $result = sidora_emammal_wi_api_call("project/" . $proj_id . '/deployment/' . $deploy_id . '/data-file/' . $df_id . '/identification-output', $update_info_json);
-    $io_id = sidora_emammal_wi_helper_pull_id($result);
-    sidora_emammal_add_wi_id_to_sidora_ds($base_obj, $io_id, 'identification_output');
+    if ($do_create){
+      $wi_seq_id = sidora_emammal_wi_create_sequence($deploy_obj, $emammal_seq_id, $create_override);
+    }
+    
+    // See if the observations are already there
+    $io_id = sidora_emammal_wi_get_id($base_obj, 'identification_output', $emammal_seq_id);
+    $do_create = $create_override;
+    if (empty($io_id)){
+      $do_create = TRUE;
+    }
+    if ($do_create){
+      $cio_obj = array(
+        "blankYn" => true,
+        "identificationMethodId" => 0,
+        "identifiedObjects" => array(),
+      );
+      foreach($observations_for_sequence as $obs_line){
+        $scientific_name = $obs_line[5];
+        $identified_object = array(
+          'commonName' => $obs_line[6],
+          'relativeAge' => '',
+          'sex' => '',
+          'markings' => '',
+          'individualIdentified' => true,
+          'remarks' => $scientific_name,
+          'behavior' => '',
+          'date' => array(),
+          'certainty' => 0,
+          'taxonomyId' => 0
+        );
+        $coi_obj['identifiedObjects'][] = $identified_object;
+      }
+      $update_info_json = json_encode($coi_obj);
+      $result = sidora_emammal_wi_api_call("project/" . $proj_id . '/deployment/' . $deploy_id . '/sequence/' . $wi_seq_id . '/identification-output', $update_info_json);
+      $io_id = sidora_emammal_wi_helper_pull_id($result);
+      sidora_emammal_add_wi_id_to_sidora_ds($base_obj, $io_id, 'identification_output');
+    }
   }
-  return $io_id;
+  return NULL;
 }
 
 /**
- * Returns the lines from the csv content which are for the emammal image
+ * Returns an array of emammal sequence ids and the content lines for that sequence
+ * The array looks something like this, note nested arrays:
+ * $returned = array(
+ *   ["d18262s1"] => array(
+ *      array( "Researcher","d18262","d18262s1","2015-09-18 08:12:27"."2015-09-18 08:14:02","Camera Trapper","Camera Trapper",,,,"1",,,),
+ *      array( "Researcher","d18262","d18262s1","2015-09-18 08:12:27"."2015-09-18 08:14:02","Nesotragus moschatus","Suni",,,,"1",,,),
+ *   ),
+ *   ["d18262s63"] => array(
+ *      array( "Researcher","d18262","d18262s63","2015-09-18 08:12:27"."2015-09-18 08:14:02","Camera Trapper","Camera Trapper",,,,"1",,,),
+ *   ),
+ *   ["d18262s80"] => array(
+ *      array( Volunteer,d18262,d18262s80,2015-10-16 10:39:51,2015-10-16 10:40:13,"Camera Trapper","Camera Trapper",,,,1,,,),
+ *   ),
+ * );
  */
-function sidora_emammal_pull_observations_for_sequence($csv_content, $emammal_seq_id){
+function sidora_emammal_pull_observations_for_sequences($csv_content){
   // There are no line breaks in the eMammal csv values, so we're free to break lines on newlines without worry
   $lines = explode("\n", $csv_content);
-  $to_return = "";
+  $to_return = array();
   foreach($lines as $line){
     $line_parts = str_getcsv($line);
-    if (!empty($line_parts) && $emammal_seq_id == $line_parts[2]){
-      $to_return[] = $line_parts;
+    if (!empty($line_parts)){
+      $emammal_seq_id = $line_parts[2];
+      $to_return[$emammal_seq_id][] = $line_parts;
     }
   }
   return $to_return;
