@@ -311,10 +311,11 @@ function sidora_emammal_remove_wi_id($emammal_obj, $wi_id){
 
 /**
  * Returns the WI token if we have one in the cache or creates one and returns it
+ * $force - do not take from the cache, get a new token
  */
-function sidora_emammal_get_wi_token(){
+function sidora_emammal_get_wi_token($force = FALSE){
   $token = sidora_emammal_get_cache('token');
-  if (empty($token)){
+  if (empty($token) || $force){
     $token_url = variable_get('sidora_emammal_wi_token_url', '');
     if (empty($token_url)){
       return "";
@@ -417,7 +418,13 @@ function sidora_emammal_wi_api_call($call_name, $data = NULL, $method_override =
   }
   $url = variable_get('sidora_emammal_wi_base_url', '') . $call_name;
   sidora_emammal_debug("api call, url:" . $url);
-  return sidora_emammal_wi_curl($url, $data, $method);
+  $check_unauthorized = sidora_emammal_wi_curl($url, $data, $method);
+  if ($check_unauthorized == 'Unauthorized'){
+    // Token was bad or timed out, try again with a new one
+    sidora_emammal_get_wi_token(TRUE);
+    $check_unauthorized = sidora_emammal_wi_curl($url, $data, $method);
+  }
+  return $check_unauthorized;
 }
 
 /**
@@ -850,8 +857,9 @@ function sidora_emammal_wi_create_project($base_obj, $create_override = FALSE){
   if ($do_create){
     $update_info = sidora_emammal_wi_project_update_strings($base_obj);
     sidora_emammal_debug("update strings:" . json_encode($update_info));
+    $org_id = sidora_emammal_wi_get_organization_id();
     // Should contain 2 objects, first is the project
-    $result = sidora_emammal_wi_api_call("project", $update_info[0]['json']);
+    $result = sidora_emammal_wi_api_call("organization/$org_id/project", $update_info[0]['json']);
     sidora_emammal_debug("create project result::" . $result);
     $proj_id = sidora_emammal_wi_helper_pull_id($result);
     if (empty($proj_id)){
@@ -1103,20 +1111,24 @@ function sidora_emammal_wi_project_update_strings($base_obj){
      'projectUrl' => '',
      'projectStatus' => $status,
      'methodology' => '',
-     'startDate' => $from_date, //array(),
-     'endDate' => $to_date, //array(),
      'remarks' => $remarks,
      'projectCreditLine' => '',
      'acknowledgements' => $acknow,
      'dataCitation' => '',
-     'embargo' => 0,
-     'dataUse' => 0,
+     //'embargo' => 0,
+     //'dataUse' => 0,
      'tags' => array(),
      'metadata' => array(
        'emammal_id' => 'TBD',
        'fedora_id' => $fedora_id,
      ),
     );
+    if (!empty($from_date)){
+      $creation_obj['startDate'] = $from_date;
+    }
+    if (!empty($end_date)){
+      $creation_obj['endDate'] = $end_date;
+    }
     $creation_string = json_encode($creation_obj);
 
     $location_obj = array(
@@ -1142,6 +1154,7 @@ function sidora_emammal_wi_project_update_strings($base_obj){
   }
   $to_return[] = array("wi_type" => "project", "json" => $creation_string);
   $to_return[] = array("wi_type" => "location", "json" => $location_string);
+var_dump($to_return);
   return $to_return;
 }
 
@@ -1907,6 +1920,10 @@ function sidora_emammal_wi_org_init($emammal_org_obj = NULL){
   return sidora_emammal_wi_create($emammal_org_obj, 'organization');
 }
 
+function sidora_emammal_wi_get_all_organizations(){
+  $result = sidora_emammal_wi_api_call("organization");
+  return $result;
+}
 /**
  * Get the WI organization ID
  */
@@ -1914,11 +1931,12 @@ function sidora_emammal_wi_get_organization_id(){
   // Cache the WI organization ID so we don't go get it from Fedora every time
   $key = "org_id";
   $cache = cache_get('sidora_emammal:'.$key);
+  $org_id = NULL;
   if ($cache){
     $org_id = $cache->data;
   }
-  else {
-    $emammal_org_obj = sidora_emammal_get_project_space();
+  if (empty($org_id)) {
+    $emammal_obj = sidora_emammal_get_project_space();
     $org_id = sidora_emammal_wi_get_id($emammal_obj);
     cache_set('sidora_emammal:'.$key, $org_id);
   }
@@ -1936,13 +1954,15 @@ function sidora_emammal_wi_create_organization(){
     'state' => 'unknown', 
     'postalCode' => 'unknown', 
     'phone' => 'unknown', 
-    'email' => 'unknown', 
+    'email' => 'unknown@sample.com', 
     'countryCode' => 'unknown', 
-    'organizationUrl' => 'unknown', 
+    //'organizationUrl' => 'unknown', 
     'remarks' => 'unknown', 
   );
   $result = sidora_emammal_wi_api_call("organization", $data);
   $org_id = sidora_emammal_wi_helper_pull_id($result);
+  $emammal_org_obj = sidora_emammal_get_project_space();
+  sidora_emammal_add_wi_id_to_sidora_ds($emammal_org_obj, $org_id);
   return $org_id;
 }
 

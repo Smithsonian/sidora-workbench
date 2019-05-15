@@ -4657,6 +4657,10 @@ function sidora_obj($pid) {
   if ($tuque) {
     $object = islandora_object_load($pid);
   }
+  else {
+    echo "Tuque down:" . json_encode($e);
+    watchdog("sidora",t('Tuque down:'. json_encode($e)));
+  }
   if (empty($object)) return NULL;
   module_load_include('inc', 'sidora', 'includes/sidora_nodes');
   $node = sidora_get_concept_node($pid);
