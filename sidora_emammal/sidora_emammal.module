@@ -78,6 +78,12 @@ function sidora_emammal_menu() {
       'access arguments' => array('administer site configuration'),
       'type' => MENU_CALLBACK,
     ),
+    'sidora/object_change' => array(
+      'title' => 'Inform SIdora that an object changed (update WI if needed)',
+      'page callback' => 'sidora_emammal_object_change',
+      'access arguments' => array('administer site configuration'),
+      'type' => MENU_CALLBACK,
+    ),
   );
 }
 function sidora_emammal_test($method = '', $data = '', $data2 = '', $data3 = ''){
@@ -1986,6 +1992,27 @@ function sidora_emammal_islandora_datastream_modified(AbstractObject $object, Ab
 }
 function sidora_emammal_islandora_datastream_ingested(AbstractObject $object, AbstractDatastream $datastream) {
   sidora_emammal_create_or_update_for_wi_if_needed($object, $datastream);
+}
+function sidora_emammal_object_change($pid, $datastream_id){
+  $obj = sidora_obj($pid);
+  $status = array();
+  if (empty($obj)){
+    $status['status'] = 'fail';
+    $status['message'] = 'object not found'; 
+  }
+  else {
+    $datastream = $obj[$datastream_id];
+    if (empty($datastream)){
+      $status['status'] = 'fail';
+      $status['message'] = 'datastream not found'; 
+    }
+    else {
+      sidora_emammal_create_or_update_for_wi_if_needed($obj, $datastream);
+      $status['status'] = 'complete';
+    }
+  }
+  drupal_json_output($status);
+  drupal_exit();
 }
 
 function sidora_emammal_create_or_update_for_wi_if_needed(AbstractObject $object, AbstractDatastream $datastream){
