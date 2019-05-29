@@ -135,6 +135,12 @@ function sidora_emammal_test($method = '', $data = '', $data2 = '', $data3 = '')
       $wi_id = sidora_emammal_wi_create_project($obj, TRUE); 
       var_dump($wi_id);
       break;
+    case 'createProjTree':
+      $obj = sidora_obj($data);
+      $wi_id = sidora_emammal_wi_create($obj, 'project', '', TRUE); 
+      var_dump($wi_id);
+      break;
+      
     case 'remove_wi_id':
       $obj = sidora_obj($data);
       $wi_id = $data2;
@@ -202,6 +208,12 @@ function sidora_emammal_test($method = '', $data = '', $data2 = '', $data3 = '')
       $obj = sidora_obj($data);
       $df = sidora_emammal_wi_create_identificationoutput($obj, TRUE);
       echo $df;
+      echo '<br>End';
+      break;
+    case 'delete':
+      echo 'Start<br>';
+      $obj = sidora_obj($data);
+      $return = sidora_emammal_wi_delete($obj);
       echo '<br>End';
       break;
     default:
@@ -435,9 +447,9 @@ function sidora_emammal_wi_curl($url, $data = '', $method = "POST", $include_bea
   curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1);
   sidora_emammal_debug("About to curl:" . $url);
   $result = curl_exec($curl);
-  //$all_info = curl_getinfo($curl);
-  //var_dump($all_info);
+  $all_info = curl_getinfo($curl);
   curl_close($curl);
+  sidora_emammal_debug("FULL INFO:" . "<br>url:<br>" . $url . "<br>header_array:<br>" . json_encode($header_array) . "<br>data:<br>" . $data . "<br>curl_getinfo:<br>" . json_encode($all_info) . "<br>result:<br>" . $result);
   //echo $result;
   sidora_emammal_debug("curl return:" . $result);
   return $result;
@@ -519,6 +531,10 @@ function sidora_emammal_debug($output){
  */
 function sidora_emammal_wi_delete($base_obj = NULL, $type = '', $subtype = ''){
   sidora_emammal_debug( "delete:" . $base_obj->id);
+  if (empty($type)){
+    $type = sidora_emammal_get_wi_type($base_obj);
+    sidora_emammal_debug( "sent empty type, got type:" . $type);
+  }
   $to_return = NULL;
   if ($type == 'organization'){
     // TBD / TODO
@@ -637,7 +653,7 @@ function sidora_emammal_wi_create($base_obj = NULL, $type = '', $subtype = '', $
       if (sidora_emammal_get_wi_type($subproject) == 'subproject'){
         $wi_id = sidora_emammal_wi_get_id($subproject);
         if (empty($wi_id)){
-          sidora_emammal_wi_create($subproject, 'subproject');
+          sidora_emammal_wi_create($subproject, 'subproject', '', $create_override);
         }
       }
       $children_concepts = $subproject->relationships->get(FEDORA_RELS_EXT_URI, 'hasConcept');
@@ -648,7 +664,7 @@ function sidora_emammal_wi_create($base_obj = NULL, $type = '', $subtype = '', $
         if (sidora_emammal_get_wi_type($check_obj) == 'deployment'){
           $wi_id = sidora_emammal_wi_get_id($check_obj);
           if (empty($wi_id)){
-            sidora_emammal_wi_create($check_obj, 'deployment');
+            sidora_emammal_wi_create($check_obj, 'deployment', '', $create_override);
           }
         }
         else {
@@ -660,7 +676,7 @@ function sidora_emammal_wi_create($base_obj = NULL, $type = '', $subtype = '', $
             if (sidora_emammal_get_wi_type($check_obj) == 'deployment'){
               $wi_id = sidora_emammal_wi_get_id($check_obj);
               if (empty($wi_id)){
-                sidora_emammal_wi_create($check_obj, 'deployment');
+                sidora_emammal_wi_create($check_obj, 'deployment', '', $create_override);
               }
             }
           }
@@ -929,16 +945,19 @@ function sidora_emammal_wi_create_project($base_obj, $create_override = FALSE){
     else {
       // project created, update the sidora datastream with the result
       sidora_emammal_add_wi_id_to_sidora_ds($base_obj, $proj_id);
-      $result = sidora_emammal_wi_api_call("project/" . $proj_id . "/location", $update_info[1]['json']);
-      $loc_id = sidora_emammal_wi_helper_pull_id($result);
-      if (empty($loc_id)){
-        watchdog('Sidora_emammal',t(
-          "Tried to create location for new project, but did not get location's WI ID: %uinfo %result", 
-          array('%uinfo' => json_encode($update_info), '%result' => $result)
-        ));
-      }
-      else {
-        sidora_emammal_add_wi_id_to_sidora_ds($base_obj, $loc_id, 'location');
+      // If there is a location, add it
+      if (!empty($update_info[1])){
+        $result = sidora_emammal_wi_api_call("project/" . $proj_id . "/location", $update_info[1]['json']);
+        $loc_id = sidora_emammal_wi_helper_pull_id($result);
+        if (empty($loc_id)){
+          watchdog('Sidora_emammal',t(
+            "Tried to create location for new project, but did not get location's WI ID: %uinfo %result", 
+            array('%uinfo' => json_encode($update_info), '%result' => $result)
+          ));
+        }
+        else {
+          sidora_emammal_add_wi_id_to_sidora_ds($base_obj, $loc_id, 'location');
+        }
       }
       // Should we still add the project id to the return if location failed? TBD / TODO
       $wi_id = $proj_id;
@@ -1192,8 +1211,6 @@ function sidora_emammal_wi_project_update_strings($base_obj){
     $creation_string = json_encode($creation_obj);
 
     $location_obj = array(
-      "latitude" => $lat,
-      "longitude" => $long,
       "placename" => $proj_loc,
       "propertyType" => "",
       "habitat" => "",
@@ -1207,13 +1224,21 @@ function sidora_emammal_wi_project_update_strings($base_obj){
       "secondOrderDivision" => "",
       "landcoverType" => "",
       "igbpClimateClassification" => "",
-      "elevationGtopo30" => 0
+      // "elevationGtopo30" => 0
     );
+    if (!empty($lat)){
+      $location_obj["latitude"] = floatval($lat);
+    }
+    if (!empty($long)){
+      $location_obj["longitude"] = floatval($long);
+    }
 
     $location_string = json_encode($location_obj);
   }
   $to_return[] = array("wi_type" => "project", "json" => $creation_string);
-  $to_return[] = array("wi_type" => "location", "json" => $location_string);
+  if (!empty($proj_loc)){
+    $to_return[] = array("wi_type" => "location", "json" => $location_string);
+  }
   return $to_return;
 }
 
@@ -1256,7 +1281,7 @@ function sidora_emammal_wi_create_subproject($base_obj, $create_override = FALSE
   if ($do_create){
     $update_info = sidora_emammal_wi_subproject_update_strings($base_obj);
     sidora_emammal_debug("update strings:" . json_encode($update_info));
-    $subproject_json = $update_info[0];
+    $subproject_json = $update_info[0]['json'];
     $result = sidora_emammal_wi_api_call("project/" . $proj_id . "/subproject", $subproject_json);
     $subproject_id = sidora_emammal_wi_helper_pull_id($result);
     if (empty($subproject_id)){
@@ -1458,28 +1483,33 @@ function sidora_emammal_wi_create_deployment($base_obj, $create_override = FALSE
         sidora_emammal_add_wi_id_to_sidora_ds($base_obj, $loc_id, 'location');
       }
     }
-    if (!empty($loc_id)){ 
-      // Put in the location and device ids to the deployment
-      $deployment_obj = json_decode($update_info[0]['json'], TRUE);
-      $deployment_obj["deviceId"] = $device_id;
+    $deployment_obj = json_decode($update_info[0]['json'], TRUE);
+    // Put in the location and device ids to the deployment
+    if (!empty($loc_id)){
       $deployment_obj["locationId"] = $loc_id;
-      // Put in the subproject ids to the deployment
-      $subproject_wi_id = sidora_emammal_get_subproject_wi_id($base_obj);
-      $deployment_obj["subprojectId"] = $subproject_wi_id;
-      $deployment_json = json_encode($deployment_obj);
-      $result = sidora_emammal_wi_api_call("project/" . $proj_id . "/deployment", $deployment_json);
-      $deployment_id = sidora_emammal_wi_helper_pull_id($result);
-      if (empty($deployment_id)){
-        watchdog('Sidora_emammal',t(
-          "Tried to create deployment, but did not get deployment's WI ID: %uinfo %result", 
-          array('%uinfo' => json_encode($update_info), '%result' => $result)
-        ));
-      }
-      else {
-        sidora_emammal_add_wi_id_to_sidora_ds($base_obj, $deployment_id);
-      }
-      $wi_id = $deployment_id;
     }
+    if (!empty($device_id)){
+      $deployment_obj["deviceId"] = $device_id;
+    }
+    // Put in the subproject ids to the deployment
+    $subproject_wi_id = sidora_emammal_get_subproject_wi_id($base_obj);
+    if (!empty($subproject_wi_id)){
+      $deployment_obj["subprojectId"] = $subproject_wi_id;
+    }
+    $deployment_json = json_encode($deployment_obj);
+    $result = sidora_emammal_wi_api_call("project/" . $proj_id . "/deployment", $deployment_json);
+    $deployment_id = sidora_emammal_wi_helper_pull_id($result);
+    if (empty($deployment_id)){
+      watchdog('Sidora_emammal',t(
+        "Tried to create deployment, but did not get deployment's WI ID: %uinfo %result", 
+        array('%uinfo' => json_encode($update_info), '%result' => $result)
+      ));
+      return $deployment_id;
+    }
+    else {
+      sidora_emammal_add_wi_id_to_sidora_ds($base_obj, $deployment_id);
+    }
+    $wi_id = $deployment_id;
   }
   // Now the object is created. Its WI ID is in its SIDORA datastream and
   // in the $wi_id variable
@@ -1598,7 +1628,7 @@ function sidora_emammal_wi_deployment_update_strings($base_obj){
     $creation_obj = array(
       "deploymentIdentifier" => $deployment_id,
       "deploymentName" => $deployment_name,
-      "sensorHeight" => 0,
+      // "sensorHeight" => 0,
       "quietPeriod" => $quiet_period,
       "detectionDistance" => $detection_distance,
       "sampleRate" => '', // No sampleRate
@@ -1611,25 +1641,25 @@ function sidora_emammal_wi_deployment_update_strings($base_obj){
       "startDatetime" => $start_date_time,
       "endDatetime" => $end_date_time,
       "remarks" => $remarks,
-      "sensorId" => 0,
+      // "sensorId" => 0,
       // "deviceId" => 0, // device will be created and added later
-      "baitTypeId" => 0,
+      // "baitTypeId" => 0,
       // "locationId" => 0, // location will be created and added later
-      "participantSetSensorId" => 0,
-      "participantRemoveSensorId" => 0
+      // "participantSetSensorId" => 0,
+      // "participantRemoveSensorId" => 0
     );
     $creation_string = json_encode($creation_obj);
 
     
     $device_obj = array(
       "name" => $camera_id,
-      "purchaseDate" => array(),
+      //"purchaseDate" => array(),
       "make" => $camera_make,
       "model" => $camera_model,
       "modelNumber" => "",
       "serialNumber" => "",
-      "purchaseYear" => 0,
-      "purchasePrice" => 0,
+      // "purchaseYear" => 0,
+      // "purchasePrice" => 0,
       "productUrl" => "",
       "remarks" => "Camera for deployment:" . $deployment_name,
     );
@@ -1637,8 +1667,6 @@ function sidora_emammal_wi_deployment_update_strings($base_obj){
     $device_string = json_encode($device_obj);
 
     $location_obj = array(
-      "latitude" => $lat,
-      "longitude" => $long,
       "placename" => "Camera Location for deployment:" . $deployment_name,
       "propertyType" => "",
       "habitat" => "",
@@ -1654,6 +1682,12 @@ function sidora_emammal_wi_deployment_update_strings($base_obj){
       "igbpClimateClassification" => "",
       "elevationGtopo30" => 0
     );
+    if (!empty($lat)){
+      $location_obj["latitude"] = floatval($lat);
+    }
+    if (!empty($long)){
+      $location_obj["longitude"] = floatval($long);
+    }
 
     $location_string = json_encode($location_obj);
   }
@@ -2013,7 +2047,7 @@ function sidora_emammal_wi_identificationoutput_update_strings($base_obj){
     
     $device_obj = array(
       "name" => $camera_id,
-      "purchaseDate" => array(),
+      //"purchaseDate" => array(),
       "make" => $camera_make,
       "model" => $camera_model,
       "modelNumber" => "",
@@ -2027,8 +2061,6 @@ function sidora_emammal_wi_identificationoutput_update_strings($base_obj){
     $device_string = json_encode($device_obj);
 
     $location_obj = array(
-      "latitude" => $lat,
-      "longitude" => $long,
       "placename" => "Camera Location for deployment:" . $deployment_name,
       "propertyType" => "",
       "habitat" => "",
@@ -2044,6 +2076,12 @@ function sidora_emammal_wi_identificationoutput_update_strings($base_obj){
       "igbpClimateClassification" => "",
       "elevationGtopo30" => 0
     );
+    if (!empty($lat)){
+      $location_obj["latitude"] = floatval($lat);
+    }
+    if (!empty($long)){
+      $location_obj["longitude"] = floatval($long);
+    }
 
     $location_string = json_encode($location_obj);
   }
@@ -2347,6 +2385,10 @@ function sidora_emammal_get_wi_type($object, $return_distances = FALSE){
         }
       }
       if (!$return_distances){
+        if (empty($check['wi_type'])){
+          sidora_emammal_debug("Couldn't find type for:" . $object->id . ", models:" . json_encode($models));
+          return '';
+        }
         return $check['wi_type'];
       }
       $wi_info[] = $check;
