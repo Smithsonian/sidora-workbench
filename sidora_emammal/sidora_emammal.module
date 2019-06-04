@@ -661,13 +661,14 @@ function sidora_emammal_wi_create($base_obj = NULL, $type = '', $subtype = '', $
         // This could be a deployment or it could be a plot, check the type
         $to_check_pid = $child_rel['object']['value'];
         $check_obj = sidora_obj($to_check_pid);
-        if (sidora_emammal_get_wi_type($check_obj) == 'deployment'){
+        $co_wi_type = sidora_emammal_get_wi_type($check_obj);
+        if ($co_wi_type == 'deployment'){
           $wi_id = sidora_emammal_wi_get_id($check_obj);
           if (empty($wi_id)){
             sidora_emammal_wi_create($check_obj, 'deployment', '', $create_override);
           }
         }
-        else {
+        else if ($co_wi_type == 'plot'){
           // This is a plot, check its children for deployments
           $plot_children_concepts = $check_obj->relationships->get(FEDORA_RELS_EXT_URI, 'hasConcept');
           foreach($plot_children_concepts as $plot_child_rel) {
@@ -680,6 +681,9 @@ function sidora_emammal_wi_create($base_obj = NULL, $type = '', $subtype = '', $
               }
             }
           }
+        }
+        else {
+          sidora_emammal_debug("Thought this would be a deployment or plot, but was not:" . $check_obj->id . " -> " . $type);
         }
       }
     }
@@ -941,6 +945,7 @@ function sidora_emammal_wi_create_project($base_obj, $create_override = FALSE){
         "Tried to create project, but did not get WI ID: %uinfo %result", 
         array('%uinfo' => json_encode($update_info), '%result' => $result)
       ));
+      return FALSE;
     }
     else {
       // project created, update the sidora datastream with the result
@@ -1229,8 +1234,14 @@ function sidora_emammal_wi_project_update_strings($base_obj){
     if (!empty($lat)){
       $location_obj["latitude"] = floatval($lat);
     }
+    else {
+      $location_obj["latitude"] = 0;
+    }
     if (!empty($long)){
       $location_obj["longitude"] = floatval($long);
+    }
+    else {
+      $location_obj["longitude"] = 0;
     }
 
     $location_string = json_encode($location_obj);
@@ -1494,7 +1505,7 @@ function sidora_emammal_wi_create_deployment($base_obj, $create_override = FALSE
     // Put in the subproject ids to the deployment
     $subproject_wi_id = sidora_emammal_get_subproject_wi_id($base_obj);
     if (!empty($subproject_wi_id)){
-      $deployment_obj["subprojectId"] = $subproject_wi_id;
+      $deployment_obj["subprojectId"] = intval($subproject_wi_id);
     }
     $deployment_json = json_encode($deployment_obj);
     $result = sidora_emammal_wi_api_call("project/" . $proj_id . "/deployment", $deployment_json);
@@ -1566,11 +1577,17 @@ function sidora_emammal_wi_deployment_update_strings($base_obj){
     $start_date_time_nodes = $doc->getElementsByTagName("begdate");
     foreach($start_date_time_nodes as $exister){
       $start_date_time = $exister->nodeValue;
+      $date_array = date_parse($start_date_time);
+      $date_string = date('c', mktime($date_array['hour'], $date_array['minute'], $date_array['second'], $date_array['month'], $date_array['day'], $date_array['year']));
+      $start_date_time = $date_string;
     }
 
     $end_date_time_nodes = $doc->getElementsByTagName("enddate");
     foreach($end_date_time_nodes as $exister){
       $end_date_time = $exister->nodeValue;
+      $date_array = date_parse($end_date_time);
+      $date_string = date('c', mktime($date_array['hour'], $date_array['minute'], $date_array['second'], $date_array['month'], $date_array['day'], $date_array['year']));
+      $end_date_time = $date_string;
     }
 
     $attrlabl_nodes = $doc->getElementsByTagName("attrlabl");
@@ -1960,11 +1977,17 @@ function sidora_emammal_wi_identificationoutput_update_strings($base_obj){
     $start_date_time_nodes = $doc->getElementsByTagName("begdate");
     foreach($start_date_time_nodes as $exister){
       $start_date_time = $exister->nodeValue;
+      $date_array = date_parse($start_date_time);
+      $date_string = date('c', mktime($date_array['hour'], $date_array['minute'], $date_array['second'], $date_array['month'], $date_array['day'], $date_array['year']));
+      $start_date_time = $date_string;
     }
 
     $end_date_time_nodes = $doc->getElementsByTagName("enddate");
     foreach($end_date_time_nodes as $exister){
       $end_date_time = $exister->nodeValue;
+      $date_array = date_parse($end_date_time);
+      $date_string = date('c', mktime($date_array['hour'], $date_array['minute'], $date_array['second'], $date_array['month'], $date_array['day'], $date_array['year']));
+      $end_date_time = $date_string;
     }
 
     $attrlabl_nodes = $doc->getElementsByTagName("attrlabl");

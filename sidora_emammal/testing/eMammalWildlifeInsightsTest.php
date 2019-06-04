@@ -31,6 +31,9 @@ class eMammalWildlifeInsightsTest extends \PHPUnit_Framework_TestCase {
       'testCanProjectBeCreated' => array(
         'fedora_project_id' => 'ct:1697264',
       ),
+      'testCanFullProjectTreeBeCreated' => array(
+        'fedora_project_id' => 'ct:1697264',
+      ),
     );
     return $testInfo;
   }
@@ -45,10 +48,6 @@ class eMammalWildlifeInsightsTest extends \PHPUnit_Framework_TestCase {
     $this->assertTrue(is_string($all_orgs));
     $json = json_decode($all_orgs);
     $this->assertTrue(!empty($json));
-    if (empty($json)){
-      echo "\n $all_orgs \n";
-      var_dump($json);
-    }
   }
   public function testCanOrganizationBeCreated(){
     /**
@@ -69,7 +68,21 @@ class eMammalWildlifeInsightsTest extends \PHPUnit_Framework_TestCase {
     $testData = $testInfo[__FUNCTION__];
     $obj_id = $testData['fedora_project_id'];
     $obj = sidora_obj($obj_id);
+    $original_label = $obj->label;
+    $obj->label = substr($original_label,0,25) . "-test1-" . date("Ymd_His");
     $wi_id = sidora_emammal_wi_create_project($obj, TRUE);
-    echo $wi_id;
+    $obj->label = $original_label;
+    $this->assertTrue(!empty($wi_id));
+  }
+  public function testCanFullProjectTreeBeCreated(){
+    $testInfo = $this->getTestData();
+    $testData = $testInfo[__FUNCTION__];
+    $obj_id = $testData['fedora_project_id'];
+    $obj = sidora_obj($obj_id);
+    $original_label = $obj->label;
+    $obj->label = substr($original_label,0,25) . "-test2-" . date("Ymd_His");
+    $wi_id = sidora_emammal_wi_create($obj, 'project', '', TRUE);
+    $obj->label = $original_label;
+    $this->assertTrue(!empty($wi_id));
   }
 }
