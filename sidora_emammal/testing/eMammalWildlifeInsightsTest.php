@@ -34,8 +34,37 @@ class eMammalWildlifeInsightsTest extends \PHPUnit_Framework_TestCase {
       'testCanFullProjectTreeBeCreated' => array(
         'fedora_project_id' => 'ct:1697264',
       ),
+      'testCanSequenceBeCreated' => array(
+        'fedora_deployment_id' => 'ct:1689234',
+      ),
+      'testCanDeploymentBeCreated' => array(
+        'fedora_deployment_id' => 'ct:1689234',
+      ),
     );
     return $testInfo;
+  }
+  
+  public function testCanDeploymentBeCreated(){
+    $testInfo = $this->getTestData();
+    $testData = $testInfo[__FUNCTION__];
+    $obj_id = $testData['fedora_deployment_id'];
+    $obj = sidora_obj($obj_id);
+    $original_label = $obj->label;
+    $obj->label = substr($original_label,0,25) . "-test1-" . date("Ymd_His");
+    $wi_id = sidora_emammal_wi_create_deployment($obj, TRUE);
+    $obj->label = $original_label;
+    $this->assertTrue(!empty($wi_id));
+  }
+  public function testCanSequenceBeCreated(){
+    $testInfo = $this->getTestData();
+    $testData = $testInfo[__FUNCTION__];
+    $obj_id = $testData['fedora_deployment_id'];
+    $obj = sidora_obj($obj_id);
+    $original_label = $obj->label;
+    $obj->label = substr($original_label,0,25) . "-test1-" . date("Ymd_His");
+    $wi_id = sidora_emammal_wi_create_sequence($obj, 'testCanSequenceBeCreated', TRUE);
+    $obj->label = $original_label;
+    $this->assertTrue(!empty($wi_id));
   }
   public function testCanTokenBeCreated() {
     $token = sidora_emammal_get_wi_token();

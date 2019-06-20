@@ -508,6 +508,7 @@ function sidora_emammal_wi_helper_pull_id($data){
 }
 
 function sidora_emammal_debug($output){
+    echo $output . "\n";
   //if (FALSE)
     watchdog("emammal_debug", $output);
 }
@@ -786,7 +787,7 @@ function sidora_emammal_wi_create_datafile($base_obj, $create_override = FALSE){
  */
 function sidora_emammal_wi_create_sequence($deploy_obj, $emammal_sequence_id, $create_override = FALSE, $proj_id = NULL){
   if (empty($proj_id)){
-    $proj_id = sidora_emammal_get_project_wi_id($base_obj);
+    $proj_id = sidora_emammal_get_project_wi_id($deploy_obj);
     sidora_emammal_debug("create sequence, got proj id:" . json_encode($proj_id));
   }
   
@@ -800,7 +801,7 @@ function sidora_emammal_wi_create_sequence($deploy_obj, $emammal_sequence_id, $c
     $seq_obj = array(
       'name' => $emammal_sequence_id,
       'controlField' => '',
-      'rule' => 0,
+      'rule' => 1,
       'remarks' => '',
       'sequenceIdentifier' => $emammal_sequence_id
     );
@@ -1836,9 +1837,7 @@ function sidora_emammal_wi_create_sequences_and_identificationoutputs($base_obj,
     return NULL;
   }
 
-  /*
-   * Go through this object's children to find the Researcher Observations
-   */ 
+  // Go through this object's children to find the Researcher Observations
   $child_res = sidora_concept_resource_listing($deploy_obj->id, array('csv' => array('si:datasetCModel')), 10, 0, 'csv', 'Researcher Observations');
   if (empty($child_res)){
     watchdog('Sidora_emammal',t(
@@ -1851,7 +1850,8 @@ function sidora_emammal_wi_create_sequences_and_identificationoutputs($base_obj,
   $researcher_obs_obj = sidora_obj($researcher_obs_pid);
   $csv_content = $researcher_obs_obj['OBJ']->content;
   $observations = sidora_emammal_pull_observations_for_sequences($csv_content);
-
+  
+  sidora_emammal_debug("obs:" . json_encode($observations));
   foreach($observations as $emammal_seq_id => $observations_for_sequence){
     // See if the sequence is already there
     $wi_seq_id = sidora_emammal_wi_get_id($base_obj, 'sequence', $emammal_seq_id);
