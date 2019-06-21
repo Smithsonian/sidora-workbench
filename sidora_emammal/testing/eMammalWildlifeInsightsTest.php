@@ -40,17 +40,35 @@ class eMammalWildlifeInsightsTest extends \PHPUnit_Framework_TestCase {
       'testCanDeploymentBeCreated' => array(
         'fedora_deployment_id' => 'ct:1689234',
       ),
+      'testCanDataFileBeCreated' => array(
+        'wi_project_id' => '100',
+        'wi_deployment_id' => '221',
+        'wi_sequence_id' => '1519',
+      ),
     );
     return $testInfo;
   }
-  
+  public function testCanDataFileBeCreated(){
+    $testInfo = $this->getTestData();
+    $testData = $testInfo[__FUNCTION__];
+    $wi_proj_id = $testData['wi_project_id'];
+    $wi_depl_id = $testData['wi_deployment_id'];
+    $wi_seq_id = $testData['wi_sequence_id'];
+    $result = sidora_emammal_wi_curl_data_file('https://staging.api.wildlifeinsights.org/api/v1/project/39/deployment/179/data-file');
+    echo $result;
+    
+  }
+  public function testCanGetIdentificationMethods(){
+    $result = sidora_emammal_wi_api_call("identification-methods/1");
+    echo $result;
+  } 
   public function testCanDeploymentBeCreated(){
     $testInfo = $this->getTestData();
     $testData = $testInfo[__FUNCTION__];
     $obj_id = $testData['fedora_deployment_id'];
     $obj = sidora_obj($obj_id);
     $original_label = $obj->label;
-    $obj->label = substr($original_label,0,25) . "-test1-" . date("Ymd_His");
+    $obj->label = substr($original_label,0,20) . "-test1-" . date("Ymd_His");
     $wi_id = sidora_emammal_wi_create_deployment($obj, TRUE);
     $obj->label = $original_label;
     $this->assertTrue(!empty($wi_id));
@@ -61,7 +79,7 @@ class eMammalWildlifeInsightsTest extends \PHPUnit_Framework_TestCase {
     $obj_id = $testData['fedora_deployment_id'];
     $obj = sidora_obj($obj_id);
     $original_label = $obj->label;
-    $obj->label = substr($original_label,0,25) . "-test1-" . date("Ymd_His");
+    $obj->label = substr($original_label,0,20) . "-test1-" . date("Ymd_His");
     $wi_id = sidora_emammal_wi_create_sequence($obj, 'testCanSequenceBeCreated', TRUE);
     $obj->label = $original_label;
     $this->assertTrue(!empty($wi_id));
@@ -98,7 +116,7 @@ class eMammalWildlifeInsightsTest extends \PHPUnit_Framework_TestCase {
     $obj_id = $testData['fedora_project_id'];
     $obj = sidora_obj($obj_id);
     $original_label = $obj->label;
-    $obj->label = substr($original_label,0,25) . "-test1-" . date("Ymd_His");
+    $obj->label = substr($original_label,0,20) . "-test1-" . date("Ymd_His");
     $wi_id = sidora_emammal_wi_create_project($obj, TRUE);
     $obj->label = $original_label;
     $this->assertTrue(!empty($wi_id));
@@ -109,7 +127,7 @@ class eMammalWildlifeInsightsTest extends \PHPUnit_Framework_TestCase {
     $obj_id = $testData['fedora_project_id'];
     $obj = sidora_obj($obj_id);
     $original_label = $obj->label;
-    $obj->label = substr($original_label,0,25) . "-test2-" . date("Ymd_His");
+    $obj->label = substr($original_label,0,20) . "-test2-" . date("Ymd_His");
     $wi_id = sidora_emammal_wi_create($obj, 'project', '', TRUE);
     $obj->label = $original_label;
     $this->assertTrue(!empty($wi_id));

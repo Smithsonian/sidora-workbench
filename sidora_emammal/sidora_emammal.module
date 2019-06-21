@@ -411,6 +411,59 @@ function sidora_emammal_get_cache($key = 'token'){
 }
 
 /**
+ * Test for datafilemetavalues
+ */
+
+function sidora_emammal_makeCurlFile($file){
+$mime = mime_content_type($file);
+$info = pathinfo($file);
+$name = $info['basename'];
+$output = new CURLFile($file, $mime, $name);
+return $output;
+}
+/**
+ * Helper method to call the WI API BBB TODO TBD
+ */
+function sidora_emammal_wi_curl_data_file($url, $data = '', $method = "POST", $include_bearer = TRUE){
+  $curl = curl_init();
+  $header_array = array(
+  );
+  if ($include_bearer){
+    $header_array[] = 'Authorization: Bearer ' . sidora_emammal_get_wi_token();
+  }
+  $image_curl_file = sidora_emammal_makeCurlFile('/home/randerson/projects/sidora/sidora0.6test/sites/default/files/randerson5bc4e90c2535e_animals_in_autumn_4.jpg');
+  if ($method == 'POST'){
+    $data = array(
+      'file' => $image_curl_file,
+      'timestamp' => '2019-01-01T00:00:01',
+      'sequenceId' => '1489',
+      'position' => 1,
+      'noCV' => 'true',
+    );
+    curl_setopt($curl, CURLOPT_POST, 1);
+    curl_setopt($curl, CURLOPT_POSTFIELDS, $data);
+  }
+  elseif ($method == 'DELETE'){
+    curl_setopt($curl, CURLOPT_CUSTOMREQUEST, 'DELETE');
+  }
+  elseif ($method == 'PATCH'){
+    curl_setopt($curl, CURLOPT_CUSTOMREQUEST, 'PATCH');
+    curl_setopt($curl, CURLOPT_POSTFIELDS, $data);
+    $header_array[] = 'Content-Length: ' . strlen($data);
+  }
+  curl_setopt($curl, CURLOPT_HTTPHEADER, $header_array);
+  curl_setopt($curl, CURLOPT_URL, $url);
+  curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1);
+  sidora_emammal_debug("About to curl:" . $url);
+  $result = curl_exec($curl);
+  $all_info = curl_getinfo($curl);
+  curl_close($curl);
+  sidora_emammal_debug("FULL INFO:" . "<br>url:<br>" . $url . "<br>header_array:<br>" . json_encode($header_array) . "<br>data:<br>" . $data . "<br>curl_getinfo:<br>" . json_encode($all_info) . "<br>result:<br>" . $result);
+  //echo $result;
+  sidora_emammal_debug("curl return:" . $result);
+  return $result;
+}
+/**
  * Helper method to call the WI API
  */
 function sidora_emammal_wi_curl($url, $data = '', $method = "POST", $include_bearer = TRUE){
@@ -1838,7 +1891,10 @@ function sidora_emammal_wi_create_sequences_and_identificationoutputs($base_obj,
   }
 
   // Go through this object's children to find the Researcher Observations
-  $child_res = sidora_concept_resource_listing($deploy_obj->id, array('csv' => array('si:datasetCModel')), 10, 0, 'csv', 'Researcher Observations');
+  $child_res = sidora_concept_resource_listing(
+    $deploy_obj->id, 
+    array('csv' => array('si:datasetCModel')), 10, 0, 'csv', 'Researcher Observations'
+  );
   if (empty($child_res)){
     watchdog('Sidora_emammal',t(
       "Tried to create identification-output for deployment: %dpid but did not find the Researcher Observations file", 
@@ -1870,9 +1926,9 @@ function sidora_emammal_wi_create_sequences_and_identificationoutputs($base_obj,
       $do_create = TRUE;
     }
     if ($do_create){
-      $cio_obj = array(
+      $coi_obj = array(
         "blankYn" => true,
-        "identificationMethodId" => 0,
+        "identificationMethodId" => 1,
         "identifiedObjects" => array(),
       );
       foreach($observations_for_sequence as $obs_line){
@@ -1887,14 +1943,15 @@ function sidora_emammal_wi_create_sequences_and_identificationoutputs($base_obj,
           'behavior' => '',
           'date' => array(),
           'certainty' => 0,
-          'taxonomyId' => 0
+          'taxonomyId' => 1
         );
         $coi_obj['identifiedObjects'][] = $identified_object;
       }
       $update_info_json = json_encode($coi_obj);
       $result = sidora_emammal_wi_api_call("project/" . $proj_id . '/deployment/' . $deploy_id . '/sequence/' . $wi_seq_id . '/identification-output', $update_info_json);
+      sidora_emammal_debug("identification output:" . $result);
       $io_id = sidora_emammal_wi_helper_pull_id($result);
-      sidora_emammal_add_wi_id_to_sidora_ds($base_obj, $io_id, 'identification_output');
+      sidora_emammal_add_wi_id_to_sidora_ds($base_obj, $io_id, 'identification_output', $emammal_seq_id);
     }
   }
   return NULL;
@@ -1930,189 +1987,6 @@ function sidora_emammal_pull_observations_for_sequences($csv_content){
   return $to_return;
 }
 
-/**
- * Returns an array of objects to use to update or create project and location in WI
- * the array looks like this:
- * $returned = array(
- *   [0] => array("wi_type" => "deployment",  "json" => $creation_string),
- *   [1] => array("wi_type" => "device",  "json" => $dev_creation_string),
- *   [2] => array("wi_type" => "location",  "json" => $loc_creation_string),
- * );
- */
-function sidora_emammal_wi_identificationoutput_update_strings($base_obj){
-  $to_return = array();
-  $name = $base_obj->label;
-  $content = $base_obj['FGDC']->content;
-  if (!empty($content)){
-    // The information to fill in:
-    $deployment_id = '';
-    $deployment_name = '';
-    $sensor_resolution = '';
-    $sensor_sensitivity = '';
-    $start_date_time = '';
-    $end_date_time = '';
-    $remarks = '';
-    $detection_distance = 0;
-    $quiet_period = 0;
-    $lat = "";
-    $long = "";
-    $camera_id = "";
-    $camera_make = "";
-    $camera_model = "";
-
-    $doc = new DOMDocument();
-    $docToLoad = ($content);
-    $doc->loadXML($docToLoad);
-
-    $di_nodes = $doc->getElementsByTagName("othercit");
-    foreach($di_nodes as $exister){
-      $deployment_id = $exister->nodeValue;
-    }
-
-    $title_nodes = $doc->getElementsByTagName("title");
-    foreach($title_nodes as $exister){
-      $deployment_name = $exister->nodeValue;
-    }
-
-    $start_date_time_nodes = $doc->getElementsByTagName("begdate");
-    foreach($start_date_time_nodes as $exister){
-      $start_date_time = $exister->nodeValue;
-      $date_array = date_parse($start_date_time);
-      $date_string = date('c', mktime($date_array['hour'], $date_array['minute'], $date_array['second'], $date_array['month'], $date_array['day'], $date_array['year']));
-      $start_date_time = $date_string;
-    }
-
-    $end_date_time_nodes = $doc->getElementsByTagName("enddate");
-    foreach($end_date_time_nodes as $exister){
-      $end_date_time = $exister->nodeValue;
-      $date_array = date_parse($end_date_time);
-      $date_string = date('c', mktime($date_array['hour'], $date_array['minute'], $date_array['second'], $date_array['month'], $date_array['day'], $date_array['year']));
-      $end_date_time = $date_string;
-    }
-
-    $attrlabl_nodes = $doc->getElementsByTagName("attrlabl");
-    foreach($attrlabl_nodes as $exister){
-      $label_value = $exister->nodeValue;
-      $attr_node = $exister->parentNode;
-      foreach($attr_node->childNodes as $attr_child_node){
-        if($attr_child_node->nodeType == XML_ELEMENT_NODE) {
-          if ($attr_child_node->tagName == 'attrdomv'){
-            $domv_child_nodes = $attr_child_node->childNodes;
-            foreach($domv_child_nodes as $edom_node){
-              if ($edom_node->childNodes !== NULL){
-                foreach($edom_node->childNodes as $ecn){
-                  if($ecn->nodeType == XML_ELEMENT_NODE) {
-                    if ($ecn->tagName == 'edomv'){
-                      $value = $ecn->nodeValue;
-                      if (empty($value)) $value = '';
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-      if ($label_value == "Image Resolution Setting"){
-        $sensor_resolution = $value;
-      }
-      if ($label_value == "Sensitivity Setting"){
-        $sensor_sensitivity = $value;
-      }
-      if ($label_value == "Detection Distance"){
-        $detection_distance = floatval($value);
-      }
-      if ($label_value == "Quiet Period Setting"){
-        $quiet_period = floatval($value);
-      }
-      if ($label_value == "Actual Latitude"){
-        $lat = $value;
-      }
-      if ($label_value == "Actual Longitude"){
-        $long = $value;
-      }
-      if ($label_value == "Camera ID"){
-        $camera_id = $value;
-      }
-      if ($label_value == "Camera Make"){
-        $camera_make = $value;
-      }
-      if ($label_value == "Camera Model"){
-        $camera_model = $value;
-      }
-    }
-
-    $creation_obj = array(
-      "deploymentIdentifier" => $deployment_id,
-      "deploymentName" => $deployment_name,
-      "sensorHeight" => 0,
-      "quietPeriod" => $quiet_period,
-      "detectionDistance" => $detection_distance,
-      "sampleRate" => '', // No sampleRate
-      "sensorOrientation" => '', //No orientation
-      "sensorSchedule" => '', //No schedule
-      "sensorResolution" => $sensor_resolution, 
-      "sensorSensitivity" => $sensor_sensitivity,
-      "sensorFailureDetails" => '', /// No failure details
-      "sensorEndStatus" => '', // No sensor end status
-      "startDatetime" => $start_date_time,
-      "endDatetime" => $end_date_time,
-      "remarks" => $remarks,
-      "sensorId" => 0,
-      "deviceId" => 0,
-      "baitTypeId" => 0,
-      "locationId" => 0,
-      "participantSetSensorId" => 0,
-      "participantRemoveSensorId" => 0
-    );
-    $creation_string = json_encode($creation_obj);
-
-    
-    $device_obj = array(
-      "name" => $camera_id,
-      //"purchaseDate" => array(),
-      "make" => $camera_make,
-      "model" => $camera_model,
-      "modelNumber" => "",
-      "serialNumber" => "",
-      "purchaseYear" => 0,
-      "purchasePrice" => 0,
-      "productUrl" => "",
-      "remarks" => "Camera for deployment:" . $deployment_name,
-    );
-
-    $device_string = json_encode($device_obj);
-
-    $location_obj = array(
-      "placename" => "Camera Location for deployment:" . $deployment_name,
-      "propertyType" => "",
-      "habitat" => "",
-      "remarks" => "",
-      "plotTreatment" => "",
-      "plotTreatmentDescription" => "",
-      "geodeticDatum" => "",
-      "fieldNumber" => "",
-      "country" => "",
-      "firstOrderDivision" => "",
-      "secondOrderDivision" => "",
-      "landcoverType" => "",
-      "igbpClimateClassification" => "",
-      "elevationGtopo30" => 0
-    );
-    if (!empty($lat)){
-      $location_obj["latitude"] = floatval($lat);
-    }
-    if (!empty($long)){
-      $location_obj["longitude"] = floatval($long);
-    }
-
-    $location_string = json_encode($location_obj);
-  }
-  $to_return[] = array("wi_type" => "deployment", "json" => $creation_string);
-  $to_return[] = array("wi_type" => "device", "json" => $device_string);
-  $to_return[] = array("wi_type" => "location", "json" => $location_string);
-  return $to_return;
-}
 /**
  * Deletes this deployment, device and location ONLY from the WI API
  * Assume the children get deleted by this function's caller
@@ -2273,10 +2147,10 @@ function sidora_emammal_wi_create_organization(){
  *****************************************************************************
  ****************************************************************************/
 function sidora_emammal_islandora_object_ingested(AbstractObject $object) {
-    watchdog('emammal',"1");// . $object['id']);
+    //watchdog('emammal',"1");// . $object['id']);
 }
 function sidora_emammal_islandora_object_modified(AbstractObject $object) {
-    watchdog('emammal',"2");// . $object['id']);
+    //watchdog('emammal',"2");// . $object['id']);
 }
 function sidora_emammal_islandora_datastream_modified(AbstractObject $object, AbstractDatastream $datastream) {
   sidora_emammal_create_or_update_for_wi_if_needed($object, $datastream);

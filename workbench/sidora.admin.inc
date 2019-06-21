@@ -597,6 +597,12 @@ tr.removed.odd {
         '#default_value' => variable_get('sidora_debug_clear_cache',FALSE),
         '#description' => t(''),
       ),
+      'sidora_debug_turn_off_warnings' => array(
+        '#type' => 'checkbox',
+        '#title' => t('Turn off watchdog warnings about improper relationships'),
+        '#default_value' => variable_get('sidora_debug_turn_off_warnings',FALSE),
+        '#description' => t('Examples: no parent, no isAdministered link, links to objects that dont exist'),
+      ),
     ),
   );
   $form['sidora_disable_locking_by_pid'] = array(
