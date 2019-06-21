@@ -411,8 +411,10 @@ function sidora_emammal_get_cache($key = 'token'){
 }
 
 /**
- * Test for datafilemetavalues
+ * Test for datafilemetavalues TBD TODO
  */
+function sidora_emammal_data_file_metavalues(){
+}
 
 function sidora_emammal_makeCurlFile($file){
 $mime = mime_content_type($file);
@@ -1255,7 +1257,7 @@ function sidora_emammal_wi_project_update_strings($base_obj){
      //'dataUse' => 0,
      'tags' => array(),
      'metadata' => array(
-       'emammal_id' => 'TBD',
+       'emammal_id' => $short_name,
        'fedora_id' => $fedora_id,
      ),
     );
@@ -1718,6 +1720,10 @@ function sidora_emammal_wi_deployment_update_strings($base_obj){
       // "locationId" => 0, // location will be created and added later
       // "participantSetSensorId" => 0,
       // "participantRemoveSensorId" => 0
+      "metadata" => array(
+       'emammal_id' => $deployment_id,
+       'fedora_id' => $base_obj->id,
+      ),
     );
     $creation_string = json_encode($creation_obj);
 
