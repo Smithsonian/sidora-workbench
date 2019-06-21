@@ -19,7 +19,6 @@ foreach (glob(TUQUE_LIBRARY_ROOT . "/*.php") as $filename)
       require_once $filename;
     }
 }
-
 /*
 */
 module_load_include('inc', 'islandora', 'includes/tuque');
@@ -30,6 +29,9 @@ class eMammalWildlifeInsightsTest extends \PHPUnit_Framework_TestCase {
   public function getTestData(){
     $testInfo = array(
       'testCanProjectBeCreated' => array(
+        'fedora_project_id' => 'ct:1697264',
+      ),
+      'testCanProjectBeUpdated' => array(
         'fedora_project_id' => 'ct:1697264',
       ),
       'testCanFullProjectTreeBeCreated' => array(
@@ -132,5 +134,23 @@ class eMammalWildlifeInsightsTest extends \PHPUnit_Framework_TestCase {
     $wi_id = sidora_emammal_wi_create($obj, 'project', '', TRUE);
     $obj->label = $original_label;
     $this->assertTrue(!empty($wi_id));
+  }
+  public function testCanProjectBeUpdated(){
+    $testInfo = $this->getTestData();
+    $testData = $testInfo[__FUNCTION__];
+    $obj_id = $testData['fedora_project_id'];
+    $obj = sidora_obj($obj_id);
+    $wi_id = sidora_emammal_wi_get_id($obj);
+    $original_label = $obj->label;
+    $new_label = substr($original_label,0,10) . "-update1-" . date("Ymd_His");
+    $obj->label = $new_label;
+    $wi_update_succeeded = sidora_emammal_wi_update($obj, 'project');
+    $obj->label = $original_label;
+    $this->assertTrue(!empty($wi_id));
+    $this->assertTrue($wi_update_succeeded);
+    $org_id = sidora_emammal_wi_get_organization_id();
+    $result = sidora_emammal_wi_api_call("organization/$org_id/project/$wi_id");
+    $new_label_loc = strpos($result, $new_label);
+    $this->assertTrue($new_label_loc > 0);
   }
 }

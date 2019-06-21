@@ -1059,7 +1059,9 @@ function sidora_emammal_wi_update_project($base_obj){
   
   $update_info = sidora_emammal_wi_project_update_strings($base_obj);
   // Should contain 2 objects, first is the project
-  $result = sidora_emammal_wi_api_call("project/" . $wi_id, $update_info[0]['json'], 'PATCH');
+  $org_id = sidora_emammal_wi_get_organization_id();
+
+  $result = sidora_emammal_wi_api_call("organization/$org_id/project/$wi_id", $update_info[0]['json'], 'PATCH');
   $returned_wi_id = sidora_emammal_wi_helper_pull_id($result);
   if ($returned_wi_id != $wi_id){
     watchdog('Sidora_emammal',t(
@@ -1240,7 +1242,7 @@ function sidora_emammal_wi_project_update_strings($base_obj){
     
     $creation_obj = array(
      'name' => $name,
-     'abbreviation' => $abbr,
+     'abbreviation' => trim($abbr),
      'shortName' => $short_name,
      'design' => $design,
      'objectives' => $objectives,
@@ -2208,7 +2210,7 @@ function sidora_emammal_create_or_update_for_wi_if_needed(AbstractObject $object
     $wi_id = sidora_emammal_wi_get_id($object);
     if (!empty($wi_id)){
       sidora_emammal_debug("Opt-out, but has ID:" . $wi_id . " proceeding to remove");
-      sidora_emammal_delete_from_wi($object, $wi_id);
+      //sidora_emammal_delete_from_wi($object, $wi_id);
     }
   }
   
