@@ -19,6 +19,7 @@ foreach (glob(TUQUE_LIBRARY_ROOT . "/*.php") as $filename)
       require_once $filename;
     }
 }
+
 /*
 */
 module_load_include('inc', 'islandora', 'includes/tuque');
