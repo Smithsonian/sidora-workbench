@@ -41,6 +41,9 @@ class eMammalWildlifeInsightsTest extends \PHPUnit_Framework_TestCase {
       'testCanDeploymentBeCreated' => array(
         'fedora_deployment_id' => 'ct:1689234',
       ),
+      'testCanDeploymentBeUpdated' => array(
+        'fedora_deployment_id' => 'ct:1689234',
+      ),
       'testCanDataFileBeCreated' => array(
         'wi_project_id' => '100',
         'wi_deployment_id' => '221',
@@ -126,6 +129,17 @@ class eMammalWildlifeInsightsTest extends \PHPUnit_Framework_TestCase {
     $testInfo = $this->getTestData();
     $testData = $testInfo[__FUNCTION__];
     $obj_id = $testData['fedora_project_id'];
+    $obj = sidora_obj($obj_id);
+    $original_label = $obj->label;
+    $obj->label = substr($original_label,0,20) . "-test2-" . date("Ymd_His");
+    $wi_id = sidora_emammal_wi_create($obj, 'project', '', TRUE);
+    $obj->label = $original_label;
+    $this->assertTrue(!empty($wi_id));
+  }
+  public function testCanDeploymentBeUpdated(){
+    $testInfo = $this->getTestData();
+    $testData = $testInfo[__FUNCTION__];
+    $obj_id = $testData['fedora_deployment_id'];
     $obj = sidora_obj($obj_id);
     $original_label = $obj->label;
     $obj->label = substr($original_label,0,20) . "-test2-" . date("Ymd_His");
