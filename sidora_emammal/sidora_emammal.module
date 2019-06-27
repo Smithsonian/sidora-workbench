@@ -669,8 +669,14 @@ function sidora_emammal_wi_update($base_obj = NULL, $type = '', $subtype = ''){
     // Assume that this is NOT a call to update the children. Those calls should
     // occur that their own level
   }
+  if($type == 'subproject'){
+    $to_return = sidora_emammal_wi_subproject_update_strings($base_obj);
+  }
   if($type == 'deployment'){
     $to_return = sidora_emammal_wi_deployment_update_strings($base_obj);
+  }
+  if($type == 'dataFile'){
+    $to_return = sidora_emammal_wi_datafile_update_strings($base_obj);
   }
   return $to_return;
 }

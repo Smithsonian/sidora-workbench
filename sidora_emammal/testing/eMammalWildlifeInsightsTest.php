@@ -142,8 +142,8 @@ class eMammalWildlifeInsightsTest extends \PHPUnit_Framework_TestCase {
     $obj_id = $testData['fedora_deployment_id'];
     $obj = sidora_obj($obj_id);
     $original_label = $obj->label;
-    $obj->label = substr($original_label,0,20) . "-test2-" . date("Ymd_His");
-    $wi_id = sidora_emammal_wi_create($obj, 'project', '', TRUE);
+    $obj->label = substr($original_label,0,20) . "-lastt-" . date("Ymd_His");
+    $wi_id = sidora_emammal_wi_create_deployment($obj,TRUE);
     $obj->label = $original_label;
     $this->assertTrue(!empty($wi_id));
   }
