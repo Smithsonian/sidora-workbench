@@ -200,7 +200,9 @@ function _sidora_put_into_proper_project_space_recursive(
   }
   
   if ($check_legacy_parents) {
-    watchdog('sidora',t("This pid does not have proper isAdministeredBy relationship: %pid" , array("%pid"=>$pid)));
+    if (!variable_get('sidora_debug_turn_off_warnings',FALSE)){
+      watchdog('sidora',t("This pid does not have proper isAdministeredBy relationship: %pid" , array("%pid"=>$pid)));
+    }
     $parent_infos = sidora_get_parent_concepts_by_pid($pid);
     $is_in_a_parents_project_space = FALSE;
     $current_gids = sidora_get_group_nids_membership($nid);
@@ -338,7 +340,9 @@ function sidora_remove_from_incorrect_and_give_correct_ps(
 
   // Below is for NON-MIGRATED DATA which should be none, but things change
   if (!$ignore_other_parents) {
-    watchdog('sidora',t('This pid does not have proper isAdministeredBy relationship: %pid' , array("%pid"=>$pid)));
+    if (!variable_get('sidora_debug_turn_off_warnings',FALSE)){
+      watchdog('sidora',t('This pid does not have proper isAdministeredBy relationship: %pid' , array("%pid"=>$pid)));
+    }
     $parent_infos = sidora_get_parent_concepts_by_pid($pid);
 //var_dump($parent_infos);
     foreach($parent_infos as $parent_info) {
@@ -440,7 +444,9 @@ function sidora_get_project_space_nodes_for_pid($pid){
       $gids += $some_gids; 
     }
     else {
-      watchdog('sidora',t('This pid does not have proper isAdministeredBy relationship: %pid' , array("%pid"=>$pid)));
+      if (!variable_get('sidora_debug_turn_off_warnings',FALSE)){
+        watchdog('sidora',t('This pid does not have proper isAdministeredBy relationship: %pid' , array("%pid"=>$pid)));
+      }
       $parent_pid_info = sidora_get_parent_concepts_by_pid($pid);
       foreach($parent_pid_info as $curr_parent_info) {
         $parent_pid = $curr_parent_info['pid'];

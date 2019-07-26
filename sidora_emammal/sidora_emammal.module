@@ -2706,4 +2706,3 @@ function sidora_emammal_get_xml_val($xml_content, $my_xsl = NULL, $single_item =
   $output = trim($proc->transformToDoc($xml)->firstChild->wholeText);
   return $output;
 }
-
