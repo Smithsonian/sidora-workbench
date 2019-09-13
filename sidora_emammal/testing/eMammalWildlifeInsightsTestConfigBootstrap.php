@@ -12,6 +12,6 @@ with this as the XML content:
 </php>
 */
 
-define("DRUPAL_ROOT", "/home/jwoyciechowsky/projects/sidora");
-define("TUQUE_LIBRARY_ROOT", "/home/jwoyciechowsky/projects/sidora/sites/all/libraries/tuque");
+define("DRUPAL_ROOT", "/var/www/html/jwoyciechowsky/sidora");
+define("TUQUE_LIBRARY_ROOT", "/var/www/html/jwoyciechowsky/sidora/sites/all/libraries/tuque");
 $_SERVER['REMOTE_ADDR'] = '127.0.0.1';
