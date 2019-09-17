@@ -4287,7 +4287,7 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
               fseek($fp, $params['start']);
               // Start buffered download.
               $buffer = $buffer_size; //1024 * 8;
-              while (!feof($fp) && ($p = ftell($fp)) <= $params['end']) {
+              while (!is_bool($fp) && !feof($fp) && ($p = ftell($fp)) <= $params['end']) {
                 if ($p + $buffer > $params['end']) {
                   // In case we're only outputting a chunk, make sure we don't read past the
                   // length.
