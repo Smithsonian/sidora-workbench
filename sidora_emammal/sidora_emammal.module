@@ -448,8 +448,7 @@ function sidora_emammal_wi_curl_data_file($caller_url, $input_data_str = NULL, $
   }
   $url = variable_get('sidora_emammal_wi_base_url', '') . $caller_url;
   $curl = curl_init();
-  $header_array = array(
-  );
+  $header_array = array();
   if ($include_bearer){
     $header_array[] = 'Authorization: Bearer ' . sidora_emammal_get_wi_token();
   }
@@ -847,7 +846,7 @@ function sidora_emammal_wi_create($base_obj = NULL, $type = '', $create_override
   if ($type == 'project'){
     $existing_wi_id = sidora_emammal_wi_get_id($base_obj);
     sidora_emammal_debug("Create project:" . $type);
-    if (empty($existing_wi_id)){
+    if (empty($existing_wi_id) || $create_override){
       $project_wi_id = sidora_emammal_wi_create_project($base_obj, $create_override);
       return $project_wi_id;
     }
@@ -866,7 +865,7 @@ function sidora_emammal_wi_create($base_obj = NULL, $type = '', $create_override
       $wi_id = sidora_emammal_wi_get_id($subproject);
       sidora_emammal_debug("Create subproject if wi_id is blank, wi_id:" . $wi_id);
       
-      if (empty($wi_id)){
+      if (empty($wi_id) || $create_override){
         sidora_emammal_wi_create($subproject, $wi_type, $create_override);
       }
     }
@@ -876,7 +875,7 @@ function sidora_emammal_wi_create($base_obj = NULL, $type = '', $create_override
     $subproject = $base_obj;
     $wi_id = sidora_emammal_wi_get_id($subproject);
     sidora_emammal_debug("Create subproject, existing wi_id:".$wi_id);
-    if (empty($wi_id)){
+    if (empty($wi_id) || $create_override){
       $subproject_wi_id = sidora_emammal_wi_create_subproject($base_obj, $create_override);
       return $subproject_wi_id;
     }
@@ -893,7 +892,7 @@ function sidora_emammal_wi_create($base_obj = NULL, $type = '', $create_override
         if ($co_wi_type == 'deployment'){
           $wi_id = sidora_emammal_wi_get_id($check_obj);
           sidora_emammal_debug("Create deployment if wi_id is blank, wi_id:" . $wi_id);
-          if (empty($wi_id)){
+          if (empty($wi_id) || $create_override){
             sidora_emammal_wi_create($check_obj, 'deployment', $create_override);
           }
         }
@@ -907,7 +906,7 @@ function sidora_emammal_wi_create($base_obj = NULL, $type = '', $create_override
             if (sidora_emammal_get_wi_type($check_obj) == 'deployment'){
               $wi_id = sidora_emammal_wi_get_id($check_obj);
               sidora_emammal_debug("Create deployment if wi_id is blank, wi_id:" . $wi_id);
-              if (empty($wi_id)){
+              if (empty($wi_id) || $create_override){
                 sidora_emammal_wi_create($check_obj, 'deployment', $create_override);
               }
             }
@@ -917,24 +916,38 @@ function sidora_emammal_wi_create($base_obj = NULL, $type = '', $create_override
           sidora_emammal_debug("Thought this would be a deployment or plot, but was not:" . $check_obj->id . " -> " . $type);
         }
       }
-      
     }
   }
 
   if ($type == 'deployment'){
     $wi_id = sidora_emammal_wi_get_id($base_obj);
-    if (empty($wi_id)){
+    if (empty($wi_id) || $create_override){
       $deployment_wi_id = sidora_emammal_wi_create_deployment($base_obj, $create_override);
       return $deployment_wi_id;
     }
     else {
       $children_resources = $base_obj->relationships->get(FEDORA_RELS_EXT_URI, 'hasResource');
-      foreach($children_resources as $child_rel) {
+      sidora_emammal_debug("cr::" . json_encode($children_resources));
+      $cri = 0;
+      $cr_created = 0;
+      for ($cri = 0; $cri < sizeof($children_resources) && $cr_created < 5; $cri++){
+        $child_rel = $children_resources[$cri];
         $to_check_pid = $child_rel['object']['value'];
         $check_obj = sidora_obj($to_check_pid);
         $co_wi_type = sidora_emammal_get_wi_type($check_obj);
-        if ($co_wi_type == 'dataFile'){
+        $cr_wi_id = sidora_emammal_wi_get_id($check_obj);
+        if ($co_wi_type == 'dataFile' && (empty($cr_wi_id) || $create_override)){
+          sidora_emammal_debug("creating in WI:" . $check_obj->id);
           sidora_emammal_wi_create($check_obj, 'dataFile', $create_override);
+          $cr_created++;
+        }
+        else {
+          if (empty($check_obj) || $create_override){
+            sidora_emammal_debug("skipping unfound object:" . $to_check_pid);
+          }
+          else {
+            sidora_emammal_debug("skipping...:" . $check_obj->id);
+          }
         }
       }
     }
@@ -942,7 +955,7 @@ function sidora_emammal_wi_create($base_obj = NULL, $type = '', $create_override
 
   if ($type == 'dataFile'){
     $wi_id = sidora_emammal_wi_get_id($base_obj);
-    if (empty($wi_id)){
+    if (empty($wi_id) || $create_override){
       $wi_id = sidora_emammal_wi_create_datafile($base_obj, $create_override);
     }
     return $wi_id;
@@ -991,14 +1004,21 @@ function sidora_emammal_wi_create_datafile($base_obj, $create_override = FALSE){
   if ($do_create){
     $deploy_obj = sidora_emammal_get_deployment_obj($base_obj);
     $deploy_id = sidora_emammal_wi_get_id($deploy_obj);
-    $sequence_id = '1489';
     $update_info = sidora_emammal_wi_datafile_update_strings($base_obj, $deploy_obj->id);
     sidora_emammal_debug("update strings:" . json_encode($update_info));
     // Should contain 3 objects, device and location must be entered first so that their ids can be put in the deployment
     $url = "project/" . $proj_id . "/deployment/" . $deploy_id . "/data-file";
     $data = $update_info[0]['json'];
-    $result = sidora_emammal_wi_curl_data_file($url, $data, "POST", TRUE, '/var/www/html/jwoyciechowsky/sidora/sites/default/files/sample.jpg');
+    $temporary_file = drupal_tempnam();
+    $temporary_dir = file_directory_temp();
+    $temporary_file = drupal_tempnam($temporary_dir, 'wi_temp_');
+    sidora_emammal_debug("Creating temporary file:" . $temporary_file);
+    $file_written = $base_obj['OBJ']->getContent($temporary_file);
+    sidora_emammal_debug("File written from Fedora:" . $file_written);
+    $result = sidora_emammal_wi_curl_data_file($url, $data, "POST", TRUE, $temporary_file);
     sidora_emammal_debug("create datafile result::" . $result);
+    $unlinked = unlink($temporary_file);
+    sidora_emammal_debug("Unlinked temporary file?" . $unlinked);
     $datafile_id = sidora_emammal_wi_helper_pull_id($result);
     sidora_emammal_debug("datafile id:" . $datafile_id);
     if (empty($datafile_id)){
@@ -1010,22 +1030,70 @@ function sidora_emammal_wi_create_datafile($base_obj, $create_override = FALSE){
     else {
       // datafile created, update the sidora datastream with the result
       sidora_emammal_add_wi_id_to_sidora_ds($base_obj, $datafile_id);
+      // add the metadata, which can't be placed into the initial call
+      $fedora_id = $base_obj->id;
+      sidora_emammal_wi_api_call($url . '/' . $datafile_id, $update_info[1]['json'], 'PATCH');
     }
-    /*
-    if (!empty($datafile_id)){ 
-      $result = sidora_emammal_wi_api_call(
-        "project/" . $proj_id . "/deployment/" . $deploy_id . "/data-file/" . $datafile_id . '/upload-url',
-        $update_info[1]['json']
-      );
-      sidora_emammal_debug("create datafile upload result::" . $result);
-      // Uploads do not have an ID
-    }
-    // Now the object is created. Its WI ID is in its SIDORA datastream
-    */
   }
-  sidora_emammal_debug("BBB EXITING..."); exit();
   return $datafile_id;
 }
+
+/**
+ * This updates the data file object in WI.
+ * Identifiers for eMammal data:
+ *   deployment: d21021
+ *   sequence:   d21021s99
+ *   image:      d21021s99i4
+ *
+ * $base_obj - the Fedora object to use for creation
+ * returns the Wildlife Insights ID of the existing object
+ */
+function sidora_emammal_wi_update_datafile($base_obj){
+  $wi_id = sidora_emammal_wi_get_id($base_obj);
+  if (empty($wi_id)){
+    sidora_emammal_debug("Update datafile, but does not exist in WI:" . $base_obj->id);
+    return NULL;
+  }
+  $proj_id = sidora_emammal_get_project_wi_id($base_obj);
+  if (empty($proj_id)){
+    sidora_emammal_debug("The project for $base_obj->id is not in WI or does not have opt-in");
+    return NULL;
+  }
+  $deploy_obj = sidora_emammal_get_deployment_obj($base_obj);
+  $deploy_id = sidora_emammal_wi_get_id($deploy_obj);
+  $update_info = sidora_emammal_wi_datafile_update_strings($base_obj, $deploy_obj->id);
+  sidora_emammal_debug("update strings:" . json_encode($update_info));
+  // Should contain 3 objects, device and location must be entered first so that their ids can be put in the deployment
+  $url = "project/" . $proj_id . "/deployment/" . $deploy_id . "/data-file";
+  $data = $update_info[0]['json'];
+  $temporary_dir = file_directory_temp();
+  $temporary_file = drupal_tempnam($temporary_dir, 'wi_temp_');
+  sidora_emammal_debug("Creating temporary file:" . $temporary_file);
+  $file_written = $base_obj['OBJ']->getContent($temporary_file);
+  sidora_emammal_debug("File written from Fedora:" . $file_written);
+  $result = sidora_emammal_wi_curl_data_file($url, $data, "PATCH", TRUE, $temporary_file);
+  sidora_emammal_debug("create datafile result::" . $result);
+  $unlinked = unlink($temporary_file);
+  sidora_emammal_debug("Unlinked temporary file?" . $unlinked);
+  $datafile_id = sidora_emammal_wi_helper_pull_id($result);
+  sidora_emammal_debug("datafile id:" . $datafile_id);
+  if (empty($datafile_id)){
+    watchdog('Sidora_emammal',t(
+      "Tried to create datafile for deployment, but did not get WI ID: %uinfo %result",
+      array('%uinfo' => json_encode($update_info), '%result' => $result)
+    ));
+    return NULL;
+  }
+  else {
+    // datafile created, update the sidora datastream with the result
+    sidora_emammal_add_wi_id_to_sidora_ds($base_obj, $datafile_id);
+    // add the metadata, which can't be placed into the initial call
+    $fedora_id = $base_obj->id;
+    sidora_emammal_wi_api_call($url . '/' . $datafile_id, $update_info[1]['json'], 'PATCH');
+  }
+  return $datafile_id;
+}
+
 
 /**
  * Intended to be used as part of the create datafile
@@ -1137,15 +1205,16 @@ function sidora_emammal_wi_datafile_update_strings($base_obj, $fedora_deployment
     $creation_string = json_encode($creation_obj);
 
     global $base_url;
-    $upload_url_obj = array(
-      "fileName" => $emammal_image_id,
-      "contentType" => "image/jpeg",
-      "clientId" => "eMammal",
-      "url" => $base_url . "/sidora/info/" . $base_obj->id . "/meta/OBJ/" . $emammal_image_id . ".jpg"
+    $metadata_patch = array(
+      "metadata" => array(
+        'emammal_id' => $emammal_image_id,
+        'fedora_id' => $base_obj->id,
+      ),
     );
+    $metadata_patch_string = json_encode($metadata_patch);
+    $to_return[] = array("wi_type" => "datafile", "json" => $creation_string);
+    $to_return[] = array("wi_type" => "datafile-patch", "json" => $metadata_patch_string);
   }
-  $to_return[] = array("wi_type" => "datafile", "json" => $creation_string);
-  $to_return[] = array("wi_type" => "upload-url", "json" => $creation_string);
   return $to_return;
 }
 
@@ -1595,6 +1664,42 @@ function sidora_emammal_wi_create_subproject($base_obj, $create_override = FALSE
   // Now the object is created. Its WI ID is in its SIDORA datastream and
   // in the $wi_id variable
   return $wi_id;
+}
+/*
+ * This updates the subproject object in WI. It will not create any child objects
+ * of a subproject.
+ *
+ * $base_obj - the Fedora object
+ * returns the Wildlife Insights ID
+ */
+function sidora_emammal_wi_update_subproject($base_obj){
+  // See if it has a WI id
+  $wi_id = sidora_emammal_wi_get_id($base_obj);
+  if (empty($wi_id)){
+    sidora_emammal_debug("The subproject does not exist in WI.");
+    return NULL;
+  }
+  $proj_id = sidora_emammal_get_project_wi_id($base_obj);
+  if (empty($proj_id)){
+    // We literally can't force the creation of a subproject in WI, part of the URL is the project WI ID
+    sidora_emammal_debug("The project for $base_obj->id is not in WI or does not have opt-in");
+    return NULL;
+  }
+
+  sidora_emammal_debug("Update subproject:" . $base_obj->id);
+  $update_info = sidora_emammal_wi_subproject_update_strings($base_obj);
+  sidora_emammal_debug("update strings:" . json_encode($update_info));
+  $subproject_json = $update_info[0]['json'];
+  $result = sidora_emammal_wi_api_call("project/" . $proj_id . "/subproject/" . $wi_id, $subproject_json, 'PATCH');
+  $subproject_id = sidora_emammal_wi_helper_pull_id($result);
+  if (empty($subproject_id)){
+    watchdog('Sidora_emammal',t(
+      "Tried to create subproject, but did not get subproject's WI ID: %uinfo %result",
+      array('%uinfo' => json_encode($update_info), '%result' => $result)
+    ));
+    return NULL;
+  }
+  return $subproject_id;
 }
 
 /**
@@ -2509,6 +2614,7 @@ function sidora_emammal_get_wi_type($object, $return_distances = FALSE){
   $wi_info = array();
   foreach($models as $model_rel) {
     $model = $model_rel['object']['value'];
+    sidora_emammal_debug("model:" . $model);
     if (in_array($model, $wi_model_types)){
       $check = $fedora_models_to_wi_type[$model];
       if (is_array($check)){
@@ -2570,11 +2676,13 @@ function sidora_emammal_get_fedora_models_to_wi_type(){
        'max_distance_to_project' => 4,
        'wi_type' => 'dataFile',
     ),
+    /*
     'si:datasetCModel' => array(
        'min_distance_to_project' => 3,
        'max_distance_to_project' => 4,
        'wi_type' => 'dataFile',
     ),
+    */
     // Optional level of plots push things one down
   );
 }
