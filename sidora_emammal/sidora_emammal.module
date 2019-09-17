@@ -997,6 +997,7 @@ function sidora_emammal_wi_create_datafile($base_obj, $create_override = FALSE){
   }
   $proj_id = sidora_emammal_get_project_wi_id($base_obj);
   if (empty($proj_id)){
+    sidora_emammal_debug("base obj".json_encode($to_return));
     sidora_emammal_debug("The project for $base_obj->id is not in WI or does not have opt-in");
     $do_create = FALSE;
   }
