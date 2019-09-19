@@ -2550,7 +2550,9 @@ function sidora_emammal_create_or_update_for_wi_if_needed(AbstractObject $object
       // TBD
     }
     else {
+       // add in-process
        sidora_emammal_create_or_update_for_wi($object);
+       // remove in-process
     }
   }
   else {
