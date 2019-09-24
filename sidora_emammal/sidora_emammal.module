@@ -598,8 +598,12 @@ function sidora_emammal_wi_helper_pull_id($data){
   return NULL;
 }
 
-function sidora_emammal_debug($output){
-  echo $output . "<br>\n";
+function sidora_emammal_debug($output)
+{
+  $fp = fopen('rbeall-test.log', 'w');
+  fwrite($fp, $output);
+  fclose($fp);
+  //echo $output . "<br>\n";
   if (FALSE)
     watchdog("emammal_debug", $output);
 }
