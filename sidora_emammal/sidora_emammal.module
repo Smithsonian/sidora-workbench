@@ -2302,14 +2302,14 @@ function sidora_emammal_wi_create_sequences_and_identificationoutputs($base_obj,
             {
               $taxonomy_json = json_decode($taxonomy_result);
 
-              if($taxonomy_json["id"])
+              if($taxonomy_json['data'][0]["id"])
               {
-                $taxonomy_id = $taxonomy_json["id"];
+                $taxonomy_id = $taxonomy_json['data'][0]["id"];
                 variable_set($scientific_name . "_tax_id");
               }
               else
               {
-                $taxonomy_id = 1;
+                $taxonomy_id = 21450;
               }
             }
           }
