@@ -600,9 +600,7 @@ function sidora_emammal_wi_helper_pull_id($data){
 
 function sidora_emammal_debug($output)
 {
-  $fp = fopen('rbeall-test.log', 'w');
-  fwrite($fp, $output);
-  fclose($fp);
+  print $output;
   //echo $output . "<br>\n";
   if (FALSE)
     watchdog("emammal_debug", $output);
@@ -941,7 +939,8 @@ function sidora_emammal_wi_create($base_obj = NULL, $type = '', $create_override
         $co_wi_type = sidora_emammal_get_wi_type($check_obj);
         $cr_wi_id = sidora_emammal_wi_get_id($check_obj);
         if ($co_wi_type == 'dataFile' && (empty($cr_wi_id) || $create_override)){
-          sidora_emammal_debug("creating in WI:" . $check_obj->id);
+          //sidora_emammal_debug("creating in WI:" . $check_obj->id);
+          sidora_emammal_debug("Adding 'requires-create':" . $check_obj->id);
           sidora_emammal_add_wi_id_to_sidora_ds($check_obj, $co_wi_id, 'requires-create');
 
           //removed call to sidora_emammal_wi_create and replaced with wi_id 'require-create set'
@@ -2314,6 +2313,8 @@ function sidora_emammal_wi_create_sequences_and_identificationoutputs($base_obj,
             }
           }
 
+          sidora_emammal_debug("taxonomyId for $scientific_name is $taxonomy_id");
+
           $identified_object = array(
             'commonName' => $obs_line[6],
             'relativeAge' => '',
@@ -2569,6 +2570,7 @@ function sidora_emammal_create_or_update_for_wi_if_needed(AbstractObject $object
   // Do NOT perform updates if the datastream that was updated is SIDORA or DC,
   // We only care if the metadata was updated or if it gained / lost childre
   sidora_emammal_debug(json_encode($object));
+
   //if ($datastream->id == 'SIDORA' || $datastream->id == 'DC'){
   if ($datastream->id == 'DC')
   {
@@ -2587,9 +2589,9 @@ function sidora_emammal_create_or_update_for_wi_if_needed(AbstractObject $object
     else
     {
       $shouldUpdate = TRUE;
-      $current_time = new DateTime('NOW');
 
-      $datestring = (string) sidora_emammal_wi_get_id($emammal_obj, 'in-process');
+      $current_time = new DateTime('NOW');
+      $datestring = (string) sidora_emammal_wi_get_id($object, 'in-process');
 
       if(!empty($datestring))
       {
@@ -2606,11 +2608,14 @@ function sidora_emammal_create_or_update_for_wi_if_needed(AbstractObject $object
         }
       }
 
+      sidora_emammal_debug("ShouldUpdate = " . ($shouldUpdate?"TRUE":"FALSE"));
+
       if($shouldUpdate)
       {
-        if($datastream->id == "EAC-CPF" || !empty(sidora_emammal_wi_get_id($emammal_obj, 'needs-update')))
+        if($datastream->id == "EAC-CPF" || !empty(sidora_emammal_wi_get_id($object, 'needs-update')))
         {
           $wi_id = sidora_emammal_wi_get_id($object);
+          sidora_emammal_debug("wi_id for $object->id is $wi_id");
           // add in-process
           sidora_emammal_add_wi_id_to_sidora_ds($object, $wi_id, 'in-process', $current_time->format('m-d-Y_H:i:s'));
           sidora_emammal_create_or_update_for_wi($object);
@@ -2628,10 +2633,12 @@ function sidora_emammal_create_or_update_for_wi_if_needed(AbstractObject $object
 
             if($child_wi_type=="datafile")
             {
+              sidora_emammal_debug("adding 'requires-create' to $child_object->id");
               sidora_emammal_add_wi_id_to_sidora_ds($child_object, $child_wi_id, 'requires-create');
             }
             else
             {
+              sidora_emammal_debug("adding 'needs-update' to $child_object->id");
               sidora_emammal_add_wi_id_to_sidora_ds($child_object, $child_wi_id, 'needs-update');
             }
           }
@@ -2639,6 +2646,7 @@ function sidora_emammal_create_or_update_for_wi_if_needed(AbstractObject $object
       }
       elseif(!empty(sidora_emammal_wi_get_id($object, 'requires-create')))
       {
+        sidora_emammal_debug("Creating $object->id");
         sidora_emammal_wi_create($object, sidora_emammal_get_wi_type($object));
       }
     }
