@@ -2286,32 +2286,55 @@ function sidora_emammal_wi_create_sequences_and_identificationoutputs($base_obj,
         "identificationMethodId" => 1,
         "identifiedObjects" => array(),
       );
+
+      $raw_csv = trim(file_get_contents("emammal-wi_taxon_map_20190919_working.csv"));
+      $rows = explode("\n", $raw_csv);
+
+      $iucn_mapping = Array();
+
+
+      for($i = 1; $i<count($rows); $i++)
+      {
+        $row = explode(",", trim($rows[$i]));
+        if(!empty($row))
+        {
+          $sn = strtolower($row[3] . " " . $row[4]);
+          $taxonomy_mapping[$row[7]][$sn] = $row[8];
+        }
+      }
+      $taxonomic_id = $iucn_mapping[$iucn_id][$species_name];
+
       foreach($observations_for_sequence as $obs_line)
       {
-        if (sizeof($obs_line) > 5){
-          $scientific_name = $obs_line[5];
-
-          $taxonomy_id = variable_get($scientific_name . "_tax_id", "");
+          if (sizeof($obs_line) > 5){
+            $scientific_name = $obs_line[5];
+            $iucn_id = $obs_line[14];
+            $taxonomy_id = variable_get($iucn_id . "_tax_id", "");
 
           if(empty($taxonomy_id))
           {
-            $taxonomy_query = "taxonomy?search=$scientific_name&fields=id";
-            $taxonomy_result = sidora_emammal_wi_api_call($taxonomy_query);
-
-            if($taxonomy_result)
+            if(!empty($iucn_id))
             {
-              $taxonomy_json = json_decode($taxonomy_result);
-
-              if($taxonomy_json['data'][0]["id"])
+              if($scientific_name)
               {
-                $taxonomy_id = $taxonomy_json['data'][0]["id"];
-                variable_set($scientific_name . "_tax_id");
+                $taxonomy_id = $taxonomy_mapping[$iucn_id][strtolower($scientific_name)];
+
+                if(empty($taxonomy_id))
+                {
+                  $taxonomy_id = reset($taxonomy_mapping[$iucn_id]);
+                }
               }
               else
               {
-                $taxonomy_id = 21450;
+                $taxonomy_id = reset($taxonomy_mapping[$iucn_id]);
               }
             }
+
+            variable_set($iucn_id . "_tax_id", $taxonomy_id);
+          }
+          else
+          {
+            $taxonomy_id = 1;
           }
 
           sidora_emammal_debug("taxonomyId for $scientific_name is $taxonomy_id");
