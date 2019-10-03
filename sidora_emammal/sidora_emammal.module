@@ -600,9 +600,9 @@ function sidora_emammal_wi_helper_pull_id($data){
 
 function sidora_emammal_debug($output)
 {
-  error_log("$output\n", 3, "rbeall_output.log");
-  print $output;
-  //echo $output . "<br>\n";
+  //error_log("$output\n", 3, "rbeall_output.log");
+  //print $output;
+  echo $output . "<br>\n";
   if (FALSE)
     watchdog("emammal_debug", $output);
 }
