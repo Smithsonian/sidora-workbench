@@ -556,7 +556,7 @@ function sidora_emammal_sidora_wi_curl_request($pid)
   curl_setopt_array($ch, array(
   CURLOPT_URL => "http://.....wi/camel/routes",
   CURLOPT_RETURNTRANSFER => true,
-  CURLOPT_POSTFIELDS => "?wiProjectPid=$pid&enabled=true"
+  CURLOPT_POSTFIELDS => "wiProjectPid=$pid&enabled=true"
   ));
 
   // execute
