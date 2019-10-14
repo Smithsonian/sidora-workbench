@@ -541,6 +541,33 @@ function sidora_emammal_wi_curl($url, $data = '', $method = "POST", $include_bea
   sidora_emammal_debug("curl return:" . $result);
   return $result;
 }
+
+/**
+ * Function for calling sidora-wi camel route code
+ * @param  string $pid pid of fedora object to pass to camel route
+ * @return boolean     true on success, false on failure
+ *
+ * src: https://www.sitepoint.com/using-curl-for-remote-requests/
+ */
+function sidora_emammal_sidora_wi_curl_request($pid)
+{
+  $ch = curl_init();
+
+  curl_setopt_array($ch, array(
+  CURLOPT_URL => "http://.....wi/camel/routes",
+  CURLOPT_RETURNTRANSFER => true,
+  CURLOPT_POSTFIELDS => "?wiProjectPid=$pid&enabled=true"
+  ));
+
+  // execute
+  $output = curl_exec($ch);
+
+  // free
+  curl_close($ch);
+
+  return $output;
+}
+
 /**
  * Intended to be the main method used to access the api
  * $call_name - should be the full call including WI IDs ("/project/2345345/deployment/3456543" for a deployment)
@@ -2544,7 +2571,9 @@ function sidora_emammal_create_or_update_for_wi_if_needed(AbstractObject $object
   $opt_in = sidora_emammal_check_opt_in_for_wi($object);
   sidora_emammal_debug("Checking update:" . $object->id . " , opt-in: '" . ($opt_in?"TRUE":"FALSE") . "'");
   if ($opt_in){
-    if ($datastream->id == 'RELS-EXT'){
+    //project creation is now handled in camel by sidora-wi
+    sidora_emammal_sidora_wi_curl_request($object->id);
+    /*if ($datastream->id == 'RELS-EXT'){
       // Run though all its children trees and update them all
       // But we don't need to update this object
       // TBD
@@ -2553,7 +2582,7 @@ function sidora_emammal_create_or_update_for_wi_if_needed(AbstractObject $object
        // add in-process
        sidora_emammal_create_or_update_for_wi($object);
        // remove in-process
-    }
+    }*/
   }
   else {
     $wi_id = sidora_emammal_wi_get_id($object);
