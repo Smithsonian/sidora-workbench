@@ -2572,7 +2572,12 @@ function sidora_emammal_create_or_update_for_wi_if_needed(AbstractObject $object
   sidora_emammal_debug("Checking update:" . $object->id . " , opt-in: '" . ($opt_in?"TRUE":"FALSE") . "'");
   if ($opt_in){
     //project creation is now handled in camel by sidora-wi
-    sidora_emammal_sidora_wi_curl_request($object->id);
+
+    //check if project 
+    if($datastream->id == "EAC-CPF")
+    {
+        sidora_emammal_sidora_wi_curl_request($object->id);
+    }
     /*if ($datastream->id == 'RELS-EXT'){
       // Run though all its children trees and update them all
       // But we don't need to update this object
