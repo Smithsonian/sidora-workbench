@@ -549,14 +549,14 @@ function sidora_emammal_wi_curl($url, $data = '', $method = "POST", $include_bea
  *
  * src: https://www.sitepoint.com/using-curl-for-remote-requests/
  */
-function sidora_emammal_sidora_wi_curl_request($pid)
+function sidora_emammal_sidora_wi_curl_request($pid, $opt_in)
 {
   $ch = curl_init();
 
   curl_setopt_array($ch, array(
-  CURLOPT_URL => "http://.....wi/camel/routes",
+  CURLOPT_URL => "http://172.16.28.245:8181/wi/camel/routes",
   CURLOPT_RETURNTRANSFER => true,
-  CURLOPT_POSTFIELDS => "wiProjectPid=$pid&enabled=true"
+  CURLOPT_POSTFIELDS => "wiProjectPid=$pid&enabled=$opt_in"
   ));
 
   // execute
@@ -2573,10 +2573,10 @@ function sidora_emammal_create_or_update_for_wi_if_needed(AbstractObject $object
   if ($opt_in){
     //project creation is now handled in camel by sidora-wi
 
-    //check if project 
+    //check if project
     if($datastream->id == "EAC-CPF")
     {
-        sidora_emammal_sidora_wi_curl_request($object->id);
+        sidora_emammal_sidora_wi_curl_request($object->id, $opt_in);
     }
     /*if ($datastream->id == 'RELS-EXT'){
       // Run though all its children trees and update them all
