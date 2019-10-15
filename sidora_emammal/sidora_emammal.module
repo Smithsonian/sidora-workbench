@@ -554,7 +554,7 @@ function sidora_emammal_sidora_wi_curl_request($pid, $opt_in)
   $ch = curl_init();
 
   curl_setopt_array($ch, array(
-  CURLOPT_URL => "http://172.16.28.245:8181/wi/camel/routes",
+  CURLOPT_URL => variable_get("sidora_emammal_sidora_wi_url", ""),
   CURLOPT_RETURNTRANSFER => true,
   CURLOPT_POSTFIELDS => "wiProjectPid=$pid&enabled=$opt_in"
   ));
