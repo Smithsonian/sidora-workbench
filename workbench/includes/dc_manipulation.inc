@@ -45,7 +45,7 @@ function sidora_dc_xml_join($previous_version_string, $current_version_string) {
     $is_text_node = TRUE;
     foreach($node_for_value_extraction->childNodes as $node) {
       if ($node->nodeType !== XML_TEXT_NODE) {
-        $is_text_node = FALSE; 
+        $is_text_node = FALSE;
       }
       else {
         $txt .= $node->nodeValue;
@@ -60,12 +60,12 @@ function sidora_dc_xml_join($previous_version_string, $current_version_string) {
       // Here we assume that additional node attributes like xml:lang="en" and xsi:type="dcterms:URI" are not changed.
 
       if ($old_nodes_of_xpath->length == 1 && $new_nodes_of_xpath->length == 1) {
-        $parentNode = $old_nodes_of_xpath->item(0); 
+        $parentNode = $old_nodes_of_xpath->item(0);
         while ($parentNode->hasChildNodes()) {
           $parentNode->removeChild($parentNode->firstChild);
         }
         $t_value = $doc1->createTextNode($txt);
-        $parentNode->appendChild($t_value); 
+        $parentNode->appendChild($t_value);
       }
       else {
         // The reason for removing then adding is if we have multiple children on either the previous or new state
@@ -144,7 +144,7 @@ function sidora_dc_join_and_return_xml($pid) {
       else {
         watchdog(
           'sidora',
-          "Problem finding datastream of object: !pid with association !association"
+          "Problem finding datastream of object: !pid with association !association",
            array('!pid' => $pid, '!association' => json_encode($association))
         );
       }
