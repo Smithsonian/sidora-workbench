@@ -559,7 +559,7 @@ function sidora_emammal_sidora_wi_curl_request($pid, $opt_in)
   CURLOPT_POSTFIELDS => "wiProjectPid=$pid&enabled=$opt_in"
   ));
 
-  file_put_contents("/home/rbeall/error.log", "Hello: " . variable_get("sidora_emammal_sidora_wi_url", "") . "\n");
+  drupal_set_message("Hello: " . variable_get("sidora_emammal_sidora_wi_url", "") . "\n");
   // execute
   $output = curl_exec($ch);
 
@@ -2573,11 +2573,11 @@ function sidora_emammal_create_or_update_for_wi_if_needed(AbstractObject $object
   sidora_emammal_debug("Checking update:" . $object->id . " , opt-in: '" . ($opt_in?"TRUE":"FALSE") . "'");
   if ($opt_in){
     //project creation is now handled in camel by sidora-wi
-    file_put_contents("/home/rbeall/error.log", "Opt-in\n");
+    drupal_set_message("Opt-in\n");
     //check if project
     if($datastream->id == "EAC-CPF")
     {
-        file_put_contents("/home/rbeall/error.log", "EAC-CPF found! \n");
+        drupal_set_message("EAC-CPF found! \n");
         sidora_emammal_sidora_wi_curl_request($object->id, $opt_in);
     }
     /*if ($datastream->id == 'RELS-EXT'){
