@@ -29,6 +29,8 @@
 
 defined("SIDORA_EMAMMAL_OPT_IN_TAG") or define('SIDORA_EMAMMAL_OPT_IN_TAG',"recordIdOI");
 
+watchdog("sidora_emammal", "hello, I exist", NULL, WATCHDOG_NOTICE);
+
 /*
  * hook_init
  * run on every drupal call, loads items that the rest of the code needs
