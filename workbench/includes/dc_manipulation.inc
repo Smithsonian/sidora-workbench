@@ -106,6 +106,7 @@ function sidora_dc_join_and_return_xml($pid) {
   if ($dc_datastream->versionable && count($dc_datastream) > 1){
     // The current one is $dc_datastream[0]
     $insert_data_into = $dc_datastream[1]->content;
+    watchdog("dc_manipulation.inc", "dc: !dc", array("!dc" => var_dump($dc_datastream)), WATCHDOG_NOTICE);
     $form_and_dsid = sidora_get_form_and_dsid($pid);
     if (empty($form_and_dsid)) {
       return NULL;
@@ -129,7 +130,7 @@ function sidora_dc_join_and_return_xml($pid) {
       $post_transform_dd = null;
       if (!empty($object[$associations[0]['dsid']])){
         $pre_transform_string = $object[$associations[0]['dsid']]->content;
-        watchdog("dc_manipulation.inc", "pre string: !pre", array("!pre" => $pre_transform_string), WATCHDOG_NOTICE);
+        watchdog("dc_manipulation.inc", "pre_transform_string: !pre", array("!pre" => $pre_transform_string), WATCHDOG_NOTICE);
         $pre_transform_dd = new DOMDocument();
         $pre_transform_dd->loadXML($pre_transform_string);
         $post_transform_dd = xml_form_builder_transform_document($transform, $pre_transform_dd);
