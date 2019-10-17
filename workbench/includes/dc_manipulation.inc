@@ -123,7 +123,7 @@ function sidora_dc_join_and_return_xml($pid) {
     // Let's not clutter watchdog yet...
     if ($transform != FALSE) {
       $post_transform_dd = null;
-      watchdog("Association in dc_manipulation.inc: $association");
+      watchdog("dc_manipulation.inc", "Association in dc_manipulation.inc: $association", NULL, WATCHDOG_NOTICE);
       if (!empty($object[$association['dsid']])){
         $pre_transform_string = $object[$association['dsid']]->content;
         $pre_transform_dd = new DOMDocument();
