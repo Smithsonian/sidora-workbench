@@ -559,7 +559,7 @@ function sidora_emammal_sidora_wi_curl_request($pid, $opt_in)
   CURLOPT_POSTFIELDS => "wiProjectPid=$pid&enabled=$opt_in"
   ));
 
-  echo "<script>console.log(\"" . variable_get("sidora_emammal_sidora_wi_url", "") . "\");</script>";
+  file_put_contents("error.log", variable_get("sidora_emammal_sidora_wi_url", ""));
   // execute
   $output = curl_exec($ch);
 
@@ -2573,7 +2573,7 @@ function sidora_emammal_create_or_update_for_wi_if_needed(AbstractObject $object
   sidora_emammal_debug("Checking update:" . $object->id . " , opt-in: '" . ($opt_in?"TRUE":"FALSE") . "'");
   if ($opt_in){
     //project creation is now handled in camel by sidora-wi
-    echo "<script>console.log(\"Opt-in\");</script>";
+
     //check if project
     if($datastream->id == "EAC-CPF")
     {
