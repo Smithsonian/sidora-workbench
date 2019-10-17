@@ -133,6 +133,7 @@ function sidora_dc_join_and_return_xml($pid) {
         watchdog("dc_manipulation.inc", "pre_transform_string: !pre", array("!pre" => $pre_transform_string), WATCHDOG_NOTICE);
         $pre_transform_dd = new DOMDocument();
         $pre_transform_dd->loadXML($pre_transform_string);
+        watchdog("dc_manipulation.inc", "pre_transform_dd: !pre", array("!pre" => $pre_transform_dd->saveXML()), WATCHDOG_NOTICE);
         $post_transform_dd = xml_form_builder_transform_document($transform, $pre_transform_dd);
         if ($post_transform_dd == null) {
           watchdog(
