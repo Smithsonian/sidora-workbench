@@ -58,7 +58,7 @@ function sidora_node_allow($type_of_operation, $node) {
     }
     // Node needs to have the permission groups on it (fully converted to new system)
     return FALSE;
-  } 
+  }
   else {
     return node_access($type_of_operation, $node);
   }
@@ -73,7 +73,7 @@ function sidora_create_all_groups_for_user($owning_user, $project_pid = NULL) {
   $groups_created[] = sidora_create_sidora_group($owning_user, $project_pid, 'edit');
   $groups_created[] = sidora_create_sidora_group($owning_user, $project_pid, 'view');
   $groups_created[] = sidora_create_sidora_group($owning_user, $project_pid, 'delete');
-  return $groups_created; 
+  return $groups_created;
 }
 /**
  * Creates a specified group for the input type for this user.  Assumes the group does not exist
@@ -84,7 +84,7 @@ function sidora_create_sidora_group($owning_user, $project_pid, $type) {
     }
     if (empty($owning_user)){
       global $user;
-      watchdog("SIdora","Tried creating SIdora groups with bad user, defaulted to currently logged in user: %a %b %c", 
+      watchdog("SIdora","Tried creating SIdora groups with bad user, defaulted to currently logged in user: %a %b %c",
         array("%a"=>$owning_user, "%b" => $project_pid, "%c" => $type)
       );
       $owning_user = $user;
@@ -165,7 +165,7 @@ function sidora_create_sidora_group($owning_user, $project_pid, $type) {
           "unsubscribe" => "unsubscribe",
         );
         break;
-    }    
+    }
     og_role_change_permissions($member_rid, $new_permission_set);
     return $entity;
 }
@@ -184,7 +184,7 @@ function sidora_get_pids_in_tree_from_nodes_by_root_pid($pid) {
   $nids = array();
   $worked = sidora_get_pids_in_tree_from_nodes_by_node_id($nid, $nids, $to_return);
   if (!$worked) {
-    return FALSE;    
+    return FALSE;
   }
   return $to_return;
 }
@@ -204,7 +204,7 @@ function sidora_get_pids_in_tree_from_nodes_by_node_id($node_id, &$nids, &$pids,
     return FALSE;
   }
   // if the node comes in as an integer, switch to string for consistency
-  $node_id = (string)$node_id; 
+  $node_id = (string)$node_id;
   if (in_array($node_id, $nids)) return;
   $node = node_load($node_id);
   $pid = $node->field_fedora_pid[$node->language][0]['value'];
@@ -219,14 +219,14 @@ function sidora_get_pids_in_tree_from_nodes_by_node_id($node_id, &$nids, &$pids,
     }
   }
   // Get rid of the node out of cache, takes longer but the memory gets used up easily otherwise (@ >6000 nodes)
-  
+
   entity_get_controller('node')->resetCache(array($node_id));
   return sizeof($nids) <= $max_pids;
 }
 /**
  * returns an array of the form
  * o and t indexes are legacy leftovers, have no special meaning but has not been refactored away
- * 
+ *
  * array(
  *   'o' => pid,
  *   't' => label
@@ -255,7 +255,7 @@ function sidora_build_tree_from_nodes_by_pid($pid, $max_depth = 3, $preload_node
 /**
  * returns an array of the form
  * o and t indexes are legacy leftovers, have no special meaning but has not been refactored away
- * 
+ *
  * array(
  *   'o' => pid,
  *   't' => label
@@ -274,6 +274,7 @@ function sidora_build_tree_from_nodes_by_pid($pid, $max_depth = 3, $preload_node
 function sidora_build_tree_from_nodes($root_node_id, $max_depth = 3, $current_depth = 0, $resync_nodes_if_needed = TRUE, $preload_nodes = TRUE){
   $to_return = array();
   $node = node_load($root_node_id);
+  watchdog("workbench", "node: !node", array("!node" => var_dump($node)), WORKBENCH_NOTICE);
   if ($node->status == 0){
     return $to_return;
   }
@@ -309,7 +310,7 @@ function sidora_build_tree_from_nodes($root_node_id, $max_depth = 3, $current_de
     $to_return['crud']['r'] = sidora_node_allow('view', $node);
     $to_return['crud']['u'] = sidora_node_allow('update', $node);
     $to_return['crud']['d'] = sidora_node_allow('delete', $node);
-    
+
     $to_return['nid'] = $node->nid;
     $og_gids = sidora_get_group_nids_membership($node->nid);
     // sidora_get_owning_parent_concept_by_administered_pid($pid)
@@ -318,7 +319,7 @@ function sidora_build_tree_from_nodes($root_node_id, $max_depth = 3, $current_de
     $parent_array = sidora_get_owning_parent_concept_by_administered_pid($pid);
     $parent_pid = '';
     if (!empty($parent_array)) {
-      foreach($parent_array as $pid => $parent_obj) { 
+      foreach($parent_array as $pid => $parent_obj) {
         $parent_pid = $pid;
       }
     }
@@ -338,7 +339,7 @@ function sidora_build_tree_from_nodes($root_node_id, $max_depth = 3, $current_de
       $children = array();
     }
     $to_return['children'] = array();
-    
+
     if ($current_depth <= $max_depth){
       foreach($children as $child) {
         if (!empty($child)) {
@@ -362,7 +363,7 @@ function sidora_build_tree_from_nodes($root_node_id, $max_depth = 3, $current_de
 }
 /*
  * Dan was looking for something to tell the system to update a pid but from an outside source that may be automated
- * The idea is something like we did a Camera Trap import directly to Fedora and we want to tell workbench to 
+ * The idea is something like we did a Camera Trap import directly to Fedora and we want to tell workbench to
  * update its data so the data is ready when the user logs in rather than having the time to update occur
  * when the first user logs in that wants to look at that data
  */
@@ -408,7 +409,7 @@ function sidora_fedora_queue_sync($pid_or_nid) {
   }
   $nid = $pid_or_nid;
   if (sidora_contains($pid_or_nid,':')){
-    $nid = sidora_quick_pid_to_node_id($pid_or_nid); 
+    $nid = sidora_quick_pid_to_node_id($pid_or_nid);
   }
   $node = node_load($nid, NULL, TRUE);
   if (!empty($node)){
@@ -444,7 +445,7 @@ function sidora_fedora_create_partial_node_set(
     $max_depth,
     $max_count
   );
-  return $root_node; 
+  return $root_node;
 }
 /*
  * Update information from Fedora based on the form data input
@@ -577,13 +578,13 @@ fails: ' . (empty($done)?1:0) . '
     $table_html .= '<tr><th></th><th>Node</th><th>Node Title</th><th>Fedora Label</th><th>Num Concept Children</th><th>Num Resource Children</th><th>Sync Time</th><th>Resync NOW</th><th>Queue Resync</th></tr>';
     $tr_class = 'odd';
     $tr_count = 1;
-    $start_table_node = 1; 
+    $start_table_node = 1;
     $end_table_node = 1000;
     $table_page = max(intval($show_table) - 1, 0);
     $start_table_node += 1000 * $table_page;
     $end_table_node += 1000 * $table_page;
     foreach($result["node"] as $nid => $obj){
-      if ($tr_count >= $start_table_node && $tr_count <= $end_table_node) {   
+      if ($tr_count >= $start_table_node && $tr_count <= $end_table_node) {
       $node = node_load($nid);
       if (array_key_exists('und',$node->field_fedora_label)){
         $html_escaped_name = htmlspecialchars($node->field_fedora_label['und'][0]['value']);
@@ -630,7 +631,7 @@ fails: ' . (empty($done)?1:0) . '
     }
     $pager .= $page;
   }
-  $to_return = ''; 
+  $to_return = '';
   if (!empty($show_table)) {
     $to_return = 'Nodes: '.$tr_count;
     $to_return .= "<br/>Page: $pager";
@@ -675,7 +676,7 @@ function sidora_concept_review_form($form, &$form_state) {
   }
   $form['help_info'] = array(
     '#markup' => 'The following search will return a set of nodes. After looking at the result set you can decide if you want to remove these nodes from the database. The search itself will not delete nodes.',
-    
+
   );
   $form['type_selector'] = array(
     '#type' => 'select',
@@ -723,9 +724,9 @@ function sidora_concept_review_form($form, &$form_state) {
 function sidora_concept_review_form_submit($form, &$form_state) {
   if ($form_state['values']['op'] == 'Submit') {
     $options = array();
-    $options['type'] = $form_state['values']['type_selector']; 
-    $options['before_date'] = $form_state['values']['before_date']['year'] . '-' . $form_state['values']['before_date']['month'] . '-' . $form_state['values']['before_date']['day']; 
-    $options['after_date'] = $form_state['values']['after_date']['year'] . '-' . $form_state['values']['after_date']['month'] . '-' . $form_state['values']['after_date']['day']; 
+    $options['type'] = $form_state['values']['type_selector'];
+    $options['before_date'] = $form_state['values']['before_date']['year'] . '-' . $form_state['values']['before_date']['month'] . '-' . $form_state['values']['before_date']['day'];
+    $options['after_date'] = $form_state['values']['after_date']['year'] . '-' . $form_state['values']['after_date']['month'] . '-' . $form_state['values']['after_date']['day'];
     $_SESSION['concept_node_maintenance_values'] = $options;
   }
   else if ($form_state['values']['op'] == 'Clear') {
@@ -743,7 +744,7 @@ function sidora_concept_node_maintenance_generate_options(&$options) {
     $options['before_date'] = filter_input($get_from, 'before_date');
     $options['after_date'] = filter_input($get_from, 'after_date');
     $options['action'] = filter_input($get_from, 'action');
-  }  
+  }
   if (empty($options['type'])) {
     $get_from = INPUT_POST;
     $options = array();
@@ -751,7 +752,7 @@ function sidora_concept_node_maintenance_generate_options(&$options) {
     $options['before_date'] = filter_input($get_from, 'before_date');
     $options['after_date'] = filter_input($get_from, 'after_date');
     $options['action'] = filter_input($get_from, 'action');
-    
+
   }
   // Pull the information from the last submit
   if (empty($options['type'])) {
@@ -778,13 +779,13 @@ function sidora_concept_node_maintenance_search($options) {
   $type = 'sidora_concept';
   $before_date = '1980-01-01';
   $after_date = '1980-01-01';
-  if(!empty($options['type'])) { 
+  if(!empty($options['type'])) {
     $type = $options['type'];
   }
-  if(!empty($options['before_date'])) { 
+  if(!empty($options['before_date'])) {
     $before_date = $options['before_date'];
   }
-  if(!empty($options['after_date'])) { 
+  if(!empty($options['after_date'])) {
     $after_date = $options['after_date'];
   }
   // What do I care about?
@@ -995,10 +996,10 @@ function sidora_quick_pid_to_node_id($pid, $node_id = '', $add_to_request_memory
   }
 }
 /*
- * Based on any of the common ways to look up a Fedora object representation, give back information 
+ * Based on any of the common ways to look up a Fedora object representation, give back information
  * on the other representations for the data
  * $load_from_fedora - if TRUE will ask Islandora to look up the information from Fedora to give
- *   back the Islandora representation.  If looking for a nid/node -> pid or pid -> nid/node you don't 
+ *   back the Islandora representation.  If looking for a nid/node -> pid or pid -> nid/node you don't
  *   want to incur that cost so don't
  * returns
   $to_return = array(
@@ -1170,7 +1171,7 @@ function sidora_update_or_create_node_from_fedora($pid_or_fedora_obj_or_nid_or_n
     'resource_children' => $num_children_resources,
     'owner' => $obj->owner,
     'state' => $obj->state,
-  ); 
+  );
   $to_return = NULL;
   // If the node doesn't exist, create it
   if (empty($node)) {
@@ -1278,7 +1279,7 @@ function sidora_update_concept_node_remove_child($node, $child_node_id = NULL) {
     }
     $node_wrapper->field_sidora_concept_children->set($new_concept_children);
   }
-  $node_wrapper->save(); 
+  $node_wrapper->save();
   return $node;
 }
 /*
@@ -1312,7 +1313,7 @@ function sidora_update_concept_node_add_child($node, $child_node_id = NULL) {
     }
     $node_wrapper->field_sidora_concept_children->set($new_concept_children);
   }
-  $node_wrapper->save(); 
+  $node_wrapper->save();
   return $node;
 }
 /*
@@ -1381,7 +1382,7 @@ function sidora_get_concept_node($pid) {
   }
   $nv = array_values($nodes);
   $node = array_shift($nv);
-  return $node; 
+  return $node;
 }
 /**
  * Retrieves concept nodes for this pid or array of pids
@@ -1457,7 +1458,7 @@ function sidora_get_concept_node_id($pid) {
  * $info = array("label"=>'label',"concept_children"=>'',"resource_children"=>0);
  * A node of a Fedora object that already existed:
  * $info = array("label"=>'label',"concept_children"=>'88,89,92',"resource_children"=>7);
- * 
+ *
  */
 function sidora_create_concept_node($pid, $info = NULL, $set_fedora_sync = FALSE, $owner_id = 1){
   if ($info === NULL) {
@@ -1505,21 +1506,21 @@ function sidora_create_concept_node($pid, $info = NULL, $set_fedora_sync = FALSE
       }
     }
   }
-  
+
   if ($set_fedora_sync) {
 //print 'Setting set_fedora_sync:' . $time_now . "\n";
     $newNode->field_sidora_fedora_sync[$newNode->language][]['value'] = $time_now;
   }
 
   // Prepare node for saving
-  $newNode = node_submit($newNode); 
+  $newNode = node_submit($newNode);
   // save node
   node_save($newNode);
   return $newNode;
 }
 /**
  * Returns the owner id of the pid if the concept is a shared item, otherwise returns the current user's id
- * 
+ *
  */
 function sidora_get_default_owner_id_under_pid($pid){
   global $user;
@@ -1531,7 +1532,7 @@ function sidora_get_default_owner_id_under_pid($pid){
 
   //If there is a node, check to see if it's in a share group
   $node_groups = og_get_entity_groups('node', $node);
- 
+
   module_load_include('inc', 'sidora', 'includes/project_spaces');
   //If it is in a share group, return the node's owner
   $owned_groups = sidora_get_owned_groups($node->uid);
@@ -1593,7 +1594,7 @@ function sidora_get_child_nodes($node_id){
 }
 
 /**
- * Create the fields necessary for the nodes that represent a Fedora Digital Object and add it to the Fedora digital 
+ * Create the fields necessary for the nodes that represent a Fedora Digital Object and add it to the Fedora digital
  * object content type
  */
 function sidora_create_fields_for_fedora_object_nodes(){
@@ -1663,7 +1664,7 @@ function sidora_check_nodes_in_fedora($node_start = NULL, $number = NULL, $sleep
   if (empty($nodes)){
     watchdog(
       "sidora",
-      t("Could not check Fedora nodes, attempted to check this many nodes:' %number ' nodes starting at ' %node_start '", 
+      t("Could not check Fedora nodes, attempted to check this many nodes:' %number ' nodes starting at ' %node_start '",
         array("%number" => $number, "%node_start" => $node_start)
       )
     );
@@ -1748,4 +1749,3 @@ function sidora_get_concept_nodes_between_timestamps($sync_timestamp_start, $syn
   }
   return node_load_multiple($to_load);
 }
-
