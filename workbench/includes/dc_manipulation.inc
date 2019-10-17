@@ -132,8 +132,8 @@ function sidora_dc_join_and_return_xml($pid) {
       $post_transform_dd = null;
       watchdog("dc_manipulation.inc", "Association in dc_manipulation.inc: $association", NULL, WATCHDOG_NOTICE);
       watchdog("dc_manipulation.inc", "Association is of type: " . gettype($association), NULL, WATCHDOG_NOTICE);
-      if (!empty($object[$association['dsid']])){
-        $pre_transform_string = $object[$association['dsid']]->content;
+      if (!empty($object[$associations[0]['dsid']])){
+        $pre_transform_string = $object[$associations[0]['dsid']]->content;
         $pre_transform_dd = new DOMDocument();
         $pre_transform_dd->loadXML($pre_transform_string);
         $post_transform_dd = xml_form_builder_transform_document($transform, $pre_transform_dd);
