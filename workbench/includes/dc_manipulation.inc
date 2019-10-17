@@ -87,6 +87,7 @@ function sidora_dc_xml_join($previous_version_string, $current_version_string) {
     }
   }
   $xml_string = $doc1->saveXML();
+  watchdog("dc_manipulation.inc", "xml_string: !xml", array("!xml" => $xml_string), WATCHDOG_NOTICE);
   return $xml_string;
 }
 
@@ -146,8 +147,6 @@ function sidora_dc_join_and_return_xml($pid) {
         }
         else {
           $post_transform_string = $post_transform_dd->saveXML();
-          watchdog("dc_manipulation.inc", "insert_data: !insert", array("!insert" => print_r($insert_data_into)), WATCHDOG_NOTICE);
-          watchdog("dc_manipulation.inc", "post_transform_string: !transform", array("!transform" => print_r($post_transform_string)), WATCHDOG_NOTICE);
           // Place information from the transformed metadata into the old entry
           $xml_string = sidora_dc_xml_join($insert_data_into, $post_transform_string);
         }
