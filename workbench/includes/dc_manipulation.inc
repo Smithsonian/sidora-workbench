@@ -129,6 +129,7 @@ function sidora_dc_join_and_return_xml($pid) {
       $post_transform_dd = null;
       if (!empty($object[$associations[0]['dsid']])){
         $pre_transform_string = $object[$associations[0]['dsid']]->content;
+        watchdog("dc_manipulation.inc", "pre string: !pre", array("!pre" => $pre_transform_string), WATCHDOG_NOTICE);
         $pre_transform_dd = new DOMDocument();
         $pre_transform_dd->loadXML($pre_transform_string);
         $post_transform_dd = xml_form_builder_transform_document($transform, $pre_transform_dd);
