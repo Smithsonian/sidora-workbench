@@ -30,10 +30,11 @@
 function sidora_dc_xml_join($previous_version_string, $current_version_string) {
   $doc1 = new DOMDocument();
   $doc1->loadXML($previous_version_string);
-  watchdog("dc_manipulation.inc", "doc1 (before): !doc1", array("!doc1", print_r($doc1->saveXML())), WATCHDOG_NOTICE);
-  watchdog("dc_manipulation.inc", "doc1 (before): !doc1", array("!doc1", print_r($doc1->saveXML())), WATCHDOG_NOTICE);
+  watchdog("dc_manipulation.inc", "doc1 (before): !doc1", array("!doc1" => print_r($doc1->saveXML())), WATCHDOG_NOTICE);
+
   $doc2 = new DOMDocument();
   $doc2->loadXML($current_version_string);
+  watchdog("dc_manipulation.inc", "doc2 (before): !doc2", array("!doc2" => print_r($doc1->saveXML())), WATCHDOG_NOTICE);
 
   $all_elements_old = $doc1->getElementsByTagName('*');
   $all_elements_new = $doc2->getElementsByTagName('*');
