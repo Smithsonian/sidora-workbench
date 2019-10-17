@@ -106,7 +106,7 @@ function sidora_dc_join_and_return_xml($pid) {
   if ($dc_datastream->versionable && count($dc_datastream) > 1){
     // The current one is $dc_datastream[0]
     $insert_data_into = $dc_datastream[1]->content;
-    watchdog("dc_manipulation.inc", "dc: !dc", array("!dc" => var_dump($dc_datastream)), WATCHDOG_NOTICE);
+    watchdog("dc_manipulation.inc", "datastream: !dc", array("!dc" => print_r($dc_datastream)), WATCHDOG_NOTICE);
     $form_and_dsid = sidora_get_form_and_dsid($pid);
     if (empty($form_and_dsid)) {
       return NULL;
