@@ -2540,6 +2540,7 @@ function sidora_emammal_islandora_datastream_ingested(AbstractObject $object, Ab
   //sidora_emammal_create_or_update_for_wi_if_needed($object, $datastream);
 }
 function sidora_emammal_object_change($pid, $datastream_id){
+  watchdog("starting sidora_emammal_object_change");
   $obj = sidora_obj($pid);
   $status = array();
   if (empty($obj)){
