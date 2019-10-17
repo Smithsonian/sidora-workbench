@@ -274,6 +274,9 @@ function sidora_build_tree_from_nodes_by_pid($pid, $max_depth = 3, $preload_node
 function sidora_build_tree_from_nodes($root_node_id, $max_depth = 3, $current_depth = 0, $resync_nodes_if_needed = TRUE, $preload_nodes = TRUE){
   $to_return = array();
   $node = node_load($root_node_id);
+  
+  watchdog("workbench", "node type: !type", array("!type" => gettype($node)));
+
   if (is_null($node) || $node->status == 0){
     return $to_return;
   }
