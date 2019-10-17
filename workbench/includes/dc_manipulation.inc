@@ -107,6 +107,7 @@ function sidora_dc_join_and_return_xml($pid) {
     if (empty($form_and_dsid)) {
       return NULL;
     }
+    watchdog("dc_manipulation.inc", "form name: !formname | dsid: !dsid", array('!formname' => $form_and_dsid['form_name'], '!dsid' => $form_and_dsid['dsid']), WATCHDOG_NOTICE);
     $associations = xml_form_builder_get_associations(array($form_and_dsid['form_name']), $object->models, array($form_and_dsid['dsid']));
     if (sizeof($associations) < 1) {
       return NULL;
@@ -124,6 +125,7 @@ function sidora_dc_join_and_return_xml($pid) {
     if ($transform != FALSE) {
       $post_transform_dd = null;
       watchdog("dc_manipulation.inc", "Association in dc_manipulation.inc: $association", NULL, WATCHDOG_NOTICE);
+      watchdog("dc_manipulation.inc", "Association is of type: " . gettype($association), NULL, WATCHDOG_NOTICE);
       if (!empty($object[$association['dsid']])){
         $pre_transform_string = $object[$association['dsid']]->content;
         $pre_transform_dd = new DOMDocument();
