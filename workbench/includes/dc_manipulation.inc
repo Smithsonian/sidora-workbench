@@ -87,7 +87,6 @@ function sidora_dc_xml_join($previous_version_string, $current_version_string) {
     }
   }
   $xml_string = $doc1->saveXML();
-  watchdog("dc_manipulation.inc", "xml_string: !xml", array("!xml" => $xml_string), WATCHDOG_NOTICE);
   return $xml_string;
 }
 
@@ -108,14 +107,8 @@ function sidora_dc_join_and_return_xml($pid) {
     if (empty($form_and_dsid)) {
       return NULL;
     }
-    watchdog("dc_manipulation.inc", "form name: !formname | dsid: !dsid", array('!formname' => $form_and_dsid['form_name'], '!dsid' => $form_and_dsid['dsid']), WATCHDOG_NOTICE);
     $associations = xml_form_builder_get_associations(array($form_and_dsid['form_name']), $object->models, array($form_and_dsid['dsid']));
-    watchdog(
-      'dc_manipulation.inc',
-      'Here is the printed variable: <pre>@placeholder_name</pre>',
-      array('@placeholder_name' => print_r( $associations, TRUE)),
-      WATCHDOG_INFO
-    );
+
     if (sizeof($associations) < 1) {
       return NULL;
     }
@@ -131,8 +124,6 @@ function sidora_dc_join_and_return_xml($pid) {
     // Let's not clutter watchdog yet...
     if ($transform != FALSE) {
       $post_transform_dd = null;
-      watchdog("dc_manipulation.inc", "Association in dc_manipulation.inc: $association", NULL, WATCHDOG_NOTICE);
-      watchdog("dc_manipulation.inc", "Association is of type: " . gettype($association), NULL, WATCHDOG_NOTICE);
       if (!empty($object[$associations[0]['dsid']])){
         $pre_transform_string = $object[$associations[0]['dsid']]->content;
         $pre_transform_dd = new DOMDocument();
