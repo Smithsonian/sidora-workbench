@@ -564,7 +564,7 @@ function sidora_emammal_sidora_wi_curl_request($pid, $opt_in)
     CURLOPT_URL => variable_get("sidora_emammal_sidora_wi_url", ""),
     CURLOPT_RETURNTRANSFER => true,
     CURLOPT_HTTPHEADER => $headers,
-    CURLOPT_POSTFIELDS => $data
+    CURLOPT_POSTFIELDS => "wiProjectPid=$pid&enabled=$opt_in_string" // $data
   ));
 
   sidora_emammal_debug("Camel URL: " . variable_get("sidora_emammal_sidora_wi_url", "") . "\n");
