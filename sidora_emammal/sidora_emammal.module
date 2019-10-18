@@ -553,8 +553,10 @@ function sidora_emammal_sidora_wi_curl_request($pid, $opt_in)
 {
   $ch = curl_init();
   $opt_in_string = $opt_in?"true":"false";
-  $post_fields = array('wiProjectPid'=>$pid, 'enabled' => $opt_in_string);
-  $data = json_encode($post_fields);
+  $project_field = array('wiProjectPid'=>$pid);
+  $enabled_field = array('enabled' => $opt_in_string);
+  $data = json_encode($project_field) . "&" . json_encode($enabled_field);
+
 
   curl_setopt_array($ch, array(
   CURLOPT_URL => variable_get("sidora_emammal_sidora_wi_url", ""),
