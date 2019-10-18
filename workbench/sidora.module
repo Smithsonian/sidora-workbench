@@ -867,7 +867,12 @@ function sidora_islandora_datastream_modified(AbstractObject $object, AbstractDa
   {
     if (module_exists('sidora_emammal'))
     {
+      watchdog("sidora", "sidora_emammal module exists", NULL, WATCHDOG_NOTICE);
       sidora_emammal_dummy_function();
+    }
+    else
+    {
+      watchdog("sidora", "sidora_emammal module does not exists", NULL, WATCHDOG_NOTICE);
     }
     $edit_metadata_path_to_pid = 'sidora/edit_metadata/';
     $pid = substr(current_path(), strlen($edit_metadata_path_to_pid));
