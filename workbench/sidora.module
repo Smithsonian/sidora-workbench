@@ -857,7 +857,7 @@ function sidora_islandora_datastream_modified(AbstractObject $object, AbstractDa
         watchdog("sidora", "pid: !pid", array("!pid" => $pid), WATCHDOG_NOTICE);
         module_load_include('inc', 'sidora', 'includes/dc_manipulation');
         $new_dc_ds = sidora_dc_join_and_return_xml($pid);
-        watchdog("sidora", "new_dc_ds: !newDC", array("!newDC" => $new_dc_ds), WATCHDOG_NOTICE);
+        watchdog("sidora", "new_dc_ds: !newDC", array("!newDC" => print_r($new_dc_ds, 1)), WATCHDOG_NOTICE);
         $obj = sidora_obj($pid);
         watchdog("sidora", "obj dc (before): !obj", array("!obj" => print_r($obj['DC'], 1)), WATCHDOG_NOTICE);
         $GLOBALS['sidora_set_dc'] = TRUE;
