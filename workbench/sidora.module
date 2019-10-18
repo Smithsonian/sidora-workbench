@@ -867,16 +867,17 @@ function sidora_islandora_datastream_modified(AbstractObject $object, AbstractDa
   {
     if (module_exists('sidora_emammal'))
     {
+      $edit_metadata_path_to_pid = 'sidora/edit_metadata/';
+      $pid = substr(current_path(), strlen($edit_metadata_path_to_pid));
       watchdog("sidora", "sidora_emammal module exists", NULL, WATCHDOG_NOTICE);
-      sidora_emammal_dummy_function();
+      $opt_in = sidora_emammal_check_opt_in_for_wi($object);
+      watchdog("sidora", "opt-in for pid !pid is !opt", array("!pid" => $pid, "!opt" => $opt_in?"TRUE":"FALSE"), WATCHDOG_NOTICE);
     }
     else
     {
       watchdog("sidora", "sidora_emammal module does not exists", NULL, WATCHDOG_NOTICE);
     }
-    $edit_metadata_path_to_pid = 'sidora/edit_metadata/';
-    $pid = substr(current_path(), strlen($edit_metadata_path_to_pid));
-    watchdog("sidora", "EAC-CPF for !pid", array("!pid"=>$pid), WATCHDOG_NOTICE);
+
   }
   if ((strpos($datastream->mimetype,'xml') !== false) && $datastream->id != 'SIDORA' && $datastream->id != 'DC' && $datastream->id != 'RELS-EXT') {
     $all_meta_entered = filter_input(INPUT_POST, 'all_meta_entered', FILTER_SANITIZE_URL);
