@@ -564,7 +564,7 @@ function sidora_emammal_sidora_wi_curl_request($pid, $opt_in)
     CURLOPT_URL => variable_get("sidora_emammal_sidora_wi_url", ""),
     CURLOPT_RETURNTRANSFER => true,
     CURLOPT_HTTPHEADER => $headers,
-    CURLOPT_POSTFIELDS => "wiProjectPid=$pid&enabled=$opt_in_string" // $data
+    CURLOPT_POSTFIELDS => $data
   ));
 
   sidora_emammal_debug("Camel URL: " . variable_get("sidora_emammal_sidora_wi_url", "") . "\n");
@@ -574,9 +574,6 @@ function sidora_emammal_sidora_wi_curl_request($pid, $opt_in)
   // Check if any error occurred
   if (!curl_errno($ch))
   {
-    $info = curl_getinfo($ch);
-    sidora_emammal_debug('Took ' . $info['total_time'] . ' seconds to send a request to ' . $info['url'] . "\n");
-
     switch ($http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE))
     {
       case 200:  # OK
@@ -584,7 +581,6 @@ function sidora_emammal_sidora_wi_curl_request($pid, $opt_in)
       default:
         sidora_emammal_debug('Unexpected HTTP code: '.  $http_code . "\n");
     }
-
   }
 
   // free
