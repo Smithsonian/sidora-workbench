@@ -863,6 +863,12 @@ function sidora_islandora_datastream_modified(AbstractObject $object, AbstractDa
     }
 
   }
+  if ($datastream->id == 'EAC-CPF')
+  {
+    $edit_metadata_path_to_pid = 'sidora/edit_metadata/';
+    $pid = substr(current_path(), strlen($edit_metadata_path_to_pid));
+    watchdog("sidora", "EAC-CPF for !pid", array("!pid"=>$pid), WATCHDOG_NOTICE);
+  }
   if ((strpos($datastream->mimetype,'xml') !== false) && $datastream->id != 'SIDORA' && $datastream->id != 'DC' && $datastream->id != 'RELS-EXT') {
     $all_meta_entered = filter_input(INPUT_POST, 'all_meta_entered', FILTER_SANITIZE_URL);
     $form_name = filter_input(INPUT_POST, 'form_name', FILTER_SANITIZE_URL);
@@ -894,7 +900,7 @@ function sidora_islandora_datastream_modified(AbstractObject $object, AbstractDa
         $sidora_node->item(0)->appendChild($node);
         $sidora_node = $doc->getElementsByTagName('sidora');
         $object['SIDORA']->content = $doc->saveXML($sidora_node->item(0));
-                        }
+      }
     }
     else {
       // Didn't have the SIDORA datastream, add at least that the metadata has been updated
