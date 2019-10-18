@@ -563,10 +563,26 @@ function sidora_emammal_sidora_wi_curl_request($pid, $opt_in)
   // execute
   $output = curl_exec($ch);
 
+  // Check if any error occurred
+  if (!curl_errno($ch))
+  {
+    $info = curl_getinfo($ch);
+    sidora_emammal_debug('Took ' . $info['total_time'] . ' seconds to send a request to ' . $info['url'] . "\n");
+
+    switch ($http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE))
+    {
+      case 200:  # OK
+        break;
+      default:
+        sidora_emammal_debug('Unexpected HTTP code: '.  $http_code . "\n");
+    }
+
+  }
+
   // free
   curl_close($ch);
 
-  sidora_emammal_debug("CURL RESULT FROM SIDORA-WI" . var_dump($output));
+  sidora_emammal_debug("CURL RESULT FROM SIDORA-WI: " . $output);
 
   return $output;
 }
