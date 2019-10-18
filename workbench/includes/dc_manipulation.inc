@@ -111,7 +111,7 @@ function sidora_dc_join_and_return_xml($pid) {
     if (empty($form_and_dsid)) {
       return NULL;
     }
-    watchdog("dc_manipulation.inc", "models: !models", array("!models" => var_dump($object->models)), WATCHDOG_NOTICE);
+    watchdog("dc_manipulation.inc", "models: !models", array("!models" => print_r($object->models)), WATCHDOG_NOTICE);
     $associations = xml_form_builder_get_associations(array($form_and_dsid['form_name']), $object->models, array($form_and_dsid['dsid']));
 
     if (sizeof($associations) < 1) {
