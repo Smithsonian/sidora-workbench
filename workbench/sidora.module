@@ -854,12 +854,15 @@ function sidora_islandora_datastream_modified(AbstractObject $object, AbstractDa
     if (sidora_startsWith(current_path(), $edit_metadata_path_to_pid)) {
       if (empty($GLOBALS['sidora_set_dc'])) {
         $pid = substr(current_path(), strlen($edit_metadata_path_to_pid));
+        watchdog("sidora", "pid: !pid", array("!pid" => $pid), WATCHDOG_NOTICE);
         module_load_include('inc', 'sidora', 'includes/dc_manipulation');
         $new_dc_ds = sidora_dc_join_and_return_xml($pid);
+        watchdog("sidora", "new_dc_ds: !newDC", array("!newDC" => $new_dc_ds), WATCHDOG_NOTICE);
         $obj = sidora_obj($pid);
+        watchdog("sidora", "obj (before setting DC): !obj", array("!obj" => var_dump($obj)), WATCHDOG_NOTICE);
         $GLOBALS['sidora_set_dc'] = TRUE;
         $obj['DC']->setContentFromString($new_dc_ds);
-        watchdog("sidora", "obj[DC]: !obj", array("!obj" => var_dump($obj['DC'])), WATCHDOG_NOTICE);
+        watchdog("sidora", "obj (after setting dc): !obj", array("!obj" => var_dump($obj)), WATCHDOG_NOTICE);
       }
     }
 
