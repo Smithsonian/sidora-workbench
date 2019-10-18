@@ -30,11 +30,9 @@
 function sidora_dc_xml_join($previous_version_string, $current_version_string) {
   $doc1 = new DOMDocument();
   $doc1->loadXML($previous_version_string);
-  watchdog("dc_manipulation.inc", "doc1 (before): !doc1", array("!doc1" => print_r($doc1->saveXML())), WATCHDOG_NOTICE);
 
   $doc2 = new DOMDocument();
   $doc2->loadXML($current_version_string);
-  watchdog("dc_manipulation.inc", "doc2 (before): !doc2", array("!doc2" => print_r($doc1->saveXML())), WATCHDOG_NOTICE);
 
   $all_elements_old = $doc1->getElementsByTagName('*');
   $all_elements_new = $doc2->getElementsByTagName('*');
@@ -106,12 +104,10 @@ function sidora_dc_join_and_return_xml($pid) {
   if ($dc_datastream->versionable && count($dc_datastream) > 1){
     // The current one is $dc_datastream[0]
     $insert_data_into = $dc_datastream[1]->content;
-    watchdog("dc_manipulation.inc", "datastream: !dc", array("!dc" => print_r($dc_datastream)), WATCHDOG_NOTICE);
     $form_and_dsid = sidora_get_form_and_dsid($pid);
     if (empty($form_and_dsid)) {
       return NULL;
     }
-    watchdog("dc_manipulation.inc", "models: !models", array("!models" => print_r($object->models)), WATCHDOG_NOTICE);
     $associations = xml_form_builder_get_associations(array($form_and_dsid['form_name']), $object->models, array($form_and_dsid['dsid']));
 
     if (sizeof($associations) < 1) {
@@ -131,10 +127,8 @@ function sidora_dc_join_and_return_xml($pid) {
       $post_transform_dd = null;
       if (!empty($object[$associations[0]['dsid']])){
         $pre_transform_string = $object[$associations[0]['dsid']]->content;
-        watchdog("dc_manipulation.inc", "pre_transform_string: !pre", array("!pre" => $pre_transform_string), WATCHDOG_NOTICE);
         $pre_transform_dd = new DOMDocument();
         $pre_transform_dd->loadXML($pre_transform_string);
-        watchdog("dc_manipulation.inc", "pre_transform_dd: !pre", array("!pre" => $pre_transform_dd->saveXML()), WATCHDOG_NOTICE);
         $post_transform_dd = xml_form_builder_transform_document($transform, $pre_transform_dd);
         if ($post_transform_dd == null) {
           watchdog(

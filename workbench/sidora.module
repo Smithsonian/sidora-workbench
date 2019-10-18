@@ -859,10 +859,10 @@ function sidora_islandora_datastream_modified(AbstractObject $object, AbstractDa
         $new_dc_ds = sidora_dc_join_and_return_xml($pid);
         watchdog("sidora", "new_dc_ds: !newDC", array("!newDC" => $new_dc_ds), WATCHDOG_NOTICE);
         $obj = sidora_obj($pid);
-        watchdog("sidora", "obj (before setting DC) is null: !obj", array("!obj" => is_null($obj)? "TRUE":"FALSE"), WATCHDOG_NOTICE);
+        watchdog("sidora", "obj (before setting DC): !obj", array("!obj" => var_dump($obj)), WATCHDOG_NOTICE);
         $GLOBALS['sidora_set_dc'] = TRUE;
         $obj['DC']->setContentFromString($new_dc_ds);
-        watchdog("sidora", "obj (after setting dc) is null: !obj", array("!obj" => is_null($obj)? "TRUE":"FALSE"), WATCHDOG_NOTICE);
+        watchdog("sidora", "obj (after setting dc): !obj", array("!obj" => var_dump($obj)), WATCHDOG_NOTICE);
       }
     }
 
