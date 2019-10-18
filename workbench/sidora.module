@@ -859,7 +859,6 @@ function sidora_islandora_datastream_modified(AbstractObject $object, AbstractDa
         $obj = sidora_obj($pid);
         $GLOBALS['sidora_set_dc'] = TRUE;
         $obj['DC']->setContentFromString($new_dc_ds);
-        watchdog("sidora", "obj dc (after): !obj", array("!obj" => print_r($obj, 1)), WATCHDOG_NOTICE);
       }
     }
 
