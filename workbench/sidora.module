@@ -865,6 +865,10 @@ function sidora_islandora_datastream_modified(AbstractObject $object, AbstractDa
   }
   if ($datastream->id == 'EAC-CPF')
   {
+    if (module_exists('sidora_emammal'))
+    {
+      sidora_emammal_dummy_function();
+    }
     $edit_metadata_path_to_pid = 'sidora/edit_metadata/';
     $pid = substr(current_path(), strlen($edit_metadata_path_to_pid));
     watchdog("sidora", "EAC-CPF for !pid", array("!pid"=>$pid), WATCHDOG_NOTICE);

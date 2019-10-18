@@ -2728,6 +2728,11 @@ function sidora_emammal_get_fedora_models_to_wi_type(){
   );
 }
 
+function sidora_emammal_dummy_function()
+{
+  watchdog("sidora_emammal", "sidora_emammal module is hit from sidora module!", NULL, WATCHDOG_NOTICE);
+}
+
 /**
  * When a datastream is created or updated, check to see if it is an eMammal object and if the Opt-In is selected
  * for the project. If these are true, update the information for the object in WI
