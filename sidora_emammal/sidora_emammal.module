@@ -552,16 +552,19 @@ function sidora_emammal_wi_curl($url, $data = '', $method = "POST", $include_bea
 function sidora_emammal_sidora_wi_curl_request($pid, $opt_in)
 {
   $ch = curl_init();
+  $headers = array();
+  $headers[] = 'Content-Type: application/json';
+
   $opt_in_string = $opt_in?"true":"false";
-  $project_field = array('wiProjectPid'=>$pid);
-  $enabled_field = array('enabled' => $opt_in_string);
-  $data = json_encode($project_field) . "&" . json_encode($enabled_field);
+  $data_fields = array('wiProjectPid'=>$pid, 'enabled' => $opt_in_string);
+  $data = json_encode($data_fields);
 
 
   curl_setopt_array($ch, array(
-  CURLOPT_URL => variable_get("sidora_emammal_sidora_wi_url", ""),
-  CURLOPT_RETURNTRANSFER => true,
-  CURLOPT_POSTFIELDS => $data
+    CURLOPT_URL => variable_get("sidora_emammal_sidora_wi_url", ""),
+    CURLOPT_RETURNTRANSFER => true,
+    CURLOPT_HTTPHEADER => $headers,
+    CURLOPT_POSTFIELDS => $data
   ));
 
   sidora_emammal_debug("Camel URL: " . variable_get("sidora_emammal_sidora_wi_url", "") . "\n");
