@@ -869,9 +869,10 @@ function sidora_islandora_datastream_modified(AbstractObject $object, AbstractDa
     {
       $edit_metadata_path_to_pid = 'sidora/edit_metadata/';
       $pid = substr(current_path(), strlen($edit_metadata_path_to_pid));
-      watchdog("sidora", "sidora_emammal module exists", NULL, WATCHDOG_NOTICE);
+      //watchdog("sidora", "sidora_emammal module exists", NULL, WATCHDOG_NOTICE);
       $opt_in = sidora_emammal_check_opt_in_for_wi($object);
-      watchdog("sidora", "opt-in for pid !pid is !opt", array("!pid" => $pid, "!opt" => $opt_in?"TRUE":"FALSE"), WATCHDOG_NOTICE);
+      sidora_emammal_sidora_wi_curl_request($pid, $opt_in);
+      //watchdog("sidora", "opt-in for pid !pid is !opt", array("!pid" => $pid, "!opt" => $opt_in?"TRUE":"FALSE"), WATCHDOG_NOTICE);
     }
     else
     {

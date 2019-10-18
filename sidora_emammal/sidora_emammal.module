@@ -559,12 +559,14 @@ function sidora_emammal_sidora_wi_curl_request($pid, $opt_in)
   CURLOPT_POSTFIELDS => "wiProjectPid=$pid&enabled=$opt_in"
   ));
 
-  sidora_emammal_debug("Hello: " . variable_get("sidora_emammal_sidora_wi_url", "") . "\n");
+  sidora_emammal_debug("Camel URL: " . variable_get("sidora_emammal_sidora_wi_url", "") . "\n");
   // execute
   $output = curl_exec($ch);
 
   // free
   curl_close($ch);
+
+  sidora_emammal_debug("CURL RESULT FROM SIDORA-WI" . var_dump($output));
 
   return $output;
 }
