@@ -92,6 +92,12 @@ jQuery("#edit-sidora-resource-ontology-json").on(\'change keyup paste\', functio
   }
 });</script>',
     ),
+    'sidora_emammal_sidora_wi_url' => array(
+          '#type' => 'textfield',
+          '#title' => t('URL for the sidora-wi camel routes'),
+          '#description' => t('URL For Springboot camel routes associated with sidora-wi. Typically ends with /, example: ').'http://localhost:8080/wi/camel/routes',
+          '#default_value' => variable_get('sidora_wi_url', ''),
+        ),
   );
 
   module_load_include('inc', 'xml_form_builder', 'XMLFormRepository');

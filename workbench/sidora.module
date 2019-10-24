@@ -863,6 +863,15 @@ function sidora_islandora_datastream_modified(AbstractObject $object, AbstractDa
     }
 
   }
+  if ($datastream->id == 'EAC-CPF')
+  {
+      $edit_metadata_path_to_pid = 'sidora/edit_metadata/';
+      $pid = substr(current_path(), strlen($edit_metadata_path_to_pid));
+      //watchdog("sidora", "sidora_emammal module exists", NULL, WATCHDOG_NOTICE);
+      $opt_in = sidora_check_opt_in_for_wi($object);
+      sidora_wi_curl_request($pid, $opt_in);
+      //watchdog("sidora", "opt-in for pid !pid is !opt", array("!pid" => $pid, "!opt" => $opt_in?"TRUE":"FALSE"), WATCHDOG_NOTICE);
+  }
   if ((strpos($datastream->mimetype,'xml') !== false) && $datastream->id != 'SIDORA' && $datastream->id != 'DC' && $datastream->id != 'RELS-EXT') {
     $all_meta_entered = filter_input(INPUT_POST, 'all_meta_entered', FILTER_SANITIZE_URL);
     $form_name = filter_input(INPUT_POST, 'form_name', FILTER_SANITIZE_URL);
@@ -4250,17 +4259,12 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
           header("Content-Disposition: attachment; filename=\"$filename\"");
         }
         if ($formatted == 'html') {
-          if (is_object($datastream)){
-            // HTML should not have enough data to overflow the memory, feel free to load the full content
-            $datastream_content = $datastream->content;
-            $converted = sidora_html_convert_entities($datastream_content);
-            // convert all the html entites to xml
-            module_load_include('inc', 'sidora', 'includes/xsl_handling');
-            print '<div class="metadata-table">'.sidora_metadata_to_html_table_transform($converted, $xsl_file).'</div>';
-          }
-          else {
-            watchdog("SIdora", t("Attempted to view bad datastream:") . json_encode(array($pid, $type, $specific_meta, $download, $formatted, $limit, $offset)));
-          }
+          // HTML should not have enough data to overflow the memory, feel free to load the full content
+          $datastream_content = $datastream->content;
+          $converted = sidora_html_convert_entities($datastream_content);
+          // convert all the html entites to xml
+          module_load_include('inc', 'sidora', 'includes/xsl_handling');
+          print '<div class="metadata-table">'.sidora_metadata_to_html_table_transform($converted, $xsl_file).'</div>';
         }
         else {
           if (is_string($datastream_content)){
@@ -4287,7 +4291,7 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
               fseek($fp, $params['start']);
               // Start buffered download.
               $buffer = $buffer_size; //1024 * 8;
-              while (!is_bool($fp) && !feof($fp) && ($p = ftell($fp)) <= $params['end']) {
+              while (!feof($fp) && ($p = ftell($fp)) <= $params['end']) {
                 if ($p + $buffer > $params['end']) {
                   // In case we're only outputting a chunk, make sure we don't read past the
                   // length.
@@ -4656,10 +4660,6 @@ function sidora_obj($pid) {
   $tuque = islandora_get_tuque_connection();
   if ($tuque) {
     $object = islandora_object_load($pid);
-  }
-  else {
-    echo "Tuque down:" . json_encode($e);
-    watchdog("sidora",t('Tuque down:'. json_encode($e)));
   }
   if (empty($object)) return NULL;
   module_load_include('inc', 'sidora', 'includes/sidora_nodes');
@@ -9144,4 +9144,180 @@ function _sidora_return_bytes($val) {
             $val *= 1024;
     }
     return $val;
+}
+
+function sidora_check_opt_in_for_wi(AbstractObject $object){
+  $wi_infos = sidora_get_wi_type($object, TRUE);
+
+  if (!empty($wi_infos)){
+    foreach($wi_infos as $wi_info) {
+      $opt_in = FALSE;
+      $parent_id = $object->id;
+      for($i = 0; $i <= $wi_info['max_distance_to_project']; $i++){
+        $checker_id = $parent_id;
+        if ($i >= $wi_info['min_distance_to_project']){
+          // $checker_id should now hold the pid of the project, which we need to check to see if it's opt-in is checked
+          $project_obj = sidora_obj($checker_id);
+
+          if (!empty($project_obj) && (!empty($project_obj['EAC-CPF']))){
+            $content = $project_obj['EAC-CPF']->content;
+            if (!empty($content)){
+              $doc = new DOMDocument();
+              $docToLoad = ($content);
+              $doc->loadXML($docToLoad);
+              $existing_wi_opt_in_nodes = $doc->getElementsByTagName(SIDORA_EMAMMAL_OPT_IN_TAG);
+              foreach($existing_wi_opt_in_nodes as $exister){
+                $opt_in = $exister->nodeValue;
+              }
+            }
+          }
+          if ("" . $opt_in === "1"){
+            return TRUE;
+          }
+        }
+        if ($i < $wi_info['max_distance_to_project']){
+          module_load_include('inc', 'sidora', 'includes/utils');
+          // use isAdministeredBy if exists
+          $parent_id = sidora_get_owning_parent_concept_pid_by_administered_pid($checker_id);
+          if (empty($parent_id)){
+            $parents = sidora_get_parent_concepts_by_pid($checker_id);
+            foreach($parents as $ppid => $parent){
+              $parent_id = $ppid;
+            }
+          }
+        }
+      }
+    }
+  }
+  return FALSE;
+}
+
+/**
+ * Helper function to return the base type of the WI object for this Fedora object
+ */
+function sidora_get_wi_type($object, $return_distances = FALSE){
+  if (empty($object)){
+    return NULL;
+  }
+  if (!is_object($object)){
+    return NULL;
+  }
+  $fedora_models_to_wi_type = sidora_get_fedora_models_to_wi_type();
+  $models = ($object->relationships->get('info:fedora/fedora-system:def/model#', 'hasModel'));
+  $wi_model_types = array_keys($fedora_models_to_wi_type);
+  $wi_info = array();
+  foreach($models as $model_rel) {
+    $model = $model_rel['object']['value'];
+    if (in_array($model, $wi_model_types)){
+      $check = $fedora_models_to_wi_type[$model];
+      if (is_array($check)){
+        if (!empty($object) && (!empty($object['EAC-CPF']))){
+          // For right now we'll hack this for project / subproject
+          // it was originally designed for subprojects that had a different model
+          // than projects, refactor when appropriate
+          $multi = $check;
+          foreach($multi as $indiv){
+            $content = $object['EAC-CPF']->content;
+            if ($indiv['wi_type'] == 'subproject' && strpos($content, "<recordId>s") > 0){
+              $check = $indiv;
+            }
+            if ($indiv['wi_type'] == 'project' && strpos($content, "<recordId>p") > 0){
+              $check = $indiv;
+            }
+          }
+        }
+      }
+      if (!$return_distances){
+        if (empty($check['wi_type'])){
+          return '';
+        }
+        return $check['wi_type'];
+      }
+      $wi_info[] = $check;
+    }
+  }
+  return $wi_info;
+}
+
+/**
+ * Helper single location for this array of info linking Feodra to WI types
+ */
+function sidora_get_fedora_models_to_wi_type(){
+  return array(
+    'si:projectCModel' => array(
+       array(
+         'min_distance_to_project' => 0,
+         'max_distance_to_project' => 0,
+         'wi_type' => 'project',
+       ),
+       array(
+         'min_distance_to_project' => 1,
+         'max_distance_to_project' => 1,
+         'wi_type' => 'subproject',
+       ),
+    ),
+    'si:cameraTrapCModel' => array(
+       'min_distance_to_project' => 2,
+       'max_distance_to_project' => 3,
+       'wi_type' => 'deployment',
+    ),
+    'si:generalImageCModel' => array(
+       'min_distance_to_project' => 3,
+       'max_distance_to_project' => 4,
+       'wi_type' => 'dataFile',
+    ),
+    /*
+    'si:datasetCModel' => array(
+       'min_distance_to_project' => 3,
+       'max_distance_to_project' => 4,
+       'wi_type' => 'dataFile',
+    ),
+    */
+    // Optional level of plots push things one down
+  );
+}
+
+/**
+ * Function for calling sidora-wi camel route code
+ * @param  string $pid pid of fedora object to pass to camel route
+ * @return boolean     true on success, false on failure
+ *
+ * src: https://www.sitepoint.com/using-curl-for-remote-requests/
+ */
+function sidora_wi_curl_request($pid, $opt_in)
+{
+  $ch = curl_init();
+  $headers = array();
+  $headers[] = 'Content-Type: application/json';
+
+  $opt_in_string = $opt_in?"true":"false";
+  $data_fields = array('wiProjectPid'=>$pid, 'enabled' => $opt_in_string);
+  $data = json_encode($data_fields);
+
+
+  curl_setopt_array($ch, array(
+    CURLOPT_URL => variable_get("sidora_wi_url", ""),
+    CURLOPT_RETURNTRANSFER => true,
+    CURLOPT_HTTPHEADER => $headers,
+    CURLOPT_POSTFIELDS => $data
+  ));
+  // execute
+  $output = curl_exec($ch);
+
+  // Check if any error occurred
+  if (!curl_errno($ch))
+  {
+    switch ($http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE))
+    {
+      case 200:  # OK
+        break;
+      default:
+        watchdog("sidora", "Unexpected HTTP code:  !http", array("!http" => $http_code), WATCHDOG_ERROR);
+    }
+  }
+
+  // free
+  curl_close($ch);
+
+  return $output;
 }
