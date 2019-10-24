@@ -117,7 +117,7 @@ jQuery("#edit-sidora-resource-ontology-json").on(\'change keyup paste\', functio
     ),
     'rows' => array(),
   );
-  
+
   foreach ($names as $form_info) {
     $name = $form_info['name'];
     if ($form_info['indb']) {
@@ -163,10 +163,10 @@ jQuery("#edit-sidora-resource-ontology-json").on(\'change keyup paste\', functio
   module_load_include('inc', 'sidora', 'includes/xsl_handling');
   $get_xsl_records = sidora_get_all_xsl_names();
   foreach ($get_xsl_records as $xsl_form_record) {
-    $xsl_names_dd .= '<option value="' . $xsl_form_record . '">' . $xsl_form_record . '</option>'; 
-  }	
+    $xsl_names_dd .= '<option value="' . $xsl_form_record . '">' . $xsl_form_record . '</option>';
+  }
   $xsl_names_dd .= '</select>';
-  /* example 
+  /* example
   $existing_json_sidora_form_config = '
     {
       "xsl_config":[
@@ -190,7 +190,7 @@ window.filesUpdated = function(updateObj){
       //If this is a brand new file, add it to the end of the file listing
       var optionsHtml = "<option value=\""+currName+"\">"+currName+"</option>";
       jQuery(".xsl-names-dd").append(optionsHtml);
-    } 
+    }
   }
 }
 window.recolorTable = function(){
@@ -297,7 +297,7 @@ tr.removed.odd {
   $sfc_label = '<label>Metadata Form XSL Configuration</label>';
   // create the delete xsl files button
   $remove_xsl_file_button = '<input id="dxsl-button" type="button" class="form-submit" value="Remove a XSL File"/>';
-  
+
   $form['xsl_form_config'] = array(
       '#type' => 'hidden',
       '#default_value' => variable_get('xsl_form_config', ''),
@@ -441,7 +441,7 @@ tr.removed.odd {
         '#description' => t('This should be an http / https location containing jstree.js and themes/default/style.min.css.  jsTree can be downloaded from https://github.com/vakata/jstree or http://jstree.com'),
         '#attributes' => array('size' => 120),
         '#maxlength' => 1024,
-      ),  
+      ),
       'sidora_js_lib_location_plupload' => array(
         '#type' => 'textfield',
         '#title' => t('PL Upload'),
@@ -449,7 +449,7 @@ tr.removed.odd {
         '#description' => t('This should be an http / https location containing plupload.full.min.js, jqueryui.plupload/jquery.ui.plupload.js, and jquery.ui.plupload/css/jquery.ui.plupload.css.  Pluplup can be downloaded from http://www.pulupload.com'),
         '#attributes' => array('size' => 120),
         '#maxlength' => 1024,
-      ),  
+      ),
     ),
   );
   $form['account_request'] = array(
@@ -470,7 +470,7 @@ tr.removed.odd {
         '#title' => t('Send New Account Request Emails from'),
         '#default_value' => variable_get('account_request_email_from', ''),
         '#description' => t('New account requests will be sent from this email address.'),
-      ),  
+      ),
     ),
   );
   $form['codebook_parser'] = array(
@@ -485,7 +485,7 @@ tr.removed.odd {
         '#title' => t('Codebook Parser URL'),
         '#default_value' => variable_get('sidora_codebook_parser_url', ''),
         '#description' => t('The location of codebook parser. Valid entry looks like this: http://&lt;server&gt;:&lt;port&gt;/codebook/?'),
-      ),  
+      ),
     ),
   );
   $legacy_items = array(
@@ -504,7 +504,7 @@ tr.removed.odd {
     'tabular_data_set_object' => 'Tabular Data Set Object'
     );
   $form_names = array('None' => 'Not Set');
-  foreach($names as $form_info){ 
+  foreach($names as $form_info){
     $form_name = $form_info['name'];
     $form_names[$form_name] = $form_name;
   }
@@ -516,7 +516,7 @@ tr.removed.odd {
         '#type' => 'select',
         '#options' => $form_names,
         '#default_value' => variable_get('sidora_legacy_'.$item.'_form', ''),
-      ),  
+      ),
       );
   }
   $form['legacy_items_form_config'] = array(
@@ -568,7 +568,7 @@ tr.removed.odd {
         '#title' => t('Server IPs (comma seperated)'),
         '#default_value' => variable_get('sidora_trusted_external_servers', ''),
         '#description' => t('Server IPs (comma seperated)'),
-      ),  
+      ),
     ),
   );
   $form['sidora_user_page_info'] = array(
@@ -597,6 +597,12 @@ tr.removed.odd {
         '#default_value' => variable_get('sidora_debug_clear_cache',FALSE),
         '#description' => t(''),
       ),
+      'sidora_debug_turn_off_warnings' => array(
+        '#type' => 'checkbox',
+        '#title' => t('Turn off watchdog warnings about improper relationships'),
+        '#default_value' => variable_get('sidora_debug_turn_off_warnings',FALSE),
+        '#description' => t('Examples: no parent, no isAdministered link, links to objects that dont exist'),
+      ),
     ),
   );
   $form['sidora_disable_locking_by_pid'] = array(
@@ -617,13 +623,13 @@ tr.removed.odd {
         '#title' => t('Batch Metadata URL'),
         '#default_value' => variable_get('sidora_batch_ingest_url', ''),
         '#description' => t('The location of endpoint for initiating a batch ingest. Valid entry looks like this: http://&lt;server&gt;:&lt;port&gt;/batch/process/'),
-      ),	
+      ),
       'sidora_batch_status_url' => array(
         '#type' => 'textfield',
 	'#title' => t('Batch Status URL'),
 	'#default_value' => variable_get('sidora_batch_status_url', ''),
 	'#description' => t('The location of endpoint for checking the status of a batch ingest. Valid entry looks like this: http://&lt;server&gt;:&lt;port&gt;/batch/newBatchResource/'),
-     ),	
+     ),
     ),
   );
   $form['fuseki_url'] = array(
@@ -638,7 +644,7 @@ tr.removed.odd {
         '#title' => t('Fuseki url'),
         '#default_value' => variable_get('sidora_fuseki_url', ''),
         '#description' => t('The location of Fuseki endpoint. Valid entry looks like this: http://&lt;server&gt;:&lt;port&gt;/fuseki/dataset.html'),
-      ),	
+      ),
     ),
   );
   $form['sidora_check_node_info'] = array(
@@ -670,7 +676,7 @@ tr.removed.odd {
 <li><a href="fedora_sync">Choose when to set concept objects to resync with Fedora</a></li>
 <li><a href="check_user_projects">' . t('Check User Projects') . '</a>' . t(' Check if the children of si:user-projects is out of sync with the Drupal users') . '</li>
 <li><a href="update_xsl_db">' . t('Update Sidora XSLs in database') . '</a>' . t(' Update the Sidora XSLs in database (XSL file location - path_to_sidora/workbench/XSL/)') . '</li>
-<li><a href="download_xsl">' . t('Download Sidora XSLs') . '</a>' . t(' Download all the SIdora XSLs from the database as an archive') . '</li> 
+<li><a href="download_xsl">' . t('Download Sidora XSLs') . '</a>' . t(' Download all the SIdora XSLs from the database as an archive') . '</li>
 </ul>
 <script>
 
