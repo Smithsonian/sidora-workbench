@@ -31,6 +31,8 @@
 defined("SIDORA_NEVER_SET") or define('SIDORA_NEVER_SET',"Never Set");
 defined("SI_RELS_EXT_URI") or define('SI_RELS_EXT_URI',"http://oris.si.edu/2017/01/relations#");
 
+defined("SIDORA_EMAMMAL_OPT_IN_TAG") or define('SIDORA_EMAMMAL_OPT_IN_TAG',"eventType");
+
 /*
  * hook_init
  * run on every drupal call, loads items that the rest of the code needs
@@ -9166,8 +9168,13 @@ function sidora_check_opt_in_for_wi(AbstractObject $object){
               $docToLoad = ($content);
               $doc->loadXML($docToLoad);
               $existing_wi_opt_in_nodes = $doc->getElementsByTagName(SIDORA_EMAMMAL_OPT_IN_TAG);
+              $opt_in = FALSE;
               foreach($existing_wi_opt_in_nodes as $exister){
-                $opt_in = $exister->nodeValue;
+                if($exister->nodeValue == "optin")
+                {
+                  $opt_in = TRUE;
+                }
+                //$opt_in = $exister->nodeValue;
               }
             }
           }
