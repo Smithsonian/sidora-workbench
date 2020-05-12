@@ -200,7 +200,7 @@ function sidora_get_pids_in_tree_from_nodes_by_node_id($node_id, &$nids, &$pids,
   // Runs into execution time issues at > 8000 nodes, would need the following line to up the execution time:
   // ini_set('max_execution_time',60);
 
-  if (sizeof($nids) > $max_pids){
+  if (_sidora_sizeof($nids) > $max_pids){
     return FALSE;
   }
   // if the node comes in as an integer, switch to string for consistency
@@ -221,7 +221,7 @@ function sidora_get_pids_in_tree_from_nodes_by_node_id($node_id, &$nids, &$pids,
   // Get rid of the node out of cache, takes longer but the memory gets used up easily otherwise (@ >6000 nodes)
   
   entity_get_controller('node')->resetCache(array($node_id));
-  return sizeof($nids) <= $max_pids;
+  return _sidora_sizeof($nids) <= $max_pids;
 }
 /**
  * returns an array of the form
@@ -535,7 +535,7 @@ function sidora_fedora_sync() {
       }
       $to_print = '{
 successes: ' . $successes . '
-fails: ' . (sizeof($full_pid_set) - $successes) . '
+fails: ' . (_sidora_sizeof($full_pid_set) - $successes) . '
 }';
       print $to_print;
       drupal_exit();
@@ -830,7 +830,7 @@ function sidora_concept_node_maintenance_delete($options) {
     // Cycling thru to delete everything resulted in timeouts,
     // just do the first set and change UI to let user know
     return $to_delete;
-  } while($current_end < sizeof($result_nids));
+  } while($current_end < _sidora_sizeof($result_nids));
   return $result_nids;
 }
 /**
@@ -1371,7 +1371,7 @@ function sidora_get_concept_node($pid) {
   if (empty($nodes)) {
     return NULL;
   }
-  if (sizeof($nodes) > 1) {
+  if (_sidora_sizeof($nodes) > 1) {
     $nodes_list = '';
     foreach($nodes as $nid => $node) {
       $nodes_list .= ' ' . $nid;
@@ -1399,7 +1399,7 @@ function sidora_get_concept_nodes($pid) {
       ->fieldCondition('field_fedora_pid', 'value', $pid_array, 'IN')
       ->addMetaData('account', user_load(1)); // Run the query as user 1.
     $result = $query->execute();
-    if (sizeof($result) === 0){
+    if (_sidora_sizeof($result) === 0){
       return NULL;
     }
     $to_load = array();
@@ -1428,7 +1428,7 @@ function sidora_get_concept_node_id($pid) {
       ->fieldCondition('field_fedora_pid', 'value', $pid_array, 'IN')
       ->addMetaData('account', user_load(1)); // Run the query as user 1.
     $result = $query->execute();
-    if (sizeof($result) === 0){
+    if (_sidora_sizeof($result) === 0){
       return NULL;
     }
     $to_return = array();
@@ -1436,7 +1436,7 @@ function sidora_get_concept_node_id($pid) {
       $to_return[] = $nid;
     }
     if (is_string($pid)){
-      if (sizeof($to_return) == 1){
+      if (_sidora_sizeof($to_return) == 1){
         return $to_return[0];
       }
     }
@@ -1698,7 +1698,7 @@ function sidora_get_concept_nodes_between_node_numbers($node_start, $number) {
       ->range(0, $number)
       ->addMetaData('account', user_load(1)); // Run the query as user 1.
     $result = $query->execute();
-    if (sizeof($result) === 0){
+    if (_sidora_sizeof($result) === 0){
       return NULL;
     }
     $to_load = array();
@@ -1726,7 +1726,7 @@ function sidora_get_concept_nodes_between_timestamps($sync_timestamp_start, $syn
       ->fieldOrderBy('field_sidora_fedora_sync', 'value', 'ASC')
       ->addMetaData('account', user_load(1)); // Run the query as user 1.
     $result = $query->execute();
-    if (sizeof($result) === 0){
+    if (_sidora_sizeof($result) === 0){
       return NULL;
     }
     $to_load = array();
