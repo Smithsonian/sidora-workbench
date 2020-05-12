@@ -164,7 +164,7 @@ function sidora_get_xsl_file_config_for_object($pid) {
   $curr_check = NULL;
   $imperfect_return = NULL;
   $catch_all = NULL;
-  for ($sfci = 0; $sfci < sizeof($sfc->xsl_config) && !$perfect_match; $sfci++) {
+  for ($sfci = 0; $sfci < _sidora_sizeof($sfc->xsl_config) && !$perfect_match; $sfci++) {
     $curr_check = $sfc->xsl_config[$sfci];
     $model_match = in_array($curr_check->model,$models);
     $form_match = $curr_check->form == $form_name;

@@ -1520,7 +1520,7 @@ function sidora_get_parent_table($pid, $only_basic_table_and_direct_removal_call
   if ($include_pid_column) {
     $header[] = t('PID');
   }
-  if (sizeof($parents) > 1) {
+  if (_sidora_sizeof($parents) > 1) {
     $header[] = t('Remove');
   }
   $unassociate_location = $GLOBALS['base_url'].'/sidora/ajax_parts/unassociate/';
@@ -1549,7 +1549,7 @@ function sidora_get_parent_table($pid, $only_basic_table_and_direct_removal_call
     if ($include_pid_column) {
       $row[] = array('data' => $parent['pid']);
     }
-    if (sizeof($parents) > 1) {
+    if (_sidora_sizeof($parents) > 1) {
       if ($parent['pid'] == $administering_pid) {
        $row[] = array('data' => t('Administering parent'));
       }
@@ -1872,7 +1872,7 @@ function sidora_get_crumbtrails($pid, $label, $current_path, $current_pids_path)
   // if this is not si:root, check if it has parents
   module_load_include('inc', 'sidora', 'includes/utils');
   $parents = sidora_get_parent_concepts_by_pid($pid);
-  if (sizeof($parents) == 0) {
+  if (_sidora_sizeof($parents) == 0) {
     // Dead end, go ahead and return what you've got
     return array($current_path);
   }
@@ -2030,11 +2030,11 @@ function sidora_direct_query($query) {
   return $results;
 }
 function sidora_flatten_tree($branch, &$rows,$visibility_settings,$path) {
-  if (isset($branch) && sizeof($branch) && !empty($branch)) {
+  if (isset($branch) && _sidora_sizeof($branch) && !empty($branch)) {
     $resource_visibility_settings = array('show_name','show_meta','show_preview','allow_download','show_degraded');
     $concept_visibility_settings = array('show_name','show_meta','future_children_show_name','future_children_show_meta','future_children_show_preview','future_children_allow_download','future_children_show_degraded');
     foreach ($branch as $child_array) {
-      if (sizeof($child_array)) {
+      if (_sidora_sizeof($child_array)) {
         //print_r($child_array);
         $tree_depth = substr_count($path,'/');
         if ($path == '') {
@@ -2059,7 +2059,7 @@ function sidora_flatten_tree($branch, &$rows,$visibility_settings,$path) {
           }
         }
       }
-      if ((isset($child_array['children'])) && (sizeof($child_array['children']) > 0)) {
+      if ((isset($child_array['children'])) && (_sidora_sizeof($child_array['children']) > 0)) {
         sidora_flatten_tree($child_array['children'],$rows,$visibility_settings,$array_index.'/');
       }
     }
@@ -2263,7 +2263,7 @@ function sidora_process_batch_submit($form,&$form_state) {
   if (is_array($association['title_field'])) {
     $parent_array = $form;
     $xml_association = $association;
-    for ($ctr=0;$ctr<sizeof($association['title_field']);$ctr++) {
+    for ($ctr=0;$ctr<_sidora_sizeof($association['title_field']);$ctr++) {
       $title_field = sidora_get_nested_title_field(array($association['title_field'][$ctr]),$parent_array);
       if (isset($title_field['#actions']) && isset($title_field['#actions']['create'])) {
         if (isset($title_field['#actions']['create']['value']) && ($title_field['#actions']['create']['value'] != '')) {
@@ -2595,7 +2595,8 @@ function sidora_is_displayable_within_display_params($filepath){
       // and the file needs to be loaded into memory to be downloaded
       // When there is large amounts of memory available, PHP seems to use too much?
         // We would like to use $free = shell_exec('free'); but exec is limited on production
-      $available_for_file = sidora_get_available_memory() - 200000000;
+      $admin_estimate_config =  variable_get('sidora_estimate_memory','200000000');
+      $available_for_file = sidora_get_available_memory() - $admin_estimate_config;
       if ($available_for_file > 1000000000){
         $available_for_file /= 2;
       }
@@ -2903,7 +2904,7 @@ function sidora_codebook_upload_form($form, &$form_state, $parent_pid) {
   module_load_include('inc', 'sidora', 'includes/project_spaces');
   $ps_pids = sidora_get_project_space_pids_for_pid($parent_pid);
   $codebook_options = array();
-  if (sizeof($ps_pids) > 0) {
+  if (_sidora_sizeof($ps_pids) > 0) {
     $cb_holder = sidora_obj($ps_pids[0]);
     if (!empty($cb_holder)) {
       $codebooks = $cb_holder->relationships->get(FEDORA_RELS_EXT_URI, 'managesCodebook');
@@ -3040,7 +3041,7 @@ function sidora_codebook_upload_form_validate($form, &$form_state) {
       }
     }
     $expl_rp = explode(drupal_realpath("public://"), $parser_os_file_path);
-    if (sizeof($expl_rp) == 2) {
+    if (_sidora_sizeof($expl_rp) == 2) {
       $parser_url_file_path = file_create_url("public://") . substr($expl_rp[1],1);
     }
     else {
@@ -4210,8 +4211,10 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
           elseif ($dsid_loop == $specific_meta) {
             // SIdora is going to need about 200MB to run
             // and the file needs to be loaded into memory to be downloaded
-            $available_for_file = sidora_get_available_memory() - 200000000;
+            $admin_estimate_config =  variable_get('sidora_estimate_memory','200000000');
+            $available_for_file = sidora_get_available_memory() - $admin_estimate_config;
             if ($available_for_file < $datastream_loop->size) {
+              watchdog("SIdora", t("Too large: available:") . $available_for_file . t(" size:") . $datastream_loop->size );
               return t('This file is too large to be downloaded through the workbench. Contact your workbench contact to retrieve this file %email',
                 array('%email' => (variable_get('site_admin_email_to', '') != ''?' at ' . variable_get('site_admin_email_to'):''))
               );
@@ -4477,7 +4480,7 @@ function sidora_info_json($pid, $type='resources', $specific_meta = '', $downloa
       }
       elseif ($download == 'browser' && $formatted == 'html') {
         $resources = sidora_concept_resource_listing($pid,$resource_types,$limit,$offset);
-        if (sizeof($resources) == 0) {
+        if (_sidora_sizeof($resources) == 0) {
           $to_output = t('<div class="resources-table">No resources available on this folder</div>');
         }
         else {
@@ -4712,7 +4715,7 @@ function sidora_concept_resource_listing_count($pid, $resource_types_list, $reso
     if (empty($results[0]['object']['value'])) {
       return 0;
     }
-    $to_return = sizeof($results);
+    $to_return = _sidora_sizeof($results);
     return $to_return;
   }
   return -1;
@@ -5365,7 +5368,7 @@ function sidora_ajax_parts($call_type, $param1 = '', $param2 = '', $param3 = '')
       $query = sidora_generate_child_resource_pid_only_sparql_query($pid, array());
       $ri = $tuque->repository->ri;
       $results = $ri->sparqlQuery($query);
-      print sizeof($results);
+      print _sidora_sizeof($results);
       drupal_exit();
     }
   }
@@ -5382,7 +5385,7 @@ function sidora_ajax_parts($call_type, $param1 = '', $param2 = '', $param3 = '')
       drupal_exit();
     }
     $parents = sidora_get_parent_concepts($object);
-    if ((sizeof($parents) < 1) || (!in_array($param2, $parents))) {
+    if ((_sidora_sizeof($parents) < 1) || (!in_array($param2, $parents))) {
         $ajax_to_return = 'refreshNode';
     }
     print $ajax_to_return;
@@ -5477,7 +5480,7 @@ function sidora_ajax_parts($call_type, $param1 = '', $param2 = '', $param3 = '')
       $next = '';
       $ppid = '';
       $resq = explode("\n", $_GET['resq']);
-      if (sizeof($resq) == 4) {
+      if (_sidora_sizeof($resq) == 4) {
         $ppid = empty($_GET['ppid'])?'':$_GET['ppid'];
         if (sidora_allow(NULL,$ppid)) {
           $pids = sidora_concept_resource_listing_pids_only($ppid, sidora_get_resource_types(), NULL, 0, $resq[0], $resq[1], $resq[2], $resq[3]);
@@ -5485,7 +5488,7 @@ function sidora_ajax_parts($call_type, $param1 = '', $param2 = '', $param3 = '')
           if ($location_in_array !== 0) {
             $prev = $pids[$location_in_array - 1];
           }
-          if ($location_in_array !== sizeof($pids) - 1) {
+          if ($location_in_array !== _sidora_sizeof($pids) - 1) {
             $next = $pids[$location_in_array + 1];
           }
         }
@@ -5951,7 +5954,7 @@ function sidora_unassociate($remove_from_pid, $pid_to_remove, $show_output = TRU
   module_load_include('inc', 'sidora', 'includes/utils');
   $to_remove = sidora_obj($pid_to_remove);
   $parents = sidora_get_parent_concepts($to_remove);
-  if (!$allow_orphan && sizeof($parents) < 2) {
+  if (!$allow_orphan && _sidora_sizeof($parents) < 2) {
 
   // Can't orphan it
     $to_output['error'] = TRUE;
@@ -6084,7 +6087,7 @@ function sidora_unassociate_delete_if_orphaned($remove_from_pid, $pid_to_remove,
     }
   }
   $parents = sidora_get_parent_concepts($object);
-  if (sizeof($parents) == 0) {
+  if (_sidora_sizeof($parents) == 0) {
     $delete_confirmation = sidora_json_for_delete($pid_to_remove, FALSE);
     sidora_release_lock($pid_to_remove);
     if ($show_output) {
@@ -6207,7 +6210,7 @@ function sidora_copy($copy_to_id, $pid, $show_output = TRUE) {
   $is_codebook = sidora_is_codebook($object);
   if ($is_concept) {
     $existing_rels = $copy_to->relationships->get(FEDORA_RELS_EXT_URI,'hasConcept',$pid);
-    if (sizeof($existing_rels) > 0) {
+    if (_sidora_sizeof($existing_rels) > 0) {
       $to_output['error'] = TRUE;
       $to_output['description'] = t("Object already exists on target");
       $to_output['target'] = $copy_to->id;
@@ -6225,7 +6228,7 @@ function sidora_copy($copy_to_id, $pid, $show_output = TRUE) {
   }
   else {
     $existing_rels = $copy_to->relationships->get(FEDORA_RELS_EXT_URI,'hasResource',$pid);
-    if (sizeof($existing_rels) > 0) {
+    if (_sidora_sizeof($existing_rels) > 0) {
       $to_output['error'] = TRUE;
       $to_output['description'] = t("Object already exists on target");
       $to_output['target'] = $copy_to->id;
@@ -6419,7 +6422,7 @@ function sidora_html_tree_from_given_pid($root_pid = '', $root = NULL, $num_leve
       $children_resources = $root->relationships->get(FEDORA_RELS_EXT_URI, 'hasResource');
     }
     if (!empty($children_resources)) {
-      $root_suffix = " (" . sizeof($children_resources) . ")";
+      $root_suffix = " (" . _sidora_sizeof($children_resources) . ")";
     }
     $filled = sidora_build_tree_from_nodes_by_pid($root_pid, $num_levels);
 
@@ -6438,7 +6441,7 @@ function sidora_html_tree_from_given_pid($root_pid = '', $root = NULL, $num_leve
   $to_return .= 'href="'.base_path().'sidora/workbench/' . $url_params . '#'.$root_pid.'" pid="'.$root_pid.'" fullname="'.$html_escaped_name.'"';
   // Count concept children
   $cr = _sidora_get_child_results_cache($root_pid);
-  $to_return .= ' conceptchildren="'.sizeof($cr).'"';
+  $to_return .= ' conceptchildren="'._sidora_sizeof($cr).'"';
   $to_return .= ' rspids="' . implode(' ', sidora_get_project_space_pids_for_pid($root_pid)) . '"';
   $info = sidora_get_info($root_pid);
   $node_wrapper = entity_metadata_wrapper('node', $info['node']);
@@ -7060,9 +7063,9 @@ function sidora_cron() {
     'sidora_workbench',
     t('Cleared directory %d: %f files, %t flagged for removal, could not remove %n files.',array(
       '%d' => $temp_dir,
-      '%f' => (sizeof($files_only)),
-      '%n' => (sizeof($to_be_removed) - sizeof($deleted_files)),
-      '%t' => (sizeof($to_be_removed)),
+      '%f' => (_sidora_sizeof($files_only)),
+      '%n' => (_sidora_sizeof($to_be_removed) - _sidora_sizeof($deleted_files)),
+      '%t' => (_sidora_sizeof($to_be_removed)),
     ))
   );
   $checker = sidora_check_nodes_in_fedora();
@@ -7469,7 +7472,7 @@ Array(
  */
 function sidora_fill_concepts_children($query_result, $current_path = array(), $max_depth = 3) {
   if ($current_path == NULL) $current_path = array();
-  if (sizeof($current_path) > $max_depth) return $query_result;
+  if (_sidora_sizeof($current_path) > $max_depth) return $query_result;
   if (is_array($query_result)) {
     foreach ($query_result as $c_index=>$child) {
       $child_pid = $child['o']['value'];
@@ -7496,7 +7499,7 @@ function _sidora_get_child_results_cache($child_pid) {
     $grandchildren_query = sidora_generate_child_concept_query($child_pid);
     $ri = $tuque->repository->ri;
     $results = $ri->sparqlQuery($grandchildren_query);
-    if (sizeof($results) == 1 && $results[0]['o']['value'] == '') $results = array();
+    if (_sidora_sizeof($results) == 1 && $results[0]['o']['value'] == '') $results = array();
     cache_set("sidora:children_results:".$child_pid,$results);
   }
   else {
@@ -9162,3 +9165,17 @@ function _sidora_return_bytes($val) {
     }
     return $val;
 }
+
+/*
+ * Ensure that update to 7.3 goes well.
+ * Any calls to sizeof that have not been replaced, such as in exhibition, should not need replacing
+ */
+function _sidora_sizeof($obj){
+  if (function_exists("is_countable")){
+    if (!is_countable($obj)){
+      return 0;
+    }
+  }
+  return sizeof($obj);
+}
+  

@@ -152,7 +152,12 @@ jQuery("#edit-sidora-resource-ontology-json").on(\'change keyup paste\', functio
   $form_names_dd .= '<option value="sidora_all">All forms that are not specifically called out</option>';
   foreach($names as $form_info){ $name = $form_info['name']; $form_names_dd .= '<option value="'.$name.'">'.$name.'</option>'; }
   $form_names_dd .= '</select>';
-  $model_names = islandora_get_content_model_names();
+  $model_names = [];
+  try {
+    $model_names = islandora_get_content_model_names();
+  } catch (Exception $e) {
+    drupal_set_message('Caught exception getting model names from islandora: ' . $e->getMessage());
+  }
 
   $model_names_dd = '<select class="model-names-dd form-select">';
   $model_names_dd .= '<option value="sidora_all">All models that are not specifically called out</option>';
@@ -665,6 +670,21 @@ tr.removed.odd {
         '#title' => t('Number of nodes'),
         '#description' => t('Checking this number of nodes at a cron'),
         '#default_value' => variable_get('sidora_check_node_exist_limit','100'),
+      ),
+    ),
+  );
+  $form['sidora_server_attributes'] = array(
+     'fieldset' => array(
+      '#type' => 'fieldset',
+      '#title' => 'Server and Runtime info',
+      '#description' => t('Estimate the size of workbench in memory, usually around 1/3 of total memory available to PHP. (bytes)'),
+      '#collapsible' => TRUE,
+      '#collapsed' => TRUE,
+      'sidora_estimate_memory' => array(
+        '#type' => 'textfield',
+        '#title' => t('Memory Estimate (bytes)'),
+        '#description' => t('Conservative estimate: 200000000 = 200MB  This limits the size of downloads from Fedora, since the file needs to be held in memory to push to end user.'),
+        '#default_value' => variable_get('sidora_estimate_memory','200000000'),
       ),
     ),
   );

@@ -3588,7 +3588,11 @@ sidora.resources.GetOnScreenPids = function(){
  * Return the total number of resources that are children of the highlighted concept.  Relys on the resource table to be loaded.
  */
 sidora.resources.GetLength = function(){
-  return jQuery(sidora.resources.dataTable).dataTable().api().page.info().recordsTotal;
+  if (jQuery(sidora.resources.dataTable).dataTable().api().page.info()){
+    return jQuery(sidora.resources.dataTable).dataTable().api().page.info().recordsTotal;
+  } else {
+    return 0;
+  }
 }
 /*
  * Remove the individualized panel for a resource (like if the user unselected it)

@@ -116,22 +116,22 @@ function drush_sidora_administer_tree($root_pid) {
     $all_processed = array();
     $other_errors = array();
     sidora_drush_recursive_administer_tree($root_pid, $no_errors, $with_errors, $all_processed, $other_errors);
-    drush_print("Objects that have been processed correctly or recursed over other than root (" . sizeof($all_processed) . ") :");
+    drush_print("Objects that have been processed correctly or recursed over other than root (" . _sidora_sizeof($all_processed) . ") :");
     foreach($all_processed as $processed_pid) {
       drush_print($processed_pid);
     }
     drush_print("==========================");
     $dry_run = drush_get_option("dry-run");
     if ($dry_run) {
-      drush_print("DRY-RUN, isAdministeredBy relationships that would have been attempted (" . sizeof($no_errors) . "):");
+      drush_print("DRY-RUN, isAdministeredBy relationships that would have been attempted (" . _sidora_sizeof($no_errors) . "):");
     }
     else {
-      drush_print("Objects where isAdministeredBy was added (" . sizeof($no_errors) . "):");
+      drush_print("Objects where isAdministeredBy was added (" . _sidora_sizeof($no_errors) . "):");
     }
     foreach($no_errors as $processed_pid) {
       drush_print($processed_pid);
     }
-    if (sizeof($with_errors) > 0 || sizeof($other_errors) > 0) {
+    if (_sidora_sizeof($with_errors) > 0 || _sidora_sizeof($other_errors) > 0) {
       drush_print("==========================");
       drush_print("ERRORS:");
       foreach($with_errors as $processed_pid => $error_info) {
@@ -168,8 +168,8 @@ function sidora_drush_recursive_administer_tree($parent_pid, &$processed_without
     else {
       $has_concept_parents = sidora_get_parent_concepts($child_obj);
       $error = FALSE;
-      if (sizeof($has_concept_parents) > 1) {
-        $error = "ERROR: $child_pid is the target of  " . sizeof($has_concept_parents) . " hasConcept relationships";
+      if (_sidora_sizeof($has_concept_parents) > 1) {
+        $error = "ERROR: $child_pid is the target of  " . _sidora_sizeof($has_concept_parents) . " hasConcept relationships";
         drush_print($error, 0, STDERR);
       }
       elseif (!$concepts_exclude) {
@@ -248,8 +248,8 @@ function sidora_drush_administer_child($parent_pid, $child_pid, $dry_run, $repla
   }
   else {
     $child_rels = $child_obj->relationships->get(SI_RELS_EXT_URI, 'isAdministeredBy');
-    if (sizeof($child_rels) > 0 && !$replace && !$force) {
-      $error = "Child already has (" . sizeof($child_rels) . ") isAdministeredBy, first relationship with " . $child_rels[0]['object']['value'];
+    if (_sidora_sizeof($child_rels) > 0 && !$replace && !$force) {
+      $error = "Child already has (" . _sidora_sizeof($child_rels) . ") isAdministeredBy, first relationship with " . $child_rels[0]['object']['value'];
       drush_print($error, 0, STDERR, FALSE);
       drush_print(". Use --force to create this relationship, or --replace to remove the existing relationships.\n", 0, STDERR);
       if ($print_summary) {
@@ -282,7 +282,7 @@ function sidora_drush_administer_child($parent_pid, $child_pid, $dry_run, $repla
       }
     }
     if ($print_summary) {
-      drush_print("(".sizeof($child_rels).") child isAdministeredBy relationships: ", 0, NULL, FALSE);
+      drush_print("("._sidora_sizeof($child_rels).") child isAdministeredBy relationships: ", 0, NULL, FALSE);
       foreach($child_rels as $child_rel) {
         if (!empty($to_output)) {
           $to_output .= ', ';

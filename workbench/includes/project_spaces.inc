@@ -217,10 +217,10 @@ function _sidora_put_into_proper_project_space_recursive(
       $parent_pids .= ' ' . $parent_pid;
       $parent_gids = sidora_get_group_nids_membership(sidora_get_concept_node_id($parent_pid));
       $intersect_check = array_intersect($current_gids, $parent_gids);
-      if (sizeof($parent_gids) > 0){
+      if (_sidora_sizeof($parent_gids) > 0){
         $all_parents_missing_group = FALSE;
       }
-      if (sizeof($parent_gids) > 0 && sizeof($intersect_check) == sizeof($parent_gids)) {
+      if (_sidora_sizeof($parent_gids) > 0 && _sidora_sizeof($intersect_check) == _sidora_sizeof($parent_gids)) {
         // Is in all the groups of this parent
         $is_in_a_parents_project_space = TRUE;
         break;
@@ -602,7 +602,7 @@ function sidora_project_spaces_tree($root_label = 'Research Space Destinations:'
     if (
       $ignore_pid != $pid && 
       !in_array($pid, $always_ignore_pids) && 
-      (sizeof($specify_pids) == 0 || in_array($pid, $specify_pids))
+      (_sidora_sizeof($specify_pids) == 0 || in_array($pid, $specify_pids))
     ) {
       $continue_output = FALSE;
       if (empty($permissions)) {
