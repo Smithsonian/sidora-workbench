@@ -413,7 +413,7 @@ function sidora_menu() {
       'title' => 'Node ID PID Results',
       'description' => 'List of Node IDs Associated with a given Fedora PID',
       'page callback' => 'sidora_query_nids_from_pid',
-      'page arguments' => array(1),
+      'page arguments' => array(3),
       'access callback' => TRUE,
       'file' => 'includes/sidora_nodes.inc',
       'type' => MENU_CALLBACK,
@@ -7997,6 +7997,11 @@ function query_nodes_from_pid_form($form, $form_state)
     '#required' => TRUE
   );
 
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Submit'),
+  );
+
   return $form;
 }
 
@@ -8007,30 +8012,55 @@ function query_nodes_from_pid_form_validate($form, $form_state)
 
 function query_nodes_from_pid_form_submit($form, $form_state)
 {
-  drupal_goto("/sidora_query_nids_from_pid/" . $form_state['values']['pid']);
+  drupal_goto("/admin/sidora/display_pid_nodes/" . $form_state['values']['pid']);
 }
 
 function sidora_query_nids_from_pid($pid)
 {
   $results = sidora_get_concept_node_id($pid);
 
-  $html = "<div><h2>Node IDs Found for Fedora PID $pid</h2></div>";
+  $link = "<div class='my-2'><a href='/admin/sidora/query_pid_nodes'>Return to PID Search</a></div>";
+
+  $html_start = "<table><thead><th>Node IDs for PID $pid</th></thead>";
+  $html_end = "</table>";
+
+  $html_middle = "";
 
   if($results === NULL)
   {
-    return "<h2>No Results Found for Fedora PID $pid</h2>";
+    return "<h1>No Results Found for Fedora PID $pid</h1>$link";
   }
-  elseif(gettype($results) == "string")
+  elseif(gettype($results) != "array")
   {
-    $html .= "<div>$results</div>";
+    $html_middle .= "<tbody><tr><td>$results</td></tr></tbody>";
   }
   else
   {
+    $html_middle .= "<tbody>";
+
+    $i = 1;
+    $class = "";
+
     foreach ($results as $nid)
     {
-      $html .= "<div>$nid</div>";
+      if($i % 2 == 0)
+      {
+        $class = "even";
+        $i = 1;
+      }
+      else
+      {
+        $class = "odd";
+        $i = 0;
+      }
+
+      $html_middle .= "<tr class='$class'><td>$nid</tr></td>";
     }
+
+    $html_middle .= "</tbody>";
   }
+
+  $html = $html_start . $html_middle . $html_end . $link;
 
   return $html;
 }
